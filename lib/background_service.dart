@@ -290,7 +290,7 @@ class BackgroundTaskToolkit {
     try {
       final androidDetails = AndroidNotificationDetails(
         'io.github.alessioc42.sphplan',
-        'lanis-mobile',
+        'Schulportal',
         channelDescription: 'Applet notifications',
         importance: Importance.high,
         priority: Priority.high,

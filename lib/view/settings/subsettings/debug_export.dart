@@ -11,6 +11,7 @@ import '../../../generated/l10n.dart';
 import '../../../utils/logger.dart';
 import '../../../utils/mono_text_viewer.dart';
 import 'debug_export_presets.dart';
+import 'package:lanis/fork_identity.dart';
 
 class DebugExport extends ConsumerStatefulWidget {
   const DebugExport({super.key});
@@ -107,7 +108,7 @@ class _DebugExportState extends ConsumerState<DebugExport> {
             leading: Icon(Icons.contact_mail),
             title: Text('Mit wem hast du Kontakt?'),
             subtitle: Text(
-              'Wenn du Debug-Daten exportierst, stelle sicher, dass du sie ausschließlich an lanis-mobile@alessioc42.dev sendest. Diese E-Mail-Adresse wird von dem Hauptentwickler betreut. Sende die Daten auf keinen Fall an andere E-Mail-Adressen oder über andere Wege!',
+              'Debug-Daten können persönliche Inhalte aus dem Schulportal enthalten. Gib sie nur an den Betreuer dieser App (siehe $forkRepoUrl) weiter und auf keinen Fall an Dritte.',
             ),
           ),
           const Divider(),

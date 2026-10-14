@@ -7,6 +7,7 @@ import 'package:lanis/utils/logger.dart';
 import 'package:lanis/utils/safe_launch.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:lanis/fork_identity.dart';
 
 /// This view is only rendered, if an error in the main function is thrown as a last resort to show the error to the user.
 ///
@@ -145,14 +146,14 @@ void forceReset() async {
 void sendEmail(FlutterErrorDetails errorDetails) async {
   final errorReport = await generateErrorReport(errorDetails);
 
-  final emailUri = Uri(
-    scheme: 'mailto',
-    path: 'lanis-mobile@alessioc42.dev',
+  // Fork: Bericht als GitHub-Issue im eigenen Repo statt Mail an die
+  // Original-Entwickler (lanis-mobile@alessioc42.dev).
+  final issueUri = Uri.parse('$forkIssuesUrl/new').replace(
     queryParameters: {
-      'subject': '[FEHLERBERICHT] ${errorDetails.exceptionAsString()}',
+      'title': '[FEHLERBERICHT] ${errorDetails.exceptionAsString()}',
       'body': '\n\n\n$errorReport',
     },
   );
 
-  await safeLaunchUrl(emailUri);
+  await safeLaunchUrl(issueUri);
 }

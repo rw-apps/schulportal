@@ -12,6 +12,7 @@ import 'package:mime/mime.dart';
 
 import 'file_icons.dart';
 import 'root_nav.dart';
+import 'package:lanis/fork_identity.dart';
 
 Future<String> _downloadRemote(
   BuildContext context,
@@ -331,7 +332,7 @@ AlertDialog errorDialog(BuildContext context) => AlertDialog(
     TextButton(
       onPressed: () {
         safeLaunchUrl(
-          Uri.parse("https://github.com/alessioC42/lanis-mobile/issues"),
+          Uri.parse(forkIssuesUrl),
           context: context,
         );
       },

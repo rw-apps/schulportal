@@ -5,6 +5,7 @@ import 'package:lanis/utils/safe_launch.dart';
 import 'package:liblanis/liblanis.dart';
 
 import '../utils/mono_text_viewer.dart';
+import 'package:lanis/fork_identity.dart';
 
 class AppletErrorView extends StatelessWidget {
   final Exception error;
@@ -63,7 +64,7 @@ class AppletErrorView extends StatelessWidget {
               OutlinedButton(
                 onPressed: () {
                   safeLaunchUrl(
-                    Uri.parse("https://github.com/lanis-mobile/lanis/issues"),
+                    Uri.parse(forkIssuesUrl),
                     context: context,
                   );
                 },

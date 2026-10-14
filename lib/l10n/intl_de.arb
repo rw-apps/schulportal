@@ -10,7 +10,7 @@
   "lessons": "Unterricht",
   "storage": "Dateispeicher",
   "settings": "Einstellungen",
-  "about": "Über Lanis-Mobile",
+  "about": "Über diese App",
   "openLanisInBrowser": "Im Browser öffnen",
   "openMoodle": "Moodle öffnen",
   "userData": "Benutzerdaten",
@@ -84,7 +84,7 @@
   "authValidationError": "Bitte fülle dieses Feld aus.",
   "authIAccept": "Ich stimme der ",
   "authTermsOfService": "Datenschutzerklärung",
-  "authOfLanisMobile": " von lanis-mobile zu.",
+  "authOfLanisMobile": " dieser App zu.",
   "authResetPassword": "Passwort zurücksetzen",
   "authFailedLoadingSchools": "Fehler beim Laden der Schulen. Erneut versuchen in 10 Sekunden...",
 

@@ -1,3 +1,15 @@
+# Schulportal (rw-apps)
+
+Inoffizielle, private Abwandlung von [Lanis-Mobile](https://github.com/lanis-mobile/lanis) für Familie und Freunde. Lizenz wie das Original: GPL-3.0.
+
+**Unterschiede zum Original:** eigener Name und eigene App-ID (`io.github.rwapps.sph`, läuft parallel zum Original), keine Login-Statistik, keine Fehlerberichte, eigener User-Agent gegenüber dem Schulportal, Update-Hinweise und Kontakt über dieses Repository. Datenschutz: [PRIVACY.md](PRIVACY.md). Den Wächter für Adressen des Originals findest du in `test/fork_identity_test.dart`, die Fork-Identität in `lib/fork_identity.dart`.
+
+**Installation (Android):** Die APK aus den [Releases](https://github.com/rw-apps/schulportal/releases/latest) installieren. Wer automatische Updates will, installiert [Obtainium](https://github.com/ImranR98/Obtainium) und fügt dort die Repo-Adresse `https://github.com/rw-apps/schulportal` hinzu.
+
+---
+
+*Original-README:*
+
 # Lanis Mobile
 
 *[Read this in English](README.en.md)*

@@ -20,7 +20,6 @@ enum UrlModalResponse {
 ///
 /// As a school, you may make a pull request and add your domain to this list after verification.
 const trustedDomains = [
-  'lanis-mobile.alessioc42.dev',
   'hessen.de',
   'bund.de',
   'wikipedia.org',

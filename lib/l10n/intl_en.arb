@@ -13,7 +13,7 @@
   "lessons": "Lessons",
   "storage": "Datastorage",
   "settings": "Settings",
-  "about": "About Lanis-Mobile",
+  "about": "About this app",
   "openLanisInBrowser": "Open in Browser",
   "openMoodle": "Open Moodle",
   "userData": "User data",
@@ -114,7 +114,7 @@
   "authSendBugReports": "Send anonymous bug reports (",
   "authIAccept": "I accept the ",
   "authTermsOfService": "Privacy policy",
-  "authOfLanisMobile": " of Lanis-Mobile",
+  "authOfLanisMobile": " of this app",
   "authResetPassword": "Reset password",
   "authFailedLoadingSchools": "Failed to load schools. Retrying in 10 seconds...",
 

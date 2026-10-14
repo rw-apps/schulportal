@@ -16,6 +16,7 @@ import 'package:lanis/utils/responsive.dart';
 import 'package:lanis/utils/safe_launch.dart';
 import 'package:lanis/utils/whats_new.dart';
 import 'package:lanis/widgets/applet_home_shell.dart';
+import 'package:lanis/fork_identity.dart';
 
 /// Nested home applet paths (order matches bottom-nav / shell branches).
 List<String> homeAppletPathsFor(AccountType accountType) => AppDefinitions
@@ -158,7 +159,7 @@ class HomePageState extends ConsumerState<HomePage> {
   Widget noAppsSupported() {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Lanis-Mobile'),
+        title: const Text(forkAppName),
         leading: IconButton(
           icon: const Icon(Icons.menu),
           onPressed: () => _drawerKey.currentState!.openDrawer(),

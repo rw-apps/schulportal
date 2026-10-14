@@ -10,6 +10,7 @@ import '../core/native_adapter_instance.dart';
 import '../utils/glitchtip.dart';
 import 'database_storage_migration.dart';
 import 'flutter_secret_store.dart';
+import 'package:lanis/fork_identity.dart';
 
 /// Configures [LanisClient] for the Flutter host and returns Riverpod overrides.
 Future<List<Override>> bootstrapLanisClient({
@@ -30,8 +31,7 @@ Future<List<Override>> bootstrapLanisClient({
     secretStore: store,
     documentCacheDirectory: p.join(tempDir.path, 'lanis_documents'),
     httpAdapter: getNativeAdapterInstance(),
-    userAgent:
-        'Lanis-Mobile/v${packageInfo.version}+${packageInfo.buildNumber}',
+    userAgent: forkUserAgent(packageInfo.version, packageInfo.buildNumber),
     onUnexpectedError: (error, stackTrace, {required appletPhpUrl}) {
       unawaited(
         captureUnexpectedAppletError(

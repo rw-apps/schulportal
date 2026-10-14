@@ -11,6 +11,7 @@ import 'package:lanis/utils/root_nav.dart';
 import 'package:lanis/utils/safe_launch.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:lanis/generated/l10n.dart';
+import 'package:lanis/fork_identity.dart';
 
 int compareVersions(String version1, String version2) {
   List<int> v1 = version1
@@ -131,10 +132,10 @@ Future<String> getDeviceReleaseTag() async {
 Future<Map?> getReleaseInfo(String? releaseTag) async {
   try {
     String url =
-        'https://api.github.com/repos/lanis-mobile/lanis/releases/latest';
+        '$forkReleasesApiUrl/latest';
     if (releaseTag != null) {
       url =
-          'https://api.github.com/repos/lanis-mobile/lanis/releases/tags/$releaseTag';
+          '$forkReleasesApiUrl/tags/$releaseTag';
     }
     final response = await Dio().get(url);
     return response.data is Map ? response.data as Map : null;
@@ -303,23 +304,13 @@ class NewUpdateAvailableDialog extends StatelessWidget {
 }
 
 Future<void> launchStore({BuildContext? context}) async {
-  if (!(Platform.isAndroid || Platform.isIOS)) return;
-  final storeUri = Uri.parse(
-    Platform.isAndroid
-        ? "market://details?id=io.github.alessioc42.sph"
-        : "https://apps.apple.com/app/id6511247743",
-  );
-  final opened = await safeLaunchUrl(
-    storeUri,
+  // Fork: Es gibt keinen Store-Eintrag; Updates liegen als APK in den
+  // GitHub-Releases (Obtainium holt sie automatisch). Ursache der Änderung:
+  // Das Original öffnete market://details?id=io.github.alessioc42.sph, also
+  // die ORIGINAL-App im Play Store — Nutzer des Forks wären dorthin gewechselt.
+  await safeLaunchUrl(
+    Uri.parse(forkLatestReleaseUrl),
     context: context,
     mode: LaunchMode.externalApplication,
-  );
-  if (opened) return;
-  await safeLaunchUrl(
-    Uri.parse(
-      Platform.isAndroid
-          ? "https://play.google.com/store/apps/details?id=io.github.alessioc42.sph"
-          : "https://apps.apple.com/app/id6511247743",
-    ),
   );
 }

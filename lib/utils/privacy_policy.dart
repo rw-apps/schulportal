@@ -1,12 +1,13 @@
 import 'package:liblanis/liblanis.dart';
+import 'package:lanis/fork_identity.dart';
 
 /// ISO date of the latest published privacy policy.
 ///
 /// Bump this string when the policy is republished so users are prompted again.
-const privacyPolicyPublishedAt = '2026-07-26';
+const privacyPolicyPublishedAt = '2026-10-14'; // Fork: eigene PRIVACY.md
 
 /// Canonical privacy policy URL (About + login + gate screen).
-const privacyPolicyUrl = 'https://lanis-mobile.alessioc42.dev/policy/';
+const privacyPolicyUrl = forkPrivacyPolicyUrl;
 
 /// [shared_settings] key for the last accepted [privacyPolicyPublishedAt].
 const privacyPolicyAcceptedVersionKey = 'privacy-policy-accepted-version';

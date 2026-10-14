@@ -8,6 +8,7 @@ import 'package:lanis/generated/l10n.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/native_adapter_instance.dart';
+import 'package:lanis/fork_identity.dart';
 
 class SchoolSelector extends StatefulWidget {
   const SchoolSelector({
@@ -48,7 +49,7 @@ class _SchoolSelectorState extends State<SchoolSelector> {
         options: Options(
           headers: {
             "User-Agent":
-                "Lanis-Mobile/v${packageInfo.version}+${packageInfo.buildNumber} on ${Platform.operatingSystem} (${kReleaseMode
+                "${forkUserAgent(packageInfo.version, packageInfo.buildNumber)} on ${Platform.operatingSystem} (${kReleaseMode
                     ? "release"
                     : kDebugMode
                     ? "debug"

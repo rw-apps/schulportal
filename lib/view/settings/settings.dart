@@ -209,16 +209,7 @@ class _SettingsScreenState extends ConsumerSettingsColoursState<SettingsScreen> 
       ),
       SettingsGroup(
         tiles: [
-          SettingsTile(
-            title: (context) => AppLocalizations.of(context).errorReporting,
-            subtitle: (context) async {
-              return AppLocalizations.of(context).errorReportingSubtitle;
-            },
-            icon: Icons.bug_report_outlined,
-            routePath: SettingsDeepLinks.errorReporting,
-            screen: (context) async =>
-                context.push(SettingsDeepLinks.errorReporting),
-          ),
+          // Fork: Kachel „Fehlerberichte“ entfernt (kein GlitchTip-Server).
           SettingsTile(
             title: (context) => AppLocalizations.of(context).about,
             subtitle: (context) async {

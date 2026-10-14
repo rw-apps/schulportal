@@ -9,6 +9,7 @@ import 'package:lanis/utils/privacy_policy.dart';
 import 'package:lanis/utils/safe_launch.dart';
 
 import '../../../utils/logger.dart';
+import 'package:lanis/fork_identity.dart';
 
 class AvatarTile extends StatelessWidget {
   final String networkImage;
@@ -129,15 +130,17 @@ class _AboutSettingsState extends ConsumerSettingsColoursState<AboutSettings> {
       title: (context) => AppLocalizations.of(context).githubRepository,
       iconData: Icons.code_outlined,
       onTap: (context) => safeLaunchUrl(
-        Uri.parse("https://github.com/alessioC42/lanis-mobile"),
+        Uri.parse(forkRepoUrl),
         context: context,
       ),
     ),
     AboutLink(
-      title: (context) => AppLocalizations.of(context).discordServer,
-      iconData: Icons.discord,
+      // Fork: statt Discord des Originals der Herkunftshinweis.
+      title: (context) =>
+          'Inoffiziell · basiert auf $upstreamName (GPL-3.0)',
+      iconData: Icons.fork_right_rounded,
       onTap: (context) => safeLaunchUrl(
-        Uri.parse("https://discord.gg/sWJXZ8FsU7"),
+        Uri.parse(upstreamRepoUrl),
         context: context,
       ),
     ),
@@ -145,9 +148,7 @@ class _AboutSettingsState extends ConsumerSettingsColoursState<AboutSettings> {
       title: (context) => AppLocalizations.of(context).featureRequest,
       iconData: Icons.add_comment_outlined,
       onTap: (context) => safeLaunchUrl(
-        Uri.parse(
-          "https://github.com/alessioC42/lanis-mobile/issues/new/choose",
-        ),
+        Uri.parse('$forkIssuesUrl/new'),
         context: context,
       ),
     ),
@@ -155,7 +156,7 @@ class _AboutSettingsState extends ConsumerSettingsColoursState<AboutSettings> {
       title: (context) => AppLocalizations.of(context).latestRelease,
       iconData: Icons.update_outlined,
       onTap: (context) => safeLaunchUrl(
-        Uri.parse("https://github.com/alessioC42/lanis-mobile/releases/latest"),
+        Uri.parse(forkLatestReleaseUrl),
         context: context,
       ),
     ),

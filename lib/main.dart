@@ -23,6 +23,7 @@ import 'package:lanis/utils/phoenix.dart';
 import 'package:lanis/utils/theme_settings.dart';
 import 'package:lanis/view/startup_error_view.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:lanis/fork_identity.dart';
 
 Future<void> main() async {
   await initGlitchTip(_startApp);
@@ -160,7 +161,7 @@ class App extends ConsumerWidget {
         }
 
         return MaterialApp.router(
-          title: 'Lanis Mobile',
+          title: forkAppName,
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: mode,

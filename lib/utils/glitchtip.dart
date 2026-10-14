@@ -5,8 +5,10 @@ import 'package:liblanis/liblanis.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// GlitchTip (Sentry-compatible) endpoint for error events only.
-const glitchtipDsn =
-    'https://d89e10f531084447ace3f71f0861e357@glitchtip.orion.alessioc42.dev/1';
+// Fork: leer. Ursache: Die DSN zeigte auf den GlitchTip-Server der
+// Original-Entwickler; Berichte dieses Forks gehören nicht dorthin.
+// Leere DSN = Sentry-SDK sendet nichts (SentryFlutter.init deaktiviert sich).
+const glitchtipDsn = '';
 
 /// [shared_settings] key for device-wide GlitchTip opt-in (default off).
 const glitchTipEnabledKey = 'glitchtip-enabled';
@@ -15,12 +17,14 @@ const glitchTipEnabledKey = 'glitchtip-enabled';
 bool glitchTipReportingEnabled = false;
 
 bool isGlitchTipEnabled(TypedSettings shared) {
-  return shared.getBool(glitchTipEnabledKey) ?? false;
+  // Fork: immer aus — ohne Server gibt es nichts einzuschalten. Ein früher
+  // gespeichertes true (z. B. aus importierten Einstellungen) wirkt nicht.
+  return false;
 }
 
 void setGlitchTipEnabled(TypedSettings shared, bool enabled) {
-  shared.setBool(glitchTipEnabledKey, enabled);
-  setGlitchTipReportingEnabled(enabled);
+  shared.setBool(glitchTipEnabledKey, false);
+  setGlitchTipReportingEnabled(false);
 }
 
 void setGlitchTipReportingEnabled(bool enabled) {

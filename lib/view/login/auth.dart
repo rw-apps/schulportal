@@ -297,6 +297,7 @@ class LoginFormState extends ConsumerState<LoginForm> {
                             ),
                           ),
                           Visibility(
+                            visible: false, // Fork: keine Fehlerberichte (utils/glitchtip.dart)
                             child: ExcludeSemantics(
                               child: CheckboxListTile(
                                 enabled: schoolIDController.text.isNotEmpty,
