@@ -1,11 +1,12 @@
 name: Release (Fork Schulportal)
 
-# Baut bei jedem Tag v*  eine signierte APK und hängt sie an ein GitHub-Release.
+# Baut bei jeder neuen Version in pubspec.yaml eine signierte APK und legt
+# Tag + GitHub-Release an.
 # Obtainium auf den Familien-/Freundes-Handys erkennt das Release und bietet
 # das Update an; die App selbst prüft dieselben Releases (lib/utils/whats_new.dart,
 # forkReleasesApiUrl in lib/fork_identity.dart).
 #
-# Tag-Format MUSS „v<version>+<build>“ sein, exakt wie pubspec.yaml „version:“.
+# Tag-Format ist „v<version>+<build>“, abgeleitet aus pubspec.yaml „version:“.
 # Ursache: compareVersions() in whats_new.dart zerlegt den Tag an „.“ und „+“
 # in Zahlen; ein abweichendes Format (z. B. „v4.1.0-rw1“) wirft beim int.parse.
 #
@@ -17,12 +18,17 @@ name: Release (Fork Schulportal)
 # Nutzer müssten sonst neu installieren und verlören ihre Anmeldung.
 
 on:
+  # Release = Versionssprung in pubspec.yaml auf main.
+  # Ursache: Tag-Pushes aus der Claude-Sitzung werden vom Git-Proxy abgewiesen
+  # (HTTP 403, 14.10.26); Branch-Pushes gehen. Deshalb legt dieser Workflow den
+  # Tag selbst an (gh release create … --target). Grenze: Ein Push ohne neue
+  # Version baut nichts (Schritt „Version schon veröffentlicht?“).
   push:
-    tags: ['v*']
+    branches: [main]
+    # Workflow-Datei selbst mit: Änderungen am Release-Weg laufen so sofort einmal
+    # durch (bei unveränderter Version ohne Bau, s. „Version schon veröffentlicht?“).
+    paths: [pubspec.yaml, .github/workflows/release-fork.yml]
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   release:
@@ -40,13 +46,22 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Tag passt zur pubspec-Version
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Version schon veröffentlicht?
+        id: ver
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          v="v$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
-          test "$v" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME ≠ pubspec $v"; exit 1; }
+          tag="v$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag existiert bereits – nichts zu tun."
+            echo "neu=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "neu=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Signierschlüssel bereitstellen
+        if: steps.ver.outputs.neu == 'true'
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -61,6 +76,7 @@ jobs:
           EOF
 
       - name: Codegen, Analyse, Tests
+        if: steps.ver.outputs.neu == 'true'
         run: |
           flutter pub get
           dart run build_runner build --delete-conflicting-outputs
@@ -69,12 +85,13 @@ jobs:
           flutter test
 
       - name: APK bauen
+        if: steps.ver.outputs.neu == 'true'
         run: |
           flutter build apk --release --dart-define=cronetHttpNoPlay=true
-          mv build/app/outputs/flutter-apk/app-release.apk "schulportal-${GITHUB_REF_NAME}.apk"
+          mv build/app/outputs/flutter-apk/app-release.apk "schulportal-${{ steps.ver.outputs.tag }}.apk"
 
       - name: Release veröffentlichen
-        if: startsWith(github.ref, 'refs/tags/')
+        if: steps.ver.outputs.neu == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "schulportal-${GITHUB_REF_NAME}.apk" --title "Schulportal $GITHUB_REF_NAME" --notes-file CHANGELOG-FORK.md
+        run: gh release create "${{ steps.ver.outputs.tag }}" "schulportal-${{ steps.ver.outputs.tag }}.apk" --target "$GITHUB_SHA" --title "Schulportal ${{ steps.ver.outputs.tag }}" --notes-file CHANGELOG-FORK.md
