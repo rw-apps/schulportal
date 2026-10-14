@@ -146,14 +146,18 @@ void forceReset() async {
 void sendEmail(FlutterErrorDetails errorDetails) async {
   final errorReport = await generateErrorReport(errorDetails);
 
-  // Fork: Bericht als GitHub-Issue im eigenen Repo statt Mail an die
-  // Original-Entwickler (lanis-mobile@alessioc42.dev).
-  final issueUri = Uri.parse('$forkIssuesUrl/new').replace(
+  // Fork: Mail-Entwurf OHNE vorgegebenen Empfänger. Ursache: Das Original
+  // schickte an lanis-mobile@alessioc42.dev (Original-Entwickler). Ein GitHub-
+  // Issue wäre schlechter: Der Bericht enthält logger.getHistory() (u. a.
+  // Schul-ID, Portal-URLs) und Issues im öffentlichen Repo sind für jeden
+  // lesbar. Der Nutzer trägt den Betreuer selbst ein (Familie/Freunde kennen ihn).
+  final emailUri = Uri(
+    scheme: 'mailto',
     queryParameters: {
-      'title': '[FEHLERBERICHT] ${errorDetails.exceptionAsString()}',
+      'subject': '[FEHLERBERICHT $forkAppName] ${errorDetails.exceptionAsString()}',
       'body': '\n\n\n$errorReport',
     },
   );
 
-  await safeLaunchUrl(issueUri);
+  await safeLaunchUrl(emailUri);
 }

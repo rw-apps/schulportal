@@ -11,7 +11,6 @@ import '../../../generated/l10n.dart';
 import '../../../utils/logger.dart';
 import '../../../utils/mono_text_viewer.dart';
 import 'debug_export_presets.dart';
-import 'package:lanis/fork_identity.dart';
 
 class DebugExport extends ConsumerStatefulWidget {
   const DebugExport({super.key});
@@ -108,7 +107,7 @@ class _DebugExportState extends ConsumerState<DebugExport> {
             leading: Icon(Icons.contact_mail),
             title: Text('Mit wem hast du Kontakt?'),
             subtitle: Text(
-              'Debug-Daten können persönliche Inhalte aus dem Schulportal enthalten. Gib sie nur an den Betreuer dieser App (siehe $forkRepoUrl) weiter und auf keinen Fall an Dritte.',
+              'Debug-Daten können persönliche Inhalte aus dem Schulportal enthalten. Gib sie nur direkt an den Betreuer dieser App weiter – nicht öffentlich (also nicht als GitHub-Issue) und auf keinen Fall an Dritte.',
             ),
           ),
           const Divider(),

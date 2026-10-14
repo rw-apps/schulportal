@@ -1,0 +1,74 @@
+name: Release (Fork Schulportal)
+
+# Baut bei jedem Tag v*  eine signierte APK und hängt sie an ein GitHub-Release.
+# Obtainium auf den Familien-/Freundes-Handys erkennt das Release und bietet
+# das Update an; die App selbst prüft dieselben Releases (lib/utils/whats_new.dart,
+# forkReleasesApiUrl in lib/fork_identity.dart).
+#
+# Tag-Format MUSS „v<version>+<build>“ sein, exakt wie pubspec.yaml „version:“.
+# Ursache: compareVersions() in whats_new.dart zerlegt den Tag an „.“ und „+“
+# in Zahlen; ein abweichendes Format (z. B. „v4.1.0-rw1“) wirft beim int.parse.
+#
+# Benötigte Repository-Secrets (Settings → Secrets and variables → Actions):
+#   KEYSTORE_BASE64   base64 der Datei schulportal-release.jks
+#   KEYSTORE_PASSWORD Passwort (store = key, Alias „schulportal“)
+# Ohne Secrets bricht der Lauf ab, statt eine unsignierte/fremd signierte APK
+# zu veröffentlichen — Android lehnt Updates mit anderem Schlüssel ab, die
+# Nutzer müssten sonst neu installieren und verlören ihre Anmeldung.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Signierschlüssel bereitstellen
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || { echo "Secret KEYSTORE_BASE64 fehlt"; exit 1; }
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          cat > android/key.properties <<EOF
+          storeFile=$RUNNER_TEMP/release.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEYSTORE_PASSWORD
+          keyAlias=schulportal
+          EOF
+
+      - name: Codegen, Analyse, Tests
+        run: |
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+          dart run intl_utils:generate
+          flutter analyze --no-fatal-infos
+          flutter test
+
+      - name: APK bauen
+        run: |
+          flutter build apk --release --dart-define=cronetHttpNoPlay=true
+          mv build/app/outputs/flutter-apk/app-release.apk "schulportal-${GITHUB_REF_NAME}.apk"
+
+      - name: Release veröffentlichen
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "schulportal-${GITHUB_REF_NAME}.apk" --title "Schulportal $GITHUB_REF_NAME" --notes-file CHANGELOG-FORK.md

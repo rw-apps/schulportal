@@ -55,7 +55,10 @@ void main() {
     }
   });
 
-  testWidgets('error reporting checkbox mirrors shared device setting', (
+  // Fork: Soll geändert. Ursache: Häkchen „Fehlerberichte (optional)“ ist in
+  // lib/view/login/auth.dart per Visibility(visible: false) ausgeblendet und
+  // bleibt aus, selbst wenn die Geräte-Einstellung true wäre.
+  testWidgets('error reporting checkbox hidden and off (fork)', (
     tester,
   ) async {
     final overrides = LanisClient.configure();
@@ -92,15 +95,9 @@ void main() {
     final l10n = AppLocalizations.of(
       tester.element(find.byType(LoginForm)),
     );
-    final tiles = tester.widgetList<CheckboxListTile>(
-      find.byType(CheckboxListTile),
-    );
-    expect(tiles.length, greaterThanOrEqualTo(2));
-    final errorTile = tiles.firstWhere(
-      (t) =>
-          t.title is Text &&
-          (t.title as Text).data == l10n.authErrorReportingOptional,
-    );
-    expect(errorTile.value, isTrue);
+    // Unsichtbar: Visibility(visible: false) baut das Kind nicht -> nicht findbar.
+    expect(find.text(l10n.authErrorReportingOptional), findsNothing);
+    // Datenschutz-Häkchen bleibt als einziges sichtbar.
+    expect(find.byType(CheckboxListTile), findsOneWidget);
   });
 }

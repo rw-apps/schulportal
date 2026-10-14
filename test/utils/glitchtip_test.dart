@@ -48,7 +48,10 @@ void main() {
     expect(result, same(event));
   });
 
-  test('shared helpers default off and round-trip', () {
+  // Fork: Soll geändert. Ursache: lib/utils/glitchtip.dart sperrt Fehlerberichte
+  // fest (leere DSN, isGlitchTipEnabled immer false). Ein „true“ aus einem
+  // Einstellungs-Import darf nicht wirken — das prüft dieser Test.
+  test('shared helpers stay off even when enabled (fork)', () {
     LanisClient.configure();
     final container = ProviderContainer(overrides: LanisClient.overrides);
     addTearDown(container.dispose);
@@ -57,8 +60,8 @@ void main() {
     expect(isGlitchTipEnabled(shared), isFalse);
 
     setGlitchTipEnabled(shared, true);
-    expect(isGlitchTipEnabled(shared), isTrue);
-    expect(glitchTipReportingEnabled, isTrue);
+    expect(isGlitchTipEnabled(shared), isFalse);
+    expect(glitchTipReportingEnabled, isFalse);
 
     setGlitchTipEnabled(shared, false);
     expect(isGlitchTipEnabled(shared), isFalse);
