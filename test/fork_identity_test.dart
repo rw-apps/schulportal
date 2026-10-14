@@ -62,6 +62,15 @@ void main() {
     expect(s.contains('asyncLogLoginRequest'), isFalse);
   });
 
+  // Ursache: Beim Umbau des Release-Workflows (14.10.26) fiel der
+  // permissions-Block weg; der Lauf baute die APK und scheiterte erst beim
+  // Anlegen des Releases (HTTP 403). Dieser Test meldet das schon lokal.
+  test('Release-Workflow darf Releases anlegen', () {
+    final s = File('.github/workflows/release-fork.yml').readAsStringSync();
+    expect(RegExp(r'^permissions:\s*\n\s+contents: write', multiLine: true)
+        .hasMatch(s), isTrue);
+  });
+
   test('GlitchTip-DSN ist leer', () {
     final s = File('lib/utils/glitchtip.dart').readAsStringSync();
     expect(s.contains("const glitchtipDsn = '';"), isTrue);

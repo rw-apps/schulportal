@@ -30,6 +30,13 @@ on:
     paths: [pubspec.yaml, .github/workflows/release-fork.yml]
   workflow_dispatch:
 
+# Pflicht: Ohne contents:write darf github.token kein Release/Tag anlegen
+# („HTTP 403: Resource not accessible by integration“ im Schritt „Release
+# veröffentlichen“, Lauf 38635426767 vom 14.10.26 — der Block war beim Umbau
+# auf Versionssprung-Auslösung versehentlich weggefallen).
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
