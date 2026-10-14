@@ -40,6 +40,12 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Tag passt zur pubspec-Version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          v="v$(grep -E '^version:' pubspec.yaml | awk '{print $2}')"
+          test "$v" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME ≠ pubspec $v"; exit 1; }
+
       - name: Signierschlüssel bereitstellen
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}

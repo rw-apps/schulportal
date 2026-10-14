@@ -14,7 +14,13 @@ publish_to: 'none'
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 4.1.0+93
+# Fork-Versionierung: <Upstream-Version>+<Upstream-Build><2-stelliger Fork-Zähler>.
+# Ursache: Android verlangt für Updates einen steigenden versionCode. Upstream
+# zählt 93, 94, …; ohne eigenen Zähler hätte jede Fork-Ausgabe zwischen zwei
+# Upstream-Ständen denselben Code. 9301 = Upstream-Build 93, Fork-Ausgabe 01.
+# Grenze: Die Test-APK vom 14.10.26 (arm64, --split-per-abi) hatte 2093;
+# 9301 > 2093, das Update darüber klappt also.
+version: 4.1.0+9301
 
 environment:
   sdk: ^3.10.0
