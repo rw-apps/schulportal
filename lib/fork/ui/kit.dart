@@ -68,6 +68,11 @@ abstract final class Sz {
   /// einen Bildschirm passt (Rückmeldung 16.10.26: „Platz verschenkt“).
   static const double gridRowMin = 46;
 
+  /// Höchsthöhe einer Stunde. Ursache: Mit nur 4 Blöcken (Schule A) wurden die
+  /// Zellen beim Füllen der Höhe ~150 dp hoch („zu luftig“, Rückmeldung
+  /// 16.10.26). Darüber bleibt unten Platz frei.
+  static const double gridRowMax = 72;
+
   /// Abstand zwischen Zellen; an Pausen ab 15 Min. der größere.
   static const double gridGap = 3;
   static const double gridBreak = 10;
@@ -414,8 +419,7 @@ class Kit {
   );
 
   // ---- Kasten „Wichtig“ -------------------------------------------------
-  TextStyle get boxTitle =>
-      _s(12, FontWeight.w800, p.change.strong, ls: 1.2);
+  TextStyle get boxTitle => _s(12, FontWeight.w800, p.change.strong, ls: 1.2);
   TextStyle boxText(SignalTone t) => _s(14, FontWeight.w500, t.ink);
   TextStyle boxStrong(SignalTone t) => _s(14, FontWeight.w800, t.ink);
 
@@ -454,11 +458,8 @@ class Kit {
   );
 
   // ---- Stundenplan ------------------------------------------------------
-  TextStyle chipLabel(bool selected, Color selectedInk) => _s(
-    14,
-    FontWeight.w700,
-    selected ? selectedInk : p.ink,
-  );
+  TextStyle chipLabel(bool selected, Color selectedInk) =>
+      _s(14, FontWeight.w700, selected ? selectedInk : p.ink);
   TextStyle get timeStart => _s(13, FontWeight.w800, p.ink);
   TextStyle get timeEnd => _s(12, FontWeight.w500, p.faint);
   TextStyle planSubject(Color c) => _s(16, FontWeight.w800, c);
@@ -480,8 +481,11 @@ class Kit {
   TextStyle get meta => _s(13, FontWeight.w500, p.muted);
 
   List<BoxShadow> get cardShadow => [
-    BoxShadow(color: p.shadow.withValues(alpha: 0.3), blurRadius: 2,
-        offset: const Offset(0, 1)),
+    BoxShadow(
+      color: p.shadow.withValues(alpha: 0.3),
+      blurRadius: 2,
+      offset: const Offset(0, 1),
+    ),
   ];
   List<BoxShadow> get navShadow => [
     BoxShadow(color: p.shadow, blurRadius: 24, offset: const Offset(0, 8)),

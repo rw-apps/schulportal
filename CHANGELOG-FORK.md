@@ -1,5 +1,10 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9317**
+
+- Wochenansicht: Zeilen höchstens 72 dp hoch; bei wenigen Blöcken (Schule A) nicht mehr aufgebläht, unten bleibt Platz frei.
+- Lehrkräfte ausgeschrieben statt Kürzel: Tagesansicht und Gruppenwahl mit Vor- und Nachname, Wochenraster mit Nachname. Die Namen kommen später aus „Mein Unterricht“; wer dort nicht vorkommt (z. B. Vertretung), bleibt als Kürzel.
+
 **4.1.0+9316**
 
 - Vorschau: Inhalte laufen nicht mehr unter die untere Leiste, sie enden darüber.

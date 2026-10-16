@@ -70,6 +70,7 @@ class KidPlan {
     required this.colorIndex,
     required this.slots,
     required this.days,
+    this.teacherNames = const {},
   });
 
   final String firstName;
@@ -78,9 +79,34 @@ class KidPlan {
 
   /// days[0] = Montag; days[d][s] gehört zu slots[s].
   final List<List<PlanCell>> days;
+
+  /// Kürzel → „Vorname Nachname“. Quelle: „Mein Unterricht“
+  /// (meinunterricht.php, Lehrer-Knöpfe mit title „Nachname, Vorname
+  /// (KÜR)“, Export Schule A 16.10.26: 11 Lehrkräfte). Der Stundenplan selbst
+  /// liefert nur Kürzel. Grenze: Lehrkräfte ohne eigenen Kurs des Kindes
+  /// (Vertretungen, fremde Parallelgruppen) bleiben Kürzel.
+  final Map<String, String> teacherNames;
+
+  /// Ausgeschrieben („Maria Becker“), sonst das Kürzel.
+  String? teacherFull(String? kuerzel) =>
+      kuerzel == null ? null : (teacherNames[kuerzel] ?? kuerzel);
+
+  /// Nachname für enge Stellen (Wochenraster), sonst das Kürzel.
+  String? teacherLast(String? kuerzel) {
+    final full = kuerzel == null ? null : teacherNames[kuerzel];
+    if (full == null) return kuerzel;
+    return full.trim().split(RegExp(r'\s+')).last;
+  }
 }
 
-/// Gewählte Gruppe je Fachkürzel („TXT“ → „BCL“). Gilt für alle Stunden
+/// „Nachname, Vorname“ (Portal) → „Vorname Nachname“.
+String portalNameToDisplay(String portal) {
+  final parts = portal.split(',');
+  if (parts.length < 2) return portal.trim();
+  return '${parts.sublist(1).join(',').trim()} ${parts.first.trim()}';
+}
+
+/// Gewählte Gruppe je Fachkürzel („TXT“ → „ABE“). Gilt für alle Stunden
 /// dieses Fachs, weil ein Kind die ganze Woche in derselben Gruppe ist.
 /// Grenze: Wechselt die Gruppe je Halbjahr, muss neu gewählt werden.
 typedef GroupChoice = Map<String, String>;
@@ -157,7 +183,9 @@ List<DayBlock> dayBlocks(KidPlan plan, int day, GroupChoice choice) {
   for (var s = 0; s < res.length; s++) {
     if (blocks.isNotEmpty && same(blocks.last.content, res[s])) {
       final b = blocks.removeLast();
-      blocks.add(DayBlock(firstSlot: b.firstSlot, lastSlot: s, content: b.content));
+      blocks.add(
+        DayBlock(firstSlot: b.firstSlot, lastSlot: s, content: b.content),
+      );
     } else {
       blocks.add(DayBlock(firstSlot: s, lastSlot: s, content: res[s]));
     }
@@ -283,8 +311,7 @@ String gridName(PlanLesson l) {
     'Darstellendes Spiel': 'DS',
     'Politik und Wirtschaft': 'PoWi',
   };
-  return short[l.subject] ??
-      (l.subject.length <= 8 ? l.subject : l.short);
+  return short[l.subject] ?? (l.subject.length <= 8 ? l.subject : l.short);
 }
 
 /// Farbplatz je Fach eines Kindes: in der Reihenfolge des ersten Auftretens

@@ -539,7 +539,7 @@ class _DayRow extends StatelessWidget {
       case ResolvedLesson r:
         final x = r.lesson;
         title = x.subject;
-        meta = [?x.room, ?x.teacher].join(' · ');
+        meta = [?x.room, ?plan.teacherFull(x.teacher)].join(' · ');
         if (x.change == ChangeKind.cancelled) {
           bg = k.p.cancel.bg;
           ink = sub = k.p.cancel.ink;
@@ -671,8 +671,8 @@ bool _isParallelSubject(KidPlan plan, String short) => plan.days.any(
 
 /// Woche als Raster, das die verfügbare Höhe ganz ausfüllt.
 ///
-/// Zeilenhöhe = (freie Höhe − Kopf − Abstände) / Stunden, mindestens
-/// [Sz.gridRowMin]; erst darunter wird gescrollt. Pausen ab 15 Minuten sind
+/// Zeilenhöhe = (freie Höhe − Kopf − Abstände) / Stunden, zwischen
+/// [Sz.gridRowMin] und [Sz.gridRowMax]; unter dem Minimum wird gescrollt. Pausen ab 15 Minuten sind
 /// eine größere Lücke ([Sz.gridBreak]), damit Vormittagsblöcke erkennbar
 /// sind. Heute: Spalte hinterlegt, Jetzt-Linie in Kinderfarbe.
 class WeekGrid extends StatelessWidget {
@@ -719,7 +719,7 @@ class WeekGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, c) {
         final free = c.maxHeight - headHeight - Sp.s - gapSum;
-        final rowH = (free / used.length).clamp(Sz.gridRowMin, double.infinity);
+        final rowH = (free / used.length).clamp(Sz.gridRowMin, Sz.gridRowMax);
         final tops = <int, double>{};
         var y = 0.0;
         for (var i = 0; i < used.length; i++) {
@@ -1020,7 +1020,7 @@ class _GridCell extends StatelessWidget {
           } else if (x.change == ChangeKind.roomChange) {
             lines.add(('Raumwechsel', k.cellTeacher(ink)));
           } else if (x.teacher != null) {
-            lines.add((x.teacher!, k.cellTeacher(ink)));
+            lines.add((plan.teacherLast(x.teacher)!, k.cellTeacher(ink)));
           }
         }
     }
@@ -1153,7 +1153,7 @@ class GroupSheet extends StatelessWidget {
                               children: [
                                 Text(
                                   sameSubject
-                                      ? 'Gruppe ${g.teacher ?? g.groupKey}'
+                                      ? 'Gruppe ${plan.teacherFull(g.teacher) ?? g.groupKey}'
                                       : g.subject,
                                   style: k.planSubject(k.p.ink),
                                 ),
@@ -1162,7 +1162,10 @@ class GroupSheet extends StatelessWidget {
                                       ? [
                                           if (g.room != null) 'Raum ${g.room}',
                                         ].join()
-                                      : [?g.teacher, ?g.room].join(' · '),
+                                      : [
+                                          ?plan.teacherFull(g.teacher),
+                                          ?g.room,
+                                        ].join(' · '),
                                   style: k.planMeta(k.p.muted),
                                 ),
                               ],

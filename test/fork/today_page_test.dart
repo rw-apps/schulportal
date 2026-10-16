@@ -90,7 +90,7 @@ void main() {
         await t.pumpAndSettle();
         expect(t.takeException(), isNull);
         expect(find.text('Lena'), findsOneWidget);
-        expect(find.textContaining('Vertretung Hr. Sommer'), findsOneWidget);
+        expect(find.textContaining('Vertretung Tim Sommer'), findsOneWidget);
         expect(find.textContaining('NOCH 30 MIN.'), findsOneWidget);
 
         // Langer Tag aufklappen: alle 6 Abschnitte, Mittagspause sichtbar.
@@ -102,7 +102,7 @@ void main() {
         expect(t.takeException(), isNull);
         expect(find.text('Musik', skipOffstage: false), findsOneWidget);
         expect(find.text('Pause bis 14:00', skipOffstage: false), findsOneWidget);
-        expect(find.text('Vertretung: Hr. Sommer, R 112', skipOffstage: false),
+        expect(find.text('Vertretung: Tim Sommer, R 112', skipOffstage: false),
             findsOneWidget);
 
         await t.drag(find.byType(CustomScrollView), const Offset(0, -6000));

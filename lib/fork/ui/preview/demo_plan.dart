@@ -1,8 +1,8 @@
 import '../plan/plan_model.dart';
 import '../today/today_model.dart' show ChangeKind;
 
-/// Beispielwochen für die Vorschau „Plan“. Lehrkräfte, Räume und Namen
-/// erfunden. Zeitraster Schule A (Blöcke) aus dem Export vom 16.10.26, Raster der
+/// Beispielwochen für die Vorschau „Plan“. Lehrkräfte (Kürzel und Namen),
+/// Räume und Kindernamen erfunden. Zeitraster Schule A (Blöcke) aus dem Export vom 16.10.26, Raster der
 /// Schule B geschätzt. Dienstag passt zur Vorschau „Heute“ (10:50).
 ///
 /// Parallelgruppen wie im echten Klassenplan von Schule A: Textil in vier Gruppen
@@ -12,16 +12,21 @@ List<KidPlan> demoPlans() => [_lena(), _jonas()];
 PlanCell _c(List<PlanLesson> l) => PlanCell(l);
 PlanCell get _e => const PlanCell([]);
 
-PlanLesson _l(String short, String subject, String room, String teacher,
-        {ChangeKind? change, String? detail}) =>
-    PlanLesson(
-      short: short,
-      subject: subject,
-      room: room,
-      teacher: teacher,
-      change: change,
-      changeDetail: detail,
-    );
+PlanLesson _l(
+  String short,
+  String subject,
+  String room,
+  String teacher, {
+  ChangeKind? change,
+  String? detail,
+}) => PlanLesson(
+  short: short,
+  subject: subject,
+  room: room,
+  teacher: teacher,
+  change: change,
+  changeDetail: detail,
+);
 
 KidPlan _lena() {
   final d = _l('D', 'Deutsch', 'R 112', 'KLE');
@@ -34,10 +39,21 @@ KidPlan _lena() {
   final ph = _l('Ph', 'Physik', 'R 302', 'NEU');
   final g = _l('G', 'Geschichte', 'R 118', 'PAU');
   final sp = _l('Sp', 'Sport', 'Halle 1', 'WAG');
-  final spAus = _l('Sp', 'Sport', 'Halle 1', 'WAG',
-      change: ChangeKind.cancelled);
-  final dVertr = _l('D', 'Deutsch', 'R 112', 'KLE',
-      change: ChangeKind.substitution, detail: 'Hr. Sommer, R 112');
+  final spAus = _l(
+    'Sp',
+    'Sport',
+    'Halle 1',
+    'WAG',
+    change: ChangeKind.cancelled,
+  );
+  final dVertr = _l(
+    'D',
+    'Deutsch',
+    'R 112',
+    'KLE',
+    change: ChangeKind.substitution,
+    detail: 'Tim Sommer, R 112',
+  );
   final reli = [
     _l('ER', 'Ev. Religion', 'R 205', 'ABE'),
     _l('KR', 'Kath. Religion', 'R 206', 'BRA'),
@@ -46,6 +62,21 @@ KidPlan _lena() {
   return KidPlan(
     firstName: 'Lena',
     colorIndex: 0,
+    teacherNames: const {
+      'KLE': 'Petra Klemm',
+      'MAY': 'Lukas Mayer',
+      'BEC': 'Maria Becker',
+      'FIS': 'Anna Fischer',
+      'ORT': 'Stefan Ort',
+      'HOL': 'Julia Holm',
+      'LEH': 'Peter Lehmann',
+      'NEU': 'Sabine Neumann',
+      'PAU': 'Thomas Paulsen',
+      'WAG': 'Nina Wagner',
+      'ABE': 'Eva Abel',
+      'BRA': 'Paul Brandt',
+      'CEL': 'Lea Celik',
+    },
     slots: const [
       PlanSlot(label: '1.', start: '08:00', end: '08:45'),
       PlanSlot(label: '2.', start: '08:45', end: '09:30'),
@@ -57,13 +88,56 @@ KidPlan _lena() {
       PlanSlot(label: '8.', start: '14:45', end: '15:30'),
     ],
     days: [
-      [_c([d]), _c([d]), _c([e]), _c([e]), _c([ch]), _c([ch]), _e, _e],
-      [_c([bio]), _c([bio]), _c([m]), _c([m]), _c([dVertr]), _c([e]),
-          _c([ek]), _c([mu])],
-      [_c([spAus]), _c([spAus]), _c([m]), _c([m]), _c(reli), _c(reli), _e,
-          _e],
-      [_c([ph]), _c([ph]), _c([d]), _c([d]), _c([m]), _c([e]), _e, _e],
-      [_c([g]), _c([g]), _c([bio]), _c([bio]), _c([m]), _c([sp]), _e, _e],
+      [
+        _c([d]),
+        _c([d]),
+        _c([e]),
+        _c([e]),
+        _c([ch]),
+        _c([ch]),
+        _e,
+        _e,
+      ],
+      [
+        _c([bio]),
+        _c([bio]),
+        _c([m]),
+        _c([m]),
+        _c([dVertr]),
+        _c([e]),
+        _c([ek]),
+        _c([mu]),
+      ],
+      [
+        _c([spAus]),
+        _c([spAus]),
+        _c([m]),
+        _c([m]),
+        _c(reli),
+        _c(reli),
+        _e,
+        _e,
+      ],
+      [
+        _c([ph]),
+        _c([ph]),
+        _c([d]),
+        _c([d]),
+        _c([m]),
+        _c([e]),
+        _e,
+        _e,
+      ],
+      [
+        _c([g]),
+        _c([g]),
+        _c([bio]),
+        _c([bio]),
+        _c([m]),
+        _c([sp]),
+        _e,
+        _e,
+      ],
     ],
   );
 }
@@ -77,9 +151,14 @@ KidPlan _jonas() {
   final ku = _l('Ku', 'Kunst', 'Atelier', 'KUR');
   final sp = _l('Sp', 'Sport', 'Halle', 'BUC');
   List<PlanLesson> txt({bool raumwechsel = false}) => [
-    _l('TXT', 'Textil', raumwechsel ? 'R101' : 'R106', 'ABE',
-        change: raumwechsel ? ChangeKind.roomChange : null,
-        detail: raumwechsel ? 'R101 statt R106' : null),
+    _l(
+      'TXT',
+      'Textil',
+      raumwechsel ? 'R101' : 'R106',
+      'ABE',
+      change: raumwechsel ? ChangeKind.roomChange : null,
+      detail: raumwechsel ? 'R101 statt R106' : null,
+    ),
     _l('TXT', 'Textil', 'G107', 'BRU'),
     _l('TXT', 'Textil', 'G108', 'CEL'),
     _l('TXT', 'Textil', 'G109', 'DOR'),
@@ -87,6 +166,19 @@ KidPlan _jonas() {
   return KidPlan(
     firstName: 'Jonas',
     colorIndex: 1,
+    teacherNames: const {
+      'NOR': 'Ole Nordmann',
+      'DIE': 'Ina Dietz',
+      'WLF': 'Jan Wolf',
+      'MEI': 'Sven Meier',
+      'KRA': 'Lisa Kramer',
+      'KUR': 'Tom Kurz',
+      'BUC': 'Mia Buch',
+      'ABE': 'Eva Abel',
+      'BRU': 'Ben Brück',
+      'CEL': 'Lea Celik',
+      'DOR': 'Rita Dorn',
+    },
     slots: const [
       PlanSlot(label: '0. Block', start: '08:00', end: '08:45'),
       PlanSlot(label: '1. Block', start: '09:00', end: '10:15'),
@@ -95,11 +187,41 @@ KidPlan _jonas() {
       PlanSlot(label: '4. Block', start: '14:00', end: '15:15'),
     ],
     days: [
-      [_e, _c([nawi]), _c([d]), _c([ku]), _c([ku])],
-      [_e, _c([gl]), _c([e]), _c([m]), _e],
-      [_e, _c([d]), _c([sp]), _c([m]), _e],
-      [_e, _c(txt(raumwechsel: true)), _c([e]), _c([nawi]), _e],
-      [_e, _c(txt()), _c([e]), _c([m]), _e],
+      [
+        _e,
+        _c([nawi]),
+        _c([d]),
+        _c([ku]),
+        _c([ku]),
+      ],
+      [
+        _e,
+        _c([gl]),
+        _c([e]),
+        _c([m]),
+        _e,
+      ],
+      [
+        _e,
+        _c([d]),
+        _c([sp]),
+        _c([m]),
+        _e,
+      ],
+      [
+        _e,
+        _c(txt(raumwechsel: true)),
+        _c([e]),
+        _c([nawi]),
+        _e,
+      ],
+      [
+        _e,
+        _c(txt()),
+        _c([e]),
+        _c([m]),
+        _e,
+      ],
     ],
   );
 }

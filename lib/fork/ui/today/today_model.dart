@@ -38,7 +38,8 @@ class DayLesson {
   final String? teacher;
   final ChangeKind? change;
 
-  /// „Hr. Sommer, R 112“ bzw. „R101 statt R106“.
+  /// „Tim Sommer, R 112“ bzw. „R101 statt R106“. Lehrkräfte immer
+  /// ausgeschrieben (Vorname Nachname), nie als Kürzel.
   final String? changeDetail;
 
   bool get cancelled => change == ChangeKind.cancelled;

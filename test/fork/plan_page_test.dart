@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/ui/plan/plan_model.dart';
+import 'package:lanis/fork/ui/kit.dart';
 import 'package:lanis/fork/ui/plan/plan_page.dart';
 import 'package:lanis/fork/ui/preview/demo_plan.dart';
 import 'package:lanis/fork/ui/preview/preview_shell.dart';
@@ -87,6 +88,15 @@ void main() {
       expect(slots['NaWi'], 0, reason: 'Mo 1. Block zuerst');
     });
 
+    test('Lehrkräfte ausgeschrieben, unbekannte als Kürzel', () {
+      expect(jonas.teacherFull('WLF'), 'Jan Wolf');
+      expect(jonas.teacherLast('WLF'), 'Wolf');
+      expect(jonas.teacherFull('XYZ'), 'XYZ', reason: 'z. B. Vertretung');
+      expect(jonas.teacherLast(null), isNull);
+      expect(portalNameToDisplay('Muster, Max'), 'Max Muster');
+      expect(portalNameToDisplay('Muster'), 'Muster');
+    });
+
     test('Kurzformen im Raster', () {
       PlanLesson l(String s) => PlanLesson(subject: s, short: 'X');
       expect(gridName(l('Biologie')), 'Bio');
@@ -133,7 +143,7 @@ void main() {
     await t.tap(find.text('Textil'));
     await t.pumpAndSettle();
     expect(find.text('Textil – Gruppe wählen'), findsOneWidget);
-    await t.tap(find.text('Gruppe BRU'));
+    await t.tap(find.text('Gruppe Ben Brück'));
     await t.pumpAndSettle();
 
     expect(find.text('Gruppe wählen:'), findsNothing);
@@ -193,5 +203,25 @@ void main() {
     final last = t.getRect(find.text('Musik'));
     final nav = t.getRect(find.byType(FloatingNavBar));
     expect(last.bottom, lessThan(nav.top));
+  });
+
+  testWidgets('Woche: Zeilen höchstens Sz.gridRowMax hoch (Jonas, 4 Blöcke)',
+      (t) async {
+    await _pixel(t);
+    await t.pumpWidget(_app());
+    await _openPlan(t, kid: 'Jonas');
+    await t.tap(find.text('Woche'));
+    await t.pumpAndSettle();
+    // Di 2. Block Englisch ist eine Einzelstunde.
+    final cell = t.getRect(find.ancestor(
+      of: find.text('Wolf').at(1),
+      matching: find.byType(Material),
+    ).first);
+    expect(cell.height, lessThanOrEqualTo(Sz.gridRowMax + 0.5));
+    expect(find.text('Jan Wolf'), findsNothing,
+        reason: 'im Raster nur der Nachname');
+    await t.tap(find.text('Tag'));
+    await t.pumpAndSettle();
+    expect(find.textContaining('Jan Wolf'), findsOneWidget);
   });
 }

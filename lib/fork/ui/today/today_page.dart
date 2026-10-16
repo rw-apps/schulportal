@@ -4,13 +4,28 @@ import '../kit.dart';
 import 'today_model.dart';
 
 const _weekdaysLong = [
-  'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag',
+  'Montag',
+  'Dienstag',
+  'Mittwoch',
+  'Donnerstag',
+  'Freitag',
+  'Samstag',
   'Sonntag',
 ];
 const _weekdaysShort = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const _months = [
-  'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August',
-  'September', 'Oktober', 'November', 'Dezember',
+  'Januar',
+  'Februar',
+  'März',
+  'April',
+  'Mai',
+  'Juni',
+  'Juli',
+  'August',
+  'September',
+  'Oktober',
+  'November',
+  'Dezember',
 ];
 
 DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
@@ -18,10 +33,11 @@ DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
 /// Abstand in Kalendertagen. Über UTC gerechnet, weil `difference` in
 /// Ortszeit über die Zeitumstellung (z. B. 25.10.26) 23 Stunden ergibt und
 /// `inDays` dann einen Tag zu wenig liefert.
-int dayDiff(DateTime from, DateTime to) =>
-    DateTime.utc(to.year, to.month, to.day)
-        .difference(DateTime.utc(from.year, from.month, from.day))
-        .inDays;
+int dayDiff(DateTime from, DateTime to) => DateTime.utc(
+  to.year,
+  to.month,
+  to.day,
+).difference(DateTime.utc(from.year, from.month, from.day)).inDays;
 
 /// „DIENSTAG, 20. OKTOBER“
 String dateCaps(DateTime d) =>
@@ -82,7 +98,11 @@ class TodayPage extends StatelessWidget {
           bottom: false,
           sliver: SliverPadding(
             padding: const EdgeInsets.fromLTRB(
-              Sp.page + Sp.xs, Sp.xl, Sp.page + Sp.xs, 0),
+              Sp.page + Sp.xs,
+              Sp.xl,
+              Sp.page + Sp.xs,
+              0,
+            ),
             sliver: SliverToBoxAdapter(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,18 +177,16 @@ class WeekStrip extends StatelessWidget {
     for (final kid in data.kids) {
       for (final c in kid.changes) {
         if (_day(c.day) == day) {
-          dots.add(c.kind == ChangeKind.cancelled
-              ? k.p.cancel.dot
-              : k.p.change.dot);
+          dots.add(
+            c.kind == ChangeKind.cancelled ? k.p.cancel.dot : k.p.change.dot,
+          );
         }
       }
     }
     for (final w in data.week) {
       if (_day(w.day) != day) continue;
       final ci = w.childIndex;
-      dots.add(ci == null
-          ? k.p.muted
-          : k.kid(data.kids[ci].colorIndex).accent);
+      dots.add(ci == null ? k.p.muted : k.kid(data.kids[ci].colorIndex).accent);
     }
     return dots.take(3).toList();
   }
@@ -308,8 +326,7 @@ class _ImportantRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final tone =
-        item.kind == ChangeKind.cancelled ? k.p.cancel : k.p.change;
+    final tone = item.kind == ChangeKind.cancelled ? k.p.cancel : k.p.change;
     final what = switch (item.kind) {
       ChangeKind.cancelled => 'fällt aus',
       ChangeKind.roomChange => 'Raumwechsel ${item.detail ?? ''}'.trim(),
@@ -472,15 +489,17 @@ class _KidCardState extends State<KidCard> {
     final rows = <Widget>[];
     for (var i = 0; i < items.length; i += 2) {
       rows.add(const SizedBox(height: Sp.s));
-      rows.add(Row(
-        children: [
-          Expanded(child: items[i]),
-          if (i + 1 < items.length) ...[
-            const SizedBox(width: Sp.s),
-            Expanded(child: items[i + 1]),
+      rows.add(
+        Row(
+          children: [
+            Expanded(child: items[i]),
+            if (i + 1 < items.length) ...[
+              const SizedBox(width: Sp.s),
+              Expanded(child: items[i + 1]),
+            ],
           ],
-        ],
-      ));
+        ),
+      );
     }
     return [const SizedBox(height: Sp.xs), ...rows];
   }
@@ -519,14 +538,16 @@ class _NowPanel extends StatelessWidget {
     switch (status.phase) {
       case DayPhase.running:
         final x = l[status.current!];
-        label = 'JETZT · ${x.slot.toUpperCase()} · NOCH '
+        label =
+            'JETZT · ${x.slot.toUpperCase()} · NOCH '
             '${status.minutesLeft} MIN.';
         title = x.subject;
         meta = details(x);
       case DayPhase.before:
       case DayPhase.gap:
         final x = l[status.next!];
-        label = '${status.phase == DayPhase.before ? 'ERSTE STUNDE' : 'GLEICH'}'
+        label =
+            '${status.phase == DayPhase.before ? 'ERSTE STUNDE' : 'GLEICH'}'
             ' · ${x.slot.toUpperCase()} · UM ${x.start}';
         title = x.subject;
         meta = details(x);
@@ -588,9 +609,7 @@ class _DayBar extends StatelessWidget {
     }
 
     final next = status.next == null ? null : l[status.next!];
-    final center = next == null
-        ? ''
-        : 'Danach ${next.start} ${next.subject}';
+    final center = next == null ? '' : 'Danach ${next.start} ${next.subject}';
     final lastEnd = l.lastWhere((x) => !x.cancelled, orElse: () => l.last).end;
 
     return Column(
@@ -669,16 +688,20 @@ class _DayList extends StatelessWidget {
     final rows = <Widget>[];
     for (var i = 0; i < l.length; i++) {
       if (gapBefore(l, i) >= pauseRowMinutes) {
-        rows.add(Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Sp.xs, vertical: Sp.xs),
-          child: Row(
-            children: [
-              const SizedBox(width: Sz.slotColumn + Sp.s + Sp.xxs),
-              Text('Pause bis ${l[i].start}', style: k.rowPause),
-            ],
+        rows.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Sp.xs,
+              vertical: Sp.xs,
+            ),
+            child: Row(
+              children: [
+                const SizedBox(width: Sz.slotColumn + Sp.s + Sp.xxs),
+                Text('Pause bis ${l[i].start}', style: k.rowPause),
+              ],
+            ),
           ),
-        ));
+        );
       }
       rows.add(_row(k, l[i], i));
     }
@@ -700,7 +723,7 @@ class _DayList extends StatelessWidget {
     Color? bg;
     var subject = x.subject;
     // Rechts nur die Uhrzeit (und Raum); Angaben zur Änderung stehen als
-    // zweite Zeile unter dem Fach. Ursache: „11:40 · Hr. Sommer, R 112“
+    // zweite Zeile unter dem Fach. Ursache: „11:40 · Tim Sommer, R 112“
     // rechts drückte das Fach bei Schrift ×1,15 in zwei Zeilen.
     var right = [x.start, if (x.change == null) ?x.room].join(' · ');
     String? second;
@@ -753,10 +776,12 @@ class _DayList extends StatelessWidget {
               children: [
                 Text(
                   subject,
-                  style: k.rowSubject(ink, strong: strong).copyWith(
-                    decoration: done ? TextDecoration.lineThrough : null,
-                    decorationColor: ink,
-                  ),
+                  style: k
+                      .rowSubject(ink, strong: strong)
+                      .copyWith(
+                        decoration: done ? TextDecoration.lineThrough : null,
+                        decorationColor: ink,
+                      ),
                 ),
                 if (second != null) Text(second, style: k.rowTime(sub)),
               ],
@@ -919,9 +944,10 @@ class _Tile extends StatelessWidget {
     final ci = item.childIndex;
     final kid = ci == null ? null : data.kids[ci];
     final color = kid == null ? k.p.muted : k.kid(kid.colorIndex).accent;
-    final caption = [relativeDay(item.day, data.now), ?item.time]
-        .join(' · ')
-        .toUpperCase();
+    final caption = [
+      relativeDay(item.day, data.now),
+      ?item.time,
+    ].join(' · ').toUpperCase();
     return Container(
       width: Sz.tileWidth,
       padding: const EdgeInsets.all(Sp.ml),
