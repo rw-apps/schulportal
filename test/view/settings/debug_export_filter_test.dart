@@ -43,4 +43,19 @@ void main() {
     );
     expect(r.skipped, isEmpty);
   });
+
+  test('Kurs-Links: zwei verschiedene, ohne Halbjahres-Varianten', () {
+    // Muster wie im Eltern-Export (Ziffern ersetzt).
+    const html =
+        '<a href="meinunterricht.php?a=sus_view&amp;id=11&amp;p=7&amp;halb=1">'
+        '<a href="meinunterricht.php?a=sus_view&amp;id=11&amp;p=7">'
+        '<a href="meinunterricht.php?a=sus_view&amp;id=11&amp;p=7">'
+        '<a href="meinunterricht.php?a=sus_view&amp;id=22&amp;p=7">'
+        '<a href="meinunterricht.php?a=sus_view&amp;id=33&amp;p=7">';
+    expect(parseCourseDetailLinks(html), [
+      'meinunterricht.php?a=sus_view&id=11&p=7',
+      'meinunterricht.php?a=sus_view&id=22&p=7',
+    ]);
+    expect(parseCourseDetailLinks(''), isEmpty);
+  });
 }

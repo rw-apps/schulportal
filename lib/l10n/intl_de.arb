@@ -188,6 +188,7 @@
   "debugExportPresetSubstitutionsMain": "Vertretungsplan (Hauptseite)",
   "debugExportPresetAppOverview": "App-Übersicht der Schule",
   "debugExportPresetAbsences": "Abwesenheiten (Krankmeldung, nur Ansicht)",
+  "debugExportPresetLessonsCourseDetail": "Mein Unterricht: Kursseiten (2 Kurse)",
   "debugExportPresetTimetable": "Stundenplan",
   "debugExportPresetCalendarMain": "Kalender (Hauptseite)",
   "debugExportPresetLessonsStudent": "Mein Unterricht (Schüler)",

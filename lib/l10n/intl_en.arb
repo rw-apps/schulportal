@@ -219,6 +219,7 @@
   "debugExportPresetSubstitutionsMain": "Substitutions (main page)",
   "debugExportPresetAppOverview": "School app overview",
   "debugExportPresetAbsences": "Absences (sick notes, view only)",
+  "debugExportPresetLessonsCourseDetail": "My lessons: course pages (2 courses)",
   "debugExportPresetTimetable": "Timetable",
   "debugExportPresetCalendarMain": "Calendar (main page)",
   "debugExportPresetLessonsStudent": "Lessons / Mein Unterricht (student)",

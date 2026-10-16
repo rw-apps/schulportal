@@ -25,6 +25,7 @@ enum DebugExportPresetId {
   timetable,
   calendarMain,
   lessonsStudent,
+  lessonsCourseDetail,
   lessonsTeacher,
   dataStorage,
   studyGroups,
@@ -86,6 +87,29 @@ class DebugExportSection {
 /// Shared state while expanding selected presets into HTTP sections.
 class DebugExportPresetContext {
   String? substitutionsHtml;
+
+  /// Fork: Antwort von meinunterricht.php (gesetzt im Runner nach dem Preset
+  /// lessonsStudent), Quelle der Kurs-Links für [parseCourseDetailLinks].
+  String? lessonsHtml;
+}
+
+/// Fork: bis zu [max] verschiedene Kurs-Detail-Links aus meinunterricht.php.
+///
+/// Ursache: Für Elternkonten fehlte eine echte Antwort der Kursseite
+/// (`meinunterricht.php?a=sus_view&id=…&p=<Kind>`, Export Schule A 16.10.26); ohne
+/// sie lässt sich die Detailansicht für Eltern nicht bauen. Grenze: Links mit
+/// `halb=` (Halbjahres-Varianten derselben Mappe) werden ausgelassen, damit
+/// zwei VERSCHIEDENE Kurse kommen.
+List<String> parseCourseDetailLinks(String html, {int max = 2}) {
+  final links = <String>[];
+  for (final m in RegExp(r'href="(meinunterricht\.php\?a=sus_view[^"]*)"')
+      .allMatches(html)) {
+    final link = m.group(1)!.replaceAll('&amp;', '&');
+    if (link.contains('halb=') || links.contains(link)) continue;
+    links.add(link);
+    if (links.length >= max) break;
+  }
+  return links;
 }
 
 typedef DebugExportSectionBuilder =
@@ -280,6 +304,20 @@ final debugExportPresets = <DebugExportPreset>[
     label: (l) => l.debugExportPresetLessonsStudent,
     buildSections: (_) =>
         _single(DebugExportPresetId.lessonsStudent, _get('meinunterricht.php')),
+  ),
+  // Fork: Kurs-Detailseiten (nur GET). Braucht lessonsStudent davor; ohne
+  // dessen Antwort entstehen keine Abschnitte.
+  DebugExportPreset(
+    id: DebugExportPresetId.lessonsCourseDetail,
+    modulePhp: 'meinunterricht.php',
+    label: (l) => l.debugExportPresetLessonsCourseDetail,
+    buildSections: (ctx) => [
+      for (final (i, link) in parseCourseDetailLinks(ctx.lessonsHtml ?? '').indexed)
+        DebugExportSection(
+          name: '${DebugExportPresetId.lessonsCourseDetail.name}#${i + 1}',
+          request: _get(link),
+        ),
+    ],
   ),
   DebugExportPreset(
     id: DebugExportPresetId.lessonsTeacher,

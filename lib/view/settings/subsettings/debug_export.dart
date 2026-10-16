@@ -485,13 +485,18 @@ Future<String> runDebugExportPresets({
     if (preset.id == DebugExportPresetId.substitutionsMain) continue;
 
     for (final section in preset.buildSections(ctx)) {
-      await appendRequestSection(
+      final body = await appendRequestSection(
         report: report,
         sectionName: section.name,
         dio: dio,
         request: section.request,
         note: section.note,
       );
+      // Fork: Übersicht merken für lessonsCourseDetail (läuft danach, da
+      // debugExportPresets die Reihenfolge vorgibt).
+      if (preset.id == DebugExportPresetId.lessonsStudent) {
+        ctx.lessonsHtml = body;
+      }
     }
   }
 

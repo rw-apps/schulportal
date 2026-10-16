@@ -1,5 +1,9 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9308**
+
+- Debug-Export: neuer Punkt „Mein Unterricht: Kursseiten“, öffnet die ersten zwei Kurse nur lesend. Nötig, um Hausaufgaben und Kurse für Elternkonten zu bauen.
+
 **4.1.0+9307**
 
 - Neu für Elternkonten: **Stundenplan** des Kindes (bisher nur für Schülerkonten).
