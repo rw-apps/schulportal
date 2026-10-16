@@ -1,5 +1,9 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9303**
+
+- Debug-Export um die „App-Übersicht der Schule“ ergänzt: Sie zeigt, welche Portal-Module die Schule freigeschaltet hat (z. B. Krankmeldung).
+
 **4.1.0+9302**
 
 - Debug-Export wieder erreichbar: jetzt direkt unter Einstellungen, statt wie bisher über die entfernte Seite „Fehlerberichte“.

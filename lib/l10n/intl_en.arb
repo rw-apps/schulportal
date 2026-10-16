@@ -217,6 +217,7 @@
   "debugExportNoSession": "No active session. Log in before exporting presets.",
   "debugExportSelectAtLeastOne": "Select at least one preset.",
   "debugExportPresetSubstitutionsMain": "Substitutions (main page)",
+  "debugExportPresetAppOverview": "School app overview",
   "debugExportPresetTimetable": "Timetable",
   "debugExportPresetCalendarMain": "Calendar (main page)",
   "debugExportPresetLessonsStudent": "Lessons / Mein Unterricht (student)",

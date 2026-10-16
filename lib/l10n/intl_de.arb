@@ -186,6 +186,7 @@
   "debugExportNoSession": "Keine aktive Sitzung. Bitte zuerst anmelden.",
   "debugExportSelectAtLeastOne": "Bitte mindestens ein Preset auswählen.",
   "debugExportPresetSubstitutionsMain": "Vertretungsplan (Hauptseite)",
+  "debugExportPresetAppOverview": "App-Übersicht der Schule",
   "debugExportPresetTimetable": "Stundenplan",
   "debugExportPresetCalendarMain": "Kalender (Hauptseite)",
   "debugExportPresetLessonsStudent": "Mein Unterricht (Schüler)",

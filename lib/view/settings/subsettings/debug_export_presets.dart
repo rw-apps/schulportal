@@ -19,6 +19,7 @@ const _conversationsXhrHeaders = <String, String>{
 };
 
 enum DebugExportPresetId {
+  appOverview,
   substitutionsMain,
   timetable,
   calendarMain,
@@ -215,6 +216,19 @@ List<DebugExportSection> _buildCalendarEvents(DebugExportPresetContext ctx) {
 
 /// Ordered list used by the picker and the export runner.
 final debugExportPresets = <DebugExportPreset>[
+  // Fork: App-Übersicht der Schule. Ursache: Die übrigen Presets decken nur
+  // Applets ab, die liblanis schon kennt; welche Module eine Schule darüber
+  // hinaus freigeschaltet hat (z. B. Krankmeldung/Abwesenheit, Elternbriefe),
+  // zeigt nur diese Liste — dieselbe Quelle wie Session.getFastTravelMenu()
+  // in liblanis (session.dart). Grenze: liefert nur Namen/Links, keine Inhalte.
+  DebugExportPreset(
+    id: DebugExportPresetId.appOverview,
+    label: (l) => l.debugExportPresetAppOverview,
+    buildSections: (_) => _single(
+      DebugExportPresetId.appOverview,
+      _get('startseite.php?a=ajax&f=apps'),
+    ),
+  ),
   DebugExportPreset(
     id: DebugExportPresetId.substitutionsMain,
     label: (l) => l.debugExportPresetSubstitutionsMain,
