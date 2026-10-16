@@ -16,7 +16,9 @@ final timeTableDefinition = AppletDefinition(
   appletType: AppletType.nested,
   addDivider: false,
   label: (context) => AppLocalizations.of(context).timeTable,
-  supportedAccountTypes: [AccountType.student],
+  // Fork: auch Eltern (Klassenplan des Kindes). Beleg und Grenze in
+  // fork/parent_support.dart (forkExtraAccountTypes).
+  supportedAccountTypes: [AccountType.student, AccountType.parent],
   refreshInterval: Duration(hours: 1),
   allowOffline: true,
   settingsDefaults: {
@@ -28,7 +30,8 @@ final timeTableDefinition = AppletDefinition(
     'lesson-colors': <String, dynamic>{},
   },
   bodyBuilder: (context, accountType, openDrawerCb) {
-    if (accountType == AccountType.student) {
+    if (accountType == AccountType.student ||
+        accountType == AccountType.parent) {
       return StudentTimetableBetterView(openDrawerCb: openDrawerCb);
     } else {
       return Placeholder();

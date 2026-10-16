@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:riverpod/misc.dart' show Override;
 
 import '../core/native_adapter_instance.dart';
+import '../fork/parent_support.dart';
 import '../utils/glitchtip.dart';
 import 'database_storage_migration.dart';
 import 'flutter_secret_store.dart';
@@ -26,7 +27,7 @@ Future<List<Override>> bootstrapLanisClient({
     persistentDirectory: persistentDir,
   );
 
-  return LanisClient.configure(
+  final overrides = LanisClient.configure(
     databasePath: databasePath,
     secretStore: store,
     documentCacheDirectory: p.join(tempDir.path, 'lanis_documents'),
@@ -42,4 +43,6 @@ Future<List<Override>> bootstrapLanisClient({
       );
     },
   );
+  // Fork: Eltern-Freischaltungen (fork/parent_support.dart).
+  return [...overrides, ...forkProviderOverrides()];
 }

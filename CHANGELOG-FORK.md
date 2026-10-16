@@ -1,5 +1,9 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9307**
+
+- Neu für Elternkonten: **Stundenplan** des Kindes (bisher nur für Schülerkonten).
+
 **4.1.0+9306**
 
 - Debug-Export fragt nur noch Module ab, die die Schule freigeschaltet hat. Ruft man ein anderes auf, beendet das Portal die Anmeldung, und alle weiteren Abfragen wären leer gewesen.
