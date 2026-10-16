@@ -65,6 +65,7 @@ class _DebugExportState extends ConsumerState<DebugExport> {
         ref: ref,
         selected: _selected,
         dio: session.dio,
+        session: session,
       );
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
@@ -175,6 +176,73 @@ Future<void> writeDebugExportHeader({
     'APP VERSION: ${packageInfo.appName} ${packageInfo.buildNumber} ${packageInfo.version}',
   );
   report.log('INSTALL STORE: ${packageInfo.installerStore}');
+}
+
+/// Fork: Sitzungsprüfung vor den Presets.
+///
+/// Ursache: Der erste Export (Schule A, Elternkonto, 16.10.26)
+/// lieferte in allen elf Presets „Login nötig“ (302 → forward.php, Cookie
+/// i=0) — die Sitzung war zum Exportzeitpunkt ungültig, der Export damit
+/// wertlos und die Ursache unsichtbar. Diese Prüfung hält fest, OB die
+/// Sitzung lebte (Cookie-NAMEN, Keep-Alive-Timer, Probe auf die App-Liste),
+/// und meldet sich bei toter Sitzung einmal neu an, damit die Presets danach
+/// echte Daten liefern.
+///
+/// Grenze: Es werden nur Cookie-Namen protokolliert, keine Werte — der Wert
+/// von `sid` ist ein Sitzungsschlüssel und gehört nicht in eine Datei, die
+/// weitergegeben wird. Ausnahme `i` (Schulnummer, nicht geheim).
+Future<void> writeSessionCheck({
+  required MemoryLogger report,
+  required LanisSession session,
+}) async {
+  report.write('============= BEGIN SESSION CHECK =============');
+  Future<bool> probe(String label) async {
+    try {
+      final uri = Uri.parse('$sphBase/');
+      final cookies = await session.jar.loadForRequest(uri);
+      final names = cookies.map((c) => c.name == 'i' ? 'i=${c.value}' : c.name);
+      report.log('[$label] Cookies (nur Namen): ${names.join(', ')}');
+      report.log(
+        '[$label] Keep-Alive-Timer aktiv: ${session.preventLogoutTimer?.isActive ?? false}',
+      );
+      report.log('[$label] Kontoart: ${session.accountTypeOrNull?.name}');
+      final r = await session.dio.get(
+        '$sphBase/startseite.php?a=ajax&f=apps',
+        options: Options(followRedirects: false, validateStatus: (_) => true),
+      );
+      var ok = false;
+      if (r.statusCode == 200) {
+        try {
+          final data = r.data is String ? jsonDecode(r.data as String) : r.data;
+          ok = data is Map && data['entrys'] is List;
+        } catch (_) {}
+      }
+      report.log(
+        '[$label] Probe App-Liste: HTTP ${r.statusCode}'
+        '${r.headers.value('location') != null ? ' → ${r.headers.value('location')}' : ''}'
+        ' → ${ok ? 'ANGEMELDET' : 'NICHT ANGEMELDET'}',
+      );
+      return ok;
+    } catch (e) {
+      report.log('[$label] Probe fehlgeschlagen: ${e.runtimeType}');
+      return false;
+    }
+  }
+
+  final alive = await probe('vorher');
+  if (!alive) {
+    report.log('Sitzung ungültig → einmalige Neuanmeldung');
+    try {
+      await session.authenticate(withoutData: true);
+      report.log('Neuanmeldung: erfolgreich');
+    } catch (e) {
+      // Nur der Typ: Meldungstexte könnten Portal-Inhalte enthalten.
+      report.log('Neuanmeldung: FEHLER ${e.runtimeType}');
+    }
+    await probe('nachher');
+  }
+  report.write('============= END SESSION CHECK =============');
+  report.write('');
 }
 
 void _writeRequestDescription(
@@ -322,11 +390,15 @@ Future<String> runDebugExportPresets({
   required WidgetRef ref,
   required Set<DebugExportPresetId> selected,
   required Dio dio,
+  LanisSession? session,
 }) async {
   final report = MemoryLogger();
   await writeDebugExportHeader(report: report, ref: ref);
   report.log('SELECTED PRESETS: ${selected.map((e) => e.name).join(', ')}');
   report.write('');
+  if (session != null) {
+    await writeSessionCheck(report: report, session: session);
+  }
 
   final selectedPresets = [
     for (final preset in debugExportPresets)
