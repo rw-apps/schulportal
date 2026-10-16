@@ -1,5 +1,13 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9326**
+
+- **Die neue Oberfläche ist jetzt die Startseite.** Nach dem Öffnen und nach einem Kontowechsel erscheint direkt „Heute“.
+- Die bisherige Ansicht bleibt vollständig erreichbar: „Mehr“ → „Alle Funktionen“. „Zurück“ führt von dort wieder in die neue Oberfläche. Im Menü der bisherigen Ansicht steht oben „Neue Oberfläche“.
+- Unter „Mehr“ lässt sich der Start umstellen („Mit der neuen Oberfläche starten“).
+- „Zurück“ in der neuen Oberfläche führt erst nach „Heute“, erst dann aus der App.
+- Kurs- und Kalenderseiten aus der neuen Oberfläche öffnen sich darüber; „Zurück“ kehrt an dieselbe Stelle zurück.
+
 **4.1.0+9325**
 
 - **Nachrichten** im neuen Stil: Liste der Unterhaltungen, ungelesene hervorgehoben mit Punkt, oben „Neue Nachricht“. Lesen und Antworten öffnet die gewohnte Unterhaltung.

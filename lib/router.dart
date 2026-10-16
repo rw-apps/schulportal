@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart';
+import 'package:lanis/fork/start.dart';
+import 'package:lanis/fork/ui/preview/preview_shell.dart';
 import 'package:lanis/applets/definitions.dart';
 import 'package:lanis/home_page.dart';
 import 'package:lanis/startup.dart';
@@ -225,6 +227,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           return HomePage(navigationShell: navigationShell);
         },
         branches: shellBranches,
+      ),
+      // Fork: neue Oberfläche als eigene Seite über dem Lanis-Gerüst; von
+      // hier führen push-Aufrufe in die bisherigen Bereiche und „Zurück“
+      // wieder hierher (geprüft mit go_router: Root-Route → Zweig einer
+      // StatefulShellRoute → pop).
+      GoRoute(
+        path: forkHomePath,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) =>
+            const PreviewShell(liveData: true, asRoot: true),
       ),
       GoRoute(
         path: SettingsDeepLinks.moodle,

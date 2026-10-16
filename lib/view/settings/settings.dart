@@ -1,4 +1,4 @@
-import 'package:lanis/fork/ui/preview/preview_shell.dart';
+import 'package:lanis/fork/start.dart';
 import 'dart:io';
 
 import 'package:app_settings/app_settings.dart';
@@ -211,20 +211,16 @@ class _SettingsScreenState
       ),
       SettingsGroup(
         tiles: [
-          // Fork: Vorschau der neuen Oberfläche (fork/ui/preview), nur zur
-          // Abnahme auf dem Gerät; erfundene Daten, keine Portal-Abfragen.
+          // Fork: neue Oberfläche (fork/ui/preview/preview_shell.dart), seit
+          // 4.1.0+9326 Startseite; der Start lässt sich dort unter „Mehr“
+          // umstellen (fork/start.dart).
           SettingsTile(
-            title: (context) => 'Neue Oberfläche (Vorschau)',
+            title: (context) => 'Neue Oberfläche',
             subtitle: (context) async =>
-                '„Plan“ mit echten Daten, sonst Beispieldaten',
+                'Heute, Kalender, Unterricht, '
+                'Nachrichten; Start unter „Mehr“ wählbar',
             icon: Icons.auto_awesome_outlined,
-            screen: (context) async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const PreviewShell(liveData: true),
-                ),
-              );
-            },
+            screen: (context) async => context.go(forkHomePath),
           ),
           // Fork: Kachel „Fehlerberichte“ ersetzt durch direkten Debug-Export.
           // Ursache: Der Debug-Export war nur über die Fehlerberichte-Seite

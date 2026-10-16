@@ -2,9 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart'
-    show TypedSettings, sharedOverAccountSettingsProvider;
+    show
+        AccountType,
+        TypedSettings,
+        activeAccountProvider,
+        sharedOverAccountSettingsProvider,
+        supportedAppletPhpUrlsProvider;
 
 import 'package:lanis/applets/external_definitions.dart';
+import 'package:lanis/fork/start.dart';
+import 'package:lanis/home_page.dart' show firstSupportedHomePathFor;
 import 'package:lanis/utils/deep_link.dart';
 
 import '../../school_links.dart';
@@ -37,11 +44,16 @@ enum ShellTab { today, calendar, courses, messages, more }
 /// den Einstellungen geöffnet zeigt sie echte Daten ([LiveDataScope]), in
 /// Tests erfundene ([demoFamily], [demoPlans]).
 class PreviewShell extends StatefulWidget {
-  const PreviewShell({super.key, this.liveData = false});
+  const PreviewShell({super.key, this.liveData = false, this.asRoot = false});
 
   /// Echte Daten des angemeldeten Kontos. Tests und Bildschirmfotos: false
   /// (Beispieldaten, ohne Portal und ohne ProviderScope).
   final bool liveData;
+
+  /// Als Startseite (Route [forkHomePath]) statt über den Einstellungen
+  /// geöffnet: bisherige Bereiche werden darüber gelegt (push), statt die
+  /// neue Oberfläche zu schließen.
+  final bool asRoot;
 
   @override
   State<PreviewShell> createState() => _PreviewShellState();
@@ -71,10 +83,13 @@ class _PreviewShellState extends State<PreviewShell> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final stored = _deviceSettings()?.getString(_fontKey);
-      if (stored != null && mounted) {
-        setState(() => _font = KitFontStep.parse(stored));
-      }
+      final settings = _deviceSettings();
+      final stored = settings?.getString(_fontKey);
+      if (!mounted || settings == null) return;
+      setState(() {
+        if (stored != null) _font = KitFontStep.parse(stored);
+        _startNew = newUiIsStart(settings);
+      });
     });
   }
 
@@ -95,12 +110,42 @@ class _PreviewShellState extends State<PreviewShell> {
       );
   }
 
-  /// In eine bisherige Lanis-Ansicht wechseln. Die neue Oberfläche liegt
-  /// (noch) als eigene Seite über dem Router; erst schließen, dann dorthin.
+  /// In eine bisherige Lanis-Ansicht wechseln. Als Startseite: darüber
+  /// legen, „Zurück“ führt hierher. Aus den Einstellungen geöffnet (eigene
+  /// Seite über dem Router): erst schließen, dann dorthin.
   void _goOld(String path) {
     final router = GoRouter.maybeOf(context);
+    if (widget.asRoot) {
+      router?.push(path);
+      return;
+    }
     Navigator.of(context).maybePop();
     router?.go(path);
+  }
+
+  bool? _startNew;
+
+  void _setStartNew(bool v) {
+    setState(() => _startNew = v);
+    _deviceSettings()?.setBool(newUiStartKey, v);
+  }
+
+  /// Bisherige Ansicht (Lanis-Startbereich) öffnen.
+  void _openAll() {
+    if (!widget.asRoot) {
+      Navigator.of(context).maybePop();
+      return;
+    }
+    try {
+      final c = ProviderScope.containerOf(context, listen: false);
+      _goOld(
+        firstSupportedHomePathFor(
+          supported: c.read(supportedAppletPhpUrlsProvider),
+          accountType:
+              c.read(activeAccountProvider)?.accountType ?? AccountType.student,
+        ),
+      );
+    } catch (_) {}
   }
 
   void _select(ShellTab t) => setState(() => _tab = t);
@@ -153,7 +198,7 @@ class _PreviewShellState extends State<PreviewShell> {
         icon: Icons.apps,
         label: 'Alle Funktionen',
         detail: 'Bisherige Ansicht',
-        onTap: () => Navigator.of(context).maybePop(),
+        onTap: _openAll,
       ),
       MoreEntry(
         icon: Icons.settings_outlined,
@@ -178,6 +223,8 @@ class _PreviewShellState extends State<PreviewShell> {
         font: _font,
         onFont: _setFont,
         entries: _liveEntries(context, s),
+        startNew: _startNew,
+        onStartNew: _setStartNew,
       ),
     };
   }
@@ -233,7 +280,16 @@ class _PreviewShellState extends State<PreviewShell> {
         data: theme.copyWith(
           textTheme: theme.textTheme.apply(fontFamily: kitFont),
         ),
-        child: widget.liveData ? LiveDataScope(child: scaffold) : scaffold,
+        // „Zurück“ führt erst nach „Heute“, dann aus der App. Ursache: Als
+        // Startseite gibt es darunter nichts; ein Zurück aus „Kalender“
+        // hätte die App sonst sofort geschlossen.
+        child: PopScope(
+          canPop: _tab == ShellTab.today,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) _select(ShellTab.today);
+          },
+          child: widget.liveData ? LiveDataScope(child: scaffold) : scaffold,
+        ),
       ),
     );
   }

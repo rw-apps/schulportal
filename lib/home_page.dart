@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/fork/school_links.dart';
+import 'package:lanis/fork/start.dart';
 import 'package:lanis/applets/definitions.dart';
 import 'package:lanis/generated/l10n.dart';
 import 'package:lanis/l10n/account_type_ui.dart';
@@ -42,17 +43,28 @@ String firstSupportedHomePathFor({
   return appletHomePath(AppDefinitions.homeApplets.first, accountType);
 }
 
-/// First home tab path supported by the current session's feature set.
-String firstSupportedHomePath(WidgetRef ref) {
-  return firstSupportedHomePathFor(
-    supported: ref.read(supportedAppletPhpUrlsProvider),
-    accountType:
-        ref.read(activeAccountProvider)?.accountType ?? AccountType.student,
-  );
-}
+/// Startseite nach Anmeldung, Kontowechsel usw.
+///
+/// Fork: die neue Oberfläche ([forkHomePath]), solange sie unter „Mehr“ als
+/// Start gewählt ist (Standard, fork/start.dart); sonst wie bei Lanis der
+/// erste unterstützte Bereich ([lanisHomePath]).
+String firstSupportedHomePath(WidgetRef ref) =>
+    newUiIsStart(ref.read(sharedOverAccountSettingsProvider))
+    ? forkHomePath
+    : lanisHomePath(ref);
 
 /// Same as [firstSupportedHomePath] for non-widget [Ref] (e.g. go_router).
-String firstSupportedHomePathFromRef(Ref ref) {
+String firstSupportedHomePathFromRef(Ref ref) =>
+    newUiIsStart(ref.read(sharedOverAccountSettingsProvider))
+    ? forkHomePath
+    : firstSupportedHomePathFor(
+        supported: ref.read(supportedAppletPhpUrlsProvider),
+        accountType:
+            ref.read(activeAccountProvider)?.accountType ?? AccountType.student,
+      );
+
+/// Erster unterstützter Bereich der bisherigen (Lanis-)Ansicht.
+String lanisHomePath(WidgetRef ref) {
   return firstSupportedHomePathFor(
     supported: ref.read(supportedAppletPhpUrlsProvider),
     accountType:
@@ -223,6 +235,16 @@ class HomePageState extends ConsumerState<HomePage> {
             VoidCallback onTap,
           })
         >[];
+
+    // Fork: zurück zur neuen Oberfläche (fork/start.dart).
+    items.add((
+      label: 'Neue Oberfläche',
+      icon: const Icon(Icons.auto_awesome_outlined),
+      selectedIcon: const Icon(Icons.auto_awesome),
+      enabled: true,
+      branchIndex: null,
+      onTap: () => context.go(forkHomePath),
+    ));
 
     for (final def in AppDefinitions.homeApplets) {
       items.add((

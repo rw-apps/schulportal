@@ -164,4 +164,16 @@ void main() {
     await t.pumpAndSettle();
     expect(t.takeException(), isNull);
   });
+
+  testWidgets('Zurück führt erst nach „Heute“', (t) async {
+    await _pixel(t);
+    await t.pumpWidget(_app(b: Brightness.light));
+    await t.tap(find.text('Mehr'));
+    await t.pumpAndSettle();
+    expect(find.text('Schriftgröße'), findsOneWidget);
+    await t.binding.handlePopRoute();
+    await t.pumpAndSettle();
+    expect(find.text('Schriftgröße'), findsNothing);
+    expect(find.textContaining('Guten'), findsOneWidget);
+  });
 }
