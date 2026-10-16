@@ -1,0 +1,1016 @@
+import 'package:flutter/material.dart';
+
+import '../kit.dart';
+import '../today/today_model.dart' show ChangeKind, minutesOf;
+import '../today/today_page.dart' show schoolWeek, dayDiff;
+import 'plan_model.dart';
+
+const _wd = ['Mo', 'Di', 'Mi', 'Do', 'Fr'];
+
+enum PlanView { day, week }
+
+/// Seite „Plan“ im Stil A + C: je Kind, Tag oder Woche, Gruppenwahl.
+class PlanPage extends StatefulWidget {
+  const PlanPage({
+    super.key,
+    required this.plans,
+    required this.now,
+    this.initialChoices = const {},
+    this.onChoicesChanged,
+  });
+
+  final List<KidPlan> plans;
+  final DateTime now;
+
+  /// Gewählte Gruppen je Kind (Index in [plans]).
+  final Map<int, GroupChoice> initialChoices;
+
+  /// Meldet jede neue Gruppenwahl nach außen (Vorschau: bleibt beim
+  /// Wechsel der Leiste erhalten; später: Speicherung je Konto).
+  final void Function(Map<int, GroupChoice> choices)? onChoicesChanged;
+
+  @override
+  State<PlanPage> createState() => _PlanPageState();
+}
+
+class _PlanPageState extends State<PlanPage> {
+  int _kid = 0;
+  PlanView _view = PlanView.day;
+  late int _day;
+  late final Map<int, GroupChoice> _choices = {
+    for (final e in widget.initialChoices.entries) e.key: {...e.value},
+  };
+
+  List<DateTime> get _week => schoolWeek(widget.now);
+
+  /// Index des heutigen Tages in [_week], sonst null (Wochenende).
+  int? get _todayIndex {
+    for (var i = 0; i < 5; i++) {
+      if (dayDiff(_week[i], widget.now) == 0) return i;
+    }
+    return null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _day = _todayIndex ?? 0;
+  }
+
+  KidPlan get _plan => widget.plans[_kid];
+  GroupChoice get _choice => _choices.putIfAbsent(_kid, () => {});
+
+  Future<void> _openGroupSheet(String short) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Kit.of(context).p.card,
+      builder: (_) => GroupSheet(
+        plan: _plan,
+        short: short,
+        chosen: chosenOption(_plan, _choice, short),
+        onChoose: (lesson) {
+          setState(() {
+            _choices[_kid] = applyGroupChoice(_plan, _choice, short, lesson);
+          });
+          widget.onChoicesChanged?.call(_choices);
+          Navigator.of(context).pop();
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    final open = openGroupSubjects(_plan, _choice).toList()..sort();
+
+    return CustomScrollView(
+      slivers: [
+        SliverSafeArea(
+          bottom: false,
+          sliver: SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+                Sp.page + Sp.xs, Sp.xl, Sp.page, 0),
+            sliver: SliverToBoxAdapter(
+              child: Row(
+                children: [
+                  Expanded(child: Text('Stundenplan', style: k.pageTitle)),
+                  _ViewToggle(
+                    value: _view,
+                    onChanged: (v) => setState(() => _view = v),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
+          sliver: SliverToBoxAdapter(
+            child: _KidChips(
+              plans: widget.plans,
+              selected: _kid,
+              onSelect: (i) => setState(() => _kid = i),
+            ),
+          ),
+        ),
+        if (open.isNotEmpty)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
+            sliver: SliverToBoxAdapter(
+              child: _OpenGroupsHint(
+                plan: _plan,
+                shorts: open,
+                onChoose: _openGroupSheet,
+              ),
+            ),
+          ),
+        if (_view == PlanView.day) ...[
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
+            sliver: SliverToBoxAdapter(
+              child: _DayPicker(
+                week: _week,
+                selected: _day,
+                today: _todayIndex,
+                onSelect: (i) => setState(() => _day = i),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+                Sp.page, Sp.ml, Sp.page, bottom + Sp.xl),
+            sliver: SliverToBoxAdapter(
+              child: DayPlan(
+                plan: _plan,
+                day: _day,
+                choice: _choice,
+                now: _day == _todayIndex ? widget.now : null,
+                onOpenGroup: _openGroupSheet,
+              ),
+            ),
+          ),
+        ] else
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+                Sp.page, Sp.ml, Sp.page, bottom + Sp.xl),
+            sliver: SliverToBoxAdapter(
+              child: WeekGrid(
+                plan: _plan,
+                week: _week,
+                today: _todayIndex,
+                now: widget.now,
+                choice: _choice,
+                onOpenGroup: _openGroupSheet,
+                onOpenDay: (d) => setState(() {
+                  _day = d;
+                  _view = PlanView.day;
+                }),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ---- Kopf ---------------------------------------------------------------
+
+class _ViewToggle extends StatelessWidget {
+  const _ViewToggle({required this.value, required this.onChanged});
+
+  final PlanView value;
+  final ValueChanged<PlanView> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    Widget seg(PlanView v, String label) {
+      final sel = v == value;
+      return Semantics(
+        selected: sel,
+        button: true,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(Rad.pill),
+          onTap: () => onChanged(v),
+          child: Container(
+            height: Sz.buttonSmall - Sp.s,
+            padding: const EdgeInsets.symmetric(horizontal: Sp.ml),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: sel ? k.p.strong : null,
+              borderRadius: BorderRadius.circular(Rad.pill),
+            ),
+            child: Text(label, style: k.chipLabel(sel, k.p.onStrong)),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(Sp.xs),
+      decoration: BoxDecoration(
+        color: k.p.card,
+        borderRadius: BorderRadius.circular(Rad.pill + Sp.xs),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [seg(PlanView.day, 'Tag'), seg(PlanView.week, 'Woche')],
+      ),
+    );
+  }
+}
+
+class _KidChips extends StatelessWidget {
+  const _KidChips({
+    required this.plans,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final List<KidPlan> plans;
+  final int selected;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    return Wrap(
+      spacing: Sp.s,
+      runSpacing: Sp.s,
+      children: [
+        for (final (i, p) in plans.indexed)
+          Builder(builder: (context) {
+            final tone = k.kid(p.colorIndex);
+            final sel = i == selected;
+            return Semantics(
+              selected: sel,
+              button: true,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(Rad.pill),
+                onTap: () => onSelect(i),
+                child: Container(
+                  height: Sz.buttonSmall,
+                  padding: const EdgeInsets.symmetric(horizontal: Sp.l),
+                  decoration: BoxDecoration(
+                    color: sel ? tone.tint : k.p.card,
+                    borderRadius: BorderRadius.circular(Rad.pill),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: Sz.dot + Sp.xxs,
+                        height: Sz.dot + Sp.xxs,
+                        decoration: BoxDecoration(
+                          color: tone.accent,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: Sp.s),
+                      Text(p.firstName,
+                          style: k.chipLabel(sel, tone.onTint)),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+}
+
+class _OpenGroupsHint extends StatelessWidget {
+  const _OpenGroupsHint({
+    required this.plan,
+    required this.shorts,
+    required this.onChoose,
+  });
+
+  final KidPlan plan;
+  final List<String> shorts;
+  final ValueChanged<String> onChoose;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(Sp.l, Sp.ml, Sp.l, Sp.ml),
+      decoration: BoxDecoration(
+        color: k.p.card,
+        borderRadius: BorderRadius.circular(Rad.box),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Gruppe wählen', style: k.cardName),
+          const SizedBox(height: Sp.xxs),
+          Text(
+            'Hier laufen mehrere Gruppen parallel. Nach deiner Wahl zeigt '
+            'der Plan nur noch die von ${plan.firstName}.',
+            style: k.meta,
+          ),
+          const SizedBox(height: Sp.s + Sp.xxs),
+          Wrap(
+            spacing: Sp.s,
+            runSpacing: Sp.s,
+            children: [
+              for (final s in shorts)
+                Material(
+                  color: k.p.inset,
+                  borderRadius: BorderRadius.circular(Rad.pill),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(Rad.pill),
+                    onTap: () => onChoose(s),
+                    child: Container(
+                      height: Sz.buttonSmall,
+                      padding: const EdgeInsets.symmetric(horizontal: Sp.l),
+                      alignment: Alignment.center,
+                      child: Text(groupShortLabel(plan, s),
+                          style: k.button(k.p.ink)),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DayPicker extends StatelessWidget {
+  const _DayPicker({
+    required this.week,
+    required this.selected,
+    required this.today,
+    required this.onSelect,
+  });
+
+  final List<DateTime> week;
+  final int selected;
+  final int? today;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    return Row(
+      children: [
+        for (var i = 0; i < 5; i++) ...[
+          if (i > 0) const SizedBox(width: Sp.xs + Sp.xxs),
+          Expanded(
+            child: Semantics(
+              selected: i == selected,
+              button: true,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(Rad.day),
+                onTap: () => onSelect(i),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: Sp.s),
+                  decoration: BoxDecoration(
+                    color: i == selected ? k.p.strong : null,
+                    borderRadius: BorderRadius.circular(Rad.day),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(_wd[i], style: k.weekDay(i == selected)),
+                      Text('${week[i].day}', style: k.weekNum(i == selected)),
+                      const SizedBox(height: Sp.xxs),
+                      Container(
+                        width: Sz.dotSmall,
+                        height: Sz.dotSmall,
+                        decoration: BoxDecoration(
+                          // Punkt markiert „heute“, wenn ein anderer Tag
+                          // gewählt ist.
+                          color: i == today && i != selected
+                              ? k.p.ink
+                              : null,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ---- Tagesansicht -----------------------------------------------------------
+
+/// Ein Tag als Liste: Uhrzeit links, Abschnitt rechts; Pausen ab 30 Min.
+class DayPlan extends StatelessWidget {
+  const DayPlan({
+    super.key,
+    required this.plan,
+    required this.day,
+    required this.choice,
+    required this.onOpenGroup,
+    this.now,
+  });
+
+  final KidPlan plan;
+  final int day;
+  final GroupChoice choice;
+  final ValueChanged<String> onOpenGroup;
+
+  /// Nur gesetzt, wenn [day] heute ist; dann „läuft“ und erledigt.
+  final DateTime? now;
+
+  static const pauseRowMinutes = 30;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final blocks = dayBlocks(plan, day, choice);
+    if (blocks.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(Sp.xl),
+        child: Text('An diesem Tag kein Unterricht.',
+            style: k.meta, textAlign: TextAlign.center),
+      );
+    }
+    final rows = <Widget>[];
+    for (var i = 0; i < blocks.length; i++) {
+      final b = blocks[i];
+      if (i > 0) {
+        final gap = minutesOf(plan.slots[b.firstSlot].start).minutes -
+            minutesOf(plan.slots[blocks[i - 1].lastSlot].end).minutes;
+        if (gap >= pauseRowMinutes) {
+          rows.add(Padding(
+            padding: const EdgeInsets.only(
+                left: Sz.slotColumn + Sp.m, top: Sp.xs, bottom: Sp.xs),
+            child: Text(
+              'Pause bis ${plan.slots[b.firstSlot].start}',
+              style: k.rowPause,
+            ),
+          ));
+        }
+      }
+      rows.add(Padding(
+        padding: const EdgeInsets.only(bottom: Sp.s),
+        child: _DayRow(
+          plan: plan,
+          block: b,
+          now: now,
+          onOpenGroup: onOpenGroup,
+        ),
+      ));
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+  }
+}
+
+class _DayRow extends StatelessWidget {
+  const _DayRow({
+    required this.plan,
+    required this.block,
+    required this.now,
+    required this.onOpenGroup,
+  });
+
+  final KidPlan plan;
+  final DayBlock block;
+  final DateTime? now;
+  final ValueChanged<String> onOpenGroup;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final tone = k.kid(plan.colorIndex);
+    final start = plan.slots[block.firstSlot].start;
+    final end = plan.slots[block.lastSlot].end;
+    final s = minutesOf(start).minutes;
+    final e = minutesOf(end).minutes;
+    final t = now == null ? null : now!.hour * 60 + now!.minute;
+    final running = t != null && t >= s && t < e;
+    final done = t != null && t >= e;
+    final label = blockLabel(plan, block);
+
+    Color bg = k.p.card;
+    Color ink = k.p.ink;
+    Color sub = k.p.muted;
+    String title;
+    String? meta;
+    String? second;
+    Widget? trailing;
+    var strike = false;
+
+    switch (block.content) {
+      case ResolvedNone():
+        bg = k.p.bg;
+        ink = sub = k.p.faint;
+        title = 'Freistunde';
+      case ResolvedOpen o:
+        bg = k.p.inset;
+        title = isSameSubjectChoice(o.options)
+            ? '${o.subject} · ${o.options.length} Gruppen'
+            : groupShortLabel(plan, o.short);
+        meta = '$label · noch nicht gewählt';
+        trailing = TextButton(
+          onPressed: () => onOpenGroup(o.short),
+          child: Text('Wählen', style: k.link),
+        );
+      case ResolvedLesson r:
+        final x = r.lesson;
+        title = x.subject;
+        meta = [?x.room, ?x.teacher].join(' · ');
+        if (x.change == ChangeKind.cancelled) {
+          bg = k.p.cancel.bg;
+          ink = sub = k.p.cancel.ink;
+          strike = true;
+          second = 'Fällt aus';
+        } else if (x.change != null) {
+          bg = k.p.change.bg;
+          ink = sub = k.p.change.ink;
+          final what = x.change == ChangeKind.substitution
+              ? 'Vertretung'
+              : 'Raumwechsel';
+          second = [what, ?x.changeDetail].join(': ');
+        } else if (running) {
+          bg = tone.tint;
+          ink = tone.onTint;
+          sub = tone.meta;
+        } else if (done) {
+          ink = sub = k.p.faint;
+        }
+        if (_isParallelSubject(plan, x.short)) {
+          trailing = IconButton(
+            tooltip: 'Andere Gruppe',
+            onPressed: () => onOpenGroup(x.short),
+            icon: Icon(Icons.swap_horiz, size: Sz.icon, color: sub),
+          );
+        }
+    }
+
+    final progress = running ? (t - s) / (e - s) : null;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: Sz.slotColumn,
+          child: Padding(
+            padding: const EdgeInsets.only(top: Sp.ml),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(start, style: done ? k.timeEnd : k.timeStart),
+                Text(end, style: k.timeEnd),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: Sp.m),
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(Rad.signal),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                      Sp.ml, Sp.m, Sp.s, Sp.m),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    title,
+                                    style: k.planSubject(ink).copyWith(
+                                      decoration: strike
+                                          ? TextDecoration.lineThrough
+                                          : null,
+                                      decorationColor: ink,
+                                    ),
+                                  ),
+                                ),
+                                // Bei offener Wahl steht rechts „Wählen“;
+                                // die Stunde zusätzlich drückte den Titel
+                                // zusammen („Textil · 4 Gruppen1. Block“).
+                                if (block.content is! ResolvedOpen) ...[
+                                  Text(running ? 'läuft' : label,
+                                      style: k.planMeta(sub)),
+                                  const SizedBox(width: Sp.xs),
+                                ],
+                              ],
+                            ),
+                            if (meta != null && meta.isNotEmpty)
+                              Text(meta, style: k.planMeta(sub)),
+                            if (second != null)
+                              Text(second, style: k.planMeta(ink)),
+                          ],
+                        ),
+                      ),
+                      ?trailing,
+                    ],
+                  ),
+                ),
+                if (progress != null)
+                  SizedBox(
+                    height: Sz.progress,
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: progress.clamp(0, 1),
+                      child: ColoredBox(color: tone.accent),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+bool _isParallelSubject(KidPlan plan, String short) => plan.days.any(
+  (d) => d.any(
+    (c) => c.isParallel && c.options.any((o) => o.short == short),
+  ),
+);
+
+// ---- Wochenraster -------------------------------------------------------
+
+class WeekGrid extends StatelessWidget {
+  const WeekGrid({
+    super.key,
+    required this.plan,
+    required this.week,
+    required this.today,
+    required this.now,
+    required this.choice,
+    required this.onOpenGroup,
+    required this.onOpenDay,
+  });
+
+  final KidPlan plan;
+  final List<DateTime> week;
+  final int? today;
+  final DateTime now;
+  final GroupChoice choice;
+  final ValueChanged<String> onOpenGroup;
+  final ValueChanged<int> onOpenDay;
+
+  static const gap = Sp.xs;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final used = usedSlots(plan);
+    double h(int span) => span * Sz.gridRow + (span - 1) * gap;
+
+    Widget header(int d) {
+      final sel = d == today;
+      return InkWell(
+        borderRadius: BorderRadius.circular(Rad.day),
+        onTap: () => onOpenDay(d),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: Sp.xs + Sp.xxs),
+          decoration: BoxDecoration(
+            color: sel ? k.p.strong : null,
+            borderRadius: BorderRadius.circular(Rad.day),
+          ),
+          child: Column(
+            children: [
+              Text(_wd[d], style: k.weekDay(sel)),
+              Text('${week[d].day}', style: k.weekNum(sel)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const SizedBox(width: Sz.gridLabel + gap),
+            for (var d = 0; d < 5; d++) ...[
+              if (d > 0) const SizedBox(width: gap),
+              Expanded(child: header(d)),
+            ],
+          ],
+        ),
+        const SizedBox(height: Sp.s),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: Sz.gridLabel,
+              child: Column(
+                children: [
+                  for (final (i, s) in used.indexed) ...[
+                    if (i > 0) const SizedBox(height: gap),
+                    SizedBox(
+                      height: Sz.gridRow,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              plan.slots[s].label.split(' ').first,
+                              style: k.gridSlot,
+                            ),
+                          ),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(plan.slots[s].start, style: k.gridTime),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: gap),
+            for (var d = 0; d < 5; d++) ...[
+              if (d > 0) const SizedBox(width: gap),
+              Expanded(
+                child: Column(
+                  children: [
+                    for (final (i, b) in _blocks(d, used).indexed) ...[
+                      if (i > 0) const SizedBox(height: gap),
+                      SizedBox(
+                        height: h(b.span),
+                        child: _GridCell(
+                          plan: plan,
+                          block: b,
+                          isToday: d == today,
+                          now: now,
+                          onOpenGroup: onOpenGroup,
+                          onOpenDay: () => onOpenDay(d),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Abschnitte eines Tages nur über die benutzten Stunden; gleiche
+  /// aufeinanderfolgende Stunden werden EIN hoher Block.
+  List<DayBlock> _blocks(int day, List<int> used) {
+    final res = [for (final s in used) resolveCell(plan.days[day][s], choice)];
+    bool same(Resolved a, Resolved b) => switch ((a, b)) {
+      (ResolvedLesson x, ResolvedLesson y) => x.lesson.sameAs(y.lesson),
+      (ResolvedOpen x, ResolvedOpen y) => x.short == y.short,
+      _ => false,
+    };
+    final out = <DayBlock>[];
+    for (var i = 0; i < used.length; i++) {
+      if (out.isNotEmpty &&
+          used[i] == out.last.lastSlot + 1 &&
+          same(out.last.content, res[i])) {
+        final b = out.removeLast();
+        out.add(DayBlock(
+            firstSlot: b.firstSlot, lastSlot: used[i], content: b.content));
+      } else {
+        out.add(DayBlock(firstSlot: used[i], lastSlot: used[i], content: res[i]));
+      }
+    }
+    return out;
+  }
+}
+
+class _GridCell extends StatelessWidget {
+  const _GridCell({
+    required this.plan,
+    required this.block,
+    required this.isToday,
+    required this.now,
+    required this.onOpenGroup,
+    required this.onOpenDay,
+  });
+
+  final KidPlan plan;
+  final DayBlock block;
+  final bool isToday;
+  final DateTime now;
+  final ValueChanged<String> onOpenGroup;
+  final VoidCallback onOpenDay;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final tone = k.kid(plan.colorIndex);
+    final s = minutesOf(plan.slots[block.firstSlot].start).minutes;
+    final e = minutesOf(plan.slots[block.lastSlot].end).minutes;
+    final t = now.hour * 60 + now.minute;
+    final running = isToday && t >= s && t < e;
+
+    Color bg;
+    Color ink;
+    Color? border;
+    String top;
+    String? bottom;
+    var strike = false;
+    VoidCallback? onTap = onOpenDay;
+
+    switch (block.content) {
+      case ResolvedNone():
+        return const SizedBox.shrink();
+      case ResolvedOpen o:
+        bg = k.p.inset;
+        ink = k.p.muted;
+        border = k.p.line;
+        // „ER“ sah wie schon gewählt aus; bei verschiedenen Fächern daher
+        // neutral „Wahl“.
+        final same = isSameSubjectChoice(o.options);
+        top = same ? o.short : 'Wahl';
+        bottom = same ? '${o.options.length} Gr.' : '${o.options.length} Fächer';
+        onTap = () => onOpenGroup(o.short);
+      case ResolvedLesson r:
+        final x = r.lesson;
+        final f = k.subject(x.short);
+        bg = f.bg;
+        ink = f.ink;
+        top = x.short;
+        bottom = x.room;
+        if (x.change == ChangeKind.cancelled) {
+          bg = k.p.cancel.bg;
+          ink = k.p.cancel.ink;
+          border = k.p.cancel.dot;
+          strike = true;
+        } else if (x.change != null) {
+          bg = k.p.change.bg;
+          ink = k.p.change.ink;
+          border = k.p.change.dot;
+        }
+    }
+    if (running) border = tone.accent;
+
+    return Material(
+      color: bg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Rad.cell),
+        side: border == null
+            ? BorderSide.none
+            : BorderSide(color: border, width: Sz.cellBorder),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Sp.xs),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  top,
+                  maxLines: 1,
+                  style: k.cellShort(ink).copyWith(
+                    decoration: strike ? TextDecoration.lineThrough : null,
+                    decorationColor: ink,
+                  ),
+                ),
+              ),
+              if (bottom != null)
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(bottom, maxLines: 1, style: k.cellRoom(ink)),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---- Gruppenwahl --------------------------------------------------------
+
+/// Auswahl der eigenen Gruppe (oder des eigenen Fachs bei Religion/Ethik);
+/// gilt für die ganze Woche.
+class GroupSheet extends StatelessWidget {
+  const GroupSheet({
+    super.key,
+    required this.plan,
+    required this.short,
+    required this.chosen,
+    required this.onChoose,
+  });
+
+  final KidPlan plan;
+  final String short;
+  final PlanLesson? chosen;
+
+  /// null = Wahl aufheben (wieder alle Gruppen zeigen).
+  final ValueChanged<PlanLesson?> onChoose;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final options = groupOptions(plan, short);
+    final label = groupLabel(plan, short);
+    final sameSubject = options.map((o) => o.subject).toSet().length == 1;
+    bool isChosen(PlanLesson o) =>
+        chosen != null &&
+        chosen!.short == o.short &&
+        chosen!.groupKey == o.groupKey;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(Sp.xl, 0, Sp.xl, Sp.l),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              sameSubject ? '$label – Gruppe wählen' : 'Welches Fach?',
+              style: k.sheetTitle,
+            ),
+            const SizedBox(height: Sp.xs),
+            Text(
+              sameSubject
+                  ? 'Gilt für alle $label-Stunden von ${plan.firstName}. '
+                      'Die anderen Gruppen werden ausgeblendet.'
+                  : 'Parallel laufen $label. Wähle, was ${plan.firstName} '
+                      'hat; die anderen werden ausgeblendet.',
+              style: k.meta,
+            ),
+            const SizedBox(height: Sp.m),
+            for (final g in options)
+              Padding(
+                padding: const EdgeInsets.only(bottom: Sp.s),
+                child: Material(
+                  color: isChosen(g)
+                      ? k.kid(plan.colorIndex).tint
+                      : k.p.inset,
+                  borderRadius: BorderRadius.circular(Rad.signal),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(Rad.signal),
+                    onTap: () => onChoose(g),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: Sp.l, vertical: Sp.m),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  sameSubject
+                                      ? 'Gruppe ${g.teacher ?? g.groupKey}'
+                                      : g.subject,
+                                  style: k.planSubject(k.p.ink),
+                                ),
+                                Text(
+                                  sameSubject
+                                      ? [if (g.room != null) 'Raum ${g.room}']
+                                          .join()
+                                      : [?g.teacher, ?g.room].join(' · '),
+                                  style: k.planMeta(k.p.muted),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isChosen(g))
+                            Icon(Icons.check, size: Sz.icon,
+                                color: k.kid(plan.colorIndex).label),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (chosen != null)
+              TextButton(
+                onPressed: () => onChoose(null),
+                child: Text('Wieder alle zeigen', style: k.link),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -1,5 +1,10 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9315**
+
+- Vorschau „Plan“ im neuen Stil: je Kind umschaltbar, Tagesansicht (Uhrzeit links, laufende Stunde mit Fortschritt, Vertretung/Ausfall farbig, Pausen) und Wochenraster (Doppelstunden als ein Block, Farbe je Fach, Tag antippen öffnet ihn).
+- Neu: **Gruppe wählen** bei Parallelgruppen (z. B. vier Textil-Gruppen oder Religion/Ethik). Einmal je Fach gewählt, zeigt der Plan nur noch die eigene Gruppe – statt jede Kachel einzeln auszublenden.
+
 **4.1.0+9314**
 
 - Vorschau „Heute“ im neuen Stil (Entwurf A + C): Begrüßung, Wochenleiste mit Terminpunkten, Kasten „Wichtig heute und morgen“ für alle Kinder, je Kind eine Karte mit „Jetzt“ und Restzeit, Tagesleiste und aufklappbarem Tag (Doppelstunden zusammengefasst, längere Pausen sichtbar), „Demnächst“ als Kacheln, schwebende Leiste unten.

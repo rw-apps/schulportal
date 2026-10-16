@@ -61,6 +61,19 @@ abstract final class Sz {
   static const double navHeight = 68;
   static const double navMargin = 16;
   static const double navBottom = 24;
+
+  // ---- Stundenplan ------------------------------------------------------
+  /// Höhe einer Stunde im Wochenraster; Doppelstunden = 2 × + Abstand.
+  static const double gridRow = 54;
+
+  /// Spalte links im Wochenraster („1.“, „08:00“).
+  static const double gridLabel = 40;
+
+  /// Fortschrittsstrich unter der laufenden Stunde (Tagesansicht).
+  static const double progress = 4;
+
+  /// Rahmen um geänderte bzw. laufende Zellen.
+  static const double cellBorder = 2;
 }
 
 /// Eckenradien.
@@ -77,6 +90,15 @@ abstract final class Rad {
   static const double bar = 6;
   static const double nav = 34;
   static const double navItem = 22;
+  static const double cell = 12;
+  static const double pill = 20;
+}
+
+/// Fläche und Schrift eines Fachs im Wochenraster.
+class FachTone {
+  const FachTone(this.bg, this.ink);
+  final Color bg;
+  final Color ink;
 }
 
 /// Farbfamilie eines Kindes.
@@ -147,7 +169,12 @@ class KitPalette {
     required this.kids,
     required this.change,
     required this.cancel,
+    required this.subjects,
   });
+
+  /// Fachfarben fürs Wochenraster. Bewusst ohne Rot und Gelb, damit kein
+  /// Fach wie eine Vertretung oder ein Ausfall aussieht.
+  final List<FachTone> subjects;
 
   final Color bg;
   final Color card;
@@ -239,6 +266,16 @@ class KitPalette {
       bar: Color(0xFFFDA29B),
       dot: Color(0xFFD92D20),
     ),
+    subjects: [
+      FachTone(Color(0xFFE0EAFF), Color(0xFF1E3A8A)),
+      FachTone(Color(0xFFD5F2EC), Color(0xFF134E48)),
+      FachTone(Color(0xFFECE4FF), Color(0xFF4C1D95)),
+      FachTone(Color(0xFFE4F2D3), Color(0xFF365314)),
+      FachTone(Color(0xFFDCF0FA), Color(0xFF0C4A6E)),
+      FachTone(Color(0xFFE6E9EF), Color(0xFF334155)),
+      FachTone(Color(0xFFE8E7FF), Color(0xFF3730A3)),
+      FachTone(Color(0xFFEEF0D8), Color(0xFF4A5216)),
+    ],
   );
 
   /// Dunkle Fassung derselben Familie (Töne aus Entwurf B/C abgeleitet).
@@ -308,6 +345,16 @@ class KitPalette {
       bar: Color(0xFF7F2A2A),
       dot: Color(0xFFF87171),
     ),
+    subjects: [
+      FachTone(Color(0xFF1E2A47), Color(0xFFC7D7FE)),
+      FachTone(Color(0xFF15332F), Color(0xFFBDEDE4)),
+      FachTone(Color(0xFF2B2245), Color(0xFFDDD3FE)),
+      FachTone(Color(0xFF22301A), Color(0xFFD4EBB5)),
+      FachTone(Color(0xFF152F3D), Color(0xFFC3E6F7)),
+      FachTone(Color(0xFF262C36), Color(0xFFD5DBE5)),
+      FachTone(Color(0xFF24234A), Color(0xFFD0CFFD)),
+      FachTone(Color(0xFF2B2E1A), Color(0xFFE0E4B8)),
+    ],
   );
 }
 
@@ -324,6 +371,17 @@ class Kit {
   final KitPalette p;
 
   KidTone kid(int index) => p.kids[index % p.kids.length];
+
+  /// Feste Fachfarbe aus dem Kürzel (gleiches Fach = gleiche Farbe, über
+  /// Tage und Wochen hinweg). Eigene Summe statt String.hashCode, weil
+  /// dessen Wert zwischen Dart-Versionen nicht garantiert gleich bleibt.
+  FachTone subject(String short) {
+    var h = 0;
+    for (final c in short.toUpperCase().codeUnits) {
+      h = (h * 31 + c) & 0x7fffffff;
+    }
+    return p.subjects[h % p.subjects.length];
+  }
 
   TextStyle _s(double size, FontWeight w, Color c, {double ls = 0}) =>
       TextStyle(
@@ -393,6 +451,23 @@ class Kit {
     selected ? FontWeight.w800 : FontWeight.w700,
     selected ? p.onNavSelected : p.muted,
   );
+
+  // ---- Stundenplan ------------------------------------------------------
+  TextStyle chipLabel(bool selected, Color selectedInk) => _s(
+    14,
+    FontWeight.w700,
+    selected ? selectedInk : p.ink,
+  );
+  TextStyle get timeStart => _s(13, FontWeight.w800, p.ink);
+  TextStyle get timeEnd => _s(12, FontWeight.w500, p.faint);
+  TextStyle planSubject(Color c) => _s(16, FontWeight.w800, c);
+  TextStyle planMeta(Color c) => _s(13, FontWeight.w500, c);
+  TextStyle get planSlot => _s(12, FontWeight.w700, p.muted);
+  TextStyle cellShort(Color c) => _s(13, FontWeight.w800, c);
+  TextStyle cellRoom(Color c) => _s(10, FontWeight.w600, c);
+  TextStyle get gridSlot => _s(11, FontWeight.w700, p.muted);
+  TextStyle get gridTime => _s(10, FontWeight.w500, p.faint);
+  TextStyle get sheetTitle => _s(20, FontWeight.w800, p.ink);
 
   // ---- Allgemein --------------------------------------------------------
   TextStyle get body => _s(15, FontWeight.w500, p.ink);

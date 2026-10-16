@@ -131,7 +131,8 @@ void main() {
   testWidgets('Leiste: Ziele wechseln, Platzhalter', (t) async {
     await _pixel(t);
     await t.pumpWidget(_app(b: Brightness.light));
-    await t.tap(find.text('Plan'));
+    // „Plan“ ist inzwischen gebaut (plan_page_test); Platzhalter z. B. hier.
+    await t.tap(find.text('Nachrichten'));
     await t.pumpAndSettle();
     expect(find.textContaining('Entwurf folgt'), findsOneWidget);
   });

@@ -1,0 +1,265 @@
+import '../today/today_model.dart' show ChangeKind;
+
+/// Datenform des Stundenplans je Kind.
+///
+/// Wie „Heute“ unabhängig von liblanis; später aus TimetableStudentParser
+/// (Klassenplan) plus Vertretungsplan gefüllt. Entscheidend ist
+/// [PlanCell.options]: Der Klassenplan Schule A (Export 16.10.26) liefert in
+/// einer Stunde mehrere Parallelgruppen (Freitag 1. Block: vier Textil-
+/// Gruppen bei vier Lehrkräften), obwohl das Kind nur in einer ist. Auch der
+/// „Persönliche Plan“ des Portals enthielt sie fast alle. Darum wählt man je
+/// Fach EINMAL die eigene Gruppe ([GroupChoice]), statt jede Kachel einzeln
+/// auszublenden wie in Lanis.
+
+/// Eine Stunde laut Zeitraster der Schule.
+class PlanSlot {
+  const PlanSlot({required this.label, required this.start, required this.end});
+
+  /// „1.“ oder „1. Block“.
+  final String label;
+  final String start;
+  final String end;
+}
+
+/// Ein Unterricht in einer Stunde.
+class PlanLesson {
+  const PlanLesson({
+    required this.subject,
+    required this.short,
+    this.room,
+    this.teacher,
+    this.change,
+    this.changeDetail,
+  });
+
+  /// Ausgeschrieben („Textil“).
+  final String subject;
+
+  /// Kürzel aus dem Plan („TXT“); bestimmt Fachfarbe und Gruppenwahl.
+  final String short;
+  final String? room;
+
+  /// Kürzel der Lehrkraft; unterscheidet Parallelgruppen.
+  final String? teacher;
+  final ChangeKind? change;
+  final String? changeDetail;
+
+  /// Kennung der Gruppe innerhalb des Fachs.
+  String get groupKey => teacher ?? room ?? subject;
+
+  bool sameAs(PlanLesson o) =>
+      short == o.short &&
+      room == o.room &&
+      teacher == o.teacher &&
+      change == o.change;
+}
+
+/// Inhalt einer Stunde an einem Tag: keine, eine oder mehrere Gruppen.
+class PlanCell {
+  const PlanCell(this.options);
+  final List<PlanLesson> options;
+
+  bool get isEmpty => options.isEmpty;
+  bool get isParallel => options.length > 1;
+}
+
+/// Wochenplan eines Kindes: [days] Mo–Fr, je Tag eine Zelle je [slots].
+class KidPlan {
+  const KidPlan({
+    required this.firstName,
+    required this.colorIndex,
+    required this.slots,
+    required this.days,
+  });
+
+  final String firstName;
+  final int colorIndex;
+  final List<PlanSlot> slots;
+
+  /// days[0] = Montag; days[d][s] gehört zu slots[s].
+  final List<List<PlanCell>> days;
+}
+
+/// Gewählte Gruppe je Fachkürzel („TXT“ → „BCL“). Gilt für alle Stunden
+/// dieses Fachs, weil ein Kind die ganze Woche in derselben Gruppe ist.
+/// Grenze: Wechselt die Gruppe je Halbjahr, muss neu gewählt werden.
+typedef GroupChoice = Map<String, String>;
+
+/// Was in einer Zelle tatsächlich angezeigt wird.
+sealed class Resolved {
+  const Resolved();
+}
+
+class ResolvedNone extends Resolved {
+  const ResolvedNone();
+}
+
+class ResolvedLesson extends Resolved {
+  const ResolvedLesson(this.lesson);
+  final PlanLesson lesson;
+}
+
+/// Parallelgruppen ohne Wahl: zeigen „n Gruppen – wählen“.
+class ResolvedOpen extends Resolved {
+  const ResolvedOpen(this.options);
+  final List<PlanLesson> options;
+  String get short => options.first.short;
+  String get subject => options.first.subject;
+}
+
+Resolved resolveCell(PlanCell cell, GroupChoice choice) {
+  if (cell.isEmpty) return const ResolvedNone();
+  if (!cell.isParallel) return ResolvedLesson(cell.options.single);
+  // Verschiedene Fächer parallel (z. B. Religion/Ethik): gewählte Gruppe
+  // eines davon gewinnt; die übrigen gelten als „nicht meine“.
+  for (final o in cell.options) {
+    final chosen = choice[o.short];
+    if (chosen != null && chosen == o.groupKey) return ResolvedLesson(o);
+  }
+  final chosenShorts = cell.options
+      .where((o) => choice.containsKey(o.short))
+      .map((o) => o.short)
+      .toSet();
+  final open = cell.options.where((o) => !chosenShorts.contains(o.short));
+  if (open.isEmpty) return const ResolvedNone();
+  final list = open.toList();
+  return list.length == 1 ? ResolvedLesson(list.single) : ResolvedOpen(list);
+}
+
+/// Ein Abschnitt der Tagesansicht: gleiche aufeinanderfolgende Stunden
+/// zusammengefasst (Doppelstunde = ein Abschnitt).
+class DayBlock {
+  const DayBlock({
+    required this.firstSlot,
+    required this.lastSlot,
+    required this.content,
+  });
+
+  final int firstSlot;
+  final int lastSlot;
+  final Resolved content;
+
+  int get span => lastSlot - firstSlot + 1;
+}
+
+/// Tag als Abschnitte; leere Stunden vor der ersten und nach der letzten
+/// entfallen, Lücken dazwischen bleiben als [ResolvedNone]-Abschnitt.
+List<DayBlock> dayBlocks(KidPlan plan, int day, GroupChoice choice) {
+  final cells = plan.days[day];
+  final res = [for (final c in cells) resolveCell(c, choice)];
+  bool same(Resolved a, Resolved b) => switch ((a, b)) {
+    (ResolvedLesson x, ResolvedLesson y) => x.lesson.sameAs(y.lesson),
+    (ResolvedOpen x, ResolvedOpen y) => x.short == y.short,
+    (ResolvedNone _, ResolvedNone _) => true,
+    _ => false,
+  };
+  final blocks = <DayBlock>[];
+  for (var s = 0; s < res.length; s++) {
+    if (blocks.isNotEmpty && same(blocks.last.content, res[s])) {
+      final b = blocks.removeLast();
+      blocks.add(DayBlock(firstSlot: b.firstSlot, lastSlot: s, content: b.content));
+    } else {
+      blocks.add(DayBlock(firstSlot: s, lastSlot: s, content: res[s]));
+    }
+  }
+  while (blocks.isNotEmpty && blocks.first.content is ResolvedNone) {
+    blocks.removeAt(0);
+  }
+  while (blocks.isNotEmpty && blocks.last.content is ResolvedNone) {
+    blocks.removeLast();
+  }
+  return blocks;
+}
+
+/// Stunden, die in der ganzen Woche leer sind (z. B. 0. Block), fallen im
+/// Wochenraster weg.
+List<int> usedSlots(KidPlan plan) => [
+  for (var s = 0; s < plan.slots.length; s++)
+    if (plan.days.any((d) => d.length > s && !d[s].isEmpty)) s,
+];
+
+/// Fächer mit Parallelgruppen, für die noch keine Wahl getroffen ist.
+Set<String> openGroupSubjects(KidPlan plan, GroupChoice choice) => {
+  for (final d in plan.days)
+    for (final c in d)
+      if (resolveCell(c, choice) case ResolvedOpen o) o.short,
+};
+
+/// „1.–2.“ bzw. „1. Block“ für einen Abschnitt.
+String blockLabel(KidPlan plan, DayBlock b) {
+  final a = plan.slots[b.firstSlot].label;
+  if (b.span == 1) return a;
+  final z = plan.slots[b.lastSlot].label;
+  // „1.“ + „2.“ → „1.–2.“; „1. Block“ + „2. Block“ → „1.–2. Block“
+  final suffix = a.contains(' ') ? a.substring(a.indexOf(' ')) : '';
+  final an = a.split(' ').first;
+  final zn = z.split(' ').first;
+  return '${an.replaceAll('.', '')}.–${zn.replaceAll('.', '')}.$suffix';
+}
+
+/// Alle Wahlmöglichkeiten der Parallel-Stunden, in denen [short] vorkommt –
+/// bei gleichem Fach die Gruppen (Textil bei vier Lehrkräften), bei
+/// verschiedenen Fächern die Fächer (Ev. Religion / Kath. Religion / Ethik).
+/// Je Gruppe einmal, in Reihenfolge des ersten Auftretens.
+List<PlanLesson> groupOptions(KidPlan plan, String short) {
+  final out = <String, PlanLesson>{};
+  for (final d in plan.days) {
+    for (final c in d) {
+      if (!c.isParallel || !c.options.any((o) => o.short == short)) continue;
+      for (final o in c.options) {
+        // Stammraum zeigen: eine Fundstelle ohne Änderung ersetzt eine mit
+        // Raumwechsel (sonst stand in der Wahl der Ausweichraum vom Do).
+        final key = '${o.short}|${o.groupKey}';
+        final had = out[key];
+        if (had == null || (had.change != null && o.change == null)) {
+          out[key] = o;
+        }
+      }
+    }
+  }
+  return out.values.toList();
+}
+
+/// Überschrift einer Wahl: Fachname, bei verschiedenen Fächern alle.
+String groupLabel(KidPlan plan, String short) {
+  final subjects = {for (final o in groupOptions(plan, short)) o.subject};
+  return subjects.join(' / ');
+}
+
+/// Neue Wahl setzen: alle Kürzel dieser Parallel-Stunden zurücksetzen, dann
+/// [lesson] wählen (null = wieder alle zeigen). Ursache für das Zurücksetzen:
+/// Wer von Ev. Religion zu Ethik wechselt, darf nicht beide gewählt haben.
+GroupChoice applyGroupChoice(
+  KidPlan plan,
+  GroupChoice choice,
+  String short,
+  PlanLesson? lesson,
+) {
+  final next = {...choice};
+  for (final o in groupOptions(plan, short)) {
+    next.remove(o.short);
+  }
+  if (lesson != null) next[lesson.short] = lesson.groupKey;
+  return next;
+}
+
+/// Die aktuell gewählte Möglichkeit dieser Parallel-Stunden, falls eine.
+PlanLesson? chosenOption(KidPlan plan, GroupChoice choice, String short) {
+  for (final o in groupOptions(plan, short)) {
+    if (choice[o.short] == o.groupKey) return o;
+  }
+  return null;
+}
+
+/// Kurzname einer Wahl für Knöpfe und Rasterzellen: bei gleichem Fach der
+/// Fachname, bei verschiedenen Fächern die Kürzel („ER / KR / Eth“).
+String groupShortLabel(KidPlan plan, String short) {
+  final opts = groupOptions(plan, short);
+  final subjects = {for (final o in opts) o.subject};
+  if (subjects.length == 1) return subjects.single;
+  return {for (final o in opts) o.short}.join(' / ');
+}
+
+/// Gleiches Fach in allen Möglichkeiten (Gruppen) statt verschiedener Fächer.
+bool isSameSubjectChoice(List<PlanLesson> options) =>
+    options.map((o) => o.subject).toSet().length == 1;

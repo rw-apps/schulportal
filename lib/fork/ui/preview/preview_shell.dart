@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../kit.dart';
 import '../today/today_model.dart';
+import '../plan/plan_model.dart' show GroupChoice;
+import '../plan/plan_page.dart';
 import '../today/today_page.dart';
+import 'demo_plan.dart';
 import 'demo_family.dart';
 
 /// Vorschau der neuen Oberfläche, erreichbar über Einstellungen.
 ///
 /// Ursache: Gestaltung braucht Abnahme auf dem Gerät (Pixel 9a), bevor die
-/// echte Anbindung gebaut wird. Grenze: Nur „Heute“ ist gebaut, mit
-/// erfundenen Daten ([demoFamily]); die übrigen Ziele der Leiste zeigen
+/// echte Anbindung gebaut wird. Grenze: „Heute“ und „Plan“ sind gebaut, mit
+/// erfundenen Daten ([demoFamily], [demoPlans]); die übrigen Ziele zeigen
 /// einen Platzhalter, Antippen löst nichts im Portal aus.
 class PreviewShell extends StatefulWidget {
   const PreviewShell({super.key});
@@ -21,6 +24,8 @@ class PreviewShell extends StatefulWidget {
 class _PreviewShellState extends State<PreviewShell> {
   int _index = 0;
   final FamilyToday _data = demoFamily();
+  final _plans = demoPlans();
+  Map<int, GroupChoice> _choices = {};
 
   void _notYet(String what) {
     ScaffoldMessenger.of(context)
@@ -59,6 +64,14 @@ class _PreviewShellState extends State<PreviewShell> {
             onOpenHomework: (c) => _notYet('Hausaufgaben von ${c.firstName}'),
             onOpenMessages: (c) => _notYet('Nachrichten von ${c.firstName}'),
             onOpenCalendar: () => setState(() => _index = 3),
+          ),
+          1 => PlanPage(
+            plans: _plans,
+            now: _data.now,
+            initialChoices: _choices,
+            onChoicesChanged: (c) => _choices = {
+              for (final e in c.entries) e.key: {...e.value},
+            },
           ),
           _ => _Placeholder(label: _dest[_index].$3),
         },
@@ -197,7 +210,7 @@ class _Placeholder extends StatelessWidget {
             Text(label, style: k.pageTitle),
             const SizedBox(height: Sp.l),
             Text(
-              'Entwurf folgt, sobald „Heute“ abgenommen ist.',
+              'Entwurf folgt nach Abnahme von „Heute“ und „Plan“.',
               style: k.meta,
             ),
             const SizedBox(height: Sp.l),
