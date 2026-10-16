@@ -1,5 +1,13 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9322**
+
+- Vorschau „Heute“ zeigt jetzt **echte Daten** des angemeldeten Kontos: den heutigen Plan mit „Jetzt“, „Danach“ und Tagesleiste, dieselben Gruppen und Lehrernamen wie unter „Plan“.
+- Vertretungen aus dem Vertretungsplan erscheinen im Kasten „Wichtig heute und morgen“, als Punkte in der Wochenleiste und in der Tagesliste (Ausfall rot, Raumwechsel und Vertretung gelb). Vertretungen der anderen Projekt-Text-Gruppen werden übergangen. Fehlt bei Doppelbesetzung nur eine Lehrkraft, gilt die Stunde nicht als Ausfall.
+- „Demnächst“ zeigt die Termine der nächsten 14 Tage aus dem Schulkalender, Arbeiten und Lernkontrollen als solche erkannt. Termine für andere Jahrgänge („8-10 Klassen …“) werden ausgeblendet.
+- „Krank melden“ öffnet die Krankmeldung (weiterhin nur prüfen).
+- Tagesliste: „1.“ statt „1. Block“ in der schmalen Spalte.
+
 **4.1.0+9321**
 
 - Gruppen werden automatisch vorgewählt, wenn „Mein Unterricht“ sie verrät. Projekt Text: Der Kurs nennt zwei Lehrkräfte, beide stehen in jeder TXT-Stunde – die App zeigt beide als eine Stunde. Ändern über das Tauschen-Symbol; die Wahl ist mit „Erkannt über den Kurs in „Mein Unterricht““ markiert.

@@ -57,6 +57,13 @@ String relativeDay(DateTime day, DateTime now) {
   return '${_weekdaysShort[day.weekday - 1]} ${day.day}.${day.month}.';
 }
 
+/// Kurzform der Stunde für die schmale Spalte der Tagesliste: „2. Block“ →
+/// „2.“, „1.–2. Block“ → „1.–2.“. Ursache: Mit echten Daten von Schule A brach
+/// „Block“ in der Spalte (Sz.slotColumn) in eine zweite Zeile um
+/// (Bildschirmfoto 16.10.26). Überschrift und Kasten behalten das Wort.
+String listSlot(String slot) =>
+    slot.replaceAll(RegExp(r'\s+(Block|Stunde|Std\.?)$'), '');
+
 /// Montag bis Freitag der laufenden Woche; am Wochenende die nächste.
 /// Mit dem DateTime-Konstruktor statt Duration gerechnet: Duration zählt
 /// 24 Stunden und landete über die Zeitumstellung bei 23:00 am Vortag
@@ -393,7 +400,11 @@ class _KidCardState extends State<KidCard> {
     final tone = k.kid(kid.colorIndex);
     final status = dayStatus(kid.lessons, widget.now);
 
-    final meta = [kid.school, kid.className, ?kid.periodsLabel].join(' · ');
+    final meta = [
+      kid.school,
+      kid.className,
+      ?kid.periodsLabel,
+    ].where((s) => s.isNotEmpty).join(' · ');
 
     return Container(
       padding: const EdgeInsets.all(Sp.lx),
@@ -767,7 +778,7 @@ class _DayList extends StatelessWidget {
         children: [
           SizedBox(
             width: Sz.slotColumn,
-            child: Text(x.slot, style: k.rowSlot(sub)),
+            child: Text(listSlot(x.slot), style: k.rowSlot(sub)),
           ),
           const SizedBox(width: Sp.s + Sp.xxs),
           Expanded(

@@ -8,6 +8,7 @@ import '../today/today_model.dart';
 import '../plan/plan_model.dart' show GroupChoice;
 import '../plan/live_plan_page.dart';
 import '../plan/plan_page.dart';
+import '../today/live_today_page.dart';
 import '../today/today_page.dart';
 import 'demo_plan.dart';
 import 'demo_family.dart';
@@ -15,13 +16,14 @@ import 'demo_family.dart';
 /// Vorschau der neuen Oberfläche, erreichbar über Einstellungen.
 ///
 /// Ursache: Gestaltung braucht Abnahme auf dem Gerät (Pixel 9a), bevor die
-/// echte Anbindung gebaut wird. Grenze: „Heute“ und „Plan“ sind gebaut, mit
-/// erfundenen Daten ([demoFamily], [demoPlans]); die übrigen Ziele zeigen
-/// einen Platzhalter, Antippen löst nichts im Portal aus.
+/// echte Anbindung gebaut wird. Grenze: „Heute“ und „Plan“ zeigen aus den
+/// Einstellungen geöffnet echte Daten ([LiveTodayPage], [LivePlanPage]), in
+/// Tests erfundene ([demoFamily], [demoPlans]); die übrigen Ziele zeigen
+/// einen Platzhalter.
 class PreviewShell extends StatefulWidget {
   const PreviewShell({super.key, this.liveData = false});
 
-  /// „Plan“ mit den echten Daten des angemeldeten Kontos ([LivePlanPage]).
+  /// „Heute“ und „Plan“ mit den echten Daten des angemeldeten Kontos.
   /// Aus den Einstellungen geöffnet: true. Tests und Bildschirmfotos: false
   /// (Beispieldaten, ohne Portal und ohne ProviderScope).
   final bool liveData;
@@ -106,6 +108,9 @@ class _PreviewShellState extends State<PreviewShell> {
           // (Rückmeldung 16.10.26 zur Tagesansicht).
           extendBody: false,
           body: switch (_index) {
+            0 when widget.liveData => LiveTodayPage(
+              onOpenCalendar: () => setState(() => _index = 3),
+            ),
             0 => TodayPage(
               data: _data,
               onReportAbsence: (c) =>

@@ -20,6 +20,13 @@ const groupChoiceSetting = 'fork-group-choice';
 /// Repository (Entscheidung 16.10.26).
 const teacherNamesSetting = 'fork-teacher-names';
 
+/// Gespeicherte Map (JSON) als Kürzel → Text; Fremdes wird übergangen.
+Map<String, String> settingStrings(Object? m) => <String, String>{
+  if (m is Map)
+    for (final e in m.entries)
+      if (e.value is String) e.key.toString(): e.value as String,
+};
+
 /// „Plan“ mit echten Daten des angemeldeten Kontos.
 ///
 /// Stundenplan über timetableParserProvider (wie die Lanis-Ansicht, mit deren
@@ -63,45 +70,20 @@ class LivePlanPage extends ConsumerWidget {
       },
       accountType: type,
       builder: (context, tt, _, settings, updateSetting, _) {
-        final raw = settings[groupChoiceSetting];
-        Map<String, String> strings(Object? m) => <String, String>{
-          if (m is Map)
-            for (final e in m.entries)
-              if (e.value is String) e.key.toString(): e.value as String,
-        };
-        final choice = strings(raw);
-        final ownNames = strings(settings[teacherNamesSetting]);
-        return _WithLessons(
+        final choice = settingStrings(settings[groupChoiceSetting]);
+        final ownNames = settingStrings(settings[teacherNamesSetting]);
+        return WithLessons(
           enabled: supported.contains('meinunterricht.php'),
           builder: (lessons, kids) {
-            final names = <String, String>{};
-            for (final l in lessons) {
-              for (final t in l.teachers) {
-                final kz = t.teacherKuerzel;
-                final n = t.teacher;
-                if (kz != null && n != null && n.isNotEmpty) {
-                  names[kz] = portalNameToDisplay(n);
-                }
-              }
-            }
             final firstName = kids.isNotEmpty
                 ? kids.first.firstName
                 : (session.userData['vorname'] ?? 'Plan');
-            final plan = kidPlanFromTimetable(
-              tt,
+            final (:plan, :auto) = livePlan(
+              tt: tt,
+              lessons: lessons,
               firstName: firstName,
-              colorIndex: 0,
-              teacherNames: names,
-              courseNames: [for (final l in lessons) l.name],
               schoolId: session.account.schoolID.toString(),
             );
-            final auto = autoGroupChoice(plan, [
-              for (final l in lessons)
-                (
-                  name: l.name,
-                  teachers: {for (final t in l.teachers) ?t.teacherKuerzel},
-                ),
-            ]);
             return PlanPage(
               plans: [plan],
               now: DateTime.now(),
@@ -120,19 +102,53 @@ class LivePlanPage extends ConsumerWidget {
   }
 }
 
+/// Plan eines Kindes aus Stundenplan und Unterricht, dazu die automatisch
+/// erkannte Gruppenwahl. Gemeinsam für „Plan“ und „Heute“, damit beide
+/// dieselben Stunden, Gruppen und Namen zeigen.
+({KidPlan plan, GroupChoice auto}) livePlan({
+  required TimeTable tt,
+  required Lessons lessons,
+  required String firstName,
+  required String schoolId,
+}) {
+  final names = <String, String>{};
+  for (final l in lessons) {
+    for (final t in l.teachers) {
+      final kz = t.teacherKuerzel;
+      final n = t.teacher;
+      if (kz != null && n != null && n.isNotEmpty) {
+        names[kz] = portalNameToDisplay(n);
+      }
+    }
+  }
+  final plan = kidPlanFromTimetable(
+    tt,
+    firstName: firstName,
+    colorIndex: 0,
+    teacherNames: names,
+    courseNames: [for (final l in lessons) l.name],
+    schoolId: schoolId,
+  );
+  final auto = autoGroupChoice(plan, [
+    for (final l in lessons)
+      (name: l.name, teachers: {for (final t in l.teachers) ?t.teacherKuerzel}),
+  ]);
+  return (plan: plan, auto: auto);
+}
+
 /// Lädt den Unterricht (für Lehrer- und Kursnamen) und baut [builder] auch
 /// schon vorher – dann eben mit Kürzeln, die sich nachträglich füllen.
-class _WithLessons extends ConsumerStatefulWidget {
-  const _WithLessons({required this.enabled, required this.builder});
+class WithLessons extends ConsumerStatefulWidget {
+  const WithLessons({super.key, required this.enabled, required this.builder});
 
   final bool enabled;
   final Widget Function(Lessons lessons, List<ChildLessons> kids) builder;
 
   @override
-  ConsumerState<_WithLessons> createState() => _WithLessonsState();
+  ConsumerState<WithLessons> createState() => _WithLessonsState();
 }
 
-class _WithLessonsState extends ConsumerState<_WithLessons> {
+class _WithLessonsState extends ConsumerState<WithLessons> {
   @override
   void initState() {
     super.initState();
