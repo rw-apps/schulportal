@@ -87,6 +87,14 @@ String? _deepLinkAuthRedirect(Ref ref, String loc) {
     return null;
   }
 
+  // Fork: veraltete Kontoart-Vorsilbe korrigieren statt Fehlerseite
+  // (Ursache bei rewriteAccountTypedPrefix in utils/deep_link.dart).
+  if (def.deepLinkScope == DeepLinkScope.accountTyped &&
+      def.supportedAccountTypes.contains(account)) {
+    final fixed = rewriteAccountTypedPrefix(loc, account);
+    if (fixed != null) return fixed;
+  }
+
   if (!deepLinkPrefixAllowed(loc, account)) {
     return SettingsDeepLinks.deepLinkError;
   }

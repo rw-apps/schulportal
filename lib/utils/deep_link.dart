@@ -77,6 +77,29 @@ bool deepLinkPrefixAllowed(String location, AccountType accountType) {
   return prefix == accountType.name;
 }
 
+/// Fork: Pfad mit falscher Kontoart-Vorsilbe auf die Kontoart der Sitzung
+/// umschreiben; null, wenn nichts zu ändern ist.
+///
+/// Ursache: goRouterProvider (router.dart) setzt die initialLocation jedes
+/// Zweigs EINMAL beim Bau des Routers — vor dem Laden des Kontos, also mit
+/// `def.supportedAccountTypes.first` (meist student). Beim ersten
+/// goBranch(…) springt ein Elternkonto daher nach `/student/timetable/home`
+/// und landete im Wächter `_deepLinkAuthRedirect` auf der Fehlerseite
+/// (Pixel 9a, 4.1.0+9308, 16.10.26).
+///
+/// Grenze: Nur Kontoart-Vorsilben (student/teacher/parent); `common` und
+/// unbekannte Pfade bleiben unberührt. Ob die Kontoart das Modul überhaupt
+/// darf, prüft der Aufrufer weiterhin.
+String? rewriteAccountTypedPrefix(String location, AccountType accountType) {
+  final prefix = deepLinkPrefixOf(location);
+  if (prefix == null ||
+      prefix == DeepLinkPrefixes.common ||
+      prefix == accountType.name) {
+    return null;
+  }
+  return '/${accountType.name}${location.substring(1 + prefix.length)}';
+}
+
 /// Full-screen error for bad deep links.
 class DeepLinkErrorPage extends StatelessWidget {
   final Exception error;

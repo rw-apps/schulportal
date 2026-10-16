@@ -5,6 +5,7 @@ import 'package:lanis/applets/definitions.dart';
 import 'package:lanis/applets/timetable/definition.dart';
 import 'package:lanis/applets/timetable/routes.dart';
 import 'package:lanis/fork/parent_support.dart';
+import 'package:lanis/utils/deep_link.dart';
 import 'package:liblanis/liblanis.dart';
 
 void main() {
@@ -37,5 +38,20 @@ void main() {
     final paths = buildTimetableRoutes(ctx).whereType<GoRoute>().map((r) => r.path);
     expect(paths, containsAll(['/student/timetable', '/parent/timetable']));
     expect(timeTableDefinition.supportedAccountTypes, contains(AccountType.parent));
+  });
+
+  test('veralteter Schülerpfad wird für Eltern umgeschrieben', () {
+    // Ablauf vom 16.10.26: Zweig-Startpfad /student/… für ein Elternkonto.
+    expect(
+      rewriteAccountTypedPrefix('/student/timetable/home', AccountType.parent),
+      '/parent/timetable/home',
+    );
+    expect(
+      rewriteAccountTypedPrefix('/student/lessons/home?x=1', AccountType.teacher),
+      '/teacher/lessons/home?x=1',
+    );
+    expect(rewriteAccountTypedPrefix('/parent/timetable/home', AccountType.parent), isNull);
+    expect(rewriteAccountTypedPrefix('/common/substitutions/home', AccountType.parent), isNull);
+    expect(rewriteAccountTypedPrefix('/welcome', AccountType.parent), isNull);
   });
 }
