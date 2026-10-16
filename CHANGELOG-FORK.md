@@ -1,5 +1,11 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9324**
+
+- **Unterricht** im neuen Stil: oben die Hausaufgaben (offene gelb, erledigte darunter), darunter alle Kurse mit Lehrkräften, neuestem Eintrag der Kursmappe und Fehlzeiten. Antippen öffnet die Kursseite mit allen Einträgen.
+- Kurse heißen kurz nach dem Fach („Naturwissenschaften“ statt „Naturwissenschaften 06 … (061NAWI05-IGS)“); lange Lehrerlisten werden gekürzt („… +4“).
+- Auf der Kinderkarte in „Heute“ erscheint die Zahl offener Hausaufgaben und ungelesener Nachrichten; Antippen führt in den jeweiligen Bereich.
+
 **4.1.0+9323**
 
 - Neue Leiste nach dem Konzept vom 17.10.: **Heute · Kalender · Unterricht · Nachrichten · Mehr**. Jedes Ding hat einen Ort, „Heute“ zeigt nur Auszüge.

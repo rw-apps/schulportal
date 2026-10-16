@@ -6,10 +6,11 @@ import 'package:liblanis/liblanis.dart'
 
 import 'package:lanis/applets/conversations/definition.dart';
 import 'package:lanis/applets/external_definitions.dart';
-import 'package:lanis/applets/lessons/definition.dart';
 import 'package:lanis/utils/deep_link.dart';
 
 import '../../school_links.dart';
+import '../courses/courses_page.dart';
+import '../courses/live_courses_page.dart';
 import '../kit.dart';
 import '../live/live_data.dart';
 import '../more/more_page.dart';
@@ -19,6 +20,7 @@ import '../plan/plan_page.dart';
 import '../today/live_today_page.dart';
 import '../today/today_model.dart';
 import '../today/today_page.dart';
+import 'demo_courses.dart';
 import 'demo_family.dart';
 import 'demo_plan.dart';
 
@@ -170,12 +172,7 @@ class _PreviewShellState extends State<PreviewShell> {
         onOpenMessages: () => _select(ShellTab.messages),
       ),
       ShellTab.calendar => const LiveCalendarPage(),
-      ShellTab.courses => _Placeholder(
-        label: 'Unterricht',
-        text: 'Hausaufgaben und Kurse im neuen Stil folgen.',
-        actionLabel: 'Bisherige Ansicht öffnen',
-        onAction: () => _goOld(lessonsDefinition.homePath(type)),
-      ),
+      ShellTab.courses => const LiveCoursesPage(),
       ShellTab.messages => _Placeholder(
         label: 'Nachrichten',
         text: 'Nachrichten im neuen Stil folgen.',
@@ -207,6 +204,7 @@ class _PreviewShellState extends State<PreviewShell> {
       },
       events: _data.week,
     ),
+    ShellTab.courses => CoursesPage(items: demoCourses(), firstName: 'Lena'),
     ShellTab.more => MorePage(font: _font, onFont: _setFont),
     _ => _Placeholder(label: _dest[_tab.index].$3, text: 'Folgt.'),
   };
