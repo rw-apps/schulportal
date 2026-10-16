@@ -86,91 +86,104 @@ class _PlanPageState extends State<PlanPage> {
     final bottom = MediaQuery.paddingOf(context).bottom;
     final open = openGroupSubjects(_plan, _choice).toList()..sort();
 
+    final head = <Widget>[
+      Padding(
+        padding: const EdgeInsets.fromLTRB(Sp.page + Sp.xs, Sp.xl, Sp.page, 0),
+        child: Row(
+          children: [
+            Expanded(child: Text('Stundenplan', style: k.pageTitle)),
+            _ViewToggle(
+              value: _view,
+              onChanged: (v) => setState(() => _view = v),
+            ),
+          ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
+        child: _KidChips(
+          plans: widget.plans,
+          selected: _kid,
+          onSelect: (i) => setState(() => _kid = i),
+        ),
+      ),
+      if (open.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Sp.page, Sp.s, Sp.page, 0),
+          child: _OpenGroupsHint(
+            plan: _plan,
+            shorts: open,
+            onChoose: _openGroupSheet,
+          ),
+        ),
+    ];
+
+    if (_view == PlanView.week) {
+      // Woche ohne Scrollen: Raster bekommt die ganze Resthöhe und teilt sie
+      // auf die Stunden auf (WeekGrid). Seitenrand schmaler als sonst, damit
+      // die fünf Spalten breiter werden.
+      return SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ...head,
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(Sp.s, Sp.ml, Sp.s, bottom + Sp.s),
+                child: WeekGrid(
+                  plan: _plan,
+                  week: _week,
+                  today: _todayIndex,
+                  now: widget.now,
+                  choice: _choice,
+                  onOpenGroup: _openGroupSheet,
+                  onOpenDay: (d) => setState(() {
+                    _day = d;
+                    _view = PlanView.day;
+                  }),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return CustomScrollView(
       slivers: [
         SliverSafeArea(
           bottom: false,
-          sliver: SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-                Sp.page + Sp.xs, Sp.xl, Sp.page, 0),
-            sliver: SliverToBoxAdapter(
-              child: Row(
-                children: [
-                  Expanded(child: Text('Stundenplan', style: k.pageTitle)),
-                  _ViewToggle(
-                    value: _view,
-                    onChanged: (v) => setState(() => _view = v),
-                  ),
-                ],
-              ),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: head,
             ),
           ),
         ),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
           sliver: SliverToBoxAdapter(
-            child: _KidChips(
-              plans: widget.plans,
-              selected: _kid,
-              onSelect: (i) => setState(() => _kid = i),
+            child: _DayPicker(
+              week: _week,
+              selected: _day,
+              today: _todayIndex,
+              onSelect: (i) => setState(() => _day = i),
             ),
           ),
         ),
-        if (open.isNotEmpty)
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
-            sliver: SliverToBoxAdapter(
-              child: _OpenGroupsHint(
-                plan: _plan,
-                shorts: open,
-                onChoose: _openGroupSheet,
-              ),
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, bottom + Sp.xl),
+          sliver: SliverToBoxAdapter(
+            child: DayPlan(
+              plan: _plan,
+              day: _day,
+              choice: _choice,
+              now: _day == _todayIndex ? widget.now : null,
+              onOpenGroup: _openGroupSheet,
             ),
           ),
-        if (_view == PlanView.day) ...[
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
-            sliver: SliverToBoxAdapter(
-              child: _DayPicker(
-                week: _week,
-                selected: _day,
-                today: _todayIndex,
-                onSelect: (i) => setState(() => _day = i),
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-                Sp.page, Sp.ml, Sp.page, bottom + Sp.xl),
-            sliver: SliverToBoxAdapter(
-              child: DayPlan(
-                plan: _plan,
-                day: _day,
-                choice: _choice,
-                now: _day == _todayIndex ? widget.now : null,
-                onOpenGroup: _openGroupSheet,
-              ),
-            ),
-          ),
-        ] else
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-                Sp.page, Sp.ml, Sp.page, bottom + Sp.xl),
-            sliver: SliverToBoxAdapter(
-              child: WeekGrid(
-                plan: _plan,
-                week: _week,
-                today: _todayIndex,
-                now: widget.now,
-                choice: _choice,
-                onOpenGroup: _openGroupSheet,
-                onOpenDay: (d) => setState(() {
-                  _day = d;
-                  _view = PlanView.day;
-                }),
-              ),
-            ),
-          ),
+        ),
       ],
     );
   }
@@ -242,47 +255,51 @@ class _KidChips extends StatelessWidget {
       runSpacing: Sp.s,
       children: [
         for (final (i, p) in plans.indexed)
-          Builder(builder: (context) {
-            final tone = k.kid(p.colorIndex);
-            final sel = i == selected;
-            return Semantics(
-              selected: sel,
-              button: true,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(Rad.pill),
-                onTap: () => onSelect(i),
-                child: Container(
-                  height: Sz.buttonSmall,
-                  padding: const EdgeInsets.symmetric(horizontal: Sp.l),
-                  decoration: BoxDecoration(
-                    color: sel ? tone.tint : k.p.card,
-                    borderRadius: BorderRadius.circular(Rad.pill),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: Sz.dot + Sp.xxs,
-                        height: Sz.dot + Sp.xxs,
-                        decoration: BoxDecoration(
-                          color: tone.accent,
-                          shape: BoxShape.circle,
+          Builder(
+            builder: (context) {
+              final tone = k.kid(p.colorIndex);
+              final sel = i == selected;
+              return Semantics(
+                selected: sel,
+                button: true,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(Rad.pill),
+                  onTap: () => onSelect(i),
+                  child: Container(
+                    height: Sz.buttonSmall,
+                    padding: const EdgeInsets.symmetric(horizontal: Sp.l),
+                    decoration: BoxDecoration(
+                      color: sel ? tone.tint : k.p.card,
+                      borderRadius: BorderRadius.circular(Rad.pill),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: Sz.dot + Sp.xxs,
+                          height: Sz.dot + Sp.xxs,
+                          decoration: BoxDecoration(
+                            color: tone.accent,
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: Sp.s),
-                      Text(p.firstName,
-                          style: k.chipLabel(sel, tone.onTint)),
-                    ],
+                        const SizedBox(width: Sp.s),
+                        Text(p.firstName, style: k.chipLabel(sel, tone.onTint)),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          }),
+              );
+            },
+          ),
       ],
     );
   }
 }
 
+/// Eine Zeile „Gruppe wählen: [Textil] [ER / KR / Eth]“. Die Erklärung
+/// steht erst in der Auswahl selbst (GroupSheet). Ursache: Der Hinweis als
+/// Karte mit Text nahm im ersten Entwurf ~130 dp über dem Raster ein.
 class _OpenGroupsHint extends StatelessWidget {
   const _OpenGroupsHint({
     required this.plan,
@@ -297,45 +314,33 @@ class _OpenGroupsHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    return Container(
-      padding: const EdgeInsets.fromLTRB(Sp.l, Sp.ml, Sp.l, Sp.ml),
-      decoration: BoxDecoration(
-        color: k.p.card,
-        borderRadius: BorderRadius.circular(Rad.box),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
         children: [
-          Text('Gruppe wählen', style: k.cardName),
-          const SizedBox(height: Sp.xxs),
-          Text(
-            'Hier laufen mehrere Gruppen parallel. Nach deiner Wahl zeigt '
-            'der Plan nur noch die von ${plan.firstName}.',
-            style: k.meta,
-          ),
-          const SizedBox(height: Sp.s + Sp.xxs),
-          Wrap(
-            spacing: Sp.s,
-            runSpacing: Sp.s,
-            children: [
-              for (final s in shorts)
-                Material(
-                  color: k.p.inset,
-                  borderRadius: BorderRadius.circular(Rad.pill),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(Rad.pill),
-                    onTap: () => onChoose(s),
-                    child: Container(
-                      height: Sz.buttonSmall,
-                      padding: const EdgeInsets.symmetric(horizontal: Sp.l),
-                      alignment: Alignment.center,
-                      child: Text(groupShortLabel(plan, s),
-                          style: k.button(k.p.ink)),
-                    ),
+          Icon(Icons.group_work_outlined, size: Sz.icon, color: k.p.muted),
+          const SizedBox(width: Sp.xs + Sp.xxs),
+          Text('Gruppe wählen:', style: k.meta),
+          for (final s in shorts) ...[
+            const SizedBox(width: Sp.s),
+            Material(
+              color: k.p.change.bg,
+              borderRadius: BorderRadius.circular(Rad.pill),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(Rad.pill),
+                onTap: () => onChoose(s),
+                child: Container(
+                  height: Sz.buttonSmall - Sp.s,
+                  padding: const EdgeInsets.symmetric(horizontal: Sp.ml),
+                  alignment: Alignment.center,
+                  child: Text(
+                    groupShortLabel(plan, s),
+                    style: k.button(k.p.change.ink),
                   ),
                 ),
-            ],
-          ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -386,9 +391,7 @@ class _DayPicker extends StatelessWidget {
                         decoration: BoxDecoration(
                           // Punkt markiert „heute“, wenn ein anderer Tag
                           // gewählt ist.
-                          color: i == today && i != selected
-                              ? k.p.ink
-                              : null,
+                          color: i == today && i != selected ? k.p.ink : null,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -434,38 +437,52 @@ class DayPlan extends StatelessWidget {
     if (blocks.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(Sp.xl),
-        child: Text('An diesem Tag kein Unterricht.',
-            style: k.meta, textAlign: TextAlign.center),
+        child: Text(
+          'An diesem Tag kein Unterricht.',
+          style: k.meta,
+          textAlign: TextAlign.center,
+        ),
       );
     }
     final rows = <Widget>[];
     for (var i = 0; i < blocks.length; i++) {
       final b = blocks[i];
       if (i > 0) {
-        final gap = minutesOf(plan.slots[b.firstSlot].start).minutes -
+        final gap =
+            minutesOf(plan.slots[b.firstSlot].start).minutes -
             minutesOf(plan.slots[blocks[i - 1].lastSlot].end).minutes;
         if (gap >= pauseRowMinutes) {
-          rows.add(Padding(
-            padding: const EdgeInsets.only(
-                left: Sz.slotColumn + Sp.m, top: Sp.xs, bottom: Sp.xs),
-            child: Text(
-              'Pause bis ${plan.slots[b.firstSlot].start}',
-              style: k.rowPause,
+          rows.add(
+            Padding(
+              padding: const EdgeInsets.only(
+                left: Sz.slotColumn + Sp.m,
+                top: Sp.xs,
+                bottom: Sp.xs,
+              ),
+              child: Text(
+                'Pause bis ${plan.slots[b.firstSlot].start}',
+                style: k.rowPause,
+              ),
             ),
-          ));
+          );
         }
       }
-      rows.add(Padding(
-        padding: const EdgeInsets.only(bottom: Sp.s),
-        child: _DayRow(
-          plan: plan,
-          block: b,
-          now: now,
-          onOpenGroup: onOpenGroup,
+      rows.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: Sp.s),
+          child: _DayRow(
+            plan: plan,
+            block: b,
+            now: now,
+            onOpenGroup: onOpenGroup,
+          ),
         ),
-      ));
+      );
     }
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: rows,
+    );
   }
 }
 
@@ -581,8 +598,7 @@ class _DayRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                      Sp.ml, Sp.m, Sp.s, Sp.m),
+                  padding: const EdgeInsets.fromLTRB(Sp.ml, Sp.m, Sp.s, Sp.m),
                   child: Row(
                     children: [
                       Expanded(
@@ -596,20 +612,24 @@ class _DayRow extends StatelessWidget {
                                 Expanded(
                                   child: Text(
                                     title,
-                                    style: k.planSubject(ink).copyWith(
-                                      decoration: strike
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                      decorationColor: ink,
-                                    ),
+                                    style: k
+                                        .planSubject(ink)
+                                        .copyWith(
+                                          decoration: strike
+                                              ? TextDecoration.lineThrough
+                                              : null,
+                                          decorationColor: ink,
+                                        ),
                                   ),
                                 ),
                                 // Bei offener Wahl steht rechts „Wählen“;
                                 // die Stunde zusätzlich drückte den Titel
                                 // zusammen („Textil · 4 Gruppen1. Block“).
                                 if (block.content is! ResolvedOpen) ...[
-                                  Text(running ? 'läuft' : label,
-                                      style: k.planMeta(sub)),
+                                  Text(
+                                    running ? 'läuft' : label,
+                                    style: k.planMeta(sub),
+                                  ),
                                   const SizedBox(width: Sp.xs),
                                 ],
                               ],
@@ -644,13 +664,17 @@ class _DayRow extends StatelessWidget {
 }
 
 bool _isParallelSubject(KidPlan plan, String short) => plan.days.any(
-  (d) => d.any(
-    (c) => c.isParallel && c.options.any((o) => o.short == short),
-  ),
+  (d) => d.any((c) => c.isParallel && c.options.any((o) => o.short == short)),
 );
 
 // ---- Wochenraster -------------------------------------------------------
 
+/// Woche als Raster, das die verfügbare Höhe ganz ausfüllt.
+///
+/// Zeilenhöhe = (freie Höhe − Kopf − Abstände) / Stunden, mindestens
+/// [Sz.gridRowMin]; erst darunter wird gescrollt. Pausen ab 15 Minuten sind
+/// eine größere Lücke ([Sz.gridBreak]), damit Vormittagsblöcke erkennbar
+/// sind. Heute: Spalte hinterlegt, Jetzt-Linie in Kinderfarbe.
 class WeekGrid extends StatelessWidget {
   const WeekGrid({
     super.key,
@@ -671,30 +695,81 @@ class WeekGrid extends StatelessWidget {
   final ValueChanged<String> onOpenGroup;
   final ValueChanged<int> onOpenDay;
 
-  static const gap = Sp.xs;
+  static const breakMinutes = 15;
+  static const headHeight = Sz.buttonSmall - Sp.s;
 
   @override
   Widget build(BuildContext context) {
-    final k = Kit.of(context);
     final used = usedSlots(plan);
-    double h(int span) => span * Sz.gridRow + (span - 1) * gap;
+    if (used.isEmpty) return const SizedBox.shrink();
 
-    Widget header(int d) {
+    // Lücke VOR jeder benutzten Stunde (erste: 0).
+    final gaps = <double>[
+      for (var i = 0; i < used.length; i++)
+        i == 0
+            ? 0
+            : (minutesOf(plan.slots[used[i]].start).minutes -
+                          minutesOf(plan.slots[used[i - 1]].end).minutes >=
+                      breakMinutes
+                  ? Sz.gridBreak
+                  : Sz.gridGap),
+    ];
+    final gapSum = gaps.fold<double>(0, (a, b) => a + b);
+
+    return LayoutBuilder(
+      builder: (context, c) {
+        final free = c.maxHeight - headHeight - Sp.s - gapSum;
+        final rowH = (free / used.length).clamp(Sz.gridRowMin, double.infinity);
+        final tops = <int, double>{};
+        var y = 0.0;
+        for (var i = 0; i < used.length; i++) {
+          y += gaps[i];
+          tops[used[i]] = y;
+          y += rowH;
+        }
+        final bodyH = y;
+        final grid = _grid(context, used, tops, rowH, bodyH);
+        final needed = headHeight + Sp.s + bodyH;
+        return needed > c.maxHeight + 0.5
+            ? SingleChildScrollView(child: grid)
+            : grid;
+      },
+    );
+  }
+
+  Widget _grid(
+    BuildContext context,
+    List<int> used,
+    Map<int, double> tops,
+    double rowH,
+    double bodyH,
+  ) {
+    final k = Kit.of(context);
+
+    Widget head(int d) {
       final sel = d == today;
       return InkWell(
         borderRadius: BorderRadius.circular(Rad.day),
         onTap: () => onOpenDay(d),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: Sp.xs + Sp.xxs),
+          height: headHeight,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: sel ? k.p.strong : null,
             borderRadius: BorderRadius.circular(Rad.day),
           ),
-          child: Column(
-            children: [
-              Text(_wd[d], style: k.weekDay(sel)),
-              Text('${week[d].day}', style: k.weekNum(sel)),
-            ],
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(_wd[d], style: k.gridHead(sel)),
+                const SizedBox(width: Sp.xs),
+                Text('${week[d].day}.', style: k.gridHeadDate(sel)),
+              ],
+            ),
           ),
         ),
       );
@@ -705,78 +780,139 @@ class WeekGrid extends StatelessWidget {
       children: [
         Row(
           children: [
-            const SizedBox(width: Sz.gridLabel + gap),
+            const SizedBox(width: Sz.gridLabel + Sz.gridGap),
             for (var d = 0; d < 5; d++) ...[
-              if (d > 0) const SizedBox(width: gap),
-              Expanded(child: header(d)),
+              if (d > 0) const SizedBox(width: Sz.gridGap),
+              Expanded(child: head(d)),
             ],
           ],
         ),
         const SizedBox(height: Sp.s),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: Sz.gridLabel,
-              child: Column(
-                children: [
-                  for (final (i, s) in used.indexed) ...[
-                    if (i > 0) const SizedBox(height: gap),
-                    SizedBox(
-                      height: Sz.gridRow,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              plan.slots[s].label.split(' ').first,
-                              style: k.gridSlot,
-                            ),
-                          ),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(plan.slots[s].start, style: k.gridTime),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: gap),
-            for (var d = 0; d < 5; d++) ...[
-              if (d > 0) const SizedBox(width: gap),
-              Expanded(
-                child: Column(
+        SizedBox(
+          height: bodyH,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                width: Sz.gridLabel,
+                child: Stack(
                   children: [
-                    for (final (i, b) in _blocks(d, used).indexed) ...[
-                      if (i > 0) const SizedBox(height: gap),
-                      SizedBox(
-                        height: h(b.span),
-                        child: _GridCell(
-                          plan: plan,
-                          block: b,
-                          isToday: d == today,
-                          now: now,
-                          onOpenGroup: onOpenGroup,
-                          onOpenDay: () => onOpenDay(d),
+                    for (final s in used)
+                      Positioned(
+                        top: tops[s],
+                        height: rowH,
+                        left: 0,
+                        right: 0,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                plan.slots[s].label.split(' ').first,
+                                style: k.gridSlot,
+                              ),
+                            ),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                plan.slots[s].start,
+                                style: k.gridTime,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
                   ],
                 ),
               ),
+              const SizedBox(width: Sz.gridGap),
+              for (var d = 0; d < 5; d++) ...[
+                if (d > 0) const SizedBox(width: Sz.gridGap),
+                Expanded(
+                  child: _dayColumn(context, d, used, tops, rowH, bodyH),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ],
     );
   }
 
-  /// Abschnitte eines Tages nur über die benutzten Stunden; gleiche
-  /// aufeinanderfolgende Stunden werden EIN hoher Block.
+  Widget _dayColumn(
+    BuildContext context,
+    int d,
+    List<int> used,
+    Map<int, double> tops,
+    double rowH,
+    double bodyH,
+  ) {
+    final k = Kit.of(context);
+    final tone = k.kid(plan.colorIndex);
+    final isToday = d == today;
+    final blocks = _blocks(d, used);
+    final nowY = isToday ? _nowY(used, tops, rowH) : null;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        if (isToday)
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: tone.tint.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(Rad.cell),
+              ),
+            ),
+          ),
+        for (final b in blocks)
+          if (b.content is! ResolvedNone)
+            Positioned(
+              top: tops[b.firstSlot],
+              height: tops[b.lastSlot]! + rowH - tops[b.firstSlot]!,
+              left: 0,
+              right: 0,
+              child: _GridCell(
+                plan: plan,
+                block: b,
+                isToday: isToday,
+                now: now,
+                onOpenGroup: onOpenGroup,
+                onOpenDay: () => onOpenDay(d),
+              ),
+            ),
+        if (nowY != null)
+          Positioned(
+            top: nowY - Sz.nowLine / 2,
+            left: -Sz.gridGap,
+            right: -Sz.gridGap,
+            height: Sz.nowLine,
+            child: IgnorePointer(child: ColoredBox(color: tone.accent)),
+          ),
+      ],
+    );
+  }
+
+  /// Senkrechte Lage von „jetzt“ in der Spalte; null vor Beginn/nach Ende.
+  double? _nowY(List<int> used, Map<int, double> tops, double rowH) {
+    final t = now.hour * 60 + now.minute;
+    for (var i = 0; i < used.length; i++) {
+      final slot = plan.slots[used[i]];
+      final s = minutesOf(slot.start).minutes;
+      final e = minutesOf(slot.end).minutes;
+      if (t >= s && t < e) return tops[used[i]]! + (t - s) / (e - s) * rowH;
+      if (t < s) {
+        // In einer Pause: Linie mittig in die Lücke davor.
+        if (i == 0) return null;
+        return tops[used[i]]! -
+            (tops[used[i]]! - tops[used[i - 1]]! - rowH) / 2;
+      }
+    }
+    return null;
+  }
+
+  /// Gleiche aufeinanderfolgende Stunden werden EIN hoher Block.
   List<DayBlock> _blocks(int day, List<int> used) {
     final res = [for (final s in used) resolveCell(plan.days[day][s], choice)];
     bool same(Resolved a, Resolved b) => switch ((a, b)) {
@@ -790,10 +926,17 @@ class WeekGrid extends StatelessWidget {
           used[i] == out.last.lastSlot + 1 &&
           same(out.last.content, res[i])) {
         final b = out.removeLast();
-        out.add(DayBlock(
-            firstSlot: b.firstSlot, lastSlot: used[i], content: b.content));
+        out.add(
+          DayBlock(
+            firstSlot: b.firstSlot,
+            lastSlot: used[i],
+            content: b.content,
+          ),
+        );
       } else {
-        out.add(DayBlock(firstSlot: used[i], lastSlot: used[i], content: res[i]));
+        out.add(
+          DayBlock(firstSlot: used[i], lastSlot: used[i], content: res[i]),
+        );
       }
     }
     return out;
@@ -829,31 +972,30 @@ class _GridCell extends StatelessWidget {
     Color bg;
     Color ink;
     Color? border;
-    String top;
-    String? bottom;
+    final lines = <(String, TextStyle)>[];
     var strike = false;
-    VoidCallback? onTap = onOpenDay;
+    VoidCallback onTap = onOpenDay;
 
     switch (block.content) {
       case ResolvedNone():
         return const SizedBox.shrink();
       case ResolvedOpen o:
-        bg = k.p.inset;
-        ink = k.p.muted;
-        border = k.p.line;
-        // „ER“ sah wie schon gewählt aus; bei verschiedenen Fächern daher
-        // neutral „Wahl“.
+        bg = k.p.change.bg;
+        ink = k.p.change.ink;
+        border = k.p.change.dot;
         final same = isSameSubjectChoice(o.options);
-        top = same ? o.short : 'Wahl';
-        bottom = same ? '${o.options.length} Gr.' : '${o.options.length} Fächer';
+        lines.add((same ? o.subject : 'Wahl', k.cellShort(ink)));
+        lines.add((
+          same ? '${o.options.length} Gruppen' : '${o.options.length} Fächer',
+          k.cellRoom(ink),
+        ));
+        lines.add(('wählen', k.cellTeacher(ink)));
         onTap = () => onOpenGroup(o.short);
       case ResolvedLesson r:
         final x = r.lesson;
-        final f = k.subject(x.short);
+        final f = k.subjectAt(subjectColorSlots(plan)[x.short] ?? 0);
         bg = f.bg;
         ink = f.ink;
-        top = x.short;
-        bottom = x.room;
         if (x.change == ChangeKind.cancelled) {
           bg = k.p.cancel.bg;
           ink = k.p.cancel.ink;
@@ -863,6 +1005,23 @@ class _GridCell extends StatelessWidget {
           bg = k.p.change.bg;
           ink = k.p.change.ink;
           border = k.p.change.dot;
+        }
+        lines.add((gridName(x), k.cellShort(ink)));
+        if (x.change == ChangeKind.cancelled) {
+          lines.add(('fällt aus', k.cellRoom(ink)));
+        } else {
+          if (x.change == ChangeKind.roomChange && x.changeDetail != null) {
+            lines.add((x.room ?? '', k.cellRoom(ink)));
+          } else if (x.room != null) {
+            lines.add((x.room!, k.cellRoom(ink)));
+          }
+          if (x.change == ChangeKind.substitution) {
+            lines.add(('Vertretung', k.cellTeacher(ink)));
+          } else if (x.change == ChangeKind.roomChange) {
+            lines.add(('Raumwechsel', k.cellTeacher(ink)));
+          } else if (x.teacher != null) {
+            lines.add((x.teacher!, k.cellTeacher(ink)));
+          }
         }
     }
     if (running) border = tone.accent;
@@ -879,27 +1038,41 @@ class _GridCell extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Sp.xs),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  top,
-                  maxLines: 1,
-                  style: k.cellShort(ink).copyWith(
-                    decoration: strike ? TextDecoration.lineThrough : null,
-                    decorationColor: ink,
+          padding: const EdgeInsets.fromLTRB(
+            Sp.xs + Sp.xxs,
+            Sp.xs + Sp.xxs,
+            Sp.xs,
+            Sp.xs,
+          ),
+          // Zeilen nur, soweit Platz ist: Was nicht passt, wird
+          // abgeschnitten statt überzulaufen (kurze Einzelstunden zeigen so
+          // Fach + Raum, Doppelstunden zusätzlich die Lehrkraft).
+          child: SingleChildScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Zu breite Zeilen werden verkleinert statt mit „…“
+                // gekürzt (erster Wurf: „Deuts…“, „Biolog…“ bei Schrift
+                // ×1,15 und ~60 dp Zellbreite).
+                for (final (i, (text, style)) in lines.indexed)
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      text,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: i == 0 && strike
+                          ? style.copyWith(
+                              decoration: TextDecoration.lineThrough,
+                              decorationColor: ink,
+                            )
+                          : style,
+                    ),
                   ),
-                ),
-              ),
-              if (bottom != null)
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(bottom, maxLines: 1, style: k.cellRoom(ink)),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -952,9 +1125,9 @@ class GroupSheet extends StatelessWidget {
             Text(
               sameSubject
                   ? 'Gilt für alle $label-Stunden von ${plan.firstName}. '
-                      'Die anderen Gruppen werden ausgeblendet.'
+                        'Die anderen Gruppen werden ausgeblendet.'
                   : 'Parallel laufen $label. Wähle, was ${plan.firstName} '
-                      'hat; die anderen werden ausgeblendet.',
+                        'hat; die anderen werden ausgeblendet.',
               style: k.meta,
             ),
             const SizedBox(height: Sp.m),
@@ -962,16 +1135,16 @@ class GroupSheet extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: Sp.s),
                 child: Material(
-                  color: isChosen(g)
-                      ? k.kid(plan.colorIndex).tint
-                      : k.p.inset,
+                  color: isChosen(g) ? k.kid(plan.colorIndex).tint : k.p.inset,
                   borderRadius: BorderRadius.circular(Rad.signal),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(Rad.signal),
                     onTap: () => onChoose(g),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: Sp.l, vertical: Sp.m),
+                        horizontal: Sp.l,
+                        vertical: Sp.m,
+                      ),
                       child: Row(
                         children: [
                           Expanded(
@@ -986,8 +1159,9 @@ class GroupSheet extends StatelessWidget {
                                 ),
                                 Text(
                                   sameSubject
-                                      ? [if (g.room != null) 'Raum ${g.room}']
-                                          .join()
+                                      ? [
+                                          if (g.room != null) 'Raum ${g.room}',
+                                        ].join()
                                       : [?g.teacher, ?g.room].join(' · '),
                                   style: k.planMeta(k.p.muted),
                                 ),
@@ -995,8 +1169,11 @@ class GroupSheet extends StatelessWidget {
                             ),
                           ),
                           if (isChosen(g))
-                            Icon(Icons.check, size: Sz.icon,
-                                color: k.kid(plan.colorIndex).label),
+                            Icon(
+                              Icons.check,
+                              size: Sz.icon,
+                              color: k.kid(plan.colorIndex).label,
+                            ),
                         ],
                       ),
                     ),

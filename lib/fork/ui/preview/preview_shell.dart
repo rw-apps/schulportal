@@ -54,9 +54,10 @@ class _PreviewShellState extends State<PreviewShell> {
       ),
       child: Scaffold(
         backgroundColor: k.p.bg,
-        // Inhalt läuft unter der schwebenden Leiste weiter; deren Höhe kommt
-        // über MediaQuery.padding.bottom bei TodayPage an.
-        extendBody: true,
+        // Inhalt endet ÜBER der Leiste (kein extendBody). Ursache: Lief er
+        // darunter weiter, schnitt die Pille beim Scrollen Stunden an
+        // (Rückmeldung 16.10.26 zur Tagesansicht).
+        extendBody: false,
         body: switch (_index) {
           0 => TodayPage(
             data: _data,
@@ -102,36 +103,40 @@ class FloatingNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final inset = MediaQuery.paddingOf(context).bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        Sz.navMargin,
-        0,
-        Sz.navMargin,
-        Sz.navBottom + inset,
-      ),
-      child: Container(
-        height: Sz.navHeight,
-        padding: const EdgeInsets.symmetric(horizontal: Sp.s),
-        decoration: BoxDecoration(
-          color: k.p.navBg,
-          borderRadius: BorderRadius.circular(Rad.nav),
-          boxShadow: k.navShadow,
+    // Fläche um die Pille in Seitenfarbe, damit nichts durchscheint.
+    return ColoredBox(
+      color: k.p.bg,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          Sz.navMargin,
+          Sp.s,
+          Sz.navMargin,
+          Sz.navBottom + inset,
         ),
-        // Jedes Ziel bekommt ein Fünftel der Breite. Ursache: Mit freier
-        // Breite lief die Leiste bei großer Systemschrift um bis zu 220 px
-        // über („Nachrichten“, Test today_page_test, Schrift ×1,3).
-        child: Row(
-          children: [
-            for (final (i, (icon, iconSel, label)) in items.indexed)
-              Expanded(
-                child: _NavItem(
-                  icon: i == selected ? iconSel : icon,
-                  label: label,
-                  selected: i == selected,
-                  onTap: () => onSelect(i),
+        child: Container(
+          height: Sz.navHeight,
+          padding: const EdgeInsets.symmetric(horizontal: Sp.s),
+          decoration: BoxDecoration(
+            color: k.p.navBg,
+            borderRadius: BorderRadius.circular(Rad.nav),
+            boxShadow: k.navShadow,
+          ),
+          // Jedes Ziel bekommt ein Fünftel der Breite. Ursache: Mit freier
+          // Breite lief die Leiste bei großer Systemschrift um bis zu 220 px
+          // über („Nachrichten“, Test today_page_test, Schrift ×1,3).
+          child: Row(
+            children: [
+              for (final (i, (icon, iconSel, label)) in items.indexed)
+                Expanded(
+                  child: _NavItem(
+                    icon: i == selected ? iconSel : icon,
+                    label: label,
+                    selected: i == selected,
+                    onTap: () => onSelect(i),
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -165,7 +170,9 @@ class _NavItem extends StatelessWidget {
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(
-            horizontal: Sp.xs, vertical: Sp.xs + Sp.xxs),
+            horizontal: Sp.xs,
+            vertical: Sp.xs + Sp.xxs,
+          ),
           decoration: BoxDecoration(
             color: selected ? k.p.navSelected : null,
             borderRadius: BorderRadius.circular(Rad.navItem),
@@ -179,11 +186,7 @@ class _NavItem extends StatelessWidget {
               // oder umgebrochen („Stundenpla-n“ im Lanis-Original).
               FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  style: k.navLabel(selected),
-                ),
+                child: Text(label, maxLines: 1, style: k.navLabel(selected)),
               ),
             ],
           ),

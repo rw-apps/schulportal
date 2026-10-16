@@ -63,11 +63,20 @@ abstract final class Sz {
   static const double navBottom = 24;
 
   // ---- Stundenplan ------------------------------------------------------
-  /// Höhe einer Stunde im Wochenraster; Doppelstunden = 2 × + Abstand.
-  static const double gridRow = 54;
+  /// Mindesthöhe einer Stunde im Wochenraster. Sonst teilt das Raster die
+  /// freie Höhe auf alle Stunden auf, damit die Woche ohne Scrollen auf
+  /// einen Bildschirm passt (Rückmeldung 16.10.26: „Platz verschenkt“).
+  static const double gridRowMin = 46;
+
+  /// Abstand zwischen Zellen; an Pausen ab 15 Min. der größere.
+  static const double gridGap = 3;
+  static const double gridBreak = 10;
 
   /// Spalte links im Wochenraster („1.“, „08:00“).
-  static const double gridLabel = 40;
+  static const double gridLabel = 32;
+
+  /// Jetzt-Linie in der heutigen Spalte.
+  static const double nowLine = 2;
 
   /// Fortschrittsstrich unter der laufenden Stunde (Tagesansicht).
   static const double progress = 4;
@@ -372,16 +381,8 @@ class Kit {
 
   KidTone kid(int index) => p.kids[index % p.kids.length];
 
-  /// Feste Fachfarbe aus dem Kürzel (gleiches Fach = gleiche Farbe, über
-  /// Tage und Wochen hinweg). Eigene Summe statt String.hashCode, weil
-  /// dessen Wert zwischen Dart-Versionen nicht garantiert gleich bleibt.
-  FachTone subject(String short) {
-    var h = 0;
-    for (final c in short.toUpperCase().codeUnits) {
-      h = (h * 31 + c) & 0x7fffffff;
-    }
-    return p.subjects[h % p.subjects.length];
-  }
+  /// Fachfarbe nach Platz (siehe subjectColorSlots im Plan-Modell).
+  FachTone subjectAt(int slot) => p.subjects[slot % p.subjects.length];
 
   TextStyle _s(double size, FontWeight w, Color c, {double ls = 0}) =>
       TextStyle(
@@ -464,9 +465,14 @@ class Kit {
   TextStyle planMeta(Color c) => _s(13, FontWeight.w500, c);
   TextStyle get planSlot => _s(12, FontWeight.w700, p.muted);
   TextStyle cellShort(Color c) => _s(13, FontWeight.w800, c);
-  TextStyle cellRoom(Color c) => _s(10, FontWeight.w600, c);
-  TextStyle get gridSlot => _s(11, FontWeight.w700, p.muted);
+  TextStyle cellRoom(Color c) => _s(11, FontWeight.w600, c);
+  TextStyle cellTeacher(Color c) => _s(10, FontWeight.w500, c);
+  TextStyle get gridSlot => _s(12, FontWeight.w800, p.ink);
   TextStyle get gridTime => _s(10, FontWeight.w500, p.faint);
+  TextStyle gridHead(bool today) =>
+      _s(13, FontWeight.w800, today ? p.onStrong : p.ink);
+  TextStyle gridHeadDate(bool today) =>
+      _s(11, FontWeight.w600, today ? p.onStrong : p.muted);
   TextStyle get sheetTitle => _s(20, FontWeight.w800, p.ink);
 
   // ---- Allgemein --------------------------------------------------------

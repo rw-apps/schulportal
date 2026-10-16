@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/ui/plan/plan_model.dart';
+import 'package:lanis/fork/ui/plan/plan_page.dart';
 import 'package:lanis/fork/ui/preview/demo_plan.dart';
 import 'package:lanis/fork/ui/preview/preview_shell.dart';
 
@@ -80,6 +81,20 @@ void main() {
       expect(blockLabel(jonas, mo.last), '3.–4. Block');
     });
 
+    test('Fachfarben: verschiedene Fächer verschiedene Plätze', () {
+      final slots = subjectColorSlots(jonas);
+      expect(slots.values.toSet().length, slots.length);
+      expect(slots['NaWi'], 0, reason: 'Mo 1. Block zuerst');
+    });
+
+    test('Kurzformen im Raster', () {
+      PlanLesson l(String s) => PlanLesson(subject: s, short: 'X');
+      expect(gridName(l('Biologie')), 'Bio');
+      expect(gridName(l('Englisch')), 'Englisch');
+      expect(gridName(l('Mathematik')), 'Mathe');
+      expect(gridName(l('Astronomieprojekt')), 'X');
+    });
+
     test('ganz leere Stunden fehlen im Wochenraster', () {
       expect(usedSlots(jonas), [1, 2, 3, 4]);
       expect(usedSlots(lena), [0, 1, 2, 3, 4, 5, 6, 7]);
@@ -113,7 +128,7 @@ void main() {
     await _pixel(t);
     await t.pumpWidget(_app());
     await _openPlan(t, kid: 'Jonas');
-    expect(find.text('Gruppe wählen'), findsOneWidget);
+    expect(find.text('Gruppe wählen:'), findsOneWidget);
 
     await t.tap(find.text('Textil'));
     await t.pumpAndSettle();
@@ -121,7 +136,7 @@ void main() {
     await t.tap(find.text('Gruppe BRU'));
     await t.pumpAndSettle();
 
-    expect(find.text('Gruppe wählen'), findsNothing);
+    expect(find.text('Gruppe wählen:'), findsNothing);
     await t.tap(find.text('Fr'));
     await t.pumpAndSettle();
     expect(find.text('Textil'), findsOneWidget);
@@ -131,7 +146,7 @@ void main() {
     await t.tap(find.text('Heute'));
     await t.pumpAndSettle();
     await _openPlan(t, kid: 'Jonas');
-    expect(find.text('Gruppe wählen'), findsNothing);
+    expect(find.text('Gruppe wählen:'), findsNothing);
   });
 
   testWidgets('Woche: Tag antippen öffnet die Tagesansicht', (t) async {
@@ -140,8 +155,43 @@ void main() {
     await _openPlan(t);
     await t.tap(find.text('Woche'));
     await t.pumpAndSettle();
-    await t.tap(find.text('22'));
+    await t.tap(find.text('22.'));
     await t.pumpAndSettle();
     expect(find.text('Physik'), findsOneWidget);
+  });
+
+  testWidgets('Woche passt ohne Scrollen auf den Pixel', (t) async {
+    await _pixel(t);
+    await t.pumpWidget(_app(scale: 1.15));
+    await _openPlan(t);
+    await t.tap(find.text('Woche'));
+    await t.pumpAndSettle();
+    expect(t.takeException(), isNull);
+    expect(
+      find.descendant(
+        of: find.byType(WeekGrid),
+        matching: find.byType(SingleChildScrollView),
+      ).evaluate().where((e) =>
+          (e.widget as SingleChildScrollView).scrollDirection ==
+              Axis.vertical &&
+          (e.widget as SingleChildScrollView).physics == null),
+      isEmpty,
+      reason: '8 Stunden passen bei ×1,15 ohne Scrollen',
+    );
+    // Letzte Stunde (Musik, Di 8.) endet über der Leiste.
+    final musik = t.getRect(find.text('Musik'));
+    final nav = t.getRect(find.byType(FloatingNavBar));
+    expect(musik.bottom, lessThan(nav.top));
+  });
+
+  testWidgets('Tagesansicht endet über der Leiste', (t) async {
+    await _pixel(t);
+    await t.pumpWidget(_app());
+    await _openPlan(t);
+    await t.drag(find.byType(CustomScrollView), const Offset(0, -3000));
+    await t.pumpAndSettle();
+    final last = t.getRect(find.text('Musik'));
+    final nav = t.getRect(find.byType(FloatingNavBar));
+    expect(last.bottom, lessThan(nav.top));
   });
 }

@@ -263,3 +263,44 @@ String groupShortLabel(KidPlan plan, String short) {
 /// Gleiches Fach in allen Möglichkeiten (Gruppen) statt verschiedener Fächer.
 bool isSameSubjectChoice(List<PlanLesson> options) =>
     options.map((o) => o.subject).toSet().length == 1;
+
+/// Name im Wochenraster: gängige Kurzform, wenn es eine gibt („Bio“), sonst
+/// der Fachname bis 8 Zeichen („Englisch“), sonst das Kürzel.
+/// Ursache: Reine Kürzel („M“, „Ek“) waren im ersten Raster schwer lesbar.
+String gridName(PlanLesson l) {
+  const short = {
+    'Mathematik': 'Mathe',
+    'Gesellschaftslehre': 'GL',
+    'Naturwissenschaften': 'NaWi',
+    'Geschichte': 'Gesch.',
+    'Biologie': 'Bio',
+    'Erdkunde': 'Erdk.',
+    'Ev. Religion': 'ev. Reli',
+    'Kath. Religion': 'kath. Reli',
+    'Informatik': 'Info',
+    'Französisch': 'Franz.',
+    'Spanisch': 'Span.',
+    'Darstellendes Spiel': 'DS',
+    'Politik und Wirtschaft': 'PoWi',
+  };
+  return short[l.subject] ??
+      (l.subject.length <= 8 ? l.subject : l.short);
+}
+
+/// Farbplatz je Fach eines Kindes: in der Reihenfolge des ersten Auftretens
+/// (Mo 1. Stunde zuerst), Kürzel ohne Farbe bekommen den nächsten freien.
+/// Ursache: Aus dem Kürzel errechnete Plätze kollidierten (Englisch, Mathe,
+/// NaWi und Sport waren alle grau). Grenze: Bei mehr Fächern als Farben
+/// (KitPalette.subjects, 8) wiederholen sich Farben – dann aber erst ab dem
+/// neunten Fach.
+Map<String, int> subjectColorSlots(KidPlan plan) {
+  final out = <String, int>{};
+  for (final d in plan.days) {
+    for (final c in d) {
+      for (final o in c.options) {
+        out.putIfAbsent(o.short, () => out.length);
+      }
+    }
+  }
+  return out;
+}
