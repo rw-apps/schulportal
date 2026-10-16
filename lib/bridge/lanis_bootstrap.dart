@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:riverpod/misc.dart' show Override;
 
 import '../core/native_adapter_instance.dart';
+import '../core/sid_rotation_adapter.dart';
 import '../utils/glitchtip.dart';
 import 'database_storage_migration.dart';
 import 'flutter_secret_store.dart';
@@ -30,7 +31,10 @@ Future<List<Override>> bootstrapLanisClient({
     databasePath: databasePath,
     secretStore: store,
     documentCacheDirectory: p.join(tempDir.path, 'lanis_documents'),
-    httpAdapter: getNativeAdapterInstance(),
+    // Fork: sid-Austausch des Portals entschärfen (Begründung + Beleg in
+    // core/sid_rotation_adapter.dart). Ohne den Wrapper ist die App nach dem
+    // ersten Besuch im Dateispeicher abgemeldet.
+    httpAdapter: SidRotationAdapter(getNativeAdapterInstance()),
     userAgent: forkUserAgent(packageInfo.version, packageInfo.buildNumber),
     onUnexpectedError: (error, stackTrace, {required appletPhpUrl}) {
       unawaited(

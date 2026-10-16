@@ -1,5 +1,10 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9305**
+
+- Behoben: Die App wurde abgemeldet, sobald das Schulportal den Sitzungsschlüssel austauschte (zum Beispiel beim Öffnen des Dateispeichers). Danach schlugen Vertretungsplan, Nachrichten und Termine fehl.
+- Debug-Export schwärzt den Sitzungsschlüssel und prüft die Anmeldung auch nach allen Abfragen.
+
 **4.1.0+9304**
 
 - Debug-Export prüft vorab, ob die Anmeldung beim Portal noch gilt, und meldet sich bei Bedarf einmal neu an. Das Ergebnis steht im Export, ohne Sitzungsschlüssel.

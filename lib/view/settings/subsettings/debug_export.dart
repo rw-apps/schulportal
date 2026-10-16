@@ -194,8 +194,10 @@ Future<void> writeDebugExportHeader({
 Future<void> writeSessionCheck({
   required MemoryLogger report,
   required LanisSession session,
+  String phase = 'vor den Presets',
+  bool reauthenticate = true,
 }) async {
-  report.write('============= BEGIN SESSION CHECK =============');
+  report.write('============= BEGIN SESSION CHECK ($phase) =============');
   Future<bool> probe(String label) async {
     try {
       final uri = Uri.parse('$sphBase/');
@@ -230,7 +232,7 @@ Future<void> writeSessionCheck({
   }
 
   final alive = await probe('vorher');
-  if (!alive) {
+  if (!alive && reauthenticate) {
     report.log('Sitzung ungültig → einmalige Neuanmeldung');
     try {
       await session.authenticate(withoutData: true);
@@ -241,7 +243,7 @@ Future<void> writeSessionCheck({
     }
     await probe('nachher');
   }
-  report.write('============= END SESSION CHECK =============');
+  report.write('============= END SESSION CHECK ($phase) =============');
   report.write('');
 }
 
@@ -259,6 +261,15 @@ void _writeRequestDescription(
   report.write('------------- END REQUEST DESCRIPTION -------------');
 }
 
+/// Ersetzt den Wert jedes `sid`-Cookies durch `<geschwaerzt>`.
+///
+/// replaceAllMapped statt replaceAll: Dart setzt in replaceAll keine
+/// Rückverweise wie `$1` ein (es stünde wörtlich im Text).
+String redactSessionCookies(String line) => line.replaceAllMapped(
+  RegExp(r'(\bsid=)[^;,\s]+', caseSensitive: false),
+  (m) => '${m[1]}<geschwaerzt>',
+);
+
 void _writeResponse(MemoryLogger report, Response<dynamic> response) {
   report.write('------------- BEGIN RESPONSE -------------');
   report.log(
@@ -266,7 +277,11 @@ void _writeResponse(MemoryLogger report, Response<dynamic> response) {
   );
   report.write('-------- BEGIN HEADER --------');
   for (final key in response.headers.map.keys) {
-    report.write('$key: ${response.headers.value(key)}');
+    // Fork: Sitzungsschlüssel schwärzen. Ursache: Export vom 16.10.26 09:54
+    // enthielt den vom Dateispeicher neu gesetzten sid im Klartext
+    // (Set-Cookie-Kopf). Grenze: nur der Wert; dass ein sid gesetzt wurde,
+    // bleibt sichtbar — genau das brauchte die Fehlersuche.
+    report.write(redactSessionCookies('$key: ${response.headers.value(key)}'));
   }
   report.write('-------- END HEADER --------');
   report.write('-------- BEGIN BODY --------');
@@ -444,6 +459,18 @@ Future<String> runDebugExportPresets({
         note: section.note,
       );
     }
+  }
+
+  // Fork: zweite Probe ohne Neuanmeldung. Ursache: Im Export vom 16.10.26
+  // starb die Sitzung MITTEN in den Presets (nach dateispeicher.php); erst
+  // eine Probe am Ende zeigt, ob sie die ganze Runde überlebt hat.
+  if (session != null) {
+    await writeSessionCheck(
+      report: report,
+      session: session,
+      phase: 'nach den Presets',
+      reauthenticate: false,
+    );
   }
 
   report.log('END: Debug Export');
