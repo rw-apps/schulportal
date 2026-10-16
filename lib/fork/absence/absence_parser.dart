@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:html/parser.dart' show parse;
 import 'package:liblanis/liblanis.dart';
@@ -98,4 +99,31 @@ AbsenceCheck parseAbsenceCheck(Object? data) {
     false,
     errors.isEmpty ? ['Das Portal hat die Meldung abgelehnt.'] : errors,
   );
+}
+
+const _absenceUrl =
+    'https://start.schulportal.hessen.de/abwesenheitsmeldung.php';
+
+/// Fragt das Portal, ob es die Meldung annehmen würde. Speichert nichts.
+///
+/// Beleg: Portal-Skript meldungEltern.js (Export 16.10.26) schickt das
+/// Formular zuerst mit `check=1` per Ajax und erwartet JSON
+/// `{success, errors}`; erst bei Erfolg sendet es das Formular ein zweites Mal
+/// OHNE `check` – erst das ist die Meldung. Dieses zweite Senden ist in der
+/// App bewusst nicht eingebaut (Entscheidung 16.10.26: vorerst nur prüfen).
+Future<AbsenceCheck> checkAbsence(
+  LanisSession session,
+  Map<String, String> fields,
+) async {
+  assert(!fields.containsKey('save'));
+  final r = await session.dio.post(
+    _absenceUrl,
+    data: {...fields, 'check': '1'},
+    options: Options(
+      contentType: Headers.formUrlEncodedContentType,
+      responseType: ResponseType.plain,
+      headers: {'X-Requested-With': 'XMLHttpRequest'},
+    ),
+  );
+  return parseAbsenceCheck(r.data);
 }

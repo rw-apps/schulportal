@@ -1,5 +1,10 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9319**
+
+- Krankmeldung: neuer Knopf **„Beim Portal prüfen (sendet nichts)“**. Das Portal sagt, ob es die Meldung annehmen würde, oder nennt seine Gründe. Es wird nichts gespeichert, die Schule sieht davon nichts.
+- Absenden bleibt gesperrt.
+
 **4.1.0+9318**
 
 - Krankmeldung wie im Portal: „Abwesend“ = Von- und Bis-Tag ohne Blöcke, „Verspätet“ = ein Tag („Am“) mit Block von–bis.

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/absence/absence_form.dart';
+import 'package:lanis/fork/absence/absence_parser.dart' show AbsenceCheck;
 import 'package:lanis/fork/absence/absence_view.dart';
 
 /// Erfundene Formulardaten, Aufbau wie abwesenheitsmeldung.php von Schule A.
@@ -72,8 +73,8 @@ void main() {
     await t.tap(find.text('Anna Beispiel'));
     await t.pump();
     expect(find.text('Bitte ein Kind auswählen.'), findsOneWidget);
-    final preview = t.widget<OutlinedButton>(
-      find.widgetWithText(OutlinedButton, 'Vorschau der Portal-Felder'),
+    final preview = t.widget<TextButton>(
+      find.widgetWithText(TextButton, 'Vorschau der Portal-Felder'),
     );
     expect(preview.onPressed, isNull);
   });
@@ -96,9 +97,52 @@ void main() {
     await t.pumpWidget(_app(_form()));
     await t.drag(find.byType(ListView), const Offset(0, -3000));
     await t.pumpAndSettle();
-    final button = find.widgetWithText(OutlinedButton, 'Vorschau der Portal-Felder');
+    final button = find.widgetWithText(TextButton, 'Vorschau der Portal-Felder');
     final screenH = 1500 / 2.5;
     final insetH = 120 / 2.5;
     expect(t.getBottomLeft(button).dy, lessThanOrEqualTo(screenH - insetH));
+  });
+
+  testWidgets('Prüfen: Antwort des Portals wird angezeigt, nichts gesendet',
+      (t) async {
+    await _tall(t);
+    Map<String, String>? sent;
+    var answer = const AbsenceCheck(true, []);
+    await t.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: AbsenceFormView(
+          form: _form(),
+          onCheck: (fields) async {
+            sent = fields;
+            return answer;
+          },
+        ),
+      ),
+    ));
+    await t.tap(find.text('Beim Portal prüfen (sendet nichts)'));
+    await t.pumpAndSettle();
+    expect(find.text('Prüfung bestanden'), findsOneWidget);
+    expect(find.textContaining('Gesendet wurde nichts'), findsOneWidget);
+    expect(sent!['selectedPupils'], '111');
+    expect(sent!.containsKey('save'), isFalse);
+    await t.tap(find.text('OK'));
+    await t.pumpAndSettle();
+
+    answer = const AbsenceCheck(false, ['Meldung nur bis 12:00 möglich']);
+    await t.tap(find.text('Beim Portal prüfen (sendet nichts)'));
+    await t.pumpAndSettle();
+    expect(find.text('Das Portal lehnt ab'), findsOneWidget);
+    expect(find.text('Meldung nur bis 12:00 möglich'), findsOneWidget);
+  });
+
+  testWidgets('ohne Prüf-Anbindung ist der Knopf gesperrt', (t) async {
+    await _tall(t);
+    await t.pumpWidget(_app(_form()));
+    final b = t.widget<OutlinedButton>(find.widgetWithText(
+        OutlinedButton, 'Beim Portal prüfen (sendet nichts)'));
+    expect(b.onPressed, isNull);
+    final send = t.widget<FilledButton>(find.widgetWithText(
+        FilledButton, 'Absenden (folgt nach gemeinsamem Test)'));
+    expect(send.onPressed, isNull, reason: 'Senden bleibt gesperrt');
   });
 }

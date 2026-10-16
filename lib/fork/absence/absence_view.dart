@@ -50,7 +50,10 @@ class AbsencePage extends ConsumerWidget {
               ),
           ],
         ),
-        body: AbsenceFormView(form: form),
+        body: AbsenceFormView(
+          form: form,
+          onCheck: (fields) => checkAbsence(session, fields),
+        ),
       ),
     );
   }
@@ -59,9 +62,17 @@ class AbsencePage extends ConsumerWidget {
 /// Die eigentliche Maske; getrennt von [AbsencePage], damit sie ohne Portal
 /// testbar ist.
 class AbsenceFormView extends StatefulWidget {
-  const AbsenceFormView({super.key, required this.form, this.now});
+  const AbsenceFormView({
+    super.key,
+    required this.form,
+    this.now,
+    this.onCheck,
+  });
 
   final AbsenceForm form;
+
+  /// Fragt das Portal, ob es die Meldung annehmen würde (sendet nichts).
+  final Future<AbsenceCheck> Function(Map<String, String> fields)? onCheck;
 
   /// Nur für Tests.
   final DateTime? now;
@@ -78,6 +89,7 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
   late String _blockFrom;
   late String _blockTo;
   final _comment = TextEditingController();
+  bool _busy = false;
 
   AbsenceForm get f => widget.form;
   bool get _isLate => _kind == absenceKindLate;
@@ -196,6 +208,42 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
     }
     final kind = _isLate ? 'verspätet' : 'abwesend';
     return '${names.isEmpty ? 'Kein Kind gewählt' : names} – $kind\n$when';
+  }
+
+  Future<void> _check() async {
+    final onCheck = widget.onCheck;
+    if (onCheck == null) return;
+    setState(() => _busy = true);
+    String title;
+    List<String> lines;
+    try {
+      final r = await onCheck(_draft.toFields(f));
+      title = r.ok ? 'Prüfung bestanden' : 'Das Portal lehnt ab';
+      lines = r.ok
+          ? [
+              'Das Portal würde diese Meldung annehmen.',
+              'Gesendet wurde nichts – die Schule sieht davon nichts.',
+            ]
+          : r.errors;
+    } catch (_) {
+      title = 'Prüfung nicht möglich';
+      lines = ['Keine Verbindung zum Portal oder unerwartete Antwort.'];
+    }
+    if (!mounted) return;
+    setState(() => _busy = false);
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(lines.join('\n\n')),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showFields() {
@@ -457,7 +505,18 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
             child: Text('Absenden (folgt nach gemeinsamem Test)'),
           ),
           const SizedBox(height: 8),
+          if (_busy)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: LinearProgressIndicator(),
+            ),
           OutlinedButton(
+            onPressed: errors.isEmpty && !_busy && widget.onCheck != null
+                ? _check
+                : null,
+            child: const Text('Beim Portal prüfen (sendet nichts)'),
+          ),
+          TextButton(
             onPressed: errors.isEmpty ? _showFields : null,
             child: const Text('Vorschau der Portal-Felder'),
           ),
