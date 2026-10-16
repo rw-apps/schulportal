@@ -271,10 +271,20 @@ final debugExportPresets = <DebugExportPreset>[
     id: DebugExportPresetId.absences,
     label: (l) => l.debugExportPresetAbsences,
     modulePhp: 'abwesenheitsmeldung.php',
-    buildSections: (_) => _single(
-      DebugExportPresetId.absences,
-      _get('abwesenheitsmeldung.php'),
-    ),
+    // Fork: dazu das Portal-Skript der Seite (statische Datei, nur lesen).
+    // Ursache: Wie es `selectedPupils` befüllt, abschickt und die Liste
+    // `#liste` nachlädt, steht nur dort; ohne das lässt sich das Absenden
+    // der Krankmeldung nicht sicher nachbauen.
+    buildSections: (_) => [
+      ..._single(
+        DebugExportPresetId.absences,
+        _get('abwesenheitsmeldung.php'),
+      ),
+      DebugExportSection(
+        name: '${DebugExportPresetId.absences.name}Script',
+        request: _get('module/abwesenheitsmeldung/js/meldungEltern.js'),
+      ),
+    ],
   ),
   DebugExportPreset(
     id: DebugExportPresetId.substitutionsMain,

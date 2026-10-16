@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lanis/applets/absence/definition.dart';
 import 'package:lanis/applets/calendar/definition.dart';
 import 'package:lanis/applets/conversations/definition.dart';
 import 'package:lanis/applets/data_storage/definition.dart';
@@ -153,6 +154,8 @@ class AppDefinitions {
     lessonsDefinition,
     dataStorageDefinition,
     studyGroupsDefinition,
+    // Fork: Krankmeldung (nur Eltern, nur wenn die Schule sie anbietet).
+    absenceDefinition,
   ];
 
   /// Bottom-nav / [StatefulShellRoute] branches (order = branch index).

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lanis/applets/definitions.dart';
 import 'package:lanis/applets/timetable/definition.dart';
 import 'package:lanis/applets/timetable/routes.dart';
+import 'package:lanis/fork/absence/absence_parser.dart';
 import 'package:lanis/fork/parent_support.dart';
 import 'package:lanis/utils/deep_link.dart';
 import 'package:liblanis/liblanis.dart';
@@ -23,6 +24,21 @@ void main() {
     expect(forkSupportsApplet(Applets.timetable, AccountType.parent, schoolA), isTrue);
     expect(forkSupportsApplet(Applets.dataStorage, AccountType.parent, schoolA), isFalse);
     expect(forkSupportsApplet(Applets.studyGroups, AccountType.parent, schoolA), isFalse);
+  });
+
+  test('Krankmeldung: nur Eltern und nur, wenn die Schule sie anbietet', () {
+    expect(forkSupportsApplet(forkAbsenceApplet, AccountType.parent, schoolA), isTrue);
+    expect(forkSupportsApplet(forkAbsenceApplet, AccountType.student, schoolA), isFalse);
+    expect(
+      forkSupportsApplet(forkAbsenceApplet, AccountType.parent, const [
+        {'link': 'stundenplan.php'},
+      ]),
+      isFalse,
+    );
+    expect(
+      AppDefinitions.getByPhpIdentifier('abwesenheitsmeldung.php').routePath,
+      '/parent/absence/home',
+    );
   });
 
   test('Schüler unverändert, Lehrkraft bekommt keinen Stundenplan dazu', () {

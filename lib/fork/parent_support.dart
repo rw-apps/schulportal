@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:riverpod/misc.dart' show Override;
 
+import 'absence/absence_parser.dart';
 import 'lessons_parent.dart';
 
 /// Module, die der Fork über liblanis hinaus für weitere Kontoarten freigibt.
@@ -62,7 +63,9 @@ List<Override> forkProviderOverrides() => [
     final type = account.accountType ?? session.accountTypeOrNull;
     if (type == null) return const {};
     return {
-      for (final applet in Applets.all)
+      // Fork-Module (Krankmeldung) laufen durch dieselbe Prüfung: nur wenn
+      // die Schule sie in der App-Liste führt und die Kontoart passt.
+      for (final applet in [...Applets.all, ...forkApplets])
         if (forkSupportsApplet(applet, type, session.travelMenu))
           applet.appletPhpUrl,
     };

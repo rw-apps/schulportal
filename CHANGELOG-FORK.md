@@ -1,5 +1,11 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9311**
+
+- Neu für Elternkonten: **Krankmeldung** im Menü, wenn die Schule das Modul anbietet. Die Maske übernimmt Kind, Art (abwesend/verspätet), Blöcke und die erlaubten Tage direkt vom Portal und prüft die Eingaben.
+- Abschicken ist noch gesperrt, bis wir es gemeinsam getestet haben. „Vorschau der Portal-Felder“ zeigt, was gesendet würde.
+- Debug-Export „Abwesenheiten“ liest zusätzlich das Portal-Skript der Seite (nur lesen). Daraus geht hervor, wie das Portal die Meldung abschickt.
+
 **4.1.0+9310**
 
 - Neu für Elternkonten: **Unterricht**, also die Kurse des Kindes mit aktuellen Einträgen, Kursseiten und Anwesenheiten. Bei mehreren Kindern an einer Schule steht der Vorname vor dem Kurs.
