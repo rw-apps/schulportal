@@ -37,7 +37,10 @@ void main() {
     await _tall(t);
     await t.pumpWidget(_app(_form()));
     expect(find.textContaining('Anna – abwesend'), findsOneWidget);
-    expect(find.textContaining('Fr, 16.10., 0. Block bis 1. Block'), findsOneWidget);
+    expect(find.textContaining('Fr, 16.10., ganzer Tag'), findsOneWidget);
+    expect(find.text('Von Block'), findsNothing,
+        reason: 'Abwesend: keine Blöcke (wie im Portal)');
+    expect(find.text('Bitte keine Gesundheitsdaten eingeben.'), findsOneWidget);
     expect(find.textContaining('spätestens bis 12:00'), findsOneWidget);
 
     final send = t.widget<FilledButton>(
@@ -48,6 +51,9 @@ void main() {
     await t.tap(find.text('Verspätet'));
     await t.pump();
     expect(find.textContaining('Anna – verspätet'), findsOneWidget);
+    expect(find.text('Am'), findsOneWidget);
+    expect(find.text('Von Block'), findsOneWidget);
+    expect(find.text('Bis'), findsNothing);
   });
 
   testWidgets('Vorschau zeigt die Portal-Felder', (t) async {
@@ -57,6 +63,7 @@ void main() {
     await t.pumpAndSettle();
     expect(find.textContaining('selectedPupils = 111'), findsOneWidget);
     expect(find.textContaining('von = 16.10.2026'), findsOneWidget);
+    expect(find.textContaining('save'), findsNothing);
   });
 
   testWidgets('ohne Kind keine Vorschau', (t) async {

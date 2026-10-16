@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:html/parser.dart';
 import 'package:lanis/fork/absence/absence_form.dart';
+import 'package:lanis/fork/absence/absence_parser.dart' show parseAbsenceCheck;
 
 /// Nachbildung von abwesenheitsmeldung.php (Elternkonto): Aufbau wie im
 /// Export von Schule A (16.10.26), Namen und IDs erfunden.
@@ -88,19 +89,29 @@ void main() {
     expect(form.rules, hasLength(2));
   });
 
-  test('zulässige Meldung ergibt die Portal-Felder', () {
+  test('abwesend: Tage, Blockfelder mit Portal-Vorauswahl, kein save', () {
     final d = draft(to: DateTime(2026, 10, 20));
     expect(validateAbsenceDraft(form, d), isEmpty);
-    expect(d.toFields(), {
+    expect(d.toFields(form), {
       'selectedPupils': '111',
       'art': 'krank',
       'von': '16.10.2026',
       'bis': '20.10.2026',
-      'stundenVon': '1',
-      'stundenBis': '2',
+      'stundenVon': '0',
+      'stundenBis': '0',
       'kommentar': '',
-      'save': '1',
     });
+  });
+
+  test('verspätet: ein Tag, bis = von, gewählte Blöcke', () {
+    final d = draft(kind: 'verspätet', to: DateTime(2026, 10, 20));
+    expect(validateAbsenceDraft(form, d), isEmpty,
+        reason: 'Bis-Tag spielt bei Verspätung keine Rolle');
+    final f = d.toFields(form);
+    expect(f['bis'], '16.10.2026');
+    expect(f['stundenVon'], '1');
+    expect(f['stundenBis'], '2');
+    expect(f.containsKey('save'), isFalse);
   });
 
   test('Grenzen und Fehler', () {
@@ -118,12 +129,41 @@ void main() {
       validateAbsenceDraft(form, draft(from: DateTime(2026, 10, 19), to: DateTime(2026, 10, 16))),
       contains('Das Ende liegt vor dem Beginn.'),
     );
-    expect(validateAbsenceDraft(form, draft(bf: '2', bt: '1')), isNotEmpty);
-    // Mehrtägig: letzter Block darf vor dem ersten liegen (anderer Tag).
+    // Blöcke zählen nur bei Verspätung.
+    expect(validateAbsenceDraft(form, draft(bf: '2', bt: '1')), isEmpty);
     expect(
-      validateAbsenceDraft(form, draft(to: DateTime(2026, 10, 19), bf: '2', bt: '0')),
-      isEmpty,
+      validateAbsenceDraft(form, draft(kind: 'verspätet', bf: '2', bt: '1')),
+      contains('Der letzte Block liegt vor dem ersten.'),
     );
+    expect(
+      validateAbsenceDraft(form,
+          draft(kind: 'verspätet', from: DateTime(2026, 10, 20))),
+      contains(startsWith('Tag nur')),
+    );
+  });
+
+  test('bestehende Meldungen und Kommentar-Warnung', () {
+    final f = parseAbsenceForm(parse(_html.replaceFirst(
+      '</form>',
+      '</form><div id="kommentarHinweis">Bitte keine Gesundheitsdaten eingeben.</div>'
+          '<table><tbody id="liste"><tr><td>Anna Beispiel</td>'
+          '<td>19.10.2026 - 20.10.2026</td><td>abwesend</td>'
+          '<td>16.10.2026 19:00</td><td></td></tr></tbody></table>',
+    )))!;
+    expect(f.entries.single.period, '19.10.2026 - 20.10.2026');
+    expect(f.entries.single.kind, 'abwesend');
+    expect(f.commentWarning, 'Bitte keine Gesundheitsdaten eingeben.');
+    expect(form.entries, isEmpty);
+  });
+
+  test('Antwort der Portal-Prüfung', () {
+    expect(parseAbsenceCheck('{"success":true}').ok, isTrue);
+    final no = parseAbsenceCheck(
+        '{"success":false,"errors":["Meldung <b>nach 12 Uhr</b> nicht möglich"]}');
+    expect(no.ok, isFalse);
+    expect(no.errors.single, 'Meldung nach 12 Uhr nicht möglich');
+    expect(parseAbsenceCheck('<html>Login</html>').ok, isFalse);
+    expect(parseAbsenceCheck({'success': false}).errors, isNotEmpty);
   });
 
   test('ohne Formular (Sitzung verloren) null', () {

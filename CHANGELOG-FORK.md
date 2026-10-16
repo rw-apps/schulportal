@@ -1,5 +1,12 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9318**
+
+- Krankmeldung wie im Portal: „Abwesend“ = Von- und Bis-Tag ohne Blöcke, „Verspätet“ = ein Tag („Am“) mit Block von–bis.
+- Kommentarfeld zeigt die Warnung des Portals „Bitte keine Gesundheitsdaten eingeben“.
+- Bestehende Meldungen der Schule erscheinen unter der Maske.
+- Abschicken bleibt gesperrt, bis es ausdrücklich freigegeben ist.
+
 **4.1.0+9317**
 
 - Wochenansicht: Zeilen höchstens 72 dp hoch; bei wenigen Blöcken (Schule A) nicht mehr aufgebläht, unten bleibt Platz frei.

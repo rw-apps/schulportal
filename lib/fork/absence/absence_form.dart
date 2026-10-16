@@ -63,6 +63,24 @@ class DateRange {
   }
 }
 
+/// Eine bestehende Meldung aus der Tabelle „Aktuelle und zukünftige
+/// Meldungen“ (`tbody#liste`).
+class AbsenceEntry {
+  const AbsenceEntry({
+    required this.name,
+    required this.period,
+    required this.kind,
+    required this.entered,
+    required this.comment,
+  });
+
+  final String name;
+  final String period;
+  final String kind;
+  final String entered;
+  final String comment;
+}
+
 /// Formular „Abwesenheitsmeldung“ (abwesenheitsmeldung.php, Elternkonto).
 class AbsenceForm {
   const AbsenceForm({
@@ -74,6 +92,8 @@ class AbsenceForm {
     required this.defaultFrom,
     required this.defaultTo,
     required this.rules,
+    this.entries = const [],
+    this.commentWarning,
   });
 
   final List<AbsencePupil> pupils;
@@ -90,15 +110,27 @@ class AbsenceForm {
   /// Hinweise des Portals („spätestens bis 12:00 des aktuellen Tages“ …).
   final List<String> rules;
 
+  /// Bestehende Meldungen (leer, wenn keine).
+  final List<AbsenceEntry> entries;
+
+  /// Warnung des Portals am Kommentarfeld („Bitte keine Gesundheitsdaten
+  /// eingeben.“, `#kommentarHinweis`).
+  final String? commentWarning;
+
   List<AbsencePupil> get allowedPupils =>
       pupils.where((p) => p.allowed).toList();
 }
 
-/// Was die Maske absenden würde, als Formularfelder des Portals.
+/// Wert von `art` für eine Verspätung; alles andere gilt als Abwesenheit.
+const absenceKindLate = 'verspätet';
+
+/// Eingaben der Maske.
 ///
-/// Grenze: Wie das Portal-Skript (`module/abwesenheitsmeldung/js/
-/// meldungEltern.js`) `selectedPupils` befüllt und ob es per Ajax abschickt,
-/// ist noch nicht belegt. Deshalb gibt es hier nur die Felder, kein Senden.
+/// Abwesend („krank“): Von- und Bis-Tag, keine Blöcke. Verspätet: EIN Tag
+/// („Am“) plus Block von–bis. Beleg: Portal-Skript meldungEltern.js (Export
+/// 16.10.26) blendet je nach `art` die Felder `stundenVon`/`stundenBis` bzw.
+/// `bis` aus. Ausgeblendete Felder schickt der Browser trotzdem mit ihrem
+/// aktuellen Wert mit; [toFields] bildet das nach.
 class AbsenceDraft {
   const AbsenceDraft({
     required this.pupilIds,
@@ -118,19 +150,31 @@ class AbsenceDraft {
   final String blockTo;
   final String comment;
 
-  Map<String, String> toFields() => {
-    'selectedPupils': pupilIds.join(','),
-    'art': kind,
-    'von': formatGermanDate(from),
-    'bis': formatGermanDate(to),
-    'stundenVon': blockFrom,
-    'stundenBis': blockTo,
-    'kommentar': comment,
-    'save': '1',
-  };
+  bool get isLate => kind == absenceKindLate;
+
+  /// Felder wie `$('#meldungForm').serialize()` im Portal-Skript.
+  ///
+  /// Kein `save`: Das Skript schickt das Formular per `$form.submit()` ab, ohne
+  /// den Speichern-Knopf; dessen name/value ist daher nicht im Formular.
+  /// `selectedPupils` = IDs mit Komma (Skript: `selectedPupils.join(',')`).
+  /// Bei Abwesenheit tragen die verborgenen Block-Felder die Vorauswahl des
+  /// Portals (erster Block); bei Verspätung ist `bis` gleich `von`.
+  Map<String, String> toFields(AbsenceForm form) {
+    final firstBlock = form.blocks.isEmpty ? '' : form.blocks.first.value;
+    return {
+      'selectedPupils': pupilIds.join(','),
+      'art': kind,
+      'von': formatGermanDate(from),
+      'bis': formatGermanDate(isLate ? from : to),
+      'stundenVon': isLate ? blockFrom : firstBlock,
+      'stundenBis': isLate ? blockTo : firstBlock,
+      'kommentar': comment,
+    };
+  }
 }
 
 /// Fehler, die die Maske vor dem Absenden anzeigt. Leer heißt: zulässig.
+/// Das Portal prüft danach noch einmal selbst (Anfrage mit `check=1`).
 List<String> validateAbsenceDraft(AbsenceForm form, AbsenceDraft d) {
   final errors = <String>[];
   final allowed = {for (final p in form.allowedPupils) p.id};
@@ -145,23 +189,27 @@ List<String> validateAbsenceDraft(AbsenceForm form, AbsenceDraft d) {
   final tr = form.toRange;
   if (fr != null && !fr.contains(d.from)) {
     errors.add(
-      'Beginn nur ${formatGermanDate(fr.first)} bis ${formatGermanDate(fr.last)}.',
+      '${d.isLate ? 'Tag' : 'Beginn'} nur ${formatGermanDate(fr.first)} bis '
+      '${formatGermanDate(fr.last)}.',
     );
   }
-  if (tr != null && !tr.contains(d.to)) {
-    errors.add(
-      'Ende nur ${formatGermanDate(tr.first)} bis ${formatGermanDate(tr.last)}.',
-    );
-  }
-  if (_day(d.to).isBefore(_day(d.from))) {
-    errors.add('Das Ende liegt vor dem Beginn.');
-  }
-  final bf = form.blocks.indexWhere((b) => b.value == d.blockFrom);
-  final bt = form.blocks.indexWhere((b) => b.value == d.blockTo);
-  if (bf < 0 || bt < 0) {
-    errors.add('Bitte Block von und bis wählen.');
-  } else if (_day(d.from) == _day(d.to) && bt < bf) {
-    errors.add('Der letzte Block liegt vor dem ersten.');
+  if (d.isLate) {
+    final bf = form.blocks.indexWhere((b) => b.value == d.blockFrom);
+    final bt = form.blocks.indexWhere((b) => b.value == d.blockTo);
+    if (bf < 0 || bt < 0) {
+      errors.add('Bitte Block von und bis wählen.');
+    } else if (bt < bf) {
+      errors.add('Der letzte Block liegt vor dem ersten.');
+    }
+  } else {
+    if (tr != null && !tr.contains(d.to)) {
+      errors.add(
+        'Ende nur ${formatGermanDate(tr.first)} bis ${formatGermanDate(tr.last)}.',
+      );
+    }
+    if (_day(d.to).isBefore(_day(d.from))) {
+      errors.add('Das Ende liegt vor dem Beginn.');
+    }
   }
   return errors;
 }
@@ -211,8 +259,7 @@ AbsenceForm? parseAbsenceForm(Document doc) {
   ];
 
   final kinds = [
-    for (final o
-        in form.querySelectorAll('select[name="art"] option'))
+    for (final o in form.querySelectorAll('select[name="art"] option'))
       AbsenceChoice(o.attributes['value'] ?? o.text.trim(), _clean(o.text)),
   ];
 
@@ -221,10 +268,7 @@ AbsenceForm? parseAbsenceForm(Document doc) {
       _block(o),
   ];
 
-  final scripts = doc
-      .querySelectorAll('script')
-      .map((s) => s.text)
-      .join('\n');
+  final scripts = doc.querySelectorAll('script').map((s) => s.text).join('\n');
 
   final rules = [
     for (final li in doc.querySelectorAll('#content .alert li'))
@@ -244,12 +288,29 @@ AbsenceForm? parseAbsenceForm(Document doc) {
       form.querySelector('input[name="bis"]')?.attributes['value'],
     ),
     rules: rules,
+    entries: [
+      for (final tr in doc.querySelectorAll('tbody#liste tr'))
+        if (tr.querySelectorAll('td') case final td when td.length >= 3)
+          AbsenceEntry(
+            name: _clean(td[0].text),
+            period: _clean(td[1].text),
+            kind: _clean(td[2].text),
+            entered: td.length > 3 ? _clean(td[3].text) : '',
+            comment: td.length > 4 ? _clean(td[4].text) : '',
+          ),
+    ],
+    commentWarning: () {
+      final w = doc.querySelector('#kommentarHinweis')?.text;
+      return w == null || _clean(w).isEmpty ? null : _clean(w);
+    }(),
   );
 }
 
 AbsenceBlock _block(Element o) {
   final text = _clean(o.text);
-  final times = RegExp(r'(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})').firstMatch(text);
+  final times = RegExp(
+    r'(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})',
+  ).firstMatch(text);
   String? hm(String? v) => v == null || v.length < 5 ? v : v.substring(0, 5);
   final label = text
       .replaceAll(RegExp(r'\(.*\)'), '')

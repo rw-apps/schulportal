@@ -80,6 +80,7 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
   final _comment = TextEditingController();
 
   AbsenceForm get f => widget.form;
+  bool get _isLate => _kind == absenceKindLate;
 
   @override
   void initState() {
@@ -170,28 +171,35 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
     });
   }
 
-  String _blockLabel(AbsenceBlock b) =>
-      b.start != null && b.end != null ? '${b.label}  ${b.start}–${b.end}' : b.label;
+  String _blockLabel(AbsenceBlock b) => b.start != null && b.end != null
+      ? '${b.label}  ${b.start}–${b.end}'
+      : b.label;
 
   String _summary() {
     final names = f.pupils
         .where((p) => _pupils.contains(p.id))
         .map((p) => p.firstName)
         .join(' und ');
-    final kind = _kind == 'krank' ? 'abwesend' : 'verspätet';
     AbsenceBlock? block(String v) =>
         f.blocks.where((b) => b.value == v).firstOrNull;
-    final bf = block(_blockFrom)?.label ?? '?';
-    final bt = block(_blockTo)?.label ?? '?';
-    final sameDay = DateUtils.isSameDay(_from, _to);
-    final when = sameDay
-        ? '${_shortDate(_from)}, $bf bis $bt'
-        : '${_shortDate(_from)} ab $bf bis ${_shortDate(_to)} einschließlich $bt';
+    final String when;
+    if (_isLate) {
+      final bf = block(_blockFrom)?.label ?? '?';
+      final bt = block(_blockTo)?.label ?? '?';
+      when = bf == bt
+          ? '${_shortDate(_from)}, $bf'
+          : '${_shortDate(_from)}, $bf bis $bt';
+    } else {
+      when = DateUtils.isSameDay(_from, _to)
+          ? '${_shortDate(_from)}, ganzer Tag'
+          : '${_shortDate(_from)} bis ${_shortDate(_to)}';
+    }
+    final kind = _isLate ? 'verspätet' : 'abwesend';
     return '${names.isEmpty ? 'Kein Kind gewählt' : names} – $kind\n$when';
   }
 
   void _showFields() {
-    final fields = _draft.toFields();
+    final fields = _draft.toFields(f);
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -290,6 +298,28 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
             ),
           )
         else ...[
+          if (f.kinds.length > 1)
+            section(
+              'Art',
+              SegmentedButton<String>(
+                segments: [
+                  for (final k in f.kinds)
+                    ButtonSegment(
+                      value: k.value,
+                      label: Text(
+                        k.value == 'krank' ? 'Abwesend' : 'Verspätet',
+                      ),
+                      icon: Icon(
+                        k.value == 'krank'
+                            ? Icons.sick_outlined
+                            : Icons.schedule,
+                      ),
+                    ),
+                ],
+                selected: {_kind},
+                onSelectionChanged: (s) => setState(() => _kind = s.single),
+              ),
+            ),
           section(
             'Kind',
             Wrap(
@@ -309,92 +339,90 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
               ],
             ),
           ),
-          if (f.kinds.length > 1)
+          // Wie im Portal (meldungEltern.js): abwesend = Von/Bis-Tag ohne
+          // Blöcke; verspätet = ein Tag („Am“) mit Block von–bis.
+          if (_isLate) ...[
             section(
-              'Art',
-              SegmentedButton<String>(
-                segments: [
-                  for (final k in f.kinds)
-                    ButtonSegment(
-                      value: k.value,
-                      label: Text(k.value == 'krank' ? 'Abwesend' : 'Verspätet'),
-                      icon: Icon(
-                        k.value == 'krank'
-                            ? Icons.sick_outlined
-                            : Icons.schedule,
-                      ),
-                    ),
-                ],
-                selected: {_kind},
-                onSelectionChanged: (s) => setState(() => _kind = s.single),
+              'Tag',
+              _DateTile(
+                label: 'Am',
+                date: _from,
+                onTap: () => _pickDate(isFrom: true),
               ),
             ),
-          section(
-            'Zeitraum',
-            Column(
-              children: [
-                _DateTile(
-                  label: 'Von',
-                  date: _from,
-                  onTap: () => _pickDate(isFrom: true),
-                ),
-                const SizedBox(height: 8),
-                _DateTile(
-                  label: 'Bis',
-                  date: _to,
-                  onTap: () => _pickDate(isFrom: false),
-                ),
-              ],
-            ),
-          ),
-          section(
-            'Unterricht',
-            Column(
-              children: [
-                DropdownButtonFormField<String>(
-                  initialValue: _blockFrom,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    labelText: 'Ab (am ${_shortDate(_from)})',
-                    border: const OutlineInputBorder(),
+            section(
+              'Unterricht',
+              Column(
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: _blockFrom,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Von Block',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      for (final b in f.blocks)
+                        DropdownMenuItem(
+                          value: b.value,
+                          child: Text(_blockLabel(b)),
+                        ),
+                    ],
+                    onChanged: (v) => setState(() => _blockFrom = v!),
                   ),
-                  items: [
-                    for (final b in f.blocks)
-                      DropdownMenuItem(
-                        value: b.value,
-                        child: Text(_blockLabel(b)),
-                      ),
-                  ],
-                  onChanged: (v) => setState(() => _blockFrom = v!),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _blockTo,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    labelText: 'Bis einschließlich (am ${_shortDate(_to)})',
-                    border: const OutlineInputBorder(),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: _blockTo,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Bis Block (einschließlich)',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      for (final b in f.blocks)
+                        DropdownMenuItem(
+                          value: b.value,
+                          child: Text(_blockLabel(b)),
+                        ),
+                    ],
+                    onChanged: (v) => setState(() => _blockTo = v!),
                   ),
-                  items: [
-                    for (final b in f.blocks)
-                      DropdownMenuItem(
-                        value: b.value,
-                        child: Text(_blockLabel(b)),
-                      ),
-                  ],
-                  onChanged: (v) => setState(() => _blockTo = v!),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ] else
+            section(
+              'Zeitraum',
+              Column(
+                children: [
+                  _DateTile(
+                    label: 'Von',
+                    date: _from,
+                    onTap: () => _pickDate(isFrom: true),
+                  ),
+                  const SizedBox(height: 8),
+                  _DateTile(
+                    label: 'Bis',
+                    date: _to,
+                    onTap: () => _pickDate(isFrom: false),
+                  ),
+                ],
+              ),
+            ),
           section(
             'Kommentar (freiwillig)',
             TextField(
               controller: _comment,
               maxLength: 200,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'z. B. Arzttermin',
+              // Warnung des Portals immer sichtbar (dort erst beim Antippen).
+              // Vorher stand hier „z. B. Arzttermin“ – genau die Art Angabe,
+              // vor der das Portal warnt.
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                helperText:
+                    f.commentWarning ??
+                    'Bitte keine Gesundheitsdaten eingeben.',
+                helperMaxLines: 2,
               ),
               onChanged: (_) => setState(() {}),
             ),
@@ -433,6 +461,31 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
             onPressed: errors.isEmpty ? _showFields : null,
             child: const Text('Vorschau der Portal-Felder'),
           ),
+          if (f.entries.isNotEmpty)
+            section(
+              'Aktuelle und zukünftige Meldungen',
+              Column(
+                children: [
+                  for (final e in f.entries)
+                    Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        title: Text('${e.name} – ${e.kind}'),
+                        subtitle: Text(
+                          [
+                            e.period,
+                            if (e.comment.isNotEmpty) e.comment,
+                          ].join('\n'),
+                        ),
+                        trailing: Text(
+                          e.entered,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
         ],
       ],
     );

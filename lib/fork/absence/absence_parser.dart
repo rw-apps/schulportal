@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:html/parser.dart' show parse;
 import 'package:liblanis/liblanis.dart';
@@ -21,8 +23,7 @@ const forkAbsenceApplet = AppletMeta(
 /// Module des Forks, die zusätzlich zu Applets.all geprüft werden.
 const forkApplets = [forkAbsenceApplet];
 
-/// Lädt nur das Formular. Absenden gibt es hier bewusst noch nicht, siehe
-/// [AbsenceDraft].
+/// Lädt das Formular samt bestehender Meldungen.
 class AbsenceParser extends AppletParser<AbsenceForm> {
   AbsenceParser(
     AppletContext ctx, {
@@ -54,3 +55,47 @@ final absenceParserProvider = Provider<AbsenceParser>((ref) {
   ref.onDispose(parser.dispose);
   return parser;
 });
+
+/// Antwort der Portal-Prüfung.
+class AbsenceCheck {
+  const AbsenceCheck(this.ok, this.errors);
+  final bool ok;
+  final List<String> errors;
+}
+
+/// Liest die JSON-Antwort der Prüfung `{success: bool, errors: [..]}`
+/// (Portal-Skript meldungEltern.js). Fehlertexte können HTML enthalten,
+/// die Tags werden entfernt. Unlesbare Antwort = nicht ok, mit Hinweis.
+AbsenceCheck parseAbsenceCheck(Object? data) {
+  Object? json = data;
+  if (data is String) {
+    try {
+      json = jsonDecode(data);
+    } on FormatException {
+      return const AbsenceCheck(false, [
+        'Das Portal hat die Prüfung nicht wie erwartet beantwortet.',
+      ]);
+    }
+  }
+  if (json is! Map) {
+    return const AbsenceCheck(false, [
+      'Das Portal hat die Prüfung nicht wie erwartet beantwortet.',
+    ]);
+  }
+  if (json['success'] == true) return const AbsenceCheck(true, []);
+  final raw = json['errors'];
+  final errors = raw is List
+      ? [
+          for (final e in raw)
+            e
+                .toString()
+                .replaceAll(RegExp(r'<[^>]+>'), ' ')
+                .replaceAll(RegExp(r'\s+'), ' ')
+                .trim(),
+        ].where((e) => e.isNotEmpty).toList()
+      : <String>[];
+  return AbsenceCheck(
+    false,
+    errors.isEmpty ? ['Das Portal hat die Meldung abgelehnt.'] : errors,
+  );
+}
