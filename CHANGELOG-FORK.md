@@ -1,5 +1,14 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9321**
+
+- Gruppen werden automatisch vorgewählt, wenn „Mein Unterricht“ sie verrät. Projekt Text: Der Kurs nennt zwei Lehrkräfte, beide stehen in jeder TXT-Stunde – die App zeigt beide als eine Stunde. Ändern über das Tauschen-Symbol; die Wahl ist mit „Erkannt über den Kurs in „Mein Unterricht““ markiert.
+- Fachnamen: TXT = „Projekt Text“ (nur Schule A), ÄSTH = „Ästhetik“, KL = „Klassenstunde“.
+- Schriftgröße in der Vorschau unter „Mehr“: Normal / Groß / Sehr groß, alle Stufen größer als bisher.
+- Lehrernamen fett.
+- Unbekannte Kürzel lassen sich benennen: Stunde antippen → „Name für …“. Die Namen bleiben nur auf diesem Gerät, je Konto.
+- Titel „Stundenplan“ bricht bei großer Schrift nicht mehr mitten im Wort um.
+
 **4.1.0+9320**
 
 - Vorschau „Plan“ zeigt jetzt den **echten Stundenplan** des angemeldeten Kontos (Einstellungen → „Neue Oberfläche (Vorschau)“ → Plan). „Heute“ bleibt vorerst mit Beispieldaten.

@@ -87,6 +87,32 @@ class KidPlan {
   /// (Vertretungen, fremde Parallelgruppen) bleiben Kürzel.
   final Map<String, String> teacherNames;
 
+  /// Gleicher Plan mit zusätzlichen bzw. überschriebenen Lehrernamen (von
+  /// Hand eingetragen, siehe PlanPage „Name eintragen“). Leere Werte löschen
+  /// den Eintrag, dann gilt wieder der Name aus dem Portal bzw. das Kürzel.
+  KidPlan withTeacherNames(Map<String, String> overrides) {
+    if (overrides.isEmpty) return this;
+    final merged = {...teacherNames};
+    overrides.forEach((k, v) {
+      if (v.trim().isEmpty) {
+        merged.remove(k);
+      } else {
+        merged[k] = v.trim();
+      }
+    });
+    return KidPlan(
+      firstName: firstName,
+      colorIndex: colorIndex,
+      slots: slots,
+      days: days,
+      teacherNames: merged,
+    );
+  }
+
+  /// Einzelne Kürzel einer Lehrer-Angabe („ABC, DEF“ → [ABC, DEF]).
+  static List<String> kuerzelOf(String? teacher) =>
+      teacher == null ? const [] : _each(teacher).toList();
+
   /// Ausgeschrieben („Maria Becker“), sonst das Kürzel. Doppelbesetzung
   /// („ABC, DEF“) wird je Kürzel übersetzt: „Maria Becker, Jan Wolf“.
   String? teacherFull(String? kuerzel) => kuerzel == null
@@ -161,6 +187,10 @@ Resolved resolveCell(PlanCell cell, GroupChoice choice) {
   for (final o in cell.options) {
     final chosen = choice[o.short];
     if (chosen != null && chosen == o.groupKey) return ResolvedLesson(o);
+  }
+  for (final short in {for (final o in cell.options) o.short}) {
+    final team = _teamIn(cell.options, short, choice[short]);
+    if (team != null) return ResolvedLesson(team);
   }
   final chosenShorts = cell.options
       .where((o) => choice.containsKey(o.short))
@@ -293,10 +323,52 @@ GroupChoice applyGroupChoice(
 
 /// Die aktuell gewählte Möglichkeit dieser Parallel-Stunden, falls eine.
 PlanLesson? chosenOption(KidPlan plan, GroupChoice choice, String short) {
-  for (final o in groupOptions(plan, short)) {
+  final options = groupOptions(plan, short);
+  for (final o in options) {
     if (choice[o.short] == o.groupKey) return o;
   }
+  for (final s in {for (final o in options) o.short}) {
+    final team = _teamIn(options, s, choice[s]);
+    if (team != null) return team;
+  }
   return null;
+}
+
+/// Team-Wahl: [key] nennt mehrere Kürzel („ABC, DEF“), und die Stunde des
+/// Kindes ist jede Gruppe des Fachs, deren Lehrkräfte alle dazugehören –
+/// zusammengefasst zu EINER Stunde mit den anwesenden Lehrkräften.
+///
+/// Ursache: An von Schule A (Export 16.10.26) hat der Kurs „Projekt Text …“ in
+/// „Mein Unterricht“ ZWEI Lehrkräfte, und der Stundenplan führt beide in
+/// jeder TXT-Stunde als eigene Einträge (einmal mit Raum, einmal ohne). Eine
+/// einzelne Gruppe hätte die halbe Stunde unterschlagen. Raum: der erste
+/// angegebene. Grenze: Teilen sich die beiden die Klasse tatsächlich auf,
+/// zeigt die App trotzdem beide – der Nutzer kann dann eine Gruppe wählen.
+PlanLesson? _teamIn(List<PlanLesson> options, String short, String? key) {
+  final team = KidPlan.kuerzelOf(key).toSet();
+  if (team.length < 2) return null;
+  final hits = [
+    for (final o in options)
+      if (o.short == short &&
+          KidPlan.kuerzelOf(o.teacher).isNotEmpty &&
+          KidPlan.kuerzelOf(o.teacher).every(team.contains))
+        o,
+  ];
+  if (hits.isEmpty) return null;
+  final present = {for (final o in hits) ...KidPlan.kuerzelOf(o.teacher)};
+  final f = hits.first;
+  final changed = hits.where((o) => o.change != null).firstOrNull;
+  return PlanLesson(
+    subject: f.subject,
+    short: short,
+    room: hits.map((o) => o.room).nonNulls.firstOrNull,
+    teacher: [
+      for (final t in team)
+        if (present.contains(t)) t,
+    ].join(', '),
+    change: changed?.change,
+    changeDetail: changed?.changeDetail,
+  );
 }
 
 /// Kurzname einer Wahl für Knöpfe und Rasterzellen: bei gleichem Fach der
@@ -351,3 +423,9 @@ Map<String, int> subjectColorSlots(KidPlan plan) {
   }
   return out;
 }
+
+/// Wirksame Gruppenwahl: automatisch erkannte, darüber die eigene. Ein
+/// leerer Wert in [user] heißt „bewusst alle zeigen“ und hebt die
+/// automatische Wahl dieses Fachs auf.
+GroupChoice effectiveChoice(GroupChoice auto, GroupChoice user) =>
+    {...auto, ...user}..removeWhere((_, v) => v.isEmpty);

@@ -771,6 +771,7 @@ class _DayList extends StatelessWidget {
           ),
           const SizedBox(width: Sp.s + Sp.xxs),
           Expanded(
+            flex: 3,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -788,7 +789,19 @@ class _DayList extends StatelessWidget {
             ),
           ),
           const SizedBox(width: Sp.s),
-          Text(right, style: k.rowTime(sub)),
+          // Uhrzeit/Raum darf schrumpfen, das Fach hat Vorrang (flex 3:2).
+          // Ursache: Bei „Sehr groß“ lief die Zeile 32 px über
+          // (today_page_test, ×1,3 × 1,12).
+          Flexible(
+            flex: 2,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(right, style: k.rowTime(sub)),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -815,9 +828,17 @@ class _ToggleButton extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                expanded ? 'Tag zuklappen' : 'Ganzen Tag zeigen',
-                style: k.button(k.p.muted),
+              // Verkleinern statt Überlauf: Bei Schriftstufe „Sehr groß“ plus
+              // großer Systemschrift lief der Text 27 px über die Karte
+              // (today_page_test, ×1,3 × 1,12).
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    expanded ? 'Tag zuklappen' : 'Ganzen Tag zeigen',
+                    style: k.button(k.p.muted),
+                  ),
+                ),
               ),
               const SizedBox(width: Sp.xs + Sp.xxs),
               Icon(

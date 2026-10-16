@@ -17,7 +17,9 @@ Widget _app({Brightness b = Brightness.light, double scale = 1.0}) =>
     MaterialApp(
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.deepPurple, brightness: b),
+          seedColor: Colors.deepPurple,
+          brightness: b,
+        ),
       ),
       builder: (c, w) => MediaQuery(
         data: MediaQuery.of(c).copyWith(textScaler: TextScaler.linear(scale)),
@@ -67,18 +69,30 @@ void main() {
     });
 
     test('Gruppenwahl zeigt Stammraum, nicht Ausweichraum', () {
-      final abe = groupOptions(jonas, 'TXT').firstWhere((o) => o.teacher == 'ABE');
+      final abe = groupOptions(
+        jonas,
+        'TXT',
+      ).firstWhere((o) => o.teacher == 'ABE');
       expect(abe.room, 'R106');
       expect(groupOptions(jonas, 'TXT'), hasLength(4));
     });
 
     test('Doppelstunden als ein Abschnitt, Ränder ohne Leerstunden', () {
       final di = dayBlocks(lena, 1, {});
-      expect(di.map((b) => blockLabel(lena, b)),
-          ['1.–2.', '3.–4.', '5.', '6.', '7.', '8.']);
+      expect(di.map((b) => blockLabel(lena, b)), [
+        '1.–2.',
+        '3.–4.',
+        '5.',
+        '6.',
+        '7.',
+        '8.',
+      ]);
       final mo = dayBlocks(jonas, 0, {});
-      expect(blockLabel(jonas, mo.first), '1. Block',
-          reason: '0. Block leer → entfällt');
+      expect(
+        blockLabel(jonas, mo.first),
+        '1. Block',
+        reason: '0. Block leer → entfällt',
+      );
       expect(blockLabel(jonas, mo.last), '3.–4. Block');
     });
 
@@ -113,8 +127,9 @@ void main() {
 
   for (final b in Brightness.values) {
     for (final scale in [1.0, 1.3]) {
-      testWidgets('Plan: $b, Schrift ×$scale, Tag und Woche ohne Überlauf',
-          (t) async {
+      testWidgets('Plan: $b, Schrift ×$scale, Tag und Woche ohne Überlauf', (
+        t,
+      ) async {
         await _pixel(t);
         await t.pumpWidget(_app(b: b, scale: scale));
         await _openPlan(t);
@@ -133,8 +148,9 @@ void main() {
     }
   }
 
-  testWidgets('Gruppe wählen: Hinweis weg, Freitag zeigt nur die eigene',
-      (t) async {
+  testWidgets('Gruppe wählen: Hinweis weg, Freitag zeigt nur die eigene', (
+    t,
+  ) async {
     await _pixel(t);
     await t.pumpWidget(_app());
     await _openPlan(t, kid: 'Jonas');
@@ -178,13 +194,18 @@ void main() {
     await t.pumpAndSettle();
     expect(t.takeException(), isNull);
     expect(
-      find.descendant(
-        of: find.byType(WeekGrid),
-        matching: find.byType(SingleChildScrollView),
-      ).evaluate().where((e) =>
-          (e.widget as SingleChildScrollView).scrollDirection ==
-              Axis.vertical &&
-          (e.widget as SingleChildScrollView).physics == null),
+      find
+          .descendant(
+            of: find.byType(WeekGrid),
+            matching: find.byType(SingleChildScrollView),
+          )
+          .evaluate()
+          .where(
+            (e) =>
+                (e.widget as SingleChildScrollView).scrollDirection ==
+                    Axis.vertical &&
+                (e.widget as SingleChildScrollView).physics == null,
+          ),
       isEmpty,
       reason: '8 Stunden passen bei ×1,15 ohne Scrollen',
     );
@@ -205,21 +226,29 @@ void main() {
     expect(last.bottom, lessThan(nav.top));
   });
 
-  testWidgets('Woche: Zeilen höchstens Sz.gridRowMax hoch (Jonas, 4 Blöcke)',
-      (t) async {
+  testWidgets('Woche: Zeilen höchstens Sz.gridRowMax hoch (Jonas, 4 Blöcke)', (
+    t,
+  ) async {
     await _pixel(t);
     await t.pumpWidget(_app());
     await _openPlan(t, kid: 'Jonas');
     await t.tap(find.text('Woche'));
     await t.pumpAndSettle();
     // Di 2. Block Englisch ist eine Einzelstunde.
-    final cell = t.getRect(find.ancestor(
-      of: find.text('Wolf').at(1),
-      matching: find.byType(Material),
-    ).first);
+    final cell = t.getRect(
+      find
+          .ancestor(
+            of: find.text('Wolf').at(1),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
     expect(cell.height, lessThanOrEqualTo(Sz.gridRowMax + 0.5));
-    expect(find.text('Jan Wolf'), findsNothing,
-        reason: 'im Raster nur der Nachname');
+    expect(
+      find.text('Jan Wolf'),
+      findsNothing,
+      reason: 'im Raster nur der Nachname',
+    );
     await t.tap(find.text('Tag'));
     await t.pumpAndSettle();
     expect(find.textContaining('Jan Wolf'), findsOneWidget);

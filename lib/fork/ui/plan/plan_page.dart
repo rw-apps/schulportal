@@ -17,10 +17,21 @@ class PlanPage extends StatefulWidget {
     required this.now,
     this.initialChoices = const {},
     this.onChoicesChanged,
+    this.autoChoices = const {},
+    this.initialNames = const {},
+    this.onNamesChanged,
   });
 
   final List<KidPlan> plans;
   final DateTime now;
+
+  /// Automatisch erkannte Gruppen je Kind (autoGroupChoice); die eigene Wahl
+  /// geht vor, siehe effectiveChoice.
+  final Map<int, GroupChoice> autoChoices;
+
+  /// Von Hand eingetragene Lehrernamen je Kind (Kürzel → Name).
+  final Map<int, Map<String, String>> initialNames;
+  final void Function(Map<int, Map<String, String>> names)? onNamesChanged;
 
   /// Gewählte Gruppen je Kind (Index in [plans]).
   final Map<int, GroupChoice> initialChoices;
@@ -40,6 +51,9 @@ class _PlanPageState extends State<PlanPage> {
   late final Map<int, GroupChoice> _choices = {
     for (final e in widget.initialChoices.entries) e.key: {...e.value},
   };
+  late final Map<int, Map<String, String>> _names = {
+    for (final e in widget.initialNames.entries) e.key: {...e.value},
+  };
 
   List<DateTime> get _week => schoolWeek(widget.now);
 
@@ -57,8 +71,15 @@ class _PlanPageState extends State<PlanPage> {
     _day = _todayIndex ?? 0;
   }
 
-  KidPlan get _plan => widget.plans[_kid];
-  GroupChoice get _choice => _choices.putIfAbsent(_kid, () => {});
+  KidPlan get _plan =>
+      widget.plans[_kid].withTeacherNames(_names[_kid] ?? const {});
+
+  /// Eigene Wahl (gespeichert); '' = bewusst alle zeigen.
+  GroupChoice get _userChoice => _choices.putIfAbsent(_kid, () => {});
+  GroupChoice get _auto => widget.autoChoices[_kid] ?? const {};
+
+  /// Was der Plan tatsächlich anwendet.
+  GroupChoice get _choice => effectiveChoice(_auto, _userChoice);
 
   Future<void> _openGroupSheet(String short) async {
     await showModalBottomSheet<void>(
@@ -69,13 +90,58 @@ class _PlanPageState extends State<PlanPage> {
         plan: _plan,
         short: short,
         chosen: chosenOption(_plan, _choice, short),
+        autoChosen: chosenOption(_plan, _auto, short),
         onChoose: (lesson) {
           setState(() {
-            _choices[_kid] = applyGroupChoice(_plan, _choice, short, lesson);
+            var next = applyGroupChoice(_plan, _userChoice, short, lesson);
+            if (lesson == null) {
+              // „Alle zeigen“ muss auch eine automatische Wahl aufheben.
+              next = {
+                ...next,
+                for (final o in groupOptions(_plan, short))
+                  if (_auto.containsKey(o.short)) o.short: '',
+              };
+            }
+            _choices[_kid] = next;
           });
           widget.onChoicesChanged?.call(_choices);
           Navigator.of(context).pop();
         },
+      ),
+    );
+  }
+
+  Future<void> _nameTeacher(String kuerzel) async {
+    final current =
+        _names[_kid]?[kuerzel] ??
+        widget.plans[_kid].teacherNames[kuerzel] ??
+        '';
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => TeacherNameDialog(kuerzel: kuerzel, initial: current),
+    );
+    if (name == null || !mounted) return;
+    setState(() {
+      (_names[_kid] ??= {})[kuerzel] = name;
+    });
+    widget.onNamesChanged?.call(_names);
+  }
+
+  Future<void> _openLesson(PlanLesson lesson, String time) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Kit.of(context).p.card,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setSheet) => LessonSheet(
+          plan: _plan,
+          lesson: lesson,
+          time: time,
+          onNameTeacher: (kz) async {
+            await _nameTeacher(kz);
+            setSheet(() {});
+          },
+        ),
       ),
     );
   }
@@ -91,7 +157,16 @@ class _PlanPageState extends State<PlanPage> {
         padding: const EdgeInsets.fromLTRB(Sp.page + Sp.xs, Sp.xl, Sp.page, 0),
         child: Row(
           children: [
-            Expanded(child: Text('Stundenplan', style: k.pageTitle)),
+            // Ab „Groß“ brach der Titel neben dem Umschalter mitten im Wort
+            // um („Stundenpla/n“, Bildschirmfoto 16.10.26) – lieber kleiner.
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text('Stundenplan', style: k.pageTitle, maxLines: 1),
+              ),
+            ),
+            const SizedBox(width: Sp.m),
             _ViewToggle(
               value: _view,
               onChanged: (v) => setState(() => _view = v),
@@ -181,6 +256,7 @@ class _PlanPageState extends State<PlanPage> {
               choice: _choice,
               now: _day == _todayIndex ? widget.now : null,
               onOpenGroup: _openGroupSheet,
+              onOpenLesson: _openLesson,
             ),
           ),
         ),
@@ -417,6 +493,7 @@ class DayPlan extends StatelessWidget {
     required this.day,
     required this.choice,
     required this.onOpenGroup,
+    this.onOpenLesson,
     this.now,
   });
 
@@ -424,6 +501,9 @@ class DayPlan extends StatelessWidget {
   final int day;
   final GroupChoice choice;
   final ValueChanged<String> onOpenGroup;
+
+  /// Antippen einer Stunde: Details mit „Name eintragen“.
+  final void Function(PlanLesson lesson, String time)? onOpenLesson;
 
   /// Nur gesetzt, wenn [day] heute ist; dann „läuft“ und erledigt.
   final DateTime? now;
@@ -475,6 +555,7 @@ class DayPlan extends StatelessWidget {
             block: b,
             now: now,
             onOpenGroup: onOpenGroup,
+            onOpenLesson: onOpenLesson,
           ),
         ),
       );
@@ -492,12 +573,14 @@ class _DayRow extends StatelessWidget {
     required this.block,
     required this.now,
     required this.onOpenGroup,
+    this.onOpenLesson,
   });
 
   final KidPlan plan;
   final DayBlock block;
   final DateTime? now;
   final ValueChanged<String> onOpenGroup;
+  final void Function(PlanLesson lesson, String time)? onOpenLesson;
 
   @override
   Widget build(BuildContext context) {
@@ -517,8 +600,10 @@ class _DayRow extends StatelessWidget {
     Color sub = k.p.muted;
     String title;
     String? meta;
+    String? teacher;
     String? second;
     Widget? trailing;
+    VoidCallback? onTap;
     var strike = false;
 
     switch (block.content) {
@@ -539,7 +624,11 @@ class _DayRow extends StatelessWidget {
       case ResolvedLesson r:
         final x = r.lesson;
         title = x.subject;
-        meta = [?x.room, ?plan.teacherFull(x.teacher)].join(' · ');
+        meta = x.room;
+        teacher = plan.teacherFull(x.teacher);
+        if (onOpenLesson != null) {
+          onTap = () => onOpenLesson!(x, '$start–$end');
+        }
         if (x.change == ChangeKind.cancelled) {
           bg = k.p.cancel.bg;
           ink = sub = k.p.cancel.ink;
@@ -588,73 +677,97 @@ class _DayRow extends StatelessWidget {
         ),
         const SizedBox(width: Sp.m),
         Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(Rad.signal),
-            ),
+          child: Material(
+            color: bg,
+            borderRadius: BorderRadius.circular(Rad.signal),
             clipBehavior: Clip.antiAlias,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(Sp.ml, Sp.m, Sp.s, Sp.m),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    title,
-                                    style: k
-                                        .planSubject(ink)
-                                        .copyWith(
-                                          decoration: strike
-                                              ? TextDecoration.lineThrough
-                                              : null,
-                                          decorationColor: ink,
+            child: InkWell(
+              onTap: onTap,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(Sp.ml, Sp.m, Sp.s, Sp.m),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      title,
+                                      style: k
+                                          .planSubject(ink)
+                                          .copyWith(
+                                            decoration: strike
+                                                ? TextDecoration.lineThrough
+                                                : null,
+                                            decorationColor: ink,
+                                          ),
+                                    ),
+                                  ),
+                                  // Bei offener Wahl steht rechts „Wählen“;
+                                  // die Stunde zusätzlich drückte den Titel
+                                  // zusammen („Textil · 4 Gruppen1. Block“).
+                                  if (block.content is! ResolvedOpen) ...[
+                                    Text(
+                                      running ? 'läuft' : label,
+                                      style: k.planMeta(sub),
+                                    ),
+                                    const SizedBox(width: Sp.xs),
+                                  ],
+                                ],
+                              ),
+                              // Raum unauffällig, Lehrkraft kräftig („mehr
+                              // Kontur“, Rückmeldung 16.10.26).
+                              if ((meta ?? '').isNotEmpty || teacher != null)
+                                Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      if ((meta ?? '').isNotEmpty)
+                                        TextSpan(
+                                          text: meta,
+                                          style: k.planMeta(sub),
                                         ),
+                                      if ((meta ?? '').isNotEmpty &&
+                                          teacher != null)
+                                        TextSpan(
+                                          text: ' · ',
+                                          style: k.planMeta(sub),
+                                        ),
+                                      if (teacher != null)
+                                        TextSpan(
+                                          text: teacher,
+                                          style: k.planTeacher(ink),
+                                        ),
+                                    ],
                                   ),
                                 ),
-                                // Bei offener Wahl steht rechts „Wählen“;
-                                // die Stunde zusätzlich drückte den Titel
-                                // zusammen („Textil · 4 Gruppen1. Block“).
-                                if (block.content is! ResolvedOpen) ...[
-                                  Text(
-                                    running ? 'läuft' : label,
-                                    style: k.planMeta(sub),
-                                  ),
-                                  const SizedBox(width: Sp.xs),
-                                ],
-                              ],
-                            ),
-                            if (meta != null && meta.isNotEmpty)
-                              Text(meta, style: k.planMeta(sub)),
-                            if (second != null)
-                              Text(second, style: k.planMeta(ink)),
-                          ],
+                              if (second != null)
+                                Text(second, style: k.planMeta(ink)),
+                            ],
+                          ),
                         ),
-                      ),
-                      ?trailing,
-                    ],
-                  ),
-                ),
-                if (progress != null)
-                  SizedBox(
-                    height: Sz.progress,
-                    child: FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: progress.clamp(0, 1),
-                      child: ColoredBox(color: tone.accent),
+                        ?trailing,
+                      ],
                     ),
                   ),
-              ],
+                  if (progress != null)
+                    SizedBox(
+                      height: Sz.progress,
+                      child: FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: progress.clamp(0, 1),
+                        child: ColoredBox(color: tone.accent),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1091,11 +1204,15 @@ class GroupSheet extends StatelessWidget {
     required this.short,
     required this.chosen,
     required this.onChoose,
+    this.autoChosen,
   });
 
   final KidPlan plan;
   final String short;
   final PlanLesson? chosen;
+
+  /// Von der App erkannte Gruppe (Kurs-Lehrkraft), zur Kennzeichnung.
+  final PlanLesson? autoChosen;
 
   /// null = Wahl aufheben (wieder alle Gruppen zeigen).
   final ValueChanged<PlanLesson?> onChoose;
@@ -1103,7 +1220,13 @@ class GroupSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final options = groupOptions(plan, short);
+    final base = groupOptions(plan, short);
+    // Team-Wahl (beide Kurs-Lehrkräfte) ist keine einzelne Gruppe des
+    // Plans, steht aber als eigene Zeile oben, damit sie sichtbar bleibt.
+    bool listed(PlanLesson t) =>
+        base.any((o) => o.short == t.short && o.groupKey == t.groupKey);
+    final team = [?autoChosen, ?chosen].where((t) => !listed(t)).firstOrNull;
+    final options = [?team, ...base];
     final label = groupLabel(plan, short);
     final sameSubject = options.map((o) => o.subject).toSet().length == 1;
     bool isChosen(PlanLesson o) =>
@@ -1168,6 +1291,16 @@ class GroupSheet extends StatelessWidget {
                                         ].join(' · '),
                                   style: k.planMeta(k.p.muted),
                                 ),
+                                if (autoChosen != null &&
+                                    autoChosen!.short == g.short &&
+                                    autoChosen!.groupKey == g.groupKey)
+                                  Text(
+                                    'Erkannt über den Kurs in „Mein '
+                                    'Unterricht“',
+                                    style: k.planMeta(
+                                      k.kid(plan.colorIndex).label,
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
@@ -1191,6 +1324,147 @@ class GroupSheet extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Details einer Stunde mit „Name eintragen“ je Lehrkraft.
+class LessonSheet extends StatelessWidget {
+  const LessonSheet({
+    super.key,
+    required this.plan,
+    required this.lesson,
+    required this.time,
+    required this.onNameTeacher,
+  });
+
+  final KidPlan plan;
+  final PlanLesson lesson;
+  final String time;
+  final ValueChanged<String> onNameTeacher;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final kuerzel = KidPlan.kuerzelOf(lesson.teacher);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(Sp.xl, 0, Sp.xl, Sp.l),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(lesson.subject, style: k.sheetTitle),
+            const SizedBox(height: Sp.xs),
+            Text(
+              [
+                time,
+                if (lesson.room != null) 'Raum ${lesson.room}',
+              ].join(' · '),
+              style: k.meta,
+            ),
+            const SizedBox(height: Sp.l),
+            for (final kz in kuerzel)
+              Padding(
+                padding: const EdgeInsets.only(bottom: Sp.s),
+                child: Material(
+                  color: k.p.inset,
+                  borderRadius: BorderRadius.circular(Rad.signal),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(Rad.signal),
+                    onTap: () => onNameTeacher(kz),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: Sp.l,
+                        vertical: Sp.m,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  plan.teacherNames[kz] ?? 'Name unbekannt',
+                                  style: k.planTeacher(k.p.ink),
+                                ),
+                                Text('Kürzel $kz', style: k.meta),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            plan.teacherNames.containsKey(kz)
+                                ? Icons.edit_outlined
+                                : Icons.person_add_alt,
+                            size: Sz.icon,
+                            color: k.p.muted,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (kuerzel.isEmpty)
+              Text('Keine Lehrkraft angegeben.', style: k.meta),
+            Text(
+              'Antippen, um einen Namen einzutragen. Er wird nur auf diesem '
+              'Gerät für dieses Konto gespeichert.',
+              style: k.meta,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Eingabe eines Lehrernamens zu einem Kürzel. Leer = eigenen Eintrag
+/// löschen (dann gilt wieder der Name aus dem Portal bzw. das Kürzel).
+class TeacherNameDialog extends StatefulWidget {
+  const TeacherNameDialog({
+    super.key,
+    required this.kuerzel,
+    required this.initial,
+  });
+
+  final String kuerzel;
+  final String initial;
+
+  @override
+  State<TeacherNameDialog> createState() => _TeacherNameDialogState();
+}
+
+class _TeacherNameDialogState extends State<TeacherNameDialog> {
+  late final _c = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Name für ${widget.kuerzel}'),
+      content: TextField(
+        controller: _c,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(hintText: 'z. B. Frau Muster'),
+        onSubmitted: (v) => Navigator.pop(context, v.trim()),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Abbrechen'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _c.text.trim()),
+          child: const Text('Speichern'),
+        ),
+      ],
     );
   }
 }

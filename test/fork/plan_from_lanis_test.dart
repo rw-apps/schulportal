@@ -6,22 +6,32 @@ import 'package:liblanis/liblanis.dart';
 SphTimeOfDay _t(int h, int m) => SphTimeOfDay(hour: h, minute: m);
 
 TimeTableRow _row(String label, int idx, (int, int) a, (int, int) b) =>
-    TimeTableRow(TimeTableRowType.lesson, _t(a.$1, a.$2), _t(b.$1, b.$2),
-        label, idx);
-
-TimetableSubject _s(String name, String? raum, String? lehrer,
-        (int, int) a, (int, int) b, {int duration = 1}) =>
-    TimetableSubject(
-      id: '$name-$lehrer',
-      name: name,
-      raum: raum,
-      lehrer: lehrer,
-      badge: null,
-      duration: duration,
-      startTime: _t(a.$1, a.$2),
-      endTime: _t(b.$1, b.$2),
-      stunde: null,
+    TimeTableRow(
+      TimeTableRowType.lesson,
+      _t(a.$1, a.$2),
+      _t(b.$1, b.$2),
+      label,
+      idx,
     );
+
+TimetableSubject _s(
+  String name,
+  String? raum,
+  String? lehrer,
+  (int, int) a,
+  (int, int) b, {
+  int duration = 1,
+}) => TimetableSubject(
+  id: '$name-$lehrer',
+  name: name,
+  raum: raum,
+  lehrer: lehrer,
+  badge: null,
+  duration: duration,
+  startTime: _t(a.$1, a.$2),
+  endTime: _t(b.$1, b.$2),
+  stunde: null,
+);
 
 /// Aufbau wie der Plan von Schule A (Blöcke), Kürzel und Räume erfunden.
 TimeTable _tt({bool ownEmpty = false}) {
@@ -82,7 +92,10 @@ void main() {
   });
 
   test('beide ohne Raum ebenfalls zusammen, gemischt bleiben Gruppen', () {
-    expect(plan.days[1][0].options.where((o) => o.short == 'TRAIN'), hasLength(1));
+    expect(
+      plan.days[1][0].options.where((o) => o.short == 'TRAIN'),
+      hasLength(1),
+    );
     expect(plan.days[0][1].isParallel, isTrue, reason: 'TXT G1 und ohne Raum');
     expect(openGroupSubjects(plan, {}), {'TXT'});
   });
@@ -104,14 +117,95 @@ void main() {
     expect(subjectFullName('SP5', courses), 'Sport');
     expect(subjectFullName('NAWI', courses), 'Naturwissenschaften');
     expect(subjectFullName('TRAIN', courses), 'Training');
-    expect(subjectFullName('TXT', courses), 'TXT',
-        reason: 'nicht raten (Projekt Text ≠ Textil)');
-    expect(subjectFullName('ÄSTH', const []), 'ÄSTH');
+    expect(
+      subjectFullName('TXT', courses),
+      'TXT',
+      reason: 'ohne Schulnummer nicht raten (anderswo Textil)',
+    );
+    expect(subjectFullName('TXT', courses, schoolId: '0000'), 'Projekt Text');
+    expect(subjectFullName('ÄSTH', const []), 'Ästhetik');
+    expect(subjectFullName('ZFU6', const []), 'ZFU6');
   });
 
   test('persönlicher Plan leer → Klassenplan', () {
-    final p = kidPlanFromTimetable(_tt(ownEmpty: true),
-        firstName: 'Kind', colorIndex: 0);
+    final p = kidPlanFromTimetable(
+      _tt(ownEmpty: true),
+      firstName: 'Kind',
+      colorIndex: 0,
+    );
     expect(p.days[0][0].isEmpty, isFalse);
+  });
+
+  test('Gruppe automatisch über die Kurs-Lehrkraft', () {
+    final p = kidPlanFromTimetable(
+      _tt(),
+      firstName: 'K',
+      colorIndex: 0,
+      schoolId: '0000',
+    );
+    expect(openGroupSubjects(p, {}), {'TXT'});
+    final auto = autoGroupChoice(p, [
+      (name: 'Projekt Text 6 xy', teachers: {'DDD'}),
+      (name: 'Mathematik 06 xy', teachers: {'AAA'}),
+    ]);
+    expect(auto, {'TXT': 'DDD'});
+    expect(openGroupSubjects(p, effectiveChoice(auto, {})), isEmpty);
+    // Eigene Wahl geht vor, '' = bewusst alle zeigen.
+    expect(effectiveChoice(auto, {'TXT': 'CCC'}), {'TXT': 'CCC'});
+    expect(effectiveChoice(auto, {'TXT': ''}), isEmpty);
+  });
+
+  test('keine Automatik ohne passenden Kurs oder bei Mehrdeutigkeit', () {
+    final p = kidPlanFromTimetable(
+      _tt(),
+      firstName: 'K',
+      colorIndex: 0,
+      schoolId: '0000',
+    );
+    expect(
+      autoGroupChoice(p, [
+        (name: 'Sport 06', teachers: {'DDD'}),
+      ]),
+      isEmpty,
+    );
+    final ohneName = kidPlanFromTimetable(_tt(), firstName: 'K', colorIndex: 0);
+    expect(
+      autoGroupChoice(ohneName, [
+        (name: 'TXT', teachers: {'DDD'}),
+      ]),
+      isEmpty,
+      reason: 'Kürzel ohne Namen wird nicht geraten',
+    );
+  });
+
+  test('zwei Kurs-Lehrkräfte in jeder Stunde → Team als eine Stunde', () {
+    final p = kidPlanFromTimetable(
+      _tt(),
+      firstName: 'K',
+      colorIndex: 0,
+      schoolId: '0000',
+    );
+    final auto = autoGroupChoice(p, [
+      (name: 'Projekt Text 6', teachers: {'CCC', 'DDD'}),
+    ]);
+    expect(auto, {'TXT': 'CCC, DDD'});
+    expect(openGroupSubjects(p, auto), isEmpty);
+    final r = resolveCell(p.days[0][1], auto) as ResolvedLesson;
+    expect(r.lesson.teacher, 'CCC, DDD');
+    expect(r.lesson.room, 'G1');
+    final chosen = chosenOption(p, auto, 'TXT')!;
+    expect(chosen.groupKey, 'CCC, DDD');
+    // Eine Einzelgruppe bleibt wählbar.
+    expect(
+      (resolveCell(p.days[0][1], {'TXT': 'DDD'}) as ResolvedLesson).lesson.room,
+      isNull,
+    );
+  });
+
+  test('eigene Lehrernamen überschreiben und lassen sich löschen', () {
+    final p = plan.withTeacherNames({'CCC': 'Frau Muster', 'AAA': ''});
+    expect(p.teacherFull('CCC'), 'Frau Muster');
+    expect(p.teacherFull('AAA'), 'AAA');
+    expect(p.teacherFull('BBB'), 'Bernd Bau');
   });
 }

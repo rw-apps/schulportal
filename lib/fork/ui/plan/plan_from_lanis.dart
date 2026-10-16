@@ -20,6 +20,7 @@ KidPlan kidPlanFromTimetable(
   required int colorIndex,
   Map<String, String> teacherNames = const {},
   List<String> courseNames = const [],
+  String? schoolId,
 }) {
   final rows = [
     for (final r in tt.hours ?? const <TimeTableRow>[])
@@ -45,7 +46,7 @@ KidPlan kidPlanFromTimetable(
       final code = (subj.name ?? '').trim();
       if (code.isEmpty) continue;
       final lesson = PlanLesson(
-        subject: subjectFullName(code, courseNames),
+        subject: subjectFullName(code, courseNames, schoolId: schoolId),
         short: code,
         room: _blankToNull(subj.raum),
         teacher: _blankToNull(subj.lehrer),
@@ -112,10 +113,19 @@ String? _blankToNull(String? s) {
 /// Kürzel – lieber „TXT“ als ein geratener Name. Beleg für die Vorsicht: Im
 /// Export von Schule A hieß der passende Kurs „Projekt Text“, nicht „Textil“, wie die
 /// Beispieldaten angenommen hatten.
-String subjectFullName(String code, List<String> courseNames) {
+String subjectFullName(
+  String code,
+  List<String> courseNames, {
+  String? schoolId,
+}) {
   final up = code.toUpperCase().trim();
   final base = up.replaceAll(RegExp(r'\d+$'), ''); // SP5 → SP
-  final known = _knownSubjects[up] ?? _knownSubjects[base];
+  final bySchool = _schoolSubjects[schoolId];
+  final known =
+      bySchool?[up] ??
+      bySchool?[base] ??
+      _knownSubjects[up] ??
+      _knownSubjects[base];
   if (known != null) return known;
 
   for (final c in courseNames) {
@@ -151,7 +161,15 @@ String? _courseBaseName(String course) {
   return words.isEmpty ? null : words.join(' ');
 }
 
-/// Nur eindeutige Kürzel. Doppeldeutige (TXT, ÄS, WPU …) bewusst nicht.
+/// Kürzel, die nur an einer Schule eindeutig sind (Schulnummer → Kürzel →
+/// Name). Beleg 0000 (Schule A): Angabe der Eltern 16.10.26,
+/// passend zum Kurs „Projekt Text 6 …“ in „Mein Unterricht“. Grenze: An
+/// anderen Schulen kann TXT „Textil“ heißen, deshalb nicht global.
+const _schoolSubjects = <String, Map<String, String>>{
+  '0000': {'TXT': 'Projekt Text'},
+};
+
+/// Nur eindeutige Kürzel. Doppeldeutige (TXT, WPU …) bewusst nicht.
 const _knownSubjects = <String, String>{
   'D': 'Deutsch',
   'DE': 'Deutsch',
@@ -190,6 +208,7 @@ const _knownSubjects = <String, String>{
   'AL': 'Arbeitslehre',
   'DS': 'Darstellendes Spiel',
   'KL': 'Klassenstunde',
+  'ÄSTH': 'Ästhetik',
 };
 
 /// Doppelbesetzung zu EINER Stunde zusammenfassen.
@@ -233,6 +252,59 @@ List<PlanLesson> mergeCoTeaching(List<PlanLesson> options) {
         ),
       );
     }
+  }
+  return out;
+}
+
+/// Ein Kurs aus „Mein Unterricht“: Name und Lehrerkürzel.
+typedef CourseRef = ({String name, Set<String> teachers});
+
+/// Parallelgruppen automatisch wählen, wo der Unterricht des Kindes es
+/// verrät: Ein Kurs, dessen Name den Fachnamen enthält („Projekt Text 6 …“
+/// ⊃ „Projekt Text“), hat Lehrkräfte. Ist GENAU EINE Gruppe des Fachs bei
+/// einer davon, ist das die Gruppe des Kindes. Passen mehrere Gruppen und
+/// steht in JEDER Stunde des Fachs mindestens eine davon, gilt das Team der
+/// Kurs-Lehrkräfte (Team-Wahl, siehe `chosenOption`) – Beleg Schule A 16.10.26:
+/// zwei Kurs-Lehrkräfte, beide in jeder TXT-Stunde.
+///
+/// Grenze: Ohne passenden Kurs (Ästhetik hat an Schule A keine Kursmappe)
+/// bleibt die Wahl offen – dann entscheidet der Nutzer. Fächer ohne
+/// ausgeschriebenen Namen (Kürzel = Name) werden nicht geraten.
+GroupChoice autoGroupChoice(KidPlan plan, List<CourseRef> courses) {
+  final out = <String, String>{};
+  for (final short in openGroupSubjects(plan, const {})) {
+    final options = groupOptions(plan, short);
+    if (options.isEmpty) continue;
+    final subject = options.first.subject;
+    if (subject == short) continue;
+    final teachers = <String>{
+      for (final c in courses)
+        if (c.name.toLowerCase().contains(subject.toLowerCase())) ...c.teachers,
+    };
+    if (teachers.isEmpty) continue;
+    final hits = [
+      for (final o in options)
+        if (KidPlan.kuerzelOf(o.teacher).any(teachers.contains)) o,
+    ];
+    if (hits.length == 1) {
+      out[hits.single.short] = hits.single.groupKey;
+      continue;
+    }
+    if (hits.length < 2) continue;
+    final team = [
+      for (final t in teachers)
+        if (hits.any((o) => KidPlan.kuerzelOf(o.teacher).contains(t))) t,
+    ];
+    final key = team.join(', ');
+    final everyLesson = plan.days.every(
+      (d) => d.every(
+        (c) =>
+            !c.isParallel ||
+            !c.options.any((o) => o.short == short) ||
+            resolveCell(c, {short: key}) is ResolvedLesson,
+      ),
+    );
+    if (everyLesson) out[short] = key;
   }
   return out;
 }

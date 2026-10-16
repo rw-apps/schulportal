@@ -29,8 +29,13 @@ Widget _app({required Brightness b, double scale = 1.0}) => MaterialApp(
 
 const _day = [
   DayLesson(slot: '1.', subject: 'A', start: '08:00', end: '08:45'),
-  DayLesson(slot: '2.', subject: 'B', start: '08:45', end: '09:30',
-      change: ChangeKind.cancelled),
+  DayLesson(
+    slot: '2.',
+    subject: 'B',
+    start: '08:45',
+    end: '09:30',
+    change: ChangeKind.cancelled,
+  ),
   DayLesson(slot: '3.', subject: 'C', start: '09:50', end: '10:35'),
 ];
 DateTime _at(int h, int m) => DateTime(2026, 10, 20, h, m);
@@ -95,15 +100,21 @@ void main() {
 
         // Langer Tag aufklappen: alle 6 Abschnitte, Mittagspause sichtbar.
         final open = find.text('Ganzen Tag zeigen').first;
-        await t.drag(find.byType(CustomScrollView), const Offset(0, -250));
+        // In die Bildmitte, damit der Knopf nicht hinter der Leiste liegt.
+        Scrollable.ensureVisible(t.element(open), alignment: 0.5);
         await t.pumpAndSettle();
         await t.tap(open, warnIfMissed: true);
         await t.pumpAndSettle();
         expect(t.takeException(), isNull);
         expect(find.text('Musik', skipOffstage: false), findsOneWidget);
-        expect(find.text('Pause bis 14:00', skipOffstage: false), findsOneWidget);
-        expect(find.text('Vertretung: Tim Sommer, R 112', skipOffstage: false),
-            findsOneWidget);
+        expect(
+          find.text('Pause bis 14:00', skipOffstage: false),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Vertretung: Tim Sommer, R 112', skipOffstage: false),
+          findsOneWidget,
+        );
 
         await t.drag(find.byType(CustomScrollView), const Offset(0, -6000));
         await t.pumpAndSettle();
@@ -118,8 +129,11 @@ void main() {
     await t.pumpWidget(_app(b: Brightness.dark));
     expect(demoFamily().kids.where((k) => k.canReportAbsence), hasLength(1));
     final btn = find.text('Krank melden');
-    await t.scrollUntilVisible(btn, 300,
-        scrollable: find.byType(Scrollable).first);
+    await t.scrollUntilVisible(
+      btn,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(btn, findsOneWidget);
     await t.ensureVisible(btn);
     await t.pumpAndSettle();

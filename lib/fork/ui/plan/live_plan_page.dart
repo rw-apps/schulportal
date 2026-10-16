@@ -15,6 +15,11 @@ import 'plan_page.dart';
 /// `hidden-lessons`).
 const groupChoiceSetting = 'fork-group-choice';
 
+/// Von Hand eingetragene Lehrernamen (Kürzel → Name), ebenfalls je Konto.
+/// Bewusst nur auf dem Gerät: Echte Namen gehören nicht ins öffentliche
+/// Repository (Entscheidung 16.10.26).
+const teacherNamesSetting = 'fork-teacher-names';
+
 /// „Plan“ mit echten Daten des angemeldeten Kontos.
 ///
 /// Stundenplan über timetableParserProvider (wie die Lanis-Ansicht, mit deren
@@ -52,15 +57,20 @@ class LivePlanPage extends ConsumerWidget {
     return CombinedAppletBuilder<TimeTable>(
       parser: ref.watch(timetableParserProvider),
       phpUrl: 'stundenplan.php',
-      settingsDefaults: const {groupChoiceSetting: <String, dynamic>{}},
+      settingsDefaults: const {
+        groupChoiceSetting: <String, dynamic>{},
+        teacherNamesSetting: <String, dynamic>{},
+      },
       accountType: type,
       builder: (context, tt, _, settings, updateSetting, _) {
         final raw = settings[groupChoiceSetting];
-        final choice = <String, String>{
-          if (raw is Map)
-            for (final e in raw.entries)
+        Map<String, String> strings(Object? m) => <String, String>{
+          if (m is Map)
+            for (final e in m.entries)
               if (e.value is String) e.key.toString(): e.value as String,
         };
+        final choice = strings(raw);
+        final ownNames = strings(settings[teacherNamesSetting]);
         return _WithLessons(
           enabled: supported.contains('meinunterricht.php'),
           builder: (lessons, kids) {
@@ -83,13 +93,25 @@ class LivePlanPage extends ConsumerWidget {
               colorIndex: 0,
               teacherNames: names,
               courseNames: [for (final l in lessons) l.name],
+              schoolId: session.account.schoolID.toString(),
             );
+            final auto = autoGroupChoice(plan, [
+              for (final l in lessons)
+                (
+                  name: l.name,
+                  teachers: {for (final t in l.teachers) ?t.teacherKuerzel},
+                ),
+            ]);
             return PlanPage(
               plans: [plan],
               now: DateTime.now(),
               initialChoices: {0: choice},
               onChoicesChanged: (c) =>
                   updateSetting(groupChoiceSetting, c[0] ?? const {}),
+              autoChoices: {0: auto},
+              initialNames: {0: ownNames},
+              onNamesChanged: (n) =>
+                  updateSetting(teacherNamesSetting, n[0] ?? const {}),
             );
           },
         );

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:liblanis/liblanis.dart'
+    show TypedSettings, sharedOverAccountSettingsProvider;
 
 import '../kit.dart';
 import '../today/today_model.dart';
@@ -29,6 +32,40 @@ class PreviewShell extends StatefulWidget {
 
 class _PreviewShellState extends State<PreviewShell> {
   int _index = 0;
+  KitFontStep _font = KitFontStep.normal;
+
+  /// Geräteweit (nicht je Konto): Die Schriftgröße ist eine Frage des
+  /// Handys und der Augen, nicht des Schulkontos.
+  static const _fontKey = 'fork-ui/font-step';
+
+  TypedSettings? _deviceSettings() {
+    if (!widget.liveData) return null;
+    try {
+      return ProviderScope.containerOf(
+        context,
+        listen: false,
+      ).read(sharedOverAccountSettingsProvider);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final stored = _deviceSettings()?.getString(_fontKey);
+      if (stored != null && mounted) {
+        setState(() => _font = KitFontStep.parse(stored));
+      }
+    });
+  }
+
+  void _setFont(KitFontStep step) {
+    setState(() => _font = step);
+    _deviceSettings()?.setString(_fontKey, step.name);
+  }
+
   final FamilyToday _data = demoFamily();
   final _plans = demoPlans();
   Map<int, GroupChoice> _choices = {};
@@ -54,39 +91,46 @@ class _PreviewShellState extends State<PreviewShell> {
     final k = Kit.of(context);
     // Schrift des Kits auch für Material-Bausteine (SnackBar, Knöpfe).
     final theme = Theme.of(context);
-    return Theme(
-      data: theme.copyWith(
-        textTheme: theme.textTheme.apply(fontFamily: kitFont),
-      ),
-      child: Scaffold(
-        backgroundColor: k.p.bg,
-        // Inhalt endet ÜBER der Leiste (kein extendBody). Ursache: Lief er
-        // darunter weiter, schnitt die Pille beim Scrollen Stunden an
-        // (Rückmeldung 16.10.26 zur Tagesansicht).
-        extendBody: false,
-        body: switch (_index) {
-          0 => TodayPage(
-            data: _data,
-            onReportAbsence: (c) => _notYet('Krankmeldung für ${c.firstName}'),
-            onOpenHomework: (c) => _notYet('Hausaufgaben von ${c.firstName}'),
-            onOpenMessages: (c) => _notYet('Nachrichten von ${c.firstName}'),
-            onOpenCalendar: () => setState(() => _index = 3),
+    final mq = MediaQuery.of(context);
+    final system = mq.textScaler.scale(14) / 14;
+    return MediaQuery(
+      data: mq.copyWith(textScaler: TextScaler.linear(system * _font.factor)),
+      child: Theme(
+        data: theme.copyWith(
+          textTheme: theme.textTheme.apply(fontFamily: kitFont),
+        ),
+        child: Scaffold(
+          backgroundColor: k.p.bg,
+          // Inhalt endet ÜBER der Leiste (kein extendBody). Ursache: Lief er
+          // darunter weiter, schnitt die Pille beim Scrollen Stunden an
+          // (Rückmeldung 16.10.26 zur Tagesansicht).
+          extendBody: false,
+          body: switch (_index) {
+            0 => TodayPage(
+              data: _data,
+              onReportAbsence: (c) =>
+                  _notYet('Krankmeldung für ${c.firstName}'),
+              onOpenHomework: (c) => _notYet('Hausaufgaben von ${c.firstName}'),
+              onOpenMessages: (c) => _notYet('Nachrichten von ${c.firstName}'),
+              onOpenCalendar: () => setState(() => _index = 3),
+            ),
+            1 when widget.liveData => const LivePlanPage(),
+            1 => PlanPage(
+              plans: _plans,
+              now: _data.now,
+              initialChoices: _choices,
+              onChoicesChanged: (c) => _choices = {
+                for (final e in c.entries) e.key: {...e.value},
+              },
+            ),
+            4 => _MorePage(font: _font, onFont: _setFont),
+            _ => _Placeholder(label: _dest[_index].$3),
+          },
+          bottomNavigationBar: FloatingNavBar(
+            selected: _index,
+            items: _dest,
+            onSelect: (i) => setState(() => _index = i),
           ),
-          1 when widget.liveData => const LivePlanPage(),
-          1 => PlanPage(
-            plans: _plans,
-            now: _data.now,
-            initialChoices: _choices,
-            onChoicesChanged: (c) => _choices = {
-              for (final e in c.entries) e.key: {...e.value},
-            },
-          ),
-          _ => _Placeholder(label: _dest[_index].$3),
-        },
-        bottomNavigationBar: FloatingNavBar(
-          selected: _index,
-          items: _dest,
-          onSelect: (i) => setState(() => _index = i),
         ),
       ),
     );
@@ -231,6 +275,76 @@ class _Placeholder extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// „Mehr“: vorerst nur die Schriftgröße der neuen Oberfläche.
+class _MorePage extends StatelessWidget {
+  const _MorePage({required this.font, required this.onFont});
+
+  final KitFontStep font;
+  final ValueChanged<KitFontStep> onFont;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(Sp.page, Sp.xl, Sp.page, Sp.xl),
+        children: [
+          Text('Mehr', style: k.pageTitle),
+          const SizedBox(height: Sp.xl),
+          Text('Schriftgröße', style: k.section),
+          const SizedBox(height: Sp.xs),
+          Text(
+            'Gilt für die neue Oberfläche, zusätzlich zur Einstellung des '
+            'Handys.',
+            style: k.meta,
+          ),
+          const SizedBox(height: Sp.m),
+          for (final step in KitFontStep.values)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Sp.s),
+              child: Material(
+                color: step == font ? k.kid(0).tint : k.p.card,
+                borderRadius: BorderRadius.circular(Rad.signal),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(Rad.signal),
+                  onTap: () => onFont(step),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Sp.l,
+                      vertical: Sp.m,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            step.label,
+                            style: k.planSubject(k.p.ink),
+                          ),
+                        ),
+                        if (step == font)
+                          Icon(
+                            Icons.check,
+                            size: Sz.icon,
+                            color: k.kid(0).label,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: Sp.l),
+          TextButton.icon(
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.close),
+            label: Text('Vorschau schließen', style: k.button(k.p.ink)),
+          ),
+        ],
       ),
     );
   }

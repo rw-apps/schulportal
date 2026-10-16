@@ -19,6 +19,29 @@ import 'package:flutter/material.dart';
 
 const kitFont = 'Manrope';
 
+/// Schriftstufe der neuen Oberfläche, zusätzlich zur Systemschrift.
+///
+/// Ursache: „Die Schriftgröße ist noch zu klein“ (Pixel, 16.10.26). „Normal“
+/// liegt deshalb schon ~2 pt über den Kit-Größen (Fach 16 → 18, Meta 13 →
+/// 14,5). Wirkt als Faktor auf MediaQuery.textScaler (PreviewShell), damit
+/// alle Kit-Formate gleichmäßig wachsen. Grenze: Feste Höhen (Knöpfe, Leiste,
+/// Rasterzeilen) wachsen nicht mit; dort verkleinern FittedBox bzw. das
+/// Raster scrollt ab der Mindesthöhe.
+enum KitFontStep {
+  normal('Normal', 1.12),
+  large('Groß', 1.25),
+  xlarge('Sehr groß', 1.4);
+
+  const KitFontStep(this.label, this.factor);
+  final String label;
+  final double factor;
+
+  static KitFontStep parse(String? name) => KitFontStep.values.firstWhere(
+    (s) => s.name == name,
+    orElse: () => KitFontStep.normal,
+  );
+}
+
 /// Abstände (logische Pixel).
 abstract final class Sp {
   static const double xxs = 2;
@@ -464,10 +487,14 @@ class Kit {
   TextStyle get timeEnd => _s(12, FontWeight.w500, p.faint);
   TextStyle planSubject(Color c) => _s(16, FontWeight.w800, c);
   TextStyle planMeta(Color c) => _s(13, FontWeight.w500, c);
+
+  /// Lehrkraft in der Tagesansicht: kräftiger als Raum/Zeit („mehr Kontur“,
+  /// Rückmeldung 16.10.26).
+  TextStyle planTeacher(Color c) => _s(14, FontWeight.w700, c);
   TextStyle get planSlot => _s(12, FontWeight.w700, p.muted);
   TextStyle cellShort(Color c) => _s(13, FontWeight.w800, c);
   TextStyle cellRoom(Color c) => _s(11, FontWeight.w600, c);
-  TextStyle cellTeacher(Color c) => _s(10, FontWeight.w500, c);
+  TextStyle cellTeacher(Color c) => _s(10, FontWeight.w700, c);
   TextStyle get gridSlot => _s(12, FontWeight.w800, p.ink);
   TextStyle get gridTime => _s(10, FontWeight.w500, p.faint);
   TextStyle gridHead(bool today) =>
