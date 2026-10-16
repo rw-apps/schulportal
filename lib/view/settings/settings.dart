@@ -1,3 +1,4 @@
+import 'package:lanis/fork/ui/preview/preview_shell.dart';
 import 'dart:io';
 
 import 'package:app_settings/app_settings.dart';
@@ -210,6 +211,19 @@ class _SettingsScreenState extends ConsumerSettingsColoursState<SettingsScreen> 
       ),
       SettingsGroup(
         tiles: [
+          // Fork: Vorschau der neuen Oberfläche (fork/ui/preview), nur zur
+          // Abnahme auf dem Gerät; erfundene Daten, keine Portal-Abfragen.
+          SettingsTile(
+            title: (context) => 'Neue Oberfläche (Vorschau)',
+            subtitle: (context) async =>
+                'Entwurf mit Beispieldaten zur Abnahme',
+            icon: Icons.auto_awesome_outlined,
+            screen: (context) async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const PreviewShell()),
+              );
+            },
+          ),
           // Fork: Kachel „Fehlerberichte“ ersetzt durch direkten Debug-Export.
           // Ursache: Der Debug-Export war nur über die Fehlerberichte-Seite
           // erreichbar (subsettings/error_reporting.dart, ListTile → DebugExport);

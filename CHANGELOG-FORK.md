@@ -1,5 +1,10 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9313**
+
+- Neu: **Vorschau der neuen Oberfläche** unter Einstellungen → „Neue Oberfläche (Vorschau)“. Erster Entwurf der Seite „Heute“: je Kind eine Karte (laufende und nächste Stunde, Vertretungen und Ausfälle, Hausaufgaben, Nachrichten, Krankmeldung) und darunter „Demnächst“ für alle Kinder. Nur erfundene Beispieldaten, keine Abfragen beim Portal.
+- Neue untere Leiste im Entwurf: Heute · Plan · Nachrichten · Termine · Mehr (die übrigen Ziele folgen nach Abnahme).
+
 **4.1.0+9312**
 
 - Behoben: Die Krankmeldung ließ sich nicht ganz nach unten scrollen; der letzte Knopf lag halb unter der Navigationsleiste.
