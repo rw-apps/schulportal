@@ -1,3 +1,4 @@
+import '../messages/messages_page.dart';
 import '../courses/courses_model.dart';
 
 /// Erfundene Kurse für Tests und Bildschirmfotos (keine echten Namen).
@@ -29,5 +30,22 @@ List<CourseItem> demoCourses() => [
     topic: 'Die Zelle',
     date: DateTime(2026, 10, 15),
     attendance: 'Fehlstunden 2 · Entschuldigt 2',
+  ),
+];
+
+/// Erfundene Unterhaltungen für Tests und Bildschirmfotos.
+List<MessageItem> demoMessages() => const [
+  MessageItem(
+    id: 'm1',
+    subject: 'Wandertag am Freitag',
+    sender: 'Maria Becker',
+    date: 'heute 08:12',
+    unread: true,
+  ),
+  MessageItem(
+    id: 'm2',
+    subject: 'Elternabend 7b',
+    sender: 'Tim Sommer',
+    date: '14.10.2026 17:40',
   ),
 ];

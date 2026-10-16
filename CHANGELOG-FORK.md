@@ -1,5 +1,11 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9325**
+
+- **Nachrichten** im neuen Stil: Liste der Unterhaltungen, ungelesene hervorgehoben mit Punkt, oben „Neue Nachricht“. Lesen und Antworten öffnet die gewohnte Unterhaltung.
+- **Neue Nachricht in drei Schritten:** (1) An wen? – Lehrkräfte aus dem Unterricht des Kindes mit ihren Fächern zum Antippen, Fachlehrkräfte oben, große Ganztags-Teams unten; freie Suche als Rückfall. (2) Worum geht es? – Vorlagen „Frage zur Hausaufgabe“, „Bitte um Rückruf“, „Termin vereinbaren“. (3) Senden – mit Rückfrage „Nachricht senden?“.
+- Ob das Portal eine Lehrkraft für Eltern freigibt, zeigt sich beim Antippen; wenn nicht: „Über das Portal nicht erreichbar“.
+
 **4.1.0+9324**
 
 - **Unterricht** im neuen Stil: oben die Hausaufgaben (offene gelb, erledigte darunter), darunter alle Kurse mit Lehrkräften, neuestem Eintrag der Kursmappe und Fehlzeiten. Antippen öffnet die Kursseite mit allen Einträgen.

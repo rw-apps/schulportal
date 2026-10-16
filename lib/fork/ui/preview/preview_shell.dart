@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart'
-    show TypedSettings, sharedOverAccountSettingsProvider, AccountType;
+    show TypedSettings, sharedOverAccountSettingsProvider;
 
-import 'package:lanis/applets/conversations/definition.dart';
 import 'package:lanis/applets/external_definitions.dart';
 import 'package:lanis/utils/deep_link.dart';
 
@@ -13,6 +12,8 @@ import '../courses/courses_page.dart';
 import '../courses/live_courses_page.dart';
 import '../kit.dart';
 import '../live/live_data.dart';
+import '../messages/live_messages_page.dart';
+import '../messages/messages_page.dart';
 import '../more/more_page.dart';
 import '../plan/live_plan_page.dart';
 import '../plan/plan_model.dart' show GroupChoice;
@@ -164,7 +165,6 @@ class _PreviewShellState extends State<PreviewShell> {
 
   Widget _liveBody(BuildContext context) {
     final s = LiveData.of(context);
-    final type = s?.session.accountTypeOrNull ?? AccountType.parent;
     return switch (_tab) {
       ShellTab.today => LiveTodayPage(
         onOpenCalendar: () => _select(ShellTab.calendar),
@@ -173,12 +173,7 @@ class _PreviewShellState extends State<PreviewShell> {
       ),
       ShellTab.calendar => const LiveCalendarPage(),
       ShellTab.courses => const LiveCoursesPage(),
-      ShellTab.messages => _Placeholder(
-        label: 'Nachrichten',
-        text: 'Nachrichten im neuen Stil folgen.',
-        actionLabel: 'Bisherige Ansicht öffnen',
-        onAction: () => _goOld(conversationsDefinition.homePath(type)),
-      ),
+      ShellTab.messages => const LiveMessagesPage(),
       ShellTab.more => MorePage(
         font: _font,
         onFont: _setFont,
@@ -205,8 +200,11 @@ class _PreviewShellState extends State<PreviewShell> {
       events: _data.week,
     ),
     ShellTab.courses => CoursesPage(items: demoCourses(), firstName: 'Lena'),
+    ShellTab.messages => MessagesPage(
+      items: demoMessages(),
+      onCompose: () => _notYet('Neue Nachricht'),
+    ),
     ShellTab.more => MorePage(font: _font, onFont: _setFont),
-    _ => _Placeholder(label: _dest[_tab.index].$3, text: 'Folgt.'),
   };
 
   @override
@@ -345,46 +343,6 @@ class _NavItem extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Placeholder extends StatelessWidget {
-  const _Placeholder({
-    required this.label,
-    required this.text,
-    this.actionLabel,
-    this.onAction,
-  });
-
-  final String label;
-  final String text;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(Sp.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: k.pageTitle),
-            const SizedBox(height: Sp.l),
-            Text(text, style: k.meta),
-            if (actionLabel != null) ...[
-              const SizedBox(height: Sp.l),
-              TextButton.icon(
-                onPressed: onAction,
-                icon: const Icon(Icons.open_in_new),
-                label: Text(actionLabel!, style: k.button(k.p.ink)),
-              ),
-            ],
-          ],
         ),
       ),
     );

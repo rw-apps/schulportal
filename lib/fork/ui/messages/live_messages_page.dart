@@ -1,0 +1,76 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:liblanis/liblanis.dart';
+
+import 'package:lanis/applets/conversations/routes.dart'
+    show ConversationChatPage;
+
+import '../kit.dart';
+import '../live/live_data.dart';
+import 'compose_model.dart';
+import 'compose_page.dart';
+import 'messages_page.dart';
+
+/// „Nachrichten“ mit echten Daten. Lesen und Antworten laufen über die
+/// bewährte Unterhaltungsseite der bisherigen Ansicht (ConversationChatPage),
+/// neu ist die Liste und das Schreiben in drei Schritten (ComposePage).
+class LiveMessagesPage extends ConsumerWidget {
+  const LiveMessagesPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return LiveGate(
+      needsTimetable: false,
+      builder: (context, s) {
+        final k = Kit.of(context);
+        if (!s.offers('nachrichten.php')) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(Sp.xl),
+              child: Text(
+                'Die Schule bietet für dieses Konto keine Nachrichten an.',
+                style: k.meta,
+              ),
+            ),
+          );
+        }
+        final entries = s.conversations.content ?? const <OverviewEntry>[];
+        final items = [
+          for (final e in entries)
+            if (!e.hidden)
+              MessageItem(
+                id: e.id,
+                subject: e.title,
+                sender: e.fullName,
+                date: e.date,
+                unread: e.unread,
+              ),
+        ];
+        Future<void> reload() =>
+            ref.read(conversationsParserProvider).fetchData(forceRefresh: true);
+        return MessagesPage(
+          items: items,
+          loading: s.conversations.content == null,
+          onRefresh: reload,
+          onOpen: (m) async {
+            await Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) =>
+                    ConversationChatPage(id: m.id, title: m.subject),
+              ),
+            );
+            await reload();
+          },
+          onCompose: () => Navigator.of(context).push(
+            MaterialPageRoute<bool>(
+              builder: (_) => ComposePage(
+                candidates: candidatesFrom(s.lessons.content ?? const []),
+                backend: portalBackend(ref),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
