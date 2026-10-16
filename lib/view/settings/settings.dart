@@ -13,6 +13,7 @@ import 'package:lanis/utils/responsive.dart';
 import 'package:lanis/utils/whats_new.dart';
 import 'package:lanis/view/settings/settings_page_builder.dart';
 import 'package:lanis/view/settings/subsettings/cache.dart';
+import 'package:lanis/view/settings/subsettings/debug_export.dart';
 import 'package:lanis/widgets/press_tile.dart';
 
 class SettingsGroup {
@@ -209,7 +210,24 @@ class _SettingsScreenState extends ConsumerSettingsColoursState<SettingsScreen> 
       ),
       SettingsGroup(
         tiles: [
-          // Fork: Kachel „Fehlerberichte“ entfernt (kein GlitchTip-Server).
+          // Fork: Kachel „Fehlerberichte“ ersetzt durch direkten Debug-Export.
+          // Ursache: Der Debug-Export war nur über die Fehlerberichte-Seite
+          // erreichbar (subsettings/error_reporting.dart, ListTile → DebugExport);
+          // mit dem Entfernen jener Kachel (kein GlitchTip-Server) war er
+          // unerreichbar. Ohne routePath öffnet tile.screen direkt (Handy und
+          // Tablet-Shell, s. onSelect weiter unten).
+          SettingsTile(
+            title: (context) => AppLocalizations.of(context).debugExport,
+            subtitle: (context) async {
+              return AppLocalizations.of(context).debugExportSubtitle;
+            },
+            icon: Icons.bug_report_outlined,
+            screen: (context) async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const DebugExport()),
+              );
+            },
+          ),
           SettingsTile(
             title: (context) => AppLocalizations.of(context).about,
             subtitle: (context) async {

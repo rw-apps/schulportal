@@ -1,5 +1,9 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9302**
+
+- Debug-Export wieder erreichbar: jetzt direkt unter Einstellungen, statt wie bisher über die entfernte Seite „Fehlerberichte“.
+
 **Erste Fassung (Basis Lanis-Mobile 4.1.0)**
 
 - Eigener Name „Schulportal“ und eigene App-ID. Die App läuft neben dem Original und ersetzt es nicht.
