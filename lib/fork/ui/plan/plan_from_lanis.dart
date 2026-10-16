@@ -1,0 +1,238 @@
+import 'package:liblanis/liblanis.dart';
+
+import 'plan_model.dart';
+
+/// Übersetzt den Lanis-Stundenplan (TimetableStudentParser) in [KidPlan].
+///
+/// Quelle: `TimeTable.hours` (Zeitraster, nur Zeilen vom Typ `lesson`) und
+/// `planForOwn` (Portal: „Persönlicher Plan“), ersatzweise `planForAll`.
+/// Mehrere Einträge in derselben Stunde werden Parallelgruppen
+/// ([PlanCell.options]) – genau das Bild aus dem Export von Schule A vom 16.10.26
+/// (Freitag 1. Block: vier TXT-Einträge bei vier Lehrkräften).
+///
+/// Zuordnung Eintrag → Stunden über die Uhrzeit: Ein Eintrag belegt jede
+/// Stunde, die ganz in seiner Zeit liegt (Doppelstunde = zwei Stunden).
+/// Grenze: Blendet die Schule die Uhrzeiten aus (liblanis setzt dann 0:00),
+/// fällt der Eintrag auf `stunde` (Zeilenindex) zurück.
+KidPlan kidPlanFromTimetable(
+  TimeTable tt, {
+  required String firstName,
+  required int colorIndex,
+  Map<String, String> teacherNames = const {},
+  List<String> courseNames = const [],
+}) {
+  final rows = [
+    for (final r in tt.hours ?? const <TimeTableRow>[])
+      if (r.type == TimeTableRowType.lesson) r,
+  ];
+  final slots = [
+    for (final r in rows)
+      PlanSlot(
+        label: _slotLabel(r.label),
+        start: _hm(r.startTime),
+        end: _hm(r.endTime),
+      ),
+  ];
+  final source = (tt.planForOwn?.any((d) => d.isNotEmpty) ?? false)
+      ? tt.planForOwn!
+      : (tt.planForAll ?? const <TimetableDay>[]);
+
+  final days = <List<PlanCell>>[];
+  for (var d = 0; d < 5; d++) {
+    final cells = List.generate(slots.length, (_) => <PlanLesson>[]);
+    final day = d < source.length ? source[d] : const <TimetableSubject>[];
+    for (final subj in day) {
+      final code = (subj.name ?? '').trim();
+      if (code.isEmpty) continue;
+      final lesson = PlanLesson(
+        subject: subjectFullName(code, courseNames),
+        short: code,
+        room: _blankToNull(subj.raum),
+        teacher: _blankToNull(subj.lehrer),
+      );
+      for (final s in _slotsOf(subj, rows)) {
+        if (!cells[s].any((o) => o.sameAs(lesson))) cells[s].add(lesson);
+      }
+    }
+    days.add([for (final c in cells) PlanCell(mergeCoTeaching(c))]);
+  }
+
+  return KidPlan(
+    firstName: firstName,
+    colorIndex: colorIndex,
+    slots: slots,
+    days: days,
+    teacherNames: teacherNames,
+  );
+}
+
+Iterable<int> _slotsOf(TimetableSubject s, List<TimeTableRow> rows) sync* {
+  final a = s.startTime.hour * 60 + s.startTime.minute;
+  final b = s.endTime.hour * 60 + s.endTime.minute;
+  if (b > a) {
+    for (var i = 0; i < rows.length; i++) {
+      final rs = rows[i].startTime.hour * 60 + rows[i].startTime.minute;
+      final re = rows[i].endTime.hour * 60 + rows[i].endTime.minute;
+      if (rs >= a && re <= b) yield i;
+    }
+    return;
+  }
+  // Ohne Uhrzeiten: Zeilenindex der Lanis-Tabelle auf Stunde abbilden.
+  final y = s.stunde;
+  if (y == null) return;
+  for (var k = 0; k < s.duration; k++) {
+    final i = rows.indexWhere((r) => r.lessonIndex == y + k);
+    if (i >= 0) yield i;
+  }
+}
+
+String _hm(SphTimeOfDay t) =>
+    '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+/// „1.Block“ → „1. Block“; „1“ → „1.“
+String _slotLabel(String raw) {
+  final s = raw.replaceAll(RegExp(r'\s+'), ' ').trim();
+  final m = RegExp(r'^(\d+)\.?\s*(.*)$').firstMatch(s);
+  if (m == null) return s;
+  final rest = m.group(2)!.trim();
+  return rest.isEmpty ? '${m.group(1)}.' : '${m.group(1)}. $rest';
+}
+
+String? _blankToNull(String? s) {
+  final t = s?.trim();
+  return t == null || t.isEmpty ? null : t;
+}
+
+/// Ausgeschriebener Fachname zu einem Kürzel aus dem Stundenplan.
+///
+/// Reihenfolge: (1) eindeutige, landesweit übliche Kürzel; (2) Kurscode in
+/// Klammern eines Kurses aus „Mein Unterricht“ („Naturwissenschaften 06 xy
+/// (061NAWI05-IGS)“); (3) ein Wort eines Kursnamens beginnt mit dem Kürzel
+/// (TRAIN → „Training Klasse 6“, erst ab 3 Buchstaben). Sonst bleibt das
+/// Kürzel – lieber „TXT“ als ein geratener Name. Beleg für die Vorsicht: Im
+/// Export von Schule A hieß der passende Kurs „Projekt Text“, nicht „Textil“, wie die
+/// Beispieldaten angenommen hatten.
+String subjectFullName(String code, List<String> courseNames) {
+  final up = code.toUpperCase().trim();
+  final base = up.replaceAll(RegExp(r'\d+$'), ''); // SP5 → SP
+  final known = _knownSubjects[up] ?? _knownSubjects[base];
+  if (known != null) return known;
+
+  for (final c in courseNames) {
+    final paren = RegExp(r'\(([^)]*)\)').firstMatch(c)?.group(1)?.toUpperCase();
+    if (paren != null && base.length >= 2 && paren.contains(base)) {
+      final name = _courseBaseName(c);
+      if (name != null) return name;
+    }
+  }
+  if (base.length >= 3) {
+    for (final c in courseNames) {
+      for (final w in c.split(RegExp(r'\s+'))) {
+        if (w.length >= base.length &&
+            w.toUpperCase().startsWith(base) &&
+            !RegExp(r'\d').hasMatch(w)) {
+          return w;
+        }
+      }
+    }
+  }
+  return code;
+}
+
+/// „Naturwissenschaften 06 xy (061NAWI05-IGS)“ → „Naturwissenschaften“:
+/// Wörter bis zum ersten mit Ziffer oder Klammer.
+String? _courseBaseName(String course) {
+  final words = <String>[];
+  for (final w in course.split(RegExp(r'\s+'))) {
+    if (w.isEmpty) continue;
+    if (RegExp(r'[\d(]').hasMatch(w)) break;
+    words.add(w);
+  }
+  return words.isEmpty ? null : words.join(' ');
+}
+
+/// Nur eindeutige Kürzel. Doppeldeutige (TXT, ÄS, WPU …) bewusst nicht.
+const _knownSubjects = <String, String>{
+  'D': 'Deutsch',
+  'DE': 'Deutsch',
+  'E': 'Englisch',
+  'EN': 'Englisch',
+  'M': 'Mathematik',
+  'MA': 'Mathematik',
+  'NAWI': 'Naturwissenschaften',
+  'NW': 'Naturwissenschaften',
+  'GL': 'Gesellschaftslehre',
+  'SP': 'Sport',
+  'SPO': 'Sport',
+  'KU': 'Kunst',
+  'MU': 'Musik',
+  'BIO': 'Biologie',
+  'BI': 'Biologie',
+  'CH': 'Chemie',
+  'PH': 'Physik',
+  'EK': 'Erdkunde',
+  'G': 'Geschichte',
+  'GE': 'Geschichte',
+  'POWI': 'Politik und Wirtschaft',
+  'F': 'Französisch',
+  'FR': 'Französisch',
+  'SPA': 'Spanisch',
+  'L': 'Latein',
+  'LA': 'Latein',
+  'INF': 'Informatik',
+  'IF': 'Informatik',
+  'ETH': 'Ethik',
+  'ET': 'Ethik',
+  'REV': 'Ev. Religion',
+  'ER': 'Ev. Religion',
+  'RKA': 'Kath. Religion',
+  'KR': 'Kath. Religion',
+  'AL': 'Arbeitslehre',
+  'DS': 'Darstellendes Spiel',
+  'KL': 'Klassenstunde',
+};
+
+/// Doppelbesetzung zu EINER Stunde zusammenfassen.
+///
+/// Gleiches Fach im selben Raum = zwei Lehrkräfte für die ganze Klasse, keine
+/// Parallelgruppe (Export von Schule A 16.10.26: D, M und E jeweils zweimal in R106).
+/// Ohne Raumangabe nur, wenn ALLE Einträge des Fachs keinen Raum haben
+/// (Training: zweimal ohne Raum). Grenze: Gemischt (TXT: R106 und zweimal
+/// ohne Raum) bleiben es Gruppen – lieber einmal zu viel „Gruppe wählen“ als
+/// eine fremde Gruppe als eigene Stunde zeigen.
+List<PlanLesson> mergeCoTeaching(List<PlanLesson> options) {
+  if (options.length < 2) return options;
+  final out = <PlanLesson>[];
+  final bySubject = <String, List<PlanLesson>>{};
+  for (final o in options) {
+    bySubject.putIfAbsent(o.short, () => []).add(o);
+  }
+  for (final group in bySubject.values) {
+    final allNoRoom = group.every((o) => o.room == null);
+    final byRoom = <String?, List<PlanLesson>>{};
+    for (final o in group) {
+      final key =
+          o.room ?? (allNoRoom ? '' : '\u0000${out.length}${o.teacher}');
+      byRoom.putIfAbsent(key, () => []).add(o);
+    }
+    for (final same in byRoom.values) {
+      if (same.length == 1) {
+        out.add(same.single);
+        continue;
+      }
+      final teachers = <String>{for (final o in same) ?o.teacher}.join(', ');
+      final f = same.first;
+      out.add(
+        PlanLesson(
+          subject: f.subject,
+          short: f.short,
+          room: f.room,
+          teacher: teachers.isEmpty ? null : teachers,
+          change: f.change,
+          changeDetail: f.changeDetail,
+        ),
+      );
+    }
+  }
+  return out;
+}

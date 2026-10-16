@@ -1,5 +1,12 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9320**
+
+- Vorschau „Plan“ zeigt jetzt den **echten Stundenplan** des angemeldeten Kontos (Einstellungen → „Neue Oberfläche (Vorschau)“ → Plan). „Heute“ bleibt vorerst mit Beispieldaten.
+- Lehrkräfte mit Namen aus „Mein Unterricht“, Fächer ausgeschrieben, wo das Kürzel eindeutig ist (sonst bleibt das Kürzel, z. B. TXT).
+- Doppelbesetzung (gleiches Fach, gleicher Raum, zwei Lehrkräfte) wird eine Stunde; nur echte Parallelgruppen erscheinen unter „Gruppe wählen“.
+- Die Gruppenwahl wird je Konto gespeichert.
+
 **4.1.0+9319**
 
 - Krankmeldung: neuer Knopf **„Beim Portal prüfen (sendet nichts)“**. Das Portal sagt, ob es die Meldung annehmen würde, oder nennt seine Gründe. Es wird nichts gespeichert, die Schule sieht davon nichts.

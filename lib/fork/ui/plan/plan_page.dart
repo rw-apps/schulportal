@@ -1020,7 +1020,7 @@ class _GridCell extends StatelessWidget {
           } else if (x.change == ChangeKind.roomChange) {
             lines.add(('Raumwechsel', k.cellTeacher(ink)));
           } else if (x.teacher != null) {
-            lines.add((plan.teacherLast(x.teacher)!, k.cellTeacher(ink)));
+            lines.add((plan.teacherCell(x.teacher)!, k.cellTeacher(ink)));
           }
         }
     }

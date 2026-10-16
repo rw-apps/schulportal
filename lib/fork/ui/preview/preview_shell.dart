@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../kit.dart';
 import '../today/today_model.dart';
 import '../plan/plan_model.dart' show GroupChoice;
+import '../plan/live_plan_page.dart';
 import '../plan/plan_page.dart';
 import '../today/today_page.dart';
 import 'demo_plan.dart';
@@ -15,7 +16,12 @@ import 'demo_family.dart';
 /// erfundenen Daten ([demoFamily], [demoPlans]); die übrigen Ziele zeigen
 /// einen Platzhalter, Antippen löst nichts im Portal aus.
 class PreviewShell extends StatefulWidget {
-  const PreviewShell({super.key});
+  const PreviewShell({super.key, this.liveData = false});
+
+  /// „Plan“ mit den echten Daten des angemeldeten Kontos ([LivePlanPage]).
+  /// Aus den Einstellungen geöffnet: true. Tests und Bildschirmfotos: false
+  /// (Beispieldaten, ohne Portal und ohne ProviderScope).
+  final bool liveData;
 
   @override
   State<PreviewShell> createState() => _PreviewShellState();
@@ -66,6 +72,7 @@ class _PreviewShellState extends State<PreviewShell> {
             onOpenMessages: (c) => _notYet('Nachrichten von ${c.firstName}'),
             onOpenCalendar: () => setState(() => _index = 3),
           ),
+          1 when widget.liveData => const LivePlanPage(),
           1 => PlanPage(
             plans: _plans,
             now: _data.now,

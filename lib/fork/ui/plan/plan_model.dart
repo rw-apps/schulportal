@@ -87,16 +87,36 @@ class KidPlan {
   /// (Vertretungen, fremde Parallelgruppen) bleiben Kürzel.
   final Map<String, String> teacherNames;
 
-  /// Ausgeschrieben („Maria Becker“), sonst das Kürzel.
-  String? teacherFull(String? kuerzel) =>
-      kuerzel == null ? null : (teacherNames[kuerzel] ?? kuerzel);
+  /// Ausgeschrieben („Maria Becker“), sonst das Kürzel. Doppelbesetzung
+  /// („ABC, DEF“) wird je Kürzel übersetzt: „Maria Becker, Jan Wolf“.
+  String? teacherFull(String? kuerzel) => kuerzel == null
+      ? null
+      : _each(kuerzel).map((k) => teacherNames[k] ?? k).join(', ');
 
-  /// Nachname für enge Stellen (Wochenraster), sonst das Kürzel.
-  String? teacherLast(String? kuerzel) {
-    final full = kuerzel == null ? null : teacherNames[kuerzel];
-    if (full == null) return kuerzel;
-    return full.trim().split(RegExp(r'\s+')).last;
+  /// Nachname für enge Stellen (Wochenraster), sonst das Kürzel; bei
+  /// Doppelbesetzung „Becker/Wolf“.
+  String? teacherLast(String? kuerzel) => kuerzel == null
+      ? null
+      : _each(kuerzel)
+            .map((k) {
+              final full = teacherNames[k];
+              return full == null ? k : full.trim().split(RegExp(r'\s+')).last;
+            })
+            .join('/');
+
+  /// Für das Wochenraster: ein Nachname, bei Doppelbesetzung „Becker +1“.
+  /// Ursache: „Becker/Wolf“ wurde in ~60 dp Zellbreite unlesbar klein
+  /// (echter Plan von Schule A, 16.10.26).
+  String? teacherCell(String? kuerzel) {
+    if (kuerzel == null) return null;
+    final all = _each(kuerzel).toList();
+    if (all.isEmpty) return null;
+    final first = teacherLast(all.first);
+    return all.length == 1 ? first : '$first +${all.length - 1}';
   }
+
+  static Iterable<String> _each(String s) =>
+      s.split(RegExp(r'\s*,\s*')).where((x) => x.isNotEmpty);
 }
 
 /// „Nachname, Vorname“ (Portal) → „Vorname Nachname“.

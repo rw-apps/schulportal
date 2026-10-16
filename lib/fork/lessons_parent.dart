@@ -183,6 +183,10 @@ Lessons flattenChildLessons(List<ChildLessons> kids) {
 class LessonsParentAwareParser extends LessonsStudentParser {
   LessonsParentAwareParser(super.ctx, {super.isConnected});
 
+  /// Zuletzt gelesene Kinder (Elternkonto), z. B. für den Vornamen im
+  /// Stundenplan der neuen Oberfläche; leer bei Schülerkonten.
+  List<ChildLessons> lastKids = const [];
+
   bool get _isParent =>
       (ctx.session.accountTypeOrNull ?? ctx.account.accountType) ==
       AccountType.parent;
@@ -197,8 +201,10 @@ class LessonsParentAwareParser extends LessonsStudentParser {
     final kids = parseParentLessons(parse(response.data.toString()));
     // Leere Eltern-Seite heißt fast immer: Sitzung verloren. Werfen, damit
     // AppletParser.fetchData einmal neu anmeldet und es erneut versucht.
-    if (kids.isEmpty)
+    if (kids.isEmpty) {
       throw UnknownException('meinunterricht.php: keine pupilbox');
+    }
+    lastKids = kids;
     return flattenChildLessons(kids);
   }
 }

@@ -55,7 +55,8 @@ class SettingsScreen extends ConsumerSettingsColours {
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends ConsumerSettingsColoursState<SettingsScreen> {
+class _SettingsScreenState
+    extends ConsumerSettingsColoursState<SettingsScreen> {
   bool _supports(AppletMeta applet) =>
       ref.read(supportedAppletPhpUrlsProvider).contains(applet.appletPhpUrl);
 
@@ -204,8 +205,7 @@ class _SettingsScreenState extends ConsumerSettingsColoursState<SettingsScreen> 
             },
             icon: Icons.account_circle_rounded,
             routePath: SettingsDeepLinks.userdata,
-            screen: (context) async =>
-                context.push(SettingsDeepLinks.userdata),
+            screen: (context) async => context.push(SettingsDeepLinks.userdata),
           ),
         ],
       ),
@@ -216,11 +216,13 @@ class _SettingsScreenState extends ConsumerSettingsColoursState<SettingsScreen> 
           SettingsTile(
             title: (context) => 'Neue Oberfläche (Vorschau)',
             subtitle: (context) async =>
-                'Entwurf mit Beispieldaten zur Abnahme',
+                '„Plan“ mit echten Daten, sonst Beispieldaten',
             icon: Icons.auto_awesome_outlined,
             screen: (context) async {
               await Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const PreviewShell()),
+                MaterialPageRoute(
+                  builder: (context) => const PreviewShell(liveData: true),
+                ),
               );
             },
           ),
