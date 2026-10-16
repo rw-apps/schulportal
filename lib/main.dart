@@ -26,6 +26,13 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:lanis/fork_identity.dart';
 
 Future<void> main() async {
+  // Fork: Lizenz der eingebauten Schrift Manrope (OFL 1.1 verlangt, dass der
+  // Lizenztext mit der App ausgeliefert wird); erscheint unter
+  // Einstellungen → Über → Lizenzen.
+  LicenseRegistry.addLicense(() async* {
+    final text = await rootBundle.loadString('fonts/manrope/OFL.txt');
+    yield LicenseEntryWithLineBreaks(const ['Manrope'], text);
+  });
   await initGlitchTip(_startApp);
 }
 

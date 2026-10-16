@@ -13,20 +13,47 @@ const _months = [
   'September', 'Oktober', 'November', 'Dezember',
 ];
 
-String _longDate(DateTime d) =>
-    '${_weekdaysLong[d.weekday - 1]}, ${d.day}. ${_months[d.month - 1]}';
+DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
+
+/// Abstand in Kalendertagen. Über UTC gerechnet, weil `difference` in
+/// Ortszeit über die Zeitumstellung (z. B. 25.10.26) 23 Stunden ergibt und
+/// `inDays` dann einen Tag zu wenig liefert.
+int dayDiff(DateTime from, DateTime to) =>
+    DateTime.utc(to.year, to.month, to.day)
+        .difference(DateTime.utc(from.year, from.month, from.day))
+        .inDays;
+
+/// „DIENSTAG, 20. OKTOBER“
+String dateCaps(DateTime d) =>
+    '${_weekdaysLong[d.weekday - 1]}, ${d.day}. ${_months[d.month - 1]}'
+        .toUpperCase();
+
+/// Begrüßung nach Tageszeit.
+String greetingFor(DateTime now) => now.hour < 11
+    ? 'Guten Morgen'
+    : (now.hour < 18 ? 'Guten Tag' : 'Guten Abend');
 
 /// „Heute“, „Morgen“ oder „Do 22.10.“ relativ zu [now].
 String relativeDay(DateTime day, DateTime now) {
-  final a = DateTime(day.year, day.month, day.day);
-  final b = DateTime(now.year, now.month, now.day);
-  final diff = a.difference(b).inDays;
+  final diff = dayDiff(now, day);
   if (diff == 0) return 'Heute';
   if (diff == 1) return 'Morgen';
   return '${_weekdaysShort[day.weekday - 1]} ${day.day}.${day.month}.';
 }
 
-/// Seite „Heute“: je Kind eine Karte, darunter die gemeinsame Woche.
+/// Montag bis Freitag der laufenden Woche; am Wochenende die nächste.
+/// Mit dem DateTime-Konstruktor statt Duration gerechnet: Duration zählt
+/// 24 Stunden und landete über die Zeitumstellung bei 23:00 am Vortag
+/// (Test: Samstag 24.10.26 → Montag 26.10.26).
+List<DateTime> schoolWeek(DateTime now) {
+  final shift = now.weekday >= DateTime.saturday ? 7 : 0;
+  final mondayDay = now.day - (now.weekday - 1) + shift;
+  return [
+    for (var i = 0; i < 5; i++) DateTime(now.year, now.month, mondayDay + i),
+  ];
+}
+
+/// Seite „Heute“ (Entwurf A + C, abgenommen 16.10.26).
 class TodayPage extends StatelessWidget {
   const TodayPage({
     super.key,
@@ -34,46 +61,67 @@ class TodayPage extends StatelessWidget {
     this.onReportAbsence,
     this.onOpenHomework,
     this.onOpenMessages,
+    this.onOpenCalendar,
   });
 
   final FamilyToday data;
   final void Function(ChildToday child)? onReportAbsence;
   final void Function(ChildToday child)? onOpenHomework;
   final void Function(ChildToday child)? onOpenMessages;
+  final VoidCallback? onOpenCalendar;
 
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
+    // Enthält bei Scaffold(extendBody: true) die Höhe der schwebenden Leiste.
     final bottom = MediaQuery.paddingOf(context).bottom;
+
     return CustomScrollView(
       slivers: [
         SliverSafeArea(
           bottom: false,
           sliver: SliverPadding(
-            padding: const EdgeInsets.fromLTRB(Sp.page, Sp.l, Sp.page, Sp.s),
+            padding: const EdgeInsets.fromLTRB(
+              Sp.page + Sp.xs, Sp.xl, Sp.page + Sp.xs, 0),
             sliver: SliverToBoxAdapter(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Heute', style: k.pageTitle),
+                  Text(dateCaps(data.now), style: k.dateCaps),
                   const SizedBox(height: Sp.xs),
-                  Text(_longDate(data.now), style: k.pageSub),
-                  if (data.isDemo) ...[
-                    const SizedBox(height: Sp.m),
-                    _DemoNote(),
-                  ],
+                  Text(greetingFor(data.now), style: k.greeting),
                 ],
               ),
             ),
           ),
         ),
         SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: Sp.page),
+          padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
+          sliver: SliverToBoxAdapter(child: WeekStrip(data: data)),
+        ),
+        if (importantItems(data).isNotEmpty)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
+            sliver: SliverToBoxAdapter(child: ImportantBox(data: data)),
+          ),
+        if (data.isDemo)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
+            sliver: SliverToBoxAdapter(
+              child: Text(
+                'Vorschau mit erfundenen Beispieldaten',
+                style: k.meta,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
           sliver: SliverList.separated(
             itemCount: data.kids.length,
-            separatorBuilder: (_, _) => const SizedBox(height: Sp.m),
-            itemBuilder: (context, i) => ChildCard(
-              child: data.kids[i],
+            separatorBuilder: (_, _) => const SizedBox(height: Sp.ml),
+            itemBuilder: (context, i) => KidCard(
+              kid: data.kids[i],
               now: data.now,
               onReportAbsence: onReportAbsence,
               onOpenHomework: onOpenHomework,
@@ -83,297 +131,103 @@ class TodayPage extends StatelessWidget {
         ),
         if (data.week.isNotEmpty)
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              Sp.page,
-              Sp.xl,
-              Sp.page,
-              Sp.xxl + bottom,
-            ),
+            padding: EdgeInsets.only(top: Sp.xl, bottom: bottom + Sp.xl),
             sliver: SliverToBoxAdapter(
-              child: WeekList(data: data),
+              child: UpcomingTiles(data: data, onOpenAll: onOpenCalendar),
             ),
-          ),
+          )
+        else
+          SliverToBoxAdapter(child: SizedBox(height: bottom + Sp.xl)),
       ],
     );
   }
 }
 
-class _DemoNote extends StatelessWidget {
+// ---- Wochenleiste ---------------------------------------------------------
+
+/// Mo–Fr mit Punkten je Tag: Kinderfarbe für Termine, Signalfarbe für
+/// Änderungen. Höchstens drei Punkte, damit die Zelle ruhig bleibt.
+class WeekStrip extends StatelessWidget {
+  const WeekStrip({super.key, required this.data});
+
+  final FamilyToday data;
+
+  List<Color> _dots(Kit k, DateTime day) {
+    final dots = <Color>[];
+    for (final kid in data.kids) {
+      for (final c in kid.changes) {
+        if (_day(c.day) == day) {
+          dots.add(c.kind == ChangeKind.cancelled
+              ? k.p.cancel.dot
+              : k.p.change.dot);
+        }
+      }
+    }
+    for (final w in data.week) {
+      if (_day(w.day) != day) continue;
+      final ci = w.childIndex;
+      dots.add(ci == null
+          ? k.p.muted
+          : k.kid(data.kids[ci].colorIndex).accent);
+    }
+    return dots.take(3).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: Sp.m, vertical: Sp.s),
-      decoration: BoxDecoration(
-        color: k.insetBg,
-        borderRadius: BorderRadius.circular(Rad.chip),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.science_outlined, size: Sz.icon, color: k.cs.onSurfaceVariant),
-          const SizedBox(width: Sp.s),
+    final today = _day(data.now);
+    return Row(
+      children: [
+        for (final (i, day) in schoolWeek(data.now).indexed) ...[
+          if (i > 0) const SizedBox(width: Sp.xs + Sp.xxs),
           Expanded(
-            child: Text(
-              'Entwurf mit erfundenen Beispieldaten',
-              style: k.meta,
+            child: _DayCell(
+              day: day,
+              selected: day == today,
+              dots: _dots(k, day),
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 }
 
-/// Karte eines Kindes.
-class ChildCard extends StatelessWidget {
-  const ChildCard({
-    super.key,
-    required this.child,
-    required this.now,
-    this.onReportAbsence,
-    this.onOpenHomework,
-    this.onOpenMessages,
+class _DayCell extends StatelessWidget {
+  const _DayCell({
+    required this.day,
+    required this.selected,
+    required this.dots,
   });
 
-  final ChildToday child;
-  final DateTime now;
-  final void Function(ChildToday child)? onReportAbsence;
-  final void Function(ChildToday child)? onOpenHomework;
-  final void Function(ChildToday child)? onOpenMessages;
+  final DateTime day;
+  final bool selected;
+  final List<Color> dots;
 
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final tone = k.child(child.colorIndex);
-    final c = child;
-
-    return Material(
-      color: k.cardBg,
-      borderRadius: BorderRadius.circular(Rad.card),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(Sp.l),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Kopf: Kind, Schule, Krankmeldung
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: Sz.avatar,
-                  backgroundColor: tone.container,
-                  child: Text(
-                    c.firstName.characters.first,
-                    style: k.cardTitle.copyWith(color: tone.onContainer),
-                  ),
-                ),
-                const SizedBox(width: Sp.m),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(c.firstName, style: k.cardTitle),
-                      Text(
-                        '${c.school} · ${c.className}',
-                        style: k.meta,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: Sp.m),
-
-            // Jetzt / Danach
-            _NowNext(child: c, tone: tone),
-
-            // Änderungen
-            for (final ch in c.changes) ...[
-              const SizedBox(height: Sp.s),
-              _ChangeRow(item: ch, now: now),
-            ],
-
-            // Zähler
-            // Krankmeldung als beschrifteter Chip statt Symbolknopf im Kopf:
-            // Das Symbol allein war im ersten Entwurf nicht verständlich.
-            if (c.openHomework > 0 ||
-                c.unreadMessages > 0 ||
-                c.canReportAbsence) ...[
-              const SizedBox(height: Sp.m),
-              Wrap(
-                spacing: Sp.s,
-                runSpacing: Sp.s,
-                children: [
-                  if (c.openHomework > 0)
-                    ActionChip(
-                      avatar: const Icon(Icons.menu_book_outlined, size: Sz.icon),
-                      label: Text(
-                        c.openHomework == 1
-                            ? '1 Hausaufgabe offen'
-                            : '${c.openHomework} Hausaufgaben offen',
-                        style: k.chip,
-                      ),
-                      onPressed: onOpenHomework == null
-                          ? null
-                          : () => onOpenHomework!(c),
-                    ),
-                  if (c.unreadMessages > 0)
-                    ActionChip(
-                      avatar: const Icon(Icons.mark_email_unread_outlined,
-                          size: Sz.icon),
-                      label: Text(
-                        c.unreadMessages == 1
-                            ? '1 neue Nachricht'
-                            : '${c.unreadMessages} neue Nachrichten',
-                        style: k.chip,
-                      ),
-                      onPressed: onOpenMessages == null
-                          ? null
-                          : () => onOpenMessages!(c),
-                    ),
-                  if (c.canReportAbsence)
-                    ActionChip(
-                      avatar: const Icon(Icons.sick_outlined, size: Sz.icon),
-                      label: Text('Krank melden', style: k.chip),
-                      tooltip: 'Krank melden',
-                      onPressed: onReportAbsence == null
-                          ? null
-                          : () => onReportAbsence!(c),
-                    ),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Laufende und nächste Stunde mit Farbbalken des Kindes.
-class _NowNext extends StatelessWidget {
-  const _NowNext({required this.child, required this.tone});
-
-  final ChildToday child;
-  final KitTone tone;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    final rows = <Widget>[];
-
-    Widget row(String tag, LessonRef l, {required bool strong}) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: Sp.xs),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
-        children: [
-          SizedBox(width: Sz.tagColumn, child: Text(tag, style: k.tag)),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l.subject, style: strong ? k.bodyStrong : k.body),
-                Text(
-                  [
-                    '${l.start}–${l.end}',
-                    ?l.room,
-                    ?l.teacher,
-                  ].join(' · '),
-                  style: k.meta,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (child.now != null) rows.add(row('JETZT', child.now!, strong: true));
-    if (child.next != null) {
-      rows.add(row(child.now == null ? 'GLEICH' : 'DANACH', child.next!,
-          strong: child.now == null));
-    }
-    if (rows.isEmpty) {
-      rows.add(
-        Text(child.dayEnd ?? 'Heute kein Unterricht', style: k.meta),
-      );
-    }
-
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            width: Sz.bar,
-            decoration: BoxDecoration(
-              color: tone.accent,
-              borderRadius: BorderRadius.circular(Sz.bar / 2),
-            ),
-          ),
-          const SizedBox(width: Sp.m),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: rows,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Eine Abweichung als farbige Zeile.
-class _ChangeRow extends StatelessWidget {
-  const _ChangeRow({required this.item, required this.now});
-
-  final ChangeItem item;
-  final DateTime now;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    final cancelled = item.kind == ChangeKind.cancelled;
-    final tone = cancelled ? k.cancel : k.change;
-    final icon = switch (item.kind) {
-      ChangeKind.cancelled => Icons.event_busy_outlined,
-      ChangeKind.roomChange => Icons.meeting_room_outlined,
-      ChangeKind.substitution => Icons.swap_horiz,
-    };
-    // Zeile 1: wann und welches Fach; Zeile 2: was sich ändert. Vorher stand
-    // „Vertretung“ doppelt („Deutsch Vertretung / Vertretung Hr. …“).
-    final what = switch (item.kind) {
-      ChangeKind.cancelled => 'Fällt aus',
-      ChangeKind.roomChange => 'Raumwechsel',
-      ChangeKind.substitution => 'Vertretung',
-    };
-    final second = item.detail == null ? what : '$what: ${item.detail}';
-
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: Sp.m, vertical: Sp.s),
+      padding: const EdgeInsets.symmetric(vertical: Sp.s),
       decoration: BoxDecoration(
-        color: tone.container,
-        borderRadius: BorderRadius.circular(Rad.tile),
+        color: selected ? k.p.strong : null,
+        borderRadius: BorderRadius.circular(Rad.day),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Icon(icon, size: Sz.icon, color: tone.onContainer),
-          ),
-          const SizedBox(width: Sp.s),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Text(_weekdaysShort[day.weekday - 1], style: k.weekDay(selected)),
+          Text('${day.day}', style: k.weekNum(selected)),
+          const SizedBox(height: Sp.xxs),
+          SizedBox(
+            height: Sz.dotSmall,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  '${relativeDay(item.day, now)} · ${item.slot} · ${item.subject}',
-                  style: k.signalStrong(tone),
-                ),
-                Text(second, style: k.signal(tone)),
+                for (final (i, c) in dots.indexed) ...[
+                  if (i > 0) const SizedBox(width: Sp.xs - 1),
+                  _Dot(color: c, size: Sz.dotSmall),
+                ],
               ],
             ),
           ),
@@ -383,63 +237,104 @@ class _ChangeRow extends StatelessWidget {
   }
 }
 
-/// Gemeinsame Wochenübersicht, nach Tagen gruppiert.
-class WeekList extends StatelessWidget {
-  const WeekList({super.key, required this.data});
+class _Dot extends StatelessWidget {
+  const _Dot({required this.color, this.size = Sz.dot});
+
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
+}
+
+// ---- Kasten „Wichtig heute und morgen“ -------------------------------------
+
+/// Änderungen aller Kinder für heute und morgen, nach Tag sortiert.
+List<(ChildToday, ChangeItem)> importantItems(FamilyToday data) {
+  final today = _day(data.now);
+  final items = <(ChildToday, ChangeItem)>[
+    for (final kid in data.kids)
+      for (final c in kid.changes)
+        if (dayDiff(today, c.day) case 0 || 1) (kid, c),
+  ];
+  items.sort((a, b) => a.$2.day.compareTo(b.$2.day));
+  return items;
+}
+
+class ImportantBox extends StatelessWidget {
+  const ImportantBox({super.key, required this.data});
 
   final FamilyToday data;
 
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final byDay = <DateTime, List<WeekItem>>{};
-    for (final w in data.week) {
-      final day = DateTime(w.day.year, w.day.month, w.day.day);
-      byDay.putIfAbsent(day, () => []).add(w);
-    }
-    final days = byDay.keys.toList()..sort();
+    final items = importantItems(data);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(Sp.l, Sp.ml, Sp.l, Sp.ml),
+      decoration: BoxDecoration(
+        color: k.p.change.bg,
+        borderRadius: BorderRadius.circular(Rad.box),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('WICHTIG HEUTE UND MORGEN', style: k.boxTitle),
+          for (final (kid, c) in items) ...[
+            const SizedBox(height: Sp.s + Sp.xxs),
+            _ImportantRow(kid: kid, item: c, now: data.now),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
-    return Column(
+class _ImportantRow extends StatelessWidget {
+  const _ImportantRow({
+    required this.kid,
+    required this.item,
+    required this.now,
+  });
+
+  final ChildToday kid;
+  final ChangeItem item;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final tone =
+        item.kind == ChangeKind.cancelled ? k.p.cancel : k.p.change;
+    final what = switch (item.kind) {
+      ChangeKind.cancelled => 'fällt aus',
+      ChangeKind.roomChange => 'Raumwechsel ${item.detail ?? ''}'.trim(),
+      ChangeKind.substitution => 'Vertretung ${item.detail ?? ''}'.trim(),
+    };
+    final when = relativeDay(item.day, now).toLowerCase();
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('DEMNÄCHST', style: k.section),
-        const SizedBox(height: Sp.s),
-        Material(
-          color: k.cardBg,
-          borderRadius: BorderRadius.circular(Rad.card),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              for (final (i, day) in days.indexed) ...[
-                if (i > 0) Divider(height: 1, color: k.divider),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: Sp.l,
-                    vertical: Sp.m,
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: Sz.tagColumn,
-                        child: Text(
-                          relativeDay(day, data.now),
-                          style: k.tag,
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            for (final w in byDay[day]!)
-                              _WeekRow(item: w, data: data),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+        Padding(
+          padding: const EdgeInsets.only(top: Sp.xs + 1),
+          child: _Dot(color: k.kid(kid.colorIndex).accent),
+        ),
+        const SizedBox(width: Sp.s + Sp.xxs),
+        Expanded(
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: '${kid.firstName} · $when ${item.slot} ${item.subject}',
+                  style: k.boxStrong(tone),
                 ),
+                TextSpan(text: ' – $what', style: k.boxText(tone)),
               ],
-            ],
+            ),
           ),
         ),
       ],
@@ -447,8 +342,573 @@ class WeekList extends StatelessWidget {
   }
 }
 
-class _WeekRow extends StatelessWidget {
-  const _WeekRow({required this.item, required this.data});
+// ---- Karte je Kind ----------------------------------------------------------
+
+class KidCard extends StatefulWidget {
+  const KidCard({
+    super.key,
+    required this.kid,
+    required this.now,
+    this.onReportAbsence,
+    this.onOpenHomework,
+    this.onOpenMessages,
+    this.initiallyExpanded = false,
+  });
+
+  final ChildToday kid;
+  final DateTime now;
+  final void Function(ChildToday child)? onReportAbsence;
+  final void Function(ChildToday child)? onOpenHomework;
+  final void Function(ChildToday child)? onOpenMessages;
+  final bool initiallyExpanded;
+
+  @override
+  State<KidCard> createState() => _KidCardState();
+}
+
+class _KidCardState extends State<KidCard> {
+  late bool _expanded = widget.initiallyExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final kid = widget.kid;
+    final tone = k.kid(kid.colorIndex);
+    final status = dayStatus(kid.lessons, widget.now);
+
+    final meta = [kid.school, kid.className, ?kid.periodsLabel].join(' · ');
+
+    return Container(
+      padding: const EdgeInsets.all(Sp.lx),
+      decoration: BoxDecoration(
+        color: k.p.card,
+        borderRadius: BorderRadius.circular(Rad.card),
+        boxShadow: k.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: Sz.avatar,
+                height: Sz.avatar,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: tone.accent,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  kid.firstName.characters.first,
+                  style: k.avatarLetter.copyWith(color: k.p.card),
+                ),
+              ),
+              const SizedBox(width: Sp.m),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(kid.firstName, style: k.cardName),
+                    Text(meta, style: k.cardMeta),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Sp.ml),
+          _NowPanel(kid: kid, status: status, tone: tone),
+          if (kid.lessons.isNotEmpty) ...[
+            const SizedBox(height: Sp.ml),
+            _DayBar(kid: kid, status: status, tone: tone, now: widget.now),
+            const SizedBox(height: Sp.s),
+            if (_expanded)
+              _DayList(kid: kid, status: status, tone: tone, now: widget.now),
+            _ToggleButton(
+              expanded: _expanded,
+              onTap: () => setState(() => _expanded = !_expanded),
+            ),
+          ],
+          ..._actions(context, k),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _actions(BuildContext context, Kit k) {
+    final kid = widget.kid;
+    final items = <Widget>[
+      if (kid.openHomework > 0)
+        _ActionButton(
+          icon: Icons.menu_book_outlined,
+          label: kid.openHomework == 1
+              ? '1 Hausaufgabe'
+              : '${kid.openHomework} Hausaufgaben',
+          onTap: widget.onOpenHomework == null
+              ? null
+              : () => widget.onOpenHomework!(kid),
+        ),
+      if (kid.unreadMessages > 0)
+        _ActionButton(
+          icon: Icons.mail_outline,
+          label: kid.unreadMessages == 1
+              ? '1 Nachricht'
+              : '${kid.unreadMessages} Nachrichten',
+          onTap: widget.onOpenMessages == null
+              ? null
+              : () => widget.onOpenMessages!(kid),
+        ),
+      if (kid.canReportAbsence)
+        _ActionButton(
+          icon: Icons.thermostat,
+          label: 'Krank melden',
+          strong: true,
+          onTap: widget.onReportAbsence == null
+              ? null
+              : () => widget.onReportAbsence!(kid),
+        ),
+    ];
+    if (items.isEmpty) return const [];
+    // Zwei je Zeile; ein übrig bleibender Knopf nimmt die ganze Breite.
+    final rows = <Widget>[];
+    for (var i = 0; i < items.length; i += 2) {
+      rows.add(const SizedBox(height: Sp.s));
+      rows.add(Row(
+        children: [
+          Expanded(child: items[i]),
+          if (i + 1 < items.length) ...[
+            const SizedBox(width: Sp.s),
+            Expanded(child: items[i + 1]),
+          ],
+        ],
+      ));
+    }
+    return [const SizedBox(height: Sp.xs), ...rows];
+  }
+}
+
+/// Fläche „JETZT · 3./4. STD. · NOCH 30 MIN.“
+class _NowPanel extends StatelessWidget {
+  const _NowPanel({
+    required this.kid,
+    required this.status,
+    required this.tone,
+  });
+
+  final ChildToday kid;
+  final DayStatus status;
+  final KidTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final l = kid.lessons;
+    String label;
+    String title;
+    String? meta;
+
+    String details(DayLesson x) => [
+      '${x.start}–${x.end}',
+      ?x.room,
+      ?x.teacher,
+      if (x.change == ChangeKind.substitution)
+        'Vertretung ${x.changeDetail ?? ''}'.trim(),
+      if (x.change == ChangeKind.roomChange)
+        'Raumwechsel ${x.changeDetail ?? ''}'.trim(),
+    ].join(' · ');
+
+    switch (status.phase) {
+      case DayPhase.running:
+        final x = l[status.current!];
+        label = 'JETZT · ${x.slot.toUpperCase()} · NOCH '
+            '${status.minutesLeft} MIN.';
+        title = x.subject;
+        meta = details(x);
+      case DayPhase.before:
+      case DayPhase.gap:
+        final x = l[status.next!];
+        label = '${status.phase == DayPhase.before ? 'ERSTE STUNDE' : 'GLEICH'}'
+            ' · ${x.slot.toUpperCase()} · UM ${x.start}';
+        title = x.subject;
+        meta = details(x);
+      case DayPhase.over:
+        final last = l.lastWhere((x) => !x.cancelled);
+        label = 'SCHULSCHLUSS';
+        title = 'Unterricht vorbei';
+        meta = 'Letzte Stunde endete um ${last.end}';
+      case DayPhase.noLessons:
+        label = 'HEUTE';
+        title = 'Kein Unterricht';
+        meta = null;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: Sp.l, vertical: Sp.ml),
+      decoration: BoxDecoration(
+        color: tone.tint,
+        borderRadius: BorderRadius.circular(Rad.panel),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: k.nowLabel(tone)),
+          const SizedBox(height: Sp.xxs),
+          Text(title, style: k.nowSubject(tone)),
+          if (meta != null) Text(meta, style: k.nowMeta(tone)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Tagesleiste: ein Abschnitt je (Doppel-)Stunde, Breite nach Dauer.
+class _DayBar extends StatelessWidget {
+  const _DayBar({
+    required this.kid,
+    required this.status,
+    required this.tone,
+    required this.now,
+  });
+
+  final ChildToday kid;
+  final DayStatus status;
+  final KidTone tone;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final l = kid.lessons;
+
+    Color colorFor(int i) {
+      final x = l[i];
+      if (x.cancelled) return k.p.cancel.bar;
+      if (x.change != null && !lessonDone(x, now)) return k.p.change.bar;
+      if (lessonDone(x, now)) return tone.barDone;
+      return tone.barRest;
+    }
+
+    final next = status.next == null ? null : l[status.next!];
+    final center = next == null
+        ? ''
+        : 'Danach ${next.start} ${next.subject}';
+    final lastEnd = l.lastWhere((x) => !x.cancelled, orElse: () => l.last).end;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: Sz.dayBar,
+          child: Row(
+            children: [
+              for (var i = 0; i < l.length; i++) ...[
+                if (i > 0) const SizedBox(width: Sp.xs),
+                Expanded(
+                  flex: lessonMinutes(l[i]),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(Rad.bar),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ColoredBox(color: colorFor(i)),
+                        if (status.current == i)
+                          FractionallySizedBox(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: status.progress.clamp(0, 1),
+                            child: ColoredBox(color: tone.accent),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: Sp.xs + Sp.xxs),
+        Row(
+          children: [
+            Text(l.first.start, style: k.barLabel),
+            Expanded(
+              child: Text(
+                center,
+                style: k.barLabel,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Text('bis $lastEnd', style: k.barLabel),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Aufgeklappter Tag: eine Zeile je Abschnitt, Pausen ab 30 Minuten.
+class _DayList extends StatelessWidget {
+  const _DayList({
+    required this.kid,
+    required this.status,
+    required this.tone,
+    required this.now,
+  });
+
+  final ChildToday kid;
+  final DayStatus status;
+  final KidTone tone;
+  final DateTime now;
+
+  /// Ab dieser Länge erscheint eine Pause als eigene Zeile. Kürzere
+  /// (5–20 Min.) sind normale Wechsel und würden die Liste nur verlängern.
+  static const pauseRowMinutes = 30;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final l = kid.lessons;
+    final rows = <Widget>[];
+    for (var i = 0; i < l.length; i++) {
+      if (gapBefore(l, i) >= pauseRowMinutes) {
+        rows.add(Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Sp.xs, vertical: Sp.xs),
+          child: Row(
+            children: [
+              const SizedBox(width: Sz.slotColumn + Sp.s + Sp.xxs),
+              Text('Pause bis ${l[i].start}', style: k.rowPause),
+            ],
+          ),
+        ));
+      }
+      rows.add(_row(k, l[i], i));
+    }
+    return Container(
+      margin: const EdgeInsets.only(bottom: Sp.s),
+      padding: const EdgeInsets.only(top: Sp.xs + Sp.xxs),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: k.p.line)),
+      ),
+      child: Column(children: rows),
+    );
+  }
+
+  Widget _row(Kit k, DayLesson x, int i) {
+    final done = lessonDone(x, now) && status.current != i;
+    final running = status.current == i;
+    Color ink = k.p.ink;
+    Color sub = k.p.muted;
+    Color? bg;
+    var subject = x.subject;
+    // Rechts nur die Uhrzeit (und Raum); Angaben zur Änderung stehen als
+    // zweite Zeile unter dem Fach. Ursache: „11:40 · Hr. Sommer, R 112“
+    // rechts drückte das Fach bei Schrift ×1,15 in zwei Zeilen.
+    var right = [x.start, if (x.change == null) ?x.room].join(' · ');
+    String? second;
+    var strong = false;
+
+    if (x.cancelled) {
+      bg = k.p.cancel.bg;
+      ink = sub = k.p.cancel.ink;
+      second = 'fällt aus';
+      strong = true;
+    } else if (running) {
+      bg = tone.tint;
+      ink = tone.onTint;
+      sub = tone.label;
+      right = 'läuft';
+      strong = true;
+    } else if (done) {
+      ink = sub = k.p.faint;
+    } else if (x.change != null) {
+      bg = k.p.change.bg;
+      ink = sub = k.p.change.ink;
+      final what = x.change == ChangeKind.substitution
+          ? 'Vertretung'
+          : 'Raumwechsel';
+      second = [what, ?x.changeDetail].join(': ');
+      strong = true;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: Sp.xxs),
+      padding: const EdgeInsets.symmetric(horizontal: Sp.xs, vertical: Sp.s),
+      decoration: bg == null
+          ? null
+          : BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(Rad.row),
+            ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          SizedBox(
+            width: Sz.slotColumn,
+            child: Text(x.slot, style: k.rowSlot(sub)),
+          ),
+          const SizedBox(width: Sp.s + Sp.xxs),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  subject,
+                  style: k.rowSubject(ink, strong: strong).copyWith(
+                    decoration: done ? TextDecoration.lineThrough : null,
+                    decorationColor: ink,
+                  ),
+                ),
+                if (second != null) Text(second, style: k.rowTime(sub)),
+              ],
+            ),
+          ),
+          const SizedBox(width: Sp.s),
+          Text(right, style: k.rowTime(sub)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToggleButton extends StatelessWidget {
+  const _ToggleButton({required this.expanded, required this.onTap});
+
+  final bool expanded;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    return Material(
+      color: k.p.inset,
+      borderRadius: BorderRadius.circular(Rad.buttonSmall),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Rad.buttonSmall),
+        onTap: onTap,
+        child: SizedBox(
+          height: Sz.buttonSmall,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                expanded ? 'Tag zuklappen' : 'Ganzen Tag zeigen',
+                style: k.button(k.p.muted),
+              ),
+              const SizedBox(width: Sp.xs + Sp.xxs),
+              Icon(
+                expanded ? Icons.expand_less : Icons.expand_more,
+                size: Sz.icon,
+                color: k.p.muted,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    this.onTap,
+    this.strong = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool strong;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final fg = strong ? k.p.onStrong : k.p.ink;
+    return Material(
+      color: strong ? k.p.strong : k.p.inset,
+      borderRadius: BorderRadius.circular(Rad.button),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Rad.button),
+        onTap: onTap,
+        child: Tooltip(
+          message: label,
+          child: SizedBox(
+            height: Sz.button,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: Sz.icon, color: fg),
+                const SizedBox(width: Sp.s),
+                Flexible(
+                  child: Text(
+                    label,
+                    style: k.button(fg),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---- Demnächst --------------------------------------------------------------
+
+class UpcomingTiles extends StatelessWidget {
+  const UpcomingTiles({super.key, required this.data, this.onOpenAll});
+
+  final FamilyToday data;
+  final VoidCallback? onOpenAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final items = [...data.week]..sort((a, b) => a.day.compareTo(b.day));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Sp.page + Sp.xs),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Expanded(child: Text('Demnächst', style: k.section)),
+              if (onOpenAll != null)
+                TextButton(
+                  onPressed: onOpenAll,
+                  child: Text('Alle Termine', style: k.link),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: Sp.xs),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: Sp.page),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final (i, w) in items.indexed) ...[
+                  if (i > 0) const SizedBox(width: Sp.s + Sp.xxs),
+                  _Tile(item: w, data: data),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Tile extends StatelessWidget {
+  const _Tile({required this.item, required this.data});
 
   final WeekItem item;
   final FamilyToday data;
@@ -456,45 +916,38 @@ class _WeekRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final childIdx = item.childIndex;
-    final kid = childIdx == null ? null : data.kids[childIdx];
-    final dot = kid == null
-        ? k.cs.onSurfaceVariant
-        : k.child(kid.colorIndex).accent;
-    final icon = switch (item.kind) {
-      WeekKind.exam => Icons.edit_note,
-      WeekKind.event => Icons.event_outlined,
-      WeekKind.deadline => Icons.flag_outlined,
-      WeekKind.free => Icons.beach_access_outlined,
-    };
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: Sp.xs),
-      child: Row(
+    final ci = item.childIndex;
+    final kid = ci == null ? null : data.kids[ci];
+    final color = kid == null ? k.p.muted : k.kid(kid.colorIndex).accent;
+    final caption = [relativeDay(item.day, data.now), ?item.time]
+        .join(' · ')
+        .toUpperCase();
+    return Container(
+      width: Sz.tileWidth,
+      padding: const EdgeInsets.all(Sp.ml),
+      decoration: BoxDecoration(
+        color: k.p.card,
+        borderRadius: BorderRadius.circular(Rad.tile),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Icon(icon, size: Sz.icon, color: dot),
-          ),
-          const SizedBox(width: Sp.s),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  style: item.kind == WeekKind.exam ? k.bodyStrong : k.body,
+          Text(caption, style: k.tileCaption),
+          const SizedBox(height: Sp.xs + Sp.xxs),
+          Expanded(child: Text(item.title, style: k.tileTitle)),
+          const SizedBox(height: Sp.xs + Sp.xxs),
+          Row(
+            children: [
+              _Dot(color: color),
+              const SizedBox(width: Sp.xs + Sp.xxs),
+              Flexible(
+                child: Text(
+                  kid?.firstName ?? 'Alle',
+                  style: k.tileKid(color),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                Text(
-                  [
-                    kid?.firstName ?? 'Alle',
-                    ?item.time,
-                  ].join(' · '),
-                  style: k.meta.copyWith(color: dot),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
