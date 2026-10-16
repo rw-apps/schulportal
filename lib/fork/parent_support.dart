@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:riverpod/misc.dart' show Override;
 
+import 'lessons_parent.dart';
+
 /// Module, die der Fork über liblanis hinaus für weitere Kontoarten freigibt.
 ///
 /// Ursache: liblanis bindet `stundenplan.php` fest an Schülerkonten
@@ -41,6 +43,17 @@ bool forkSupportsApplet(
 /// (sessionFeatureEpoch, session, aktives Konto) bleiben identisch, damit
 /// Aktualisierung nach Anmeldung/Kontowechsel unverändert funktioniert.
 List<Override> forkProviderOverrides() => [
+  // Eltern-Übersicht für meinunterricht.php (fork/lessons_parent.dart);
+  // Schüler laufen unverändert durch LessonsStudentParser.getHome.
+  lessonsStudentParserProvider.overrideWith((ref) {
+    final ctx = ref.watch(appletContextProvider);
+    final parser = LessonsParentAwareParser(
+      ctx,
+      isConnected: () => ref.read(connectionCheckerProvider).connected,
+    );
+    ref.onDispose(parser.dispose);
+    return parser;
+  }),
   supportedAppletPhpUrlsProvider.overrideWith((ref) {
     ref.watch(sessionFeatureEpochProvider);
     final session = ref.watch(sessionProvider).asData?.value;

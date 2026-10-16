@@ -51,7 +51,7 @@ void main() {
 
     final mathe = kids.first.lessons.single;
     expect(mathe.name, 'Mathematik 6a');
-    expect(mathe.courseID, '501', reason: 'nur id, ohne &p=');
+    expect(mathe.courseID, '501&p=100', reason: 'Kind gehört in die Kursroute');
     expect(mathe.courseURL.queryParameters['p'], '100');
     expect(mathe.teachers.single.teacherKuerzel, 'MUS');
     expect(mathe.teachers.single.teacher, 'Muster, Max');
@@ -68,10 +68,20 @@ void main() {
   test('Kurse bleiben beim richtigen Kind', () {
     final kids = parseParentLessons(doc);
     expect(kids[1].lessons.single.name, 'Englisch 8b');
-    expect(kids[1].lessons.single.courseID, '777');
+    expect(kids[1].lessons.single.courseID, '777&p=200');
   });
 
   test('Schülerseite (ohne pupilbox) ergibt keine Kinder', () {
     expect(parseParentLessons(parse('<div id="mappen"></div>')), isEmpty);
+  });
+
+  test('flatten: bei mehreren Kindern Vorname vor dem Kurs', () {
+    final all = flattenChildLessons(parseParentLessons(doc));
+    expect(all.map((l) => l.name), containsAll(['Anna: Mathematik 6a', 'Ben: Englisch 8b']));
+  });
+
+  test('flatten: ein Kind ohne Vorsilbe', () {
+    final one = parse('<html><body>${_box('100', 'Beispiel, Anna', 'Mathematik 6a', '501')}</body></html>');
+    expect(flattenChildLessons(parseParentLessons(one)).single.name, 'Mathematik 6a');
   });
 }

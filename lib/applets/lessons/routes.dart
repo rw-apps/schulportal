@@ -16,6 +16,8 @@ List<RouteBase> buildLessonsRoutes(AppletRouteContext ctx) {
   return [
     ..._lessonsRoutesFor(AccountType.student, ctx),
     ..._lessonsRoutesFor(AccountType.teacher, ctx),
+    // Fork: Eltern bekommen Kurs + Anwesenheiten, aber keine Abgabe-Route.
+    ..._lessonsRoutesFor(AccountType.parent, ctx),
   ];
 }
 
@@ -33,7 +35,7 @@ List<RouteBase> _lessonsRoutesFor(AccountType type, AppletRouteContext ctx) {
         appletHomeShell(
           homeBuilder: (context, state) => ctx.homeBody(lessonsDefinition),
         ),
-        if (type == AccountType.student)
+        if (type == AccountType.student || type == AccountType.parent)
           GoRoute(
             path: 'course/:courseId',
             builder: (context, state) {
@@ -54,7 +56,7 @@ List<RouteBase> _lessonsRoutesFor(AccountType type, AppletRouteContext ctx) {
               );
             },
           ),
-        if (type == AccountType.student)
+        if (type == AccountType.student || type == AccountType.parent)
           GoRoute(
             path: 'attendances',
             builder: (context, state) => DeepLinkPopScope(

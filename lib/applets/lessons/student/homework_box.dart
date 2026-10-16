@@ -97,6 +97,19 @@ class _HomeworkBoxState extends ConsumerState<HomeworkBox> with WidgetsBindingOb
                   ],
                 ),
                 const Spacer(),
+                // Fork: Eltern sehen den Stand nur, abhaken darf das Kind.
+                // Ursache: setHomework (liblanis LessonsStudentParser) schreibt
+                // den Erledigt-Status des Schülers; aus dem Elternkonto wäre das
+                // ein Eingriff in dessen Liste. Grenze: Anzeige bleibt gleich.
+                if (ref.read(activeAccountProvider)?.accountType ==
+                    AccountType.parent)
+                  Icon(
+                    widget.currentEntry.homework!.homeWorkDone
+                        ? Icons.check_box
+                        : Icons.check_box_outline_blank,
+                    color: Theme.of(context).colorScheme.onPrimary,
+                  )
+                else
                 Checkbox(
                   visualDensity: VisualDensity.compact,
                   value: widget.currentEntry.homework!.homeWorkDone,

@@ -412,7 +412,11 @@ class _CourseOverviewAnsichtState extends ConsumerState<CourseOverviewAnsicht> {
                                   ),
                                 ),
                                 Visibility(
-                                  visible: uploads.isNotEmpty,
+                                  // Fork: keine Abgaben aus dem Elternkonto
+                                  // (Upload-Route gibt es nur für Schüler,
+                                  // applets/lessons/routes.dart).
+                                  visible: uploads.isNotEmpty &&
+                                      _accountPrefix != AccountType.parent.name,
                                   child: Padding(
                                     padding: const EdgeInsets.only(top: 4),
                                     child: Wrap(

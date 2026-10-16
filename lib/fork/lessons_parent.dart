@@ -1,4 +1,5 @@
 import 'package:html/dom.dart';
+import 'package:html/parser.dart' show parse;
 import 'package:liblanis/liblanis.dart';
 
 /// Kurse eines Kindes aus der Eltern-Ansicht von meinunterricht.php.
@@ -32,9 +33,14 @@ class ChildLessons {
 ///
 /// Grenze: Innerhalb der Reiter sind die Strukturen gleich wie bei Schülern
 /// (Kursmappen-Kacheln, `tr.printable`, Anwesenheitstabelle); die Selektoren
-/// sind daher bewusst dieselben. Kurs-IDs kommen aus dem Query-Parameter `id`,
-/// weil Eltern-Links zusätzlich `&p=<Kind>` tragen (der Schülerparser nimmt
-/// alles hinter `id=`).
+/// sind daher bewusst dieselben.
+///
+/// `courseID` lautet `<id>&p=<Kind>`. Ursache: Die Kursroute baut die URL als
+/// `meinunterricht.php?a=sus_view&id=$courseId` (applets/lessons/routes.dart);
+/// das Kind muss mit, sonst weiß das Portal bei mehreren Kindern nicht, wessen
+/// Kurs gemeint ist. Dieselbe Form ergibt auch LessonsStudentParser
+/// .getDetailedCourseView (`url.split("id=")[1]`), damit bleibt beides gleich.
+/// Zuordnungen innerhalb der Seite laufen über die reine Kurs-ID.
 List<ChildLessons> parseParentLessons(Document document) {
   final result = <ChildLessons>[];
   for (final box in document.querySelectorAll('div.pupilbox')) {
@@ -43,6 +49,7 @@ List<ChildLessons> parseParentLessons(Document document) {
     if (head == null || id == null) continue;
 
     final lessons = <Lesson>[];
+    final byPureId = <String, Lesson>{};
 
     // Kursmappen
     final row = box.querySelector('#mappen$id .row');
@@ -51,22 +58,23 @@ List<ChildLessons> parseParentLessons(Document document) {
       final name = mappe.querySelector('h2')?.text.trim();
       if (link == null || name == null) continue;
       final url = Uri.parse(link);
-      lessons.add(
-        Lesson(
-          name: name,
-          teachers: mappe
-              .querySelectorAll('div.btn-group>button')
-              .map(
-                (e) => LessonTeacher(
-                  teacher: e.attributes['title']?.split(' (')[0].trim(),
-                  teacherKuerzel: e.text.trim(),
-                ),
-              )
-              .toList(),
-          courseURL: url,
-          courseID: url.queryParameters['id'] ?? link,
-        ),
+      final pureId = url.queryParameters['id'] ?? link;
+      final lesson = Lesson(
+        name: name,
+        teachers: mappe
+            .querySelectorAll('div.btn-group>button')
+            .map(
+              (e) => LessonTeacher(
+                teacher: e.attributes['title']?.split(' (')[0].trim(),
+                teacherKuerzel: e.text.trim(),
+              ),
+            )
+            .toList(),
+        courseURL: url,
+        courseID: '$pureId&p=$id',
       );
+      lessons.add(lesson);
+      byPureId[pureId] = lesson;
     }
 
     // Aktuelle Einträge
@@ -75,8 +83,7 @@ List<ChildLessons> parseParentLessons(Document document) {
       final entryId = tr.attributes['data-entry'];
       final courseLink = tr.querySelector('td>h3>a')?.attributes['href'];
       if (dateText == null || entryId == null || courseLink == null) continue;
-      final courseId = Uri.parse(courseLink).queryParameters['id'];
-      final lesson = lessons.where((l) => l.courseID == courseId).firstOrNull;
+      final lesson = byPureId[Uri.parse(courseLink).queryParameters['id']];
       if (lesson == null) continue;
 
       Homework? homework;
@@ -107,8 +114,9 @@ List<ChildLessons> parseParentLessons(Document document) {
     ];
     for (final tr in attendance?.querySelectorAll('tbody>tr') ?? const []) {
       final href = tr.querySelector('a')?.attributes['href'];
-      final courseId = href == null ? null : Uri.parse(href).queryParameters['id'];
-      final lesson = lessons.where((l) => l.courseID == courseId).firstOrNull;
+      final lesson = href == null
+          ? null
+          : byPureId[Uri.parse(href).queryParameters['id']];
       if (lesson == null) continue;
       final values = <String, String>{};
       for (var i = 0; i < tr.children.length && i < keys.length; i++) {
@@ -144,4 +152,53 @@ DateTime? _parseGermanDate(String text) {
     int.parse(m.group(2)!),
     int.parse(m.group(1)!),
   );
+}
+
+/// Alle Kinder in eine Liste, neueste Einträge zuerst. Bei mehreren Kindern
+/// steht der Vorname vor dem Kursnamen, damit die Liste eindeutig bleibt.
+Lessons flattenChildLessons(List<ChildLessons> kids) {
+  final all = <Lesson>[];
+  for (final k in kids) {
+    for (final l in k.lessons) {
+      if (kids.length > 1) l.name = '${k.firstName}: ${l.name}';
+      all.add(l);
+    }
+  }
+  all.sort((a, b) {
+    final da = a.currentEntry?.topicDate;
+    final db = b.currentEntry?.topicDate;
+    if (da == null || db == null) return 0;
+    return db.compareTo(da);
+  });
+  return all;
+}
+
+/// LessonsStudentParser mit Eltern-Übersicht.
+///
+/// Ursache: siehe [parseParentLessons]. Grenze: Nur getHome() unterscheidet
+/// nach Kontoart; die Kursdetailseite liest der Schülerparser auch für Eltern
+/// korrekt (lokal gegen zwei Eltern-Kursseiten von Schule A geprüft, 16.10.26:
+/// 0 bzw. 5 Einträge, Anwesenheit erkannt). Aktionen wie setHomework oder
+/// Uploads blendet die Oberfläche für Eltern aus.
+class LessonsParentAwareParser extends LessonsStudentParser {
+  LessonsParentAwareParser(super.ctx, {super.isConnected});
+
+  bool get _isParent =>
+      (ctx.session.accountTypeOrNull ?? ctx.account.accountType) ==
+      AccountType.parent;
+
+  @override
+  Future<Lessons> getHome() async {
+    if (!_isParent) return super.getHome();
+    final response = await ctx.session.dio.get(
+      'https://start.schulportal.hessen.de/meinunterricht.php'
+      '?cacheBreaker=${DateTime.now().millisecondsSinceEpoch}',
+    );
+    final kids = parseParentLessons(parse(response.data.toString()));
+    // Leere Eltern-Seite heißt fast immer: Sitzung verloren. Werfen, damit
+    // AppletParser.fetchData einmal neu anmeldet und es erneut versucht.
+    if (kids.isEmpty)
+      throw UnknownException('meinunterricht.php: keine pupilbox');
+    return flattenChildLessons(kids);
+  }
 }

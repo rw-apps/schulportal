@@ -1,5 +1,10 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9310**
+
+- Neu für Elternkonten: **Unterricht**, also die Kurse des Kindes mit aktuellen Einträgen, Kursseiten und Anwesenheiten. Bei mehreren Kindern an einer Schule steht der Vorname vor dem Kurs.
+- Eltern sehen den Hausaufgaben-Stand, abhaken kann ihn nur das Kind. Abgaben gibt es im Elternkonto nicht.
+
 **4.1.0+9309**
 
 - Behoben: Beim Elternkonto zeigte „Stundenplan“ nur einen Fehlerhinweis. Die Navigation sprang noch auf den Pfad für Schülerkonten.
