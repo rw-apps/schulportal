@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart';
+import 'package:lanis/fork/school_links.dart';
 import 'package:lanis/applets/definitions.dart';
 import 'package:lanis/generated/l10n.dart';
 import 'package:lanis/l10n/account_type_ui.dart';
@@ -246,14 +247,18 @@ class HomePageState extends ConsumerState<HomePage> {
       ));
     }
 
-    items.add((
-      label: AppLocalizations.of(context).openMoodle,
-      icon: const Icon(Icons.open_in_new),
-      selectedIcon: const Icon(Icons.open_in_new),
-      enabled: true,
-      branchIndex: null,
-      onTap: () => context.push(SettingsDeepLinks.moodle),
-    ));
+    // Fork: Moodle nur, wenn die Schule es anbietet (Ursache bei
+    // offersMoodle in fork/school_links.dart).
+    if (offersMoodle(_session?.travelMenu ?? const [])) {
+      items.add((
+        label: AppLocalizations.of(context).openMoodle,
+        icon: const Icon(Icons.open_in_new),
+        selectedIcon: const Icon(Icons.open_in_new),
+        enabled: true,
+        branchIndex: null,
+        onTap: () => context.push(SettingsDeepLinks.moodle),
+      ));
+    }
     items.add((
       label: AppLocalizations.of(context).openLanisInBrowser,
       icon: const Icon(Icons.open_in_new),

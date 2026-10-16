@@ -1,30 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart'
-    show TypedSettings, sharedOverAccountSettingsProvider;
+    show TypedSettings, sharedOverAccountSettingsProvider, AccountType;
 
+import 'package:lanis/applets/conversations/definition.dart';
+import 'package:lanis/applets/external_definitions.dart';
+import 'package:lanis/applets/lessons/definition.dart';
+import 'package:lanis/utils/deep_link.dart';
+
+import '../../school_links.dart';
 import '../kit.dart';
-import '../today/today_model.dart';
-import '../plan/plan_model.dart' show GroupChoice;
+import '../live/live_data.dart';
+import '../more/more_page.dart';
 import '../plan/live_plan_page.dart';
+import '../plan/plan_model.dart' show GroupChoice;
 import '../plan/plan_page.dart';
 import '../today/live_today_page.dart';
+import '../today/today_model.dart';
 import '../today/today_page.dart';
-import 'demo_plan.dart';
 import 'demo_family.dart';
+import 'demo_plan.dart';
 
-/// Vorschau der neuen Oberfläche, erreichbar über Einstellungen.
+/// Bereiche der Leiste (Konzept 17.10.26, Variante A): jedes Ding hat genau
+/// eine Heimat – Kalender (alles mit Datum: Stunden, Vertretungen, Termine),
+/// Unterricht (alles am Kurs), Nachrichten, Mehr (Dienste). „Heute“ besitzt
+/// nichts Eigenes, es zeigt nur Auszüge, die in ihre Heimat führen.
+enum ShellTab { today, calendar, courses, messages, more }
+
+/// Neue Oberfläche.
 ///
-/// Ursache: Gestaltung braucht Abnahme auf dem Gerät (Pixel 9a), bevor die
-/// echte Anbindung gebaut wird. Grenze: „Heute“ und „Plan“ zeigen aus den
-/// Einstellungen geöffnet echte Daten ([LiveTodayPage], [LivePlanPage]), in
-/// Tests erfundene ([demoFamily], [demoPlans]); die übrigen Ziele zeigen
-/// einen Platzhalter.
+/// Ursache: Gestaltung braucht Abnahme auf dem Gerät (Pixel 9a). Grenze: Aus
+/// den Einstellungen geöffnet zeigt sie echte Daten ([LiveDataScope]), in
+/// Tests erfundene ([demoFamily], [demoPlans]).
 class PreviewShell extends StatefulWidget {
   const PreviewShell({super.key, this.liveData = false});
 
-  /// „Heute“ und „Plan“ mit den echten Daten des angemeldeten Kontos.
-  /// Aus den Einstellungen geöffnet: true. Tests und Bildschirmfotos: false
+  /// Echte Daten des angemeldeten Kontos. Tests und Bildschirmfotos: false
   /// (Beispieldaten, ohne Portal und ohne ProviderScope).
   final bool liveData;
 
@@ -33,7 +45,7 @@ class PreviewShell extends StatefulWidget {
 }
 
 class _PreviewShellState extends State<PreviewShell> {
-  int _index = 0;
+  ShellTab _tab = ShellTab.today;
   KitFontStep _font = KitFontStep.normal;
 
   /// Geräteweit (nicht je Konto): Die Schriftgröße ist eine Frage des
@@ -80,13 +92,124 @@ class _PreviewShellState extends State<PreviewShell> {
       );
   }
 
+  /// In eine bisherige Lanis-Ansicht wechseln. Die neue Oberfläche liegt
+  /// (noch) als eigene Seite über dem Router; erst schließen, dann dorthin.
+  void _goOld(String path) {
+    final router = GoRouter.maybeOf(context);
+    Navigator.of(context).maybePop();
+    router?.go(path);
+  }
+
+  void _select(ShellTab t) => setState(() => _tab = t);
+
   static const _dest = [
     (Icons.home_outlined, Icons.home, 'Heute'),
-    (Icons.calendar_view_week_outlined, Icons.calendar_view_week, 'Plan'),
+    (Icons.calendar_month_outlined, Icons.calendar_month, 'Kalender'),
+    (Icons.menu_book_outlined, Icons.menu_book, 'Unterricht'),
     (Icons.chat_bubble_outline, Icons.chat_bubble, 'Nachrichten'),
-    (Icons.event_outlined, Icons.event, 'Termine'),
     (Icons.more_horiz, Icons.more_horiz, 'Mehr'),
   ];
+
+  List<MoreEntry> _liveEntries(BuildContext context, LiveSnapshot? s) {
+    if (s == null) return const [];
+    final mensa = mensaUrlFor(s.schoolId);
+    return [
+      if (s.offers('abwesenheitsmeldung.php'))
+        MoreEntry(
+          icon: Icons.thermostat,
+          label: 'Krank melden',
+          detail: 'Vorerst nur beim Portal prüfen',
+          onTap: () => openAbsence(context),
+        ),
+      if (mensa != null)
+        MoreEntry(
+          icon: Icons.restaurant_menu,
+          label: 'Essen bestellen',
+          detail: 'Bestellseite der Mensa im Browser',
+          onTap: () => openMensa(context, mensa),
+        ),
+      if (offersMoodle(s.session.travelMenu))
+        MoreEntry(
+          icon: Icons.school_outlined,
+          label: 'Lernplattform (Moodle)',
+          onTap: () => _goOld(SettingsDeepLinks.moodle),
+        ),
+      if (s.offers('kalender.php'))
+        MoreEntry(
+          icon: Icons.event_available_outlined,
+          label: 'Termine in eigenen Kalender',
+          detail: 'Schultermine abonnieren',
+          onTap: () => _goOld(SettingsDeepLinks.calendarExport),
+        ),
+      MoreEntry(
+        icon: Icons.open_in_browser,
+        label: 'Schulportal im Browser',
+        onTap: () => openLanisDefinition.action?.call(context),
+      ),
+      MoreEntry(
+        icon: Icons.apps,
+        label: 'Alle Funktionen',
+        detail: 'Bisherige Ansicht',
+        onTap: () => Navigator.of(context).maybePop(),
+      ),
+      MoreEntry(
+        icon: Icons.settings_outlined,
+        label: 'Einstellungen',
+        onTap: () => _goOld(SettingsDeepLinks.home),
+      ),
+    ];
+  }
+
+  Widget _liveBody(BuildContext context) {
+    final s = LiveData.of(context);
+    final type = s?.session.accountTypeOrNull ?? AccountType.parent;
+    return switch (_tab) {
+      ShellTab.today => LiveTodayPage(
+        onOpenCalendar: () => _select(ShellTab.calendar),
+        onOpenHomework: () => _select(ShellTab.courses),
+        onOpenMessages: () => _select(ShellTab.messages),
+      ),
+      ShellTab.calendar => const LiveCalendarPage(),
+      ShellTab.courses => _Placeholder(
+        label: 'Unterricht',
+        text: 'Hausaufgaben und Kurse im neuen Stil folgen.',
+        actionLabel: 'Bisherige Ansicht öffnen',
+        onAction: () => _goOld(lessonsDefinition.homePath(type)),
+      ),
+      ShellTab.messages => _Placeholder(
+        label: 'Nachrichten',
+        text: 'Nachrichten im neuen Stil folgen.',
+        actionLabel: 'Bisherige Ansicht öffnen',
+        onAction: () => _goOld(conversationsDefinition.homePath(type)),
+      ),
+      ShellTab.more => MorePage(
+        font: _font,
+        onFont: _setFont,
+        entries: _liveEntries(context, s),
+      ),
+    };
+  }
+
+  Widget _demoBody() => switch (_tab) {
+    ShellTab.today => TodayPage(
+      data: _data,
+      onReportAbsence: (c) => _notYet('Krankmeldung für ${c.firstName}'),
+      onOpenHomework: (_) => _select(ShellTab.courses),
+      onOpenMessages: (_) => _select(ShellTab.messages),
+      onOpenCalendar: () => _select(ShellTab.calendar),
+    ),
+    ShellTab.calendar => PlanPage(
+      plans: _plans,
+      now: _data.now,
+      initialChoices: _choices,
+      onChoicesChanged: (c) => _choices = {
+        for (final e in c.entries) e.key: {...e.value},
+      },
+      events: _data.week,
+    ),
+    ShellTab.more => MorePage(font: _font, onFont: _setFont),
+    _ => _Placeholder(label: _dest[_tab.index].$3, text: 'Folgt.'),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -95,48 +218,26 @@ class _PreviewShellState extends State<PreviewShell> {
     final theme = Theme.of(context);
     final mq = MediaQuery.of(context);
     final system = mq.textScaler.scale(14) / 14;
+    final scaffold = Scaffold(
+      backgroundColor: k.p.bg,
+      // Inhalt endet ÜBER der Leiste (kein extendBody). Ursache: Lief er
+      // darunter weiter, schnitt die Pille beim Scrollen Stunden an
+      // (Rückmeldung 16.10.26 zur Tagesansicht).
+      extendBody: false,
+      body: widget.liveData ? Builder(builder: _liveBody) : _demoBody(),
+      bottomNavigationBar: FloatingNavBar(
+        selected: _tab.index,
+        items: _dest,
+        onSelect: (i) => _select(ShellTab.values[i]),
+      ),
+    );
     return MediaQuery(
       data: mq.copyWith(textScaler: TextScaler.linear(system * _font.factor)),
       child: Theme(
         data: theme.copyWith(
           textTheme: theme.textTheme.apply(fontFamily: kitFont),
         ),
-        child: Scaffold(
-          backgroundColor: k.p.bg,
-          // Inhalt endet ÜBER der Leiste (kein extendBody). Ursache: Lief er
-          // darunter weiter, schnitt die Pille beim Scrollen Stunden an
-          // (Rückmeldung 16.10.26 zur Tagesansicht).
-          extendBody: false,
-          body: switch (_index) {
-            0 when widget.liveData => LiveTodayPage(
-              onOpenCalendar: () => setState(() => _index = 3),
-            ),
-            0 => TodayPage(
-              data: _data,
-              onReportAbsence: (c) =>
-                  _notYet('Krankmeldung für ${c.firstName}'),
-              onOpenHomework: (c) => _notYet('Hausaufgaben von ${c.firstName}'),
-              onOpenMessages: (c) => _notYet('Nachrichten von ${c.firstName}'),
-              onOpenCalendar: () => setState(() => _index = 3),
-            ),
-            1 when widget.liveData => const LivePlanPage(),
-            1 => PlanPage(
-              plans: _plans,
-              now: _data.now,
-              initialChoices: _choices,
-              onChoicesChanged: (c) => _choices = {
-                for (final e in c.entries) e.key: {...e.value},
-              },
-            ),
-            4 => _MorePage(font: _font, onFont: _setFont),
-            _ => _Placeholder(label: _dest[_index].$3),
-          },
-          bottomNavigationBar: FloatingNavBar(
-            selected: _index,
-            items: _dest,
-            onSelect: (i) => setState(() => _index = i),
-          ),
-        ),
+        child: widget.liveData ? LiveDataScope(child: scaffold) : scaffold,
       ),
     );
   }
@@ -253,9 +354,17 @@ class _NavItem extends StatelessWidget {
 }
 
 class _Placeholder extends StatelessWidget {
-  const _Placeholder({required this.label});
+  const _Placeholder({
+    required this.label,
+    required this.text,
+    this.actionLabel,
+    this.onAction,
+  });
 
   final String label;
+  final String text;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -268,88 +377,17 @@ class _Placeholder extends StatelessWidget {
           children: [
             Text(label, style: k.pageTitle),
             const SizedBox(height: Sp.l),
-            Text(
-              'Entwurf folgt nach Abnahme von „Heute“ und „Plan“.',
-              style: k.meta,
-            ),
-            const SizedBox(height: Sp.l),
-            TextButton.icon(
-              onPressed: () => Navigator.of(context).maybePop(),
-              icon: const Icon(Icons.close),
-              label: Text('Vorschau schließen', style: k.button(k.p.ink)),
-            ),
+            Text(text, style: k.meta),
+            if (actionLabel != null) ...[
+              const SizedBox(height: Sp.l),
+              TextButton.icon(
+                onPressed: onAction,
+                icon: const Icon(Icons.open_in_new),
+                label: Text(actionLabel!, style: k.button(k.p.ink)),
+              ),
+            ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// „Mehr“: vorerst nur die Schriftgröße der neuen Oberfläche.
-class _MorePage extends StatelessWidget {
-  const _MorePage({required this.font, required this.onFont});
-
-  final KitFontStep font;
-  final ValueChanged<KitFontStep> onFont;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(Sp.page, Sp.xl, Sp.page, Sp.xl),
-        children: [
-          Text('Mehr', style: k.pageTitle),
-          const SizedBox(height: Sp.xl),
-          Text('Schriftgröße', style: k.section),
-          const SizedBox(height: Sp.xs),
-          Text(
-            'Gilt für die neue Oberfläche, zusätzlich zur Einstellung des '
-            'Handys.',
-            style: k.meta,
-          ),
-          const SizedBox(height: Sp.m),
-          for (final step in KitFontStep.values)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Sp.s),
-              child: Material(
-                color: step == font ? k.kid(0).tint : k.p.card,
-                borderRadius: BorderRadius.circular(Rad.signal),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(Rad.signal),
-                  onTap: () => onFont(step),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: Sp.l,
-                      vertical: Sp.m,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            step.label,
-                            style: k.planSubject(k.p.ink),
-                          ),
-                        ),
-                        if (step == font)
-                          Icon(
-                            Icons.check,
-                            size: Sz.icon,
-                            color: k.kid(0).label,
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          const SizedBox(height: Sp.l),
-          TextButton.icon(
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(Icons.close),
-            label: Text('Vorschau schließen', style: k.button(k.p.ink)),
-          ),
-        ],
       ),
     );
   }

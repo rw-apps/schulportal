@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lanis/fork/school_links.dart';
 import 'package:lanis/fork/ui/plan/plan_model.dart';
 import 'package:lanis/fork/ui/today/today_from_lanis.dart';
 import 'package:lanis/fork/ui/today/today_model.dart';
@@ -300,6 +301,66 @@ void main() {
       expect(items[3].time, isNull);
     });
 
+    test(
+      'Essenshinweise: nicht als Kachel, aber an der Karte und im Kalender',
+      () {
+        final events = [
+          ev(
+            'Kein Essen für alle Jg.!',
+            DateTime(2026, 10, 19),
+            DateTime(2026, 10, 19, 23, 59),
+            allDay: true,
+          ),
+          ev(
+            'Essen nur für 5, 6 und 7 Jg.',
+            DateTime(2026, 10, 20, 11),
+            DateTime(2026, 10, 20, 12),
+          ),
+          ev(
+            'Essen nur für 8 und 9 Jg.',
+            DateTime(2026, 10, 20, 11),
+            DateTime(2026, 10, 20, 12),
+          ),
+          ev(
+            'Interessen-AG',
+            DateTime(2026, 10, 20, 14),
+            DateTime(2026, 10, 20, 15),
+          ),
+        ];
+        final tiles = weekItemsFromCalendar(events, now, className: '06 XY');
+        expect(tiles.map((i) => i.title), ['Interessen-AG']);
+        final all = weekItemsFromCalendar(
+          events,
+          now,
+          className: '06 XY',
+          includeMeals: true,
+        );
+        expect(all.where((i) => i.kind == WeekKind.meal), hasLength(2));
+        expect(
+          mealHintFor(events, now, className: '06 XY'),
+          'Heute: Kein Essen für alle Jg.!',
+        );
+        expect(
+          mealHintFor(events, DateTime(2026, 10, 19, 15), className: '06 XY'),
+          'Morgen: Essen nur für 5, 6 und 7 Jg.',
+        );
+        expect(forGrade('Essen nur für 5, 6 und 7 Jg.', 8), isFalse);
+      },
+    );
+
+    test('mehrtägig: läuft bis', () {
+      final items = weekItemsFromCalendar([
+        ev(
+          'Herbstferien',
+          DateTime(2026, 10, 5),
+          DateTime(2026, 10, 23, 23, 59),
+          cat: 4,
+          allDay: true,
+        ),
+      ], now);
+      expect(items.single.until, DateTime(2026, 10, 23));
+    });
+
     test('ohne bekannte Klasse kein Jahrgangsfilter', () {
       final items = weekItemsFromCalendar([
         ev(
@@ -311,5 +372,25 @@ void main() {
       expect(items, hasLength(1));
       expect(items.single.childIndex, isNull);
     });
+  });
+
+  test('Moodle nur, wenn die Schule es anbietet; Mensa je Schule', () {
+    expect(
+      offersMoodle(const [
+        {'Name': 'Stundenplan', 'link': 'stundenplan.php'},
+      ]),
+      isFalse,
+    );
+    expect(
+      offersMoodle(const [
+        {
+          'Name': 'Lernplattform',
+          'link': 'https://mo1234.schulportal.hessen.de',
+        },
+      ]),
+      isTrue,
+    );
+    expect(mensaUrlFor('0000'), startsWith('https://'));
+    expect(mensaUrlFor('9999'), isNull);
   });
 }

@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../calendar/event_list.dart';
 import '../kit.dart';
-import '../today/today_model.dart' show ChangeKind, minutesOf;
+import '../today/today_model.dart' show ChangeKind, WeekItem, minutesOf;
 import '../today/today_page.dart' show schoolWeek, dayDiff;
 import 'plan_model.dart';
 
 const _wd = ['Mo', 'Di', 'Mi', 'Do', 'Fr'];
 
-enum PlanView { day, week }
+/// Tag und Woche zeigen Stunden, [events] die Termine der Schule.
+enum PlanView { day, week, events }
 
-/// Seite „Plan“ im Stil A + C: je Kind, Tag oder Woche, Gruppenwahl.
+/// Bereich „Kalender“ im Stil A + C: Stunden je Kind als Tag oder Woche
+/// (mit Gruppenwahl), dazu die Termine der Schule als Liste. Ursache für die
+/// Zusammenlegung (Konzept 17.10.26): Plan und Termine sind beide „was ist
+/// wann“ und überschnitten sich als eigene Bereiche.
 class PlanPage extends StatefulWidget {
   const PlanPage({
     super.key,
@@ -20,10 +25,19 @@ class PlanPage extends StatefulWidget {
     this.autoChoices = const {},
     this.initialNames = const {},
     this.onNamesChanged,
+    this.events,
+    this.onRefresh,
   });
 
   final List<KidPlan> plans;
   final DateTime now;
+
+  /// Termine der Schule für die Ansicht „Termine“; null = Ansicht fehlt
+  /// (Schule ohne Kalender).
+  final List<WeekItem>? events;
+
+  /// Ziehen zum Aktualisieren (Tag und Termine); null = ohne.
+  final Future<void> Function()? onRefresh;
 
   /// Automatisch erkannte Gruppen je Kind (autoGroupChoice); die eigene Wahl
   /// geht vor, siehe effectiveChoice.
@@ -163,13 +177,26 @@ class _PlanPageState extends State<PlanPage> {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
-                child: Text('Stundenplan', style: k.pageTitle, maxLines: 1),
+                child: Text('Kalender', style: k.pageTitle, maxLines: 1),
               ),
             ),
             const SizedBox(width: Sp.m),
-            _ViewToggle(
-              value: _view,
-              onChanged: (v) => setState(() => _view = v),
+            // Höchstens gut zwei Drittel der Breite, sonst verkleinert: Mit
+            // drei Ansichten (Tag/Woche/Termine) und „Sehr groß“ wäre der
+            // Umschalter sonst über den Rand gelaufen.
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.68,
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: _ViewToggle(
+                  value: _view,
+                  withEvents: widget.events != null,
+                  onChanged: (v) => setState(() => _view = v),
+                ),
+              ),
             ),
           ],
         ),
@@ -225,7 +252,39 @@ class _PlanPageState extends State<PlanPage> {
       );
     }
 
-    return CustomScrollView(
+    if (_view == PlanView.events) {
+      final view = CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverSafeArea(
+            bottom: false,
+            sliver: SliverToBoxAdapter(child: head.first),
+          ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              Sp.page,
+              Sp.ml,
+              Sp.page,
+              bottom + Sp.xl,
+            ),
+            sliver: SliverToBoxAdapter(
+              child: EventList(
+                items: widget.events ?? const [],
+                now: widget.now,
+                kidColor: _plan.colorIndex,
+              ),
+            ),
+          ),
+        ],
+      );
+      final refresh = widget.onRefresh;
+      return refresh == null
+          ? view
+          : RefreshIndicator(onRefresh: refresh, child: view);
+    }
+
+    final dayView = CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         SliverSafeArea(
           bottom: false,
@@ -262,16 +321,25 @@ class _PlanPageState extends State<PlanPage> {
         ),
       ],
     );
+    final refresh = widget.onRefresh;
+    return refresh == null
+        ? dayView
+        : RefreshIndicator(onRefresh: refresh, child: dayView);
   }
 }
 
 // ---- Kopf ---------------------------------------------------------------
 
 class _ViewToggle extends StatelessWidget {
-  const _ViewToggle({required this.value, required this.onChanged});
+  const _ViewToggle({
+    required this.value,
+    required this.onChanged,
+    this.withEvents = false,
+  });
 
   final PlanView value;
   final ValueChanged<PlanView> onChanged;
+  final bool withEvents;
 
   @override
   Widget build(BuildContext context) {
@@ -306,7 +374,11 @@ class _ViewToggle extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [seg(PlanView.day, 'Tag'), seg(PlanView.week, 'Woche')],
+        children: [
+          seg(PlanView.day, 'Tag'),
+          seg(PlanView.week, 'Woche'),
+          if (withEvents) seg(PlanView.events, 'Termine'),
+        ],
       ),
     );
   }

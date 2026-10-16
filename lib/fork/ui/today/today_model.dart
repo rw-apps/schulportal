@@ -74,6 +74,8 @@ class ChildToday {
     this.openHomework = 0,
     this.unreadMessages = 0,
     this.canReportAbsence = false,
+    this.mealHint,
+    this.mensaUrl,
   });
 
   final String firstName;
@@ -94,9 +96,17 @@ class ChildToday {
 
   /// Schule bietet die Krankmeldung im Portal an (Modul in der App-Liste).
   final bool canReportAbsence;
+
+  /// „Heute: Kein Essen für alle Jg.!“ aus dem Schulkalender.
+  final String? mealHint;
+
+  /// Bestellseite des Caterers der Schule (fork/school_links.dart).
+  final String? mensaUrl;
 }
 
-enum WeekKind { exam, event, deadline, free }
+/// [meal]: Hinweis zum Mittagessen; nur in der Terminliste des Kalenders,
+/// in „Heute“ als Zeile an der Kinderkarte (ChildToday.mealHint).
+enum WeekKind { exam, event, deadline, free, meal }
 
 class WeekItem {
   const WeekItem({
@@ -105,11 +115,17 @@ class WeekItem {
     required this.kind,
     this.childIndex,
     this.time,
+    this.until,
+    this.place,
   });
 
   final DateTime day;
   final String title;
   final WeekKind kind;
+
+  /// Letzter Tag bei mehrtägigen Terminen (Ferien), sonst null.
+  final DateTime? until;
+  final String? place;
 
   /// Index in [FamilyToday.kids]; null = betrifft alle.
   final int? childIndex;

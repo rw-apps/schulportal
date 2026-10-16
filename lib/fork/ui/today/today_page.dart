@@ -85,6 +85,8 @@ class TodayPage extends StatelessWidget {
     this.onOpenHomework,
     this.onOpenMessages,
     this.onOpenCalendar,
+    this.onOrderMeal,
+    this.onRefresh,
   });
 
   final FamilyToday data;
@@ -92,6 +94,10 @@ class TodayPage extends StatelessWidget {
   final void Function(ChildToday child)? onOpenHomework;
   final void Function(ChildToday child)? onOpenMessages;
   final VoidCallback? onOpenCalendar;
+  final void Function(ChildToday child)? onOrderMeal;
+
+  /// Ziehen zum Aktualisieren; null = ohne (Beispieldaten).
+  final Future<void> Function()? onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +105,8 @@ class TodayPage extends StatelessWidget {
     // Enthält bei Scaffold(extendBody: true) die Höhe der schwebenden Leiste.
     final bottom = MediaQuery.paddingOf(context).bottom;
 
-    return CustomScrollView(
+    final view = CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         SliverSafeArea(
           bottom: false,
@@ -153,6 +160,7 @@ class TodayPage extends StatelessWidget {
               onReportAbsence: onReportAbsence,
               onOpenHomework: onOpenHomework,
               onOpenMessages: onOpenMessages,
+              onOrderMeal: onOrderMeal,
             ),
           ),
         ),
@@ -167,6 +175,9 @@ class TodayPage extends StatelessWidget {
           SliverToBoxAdapter(child: SizedBox(height: bottom + Sp.xl)),
       ],
     );
+    final refresh = onRefresh;
+    if (refresh == null) return view;
+    return RefreshIndicator(onRefresh: refresh, child: view);
   }
 }
 
@@ -376,6 +387,7 @@ class KidCard extends StatefulWidget {
     this.onReportAbsence,
     this.onOpenHomework,
     this.onOpenMessages,
+    this.onOrderMeal,
     this.initiallyExpanded = false,
   });
 
@@ -384,6 +396,7 @@ class KidCard extends StatefulWidget {
   final void Function(ChildToday child)? onReportAbsence;
   final void Function(ChildToday child)? onOpenHomework;
   final void Function(ChildToday child)? onOpenMessages;
+  final void Function(ChildToday child)? onOrderMeal;
   final bool initiallyExpanded;
 
   @override
@@ -456,6 +469,17 @@ class _KidCardState extends State<KidCard> {
               onTap: () => setState(() => _expanded = !_expanded),
             ),
           ],
+          if (kid.mealHint != null) ...[
+            const SizedBox(height: Sp.m),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.restaurant, size: Sz.icon, color: k.p.muted),
+                const SizedBox(width: Sp.s),
+                Expanded(child: Text(kid.mealHint!, style: k.cardMeta)),
+              ],
+            ),
+          ],
           ..._actions(context, k),
         ],
       ),
@@ -484,6 +508,14 @@ class _KidCardState extends State<KidCard> {
           onTap: widget.onOpenMessages == null
               ? null
               : () => widget.onOpenMessages!(kid),
+        ),
+      if (kid.mensaUrl != null)
+        _ActionButton(
+          icon: Icons.restaurant_menu,
+          label: 'Essen bestellen',
+          onTap: widget.onOrderMeal == null
+              ? null
+              : () => widget.onOrderMeal!(kid),
         ),
       if (kid.canReportAbsence)
         _ActionButton(

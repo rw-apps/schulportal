@@ -1,5 +1,15 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9323**
+
+- Neue Leiste nach dem Konzept vom 17.10.: **Heute · Kalender · Unterricht · Nachrichten · Mehr**. Jedes Ding hat einen Ort, „Heute“ zeigt nur Auszüge.
+- **Kalender** vereint Stundenplan und Termine: Tag, Woche und neu „Termine“ (alle Schultermine der nächsten vier Monate, nach Tagen gruppiert, Arbeiten und schulfreie Tage markiert, mehrtägige mit „bis …“).
+- **Mittagessen:** „Kein Essen …“ erscheint nicht mehr als Kachel unter „Demnächst“, sondern als Hinweis an der Kinderkarte (ab 14 Uhr der von morgen). Neuer Knopf **„Essen bestellen“** öffnet die Bestellseite der Mensa (Schule A: Caterer) im Browser.
+- **Mehr:** Krank melden, Essen bestellen, Termine in eigenen Kalender, Schulportal im Browser, alle bisherigen Funktionen, Einstellungen, Schriftgröße.
+- **Moodle** erscheint nur noch, wenn die Schule es anbietet (an Schule A nicht).
+- Alle Bereiche teilen sich die Daten: Stundenplan, Unterricht, Vertretungen, Kalender und Nachrichten werden einmal und nacheinander geladen. Ziehen nach unten lädt neu.
+- Unterricht und Nachrichten im neuen Stil folgen in den nächsten Versionen; bis dahin führt ein Knopf in die bisherige Ansicht.
+
 **4.1.0+9322**
 
 - Vorschau „Heute“ zeigt jetzt **echte Daten** des angemeldeten Kontos: den heutigen Plan mit „Jetzt“, „Danach“ und Tagesleiste, dieselben Gruppen und Lehrernamen wie unter „Plan“.

@@ -145,9 +145,23 @@ void main() {
   testWidgets('Leiste: Ziele wechseln, Platzhalter', (t) async {
     await _pixel(t);
     await t.pumpWidget(_app(b: Brightness.light));
-    // „Plan“ ist inzwischen gebaut (plan_page_test); Platzhalter z. B. hier.
-    await t.tap(find.text('Nachrichten'));
+    // Leiste nach Konzept 17.10.26 (Variante A).
+    for (final l in [
+      'Heute',
+      'Kalender',
+      'Unterricht',
+      'Nachrichten',
+      'Mehr',
+    ]) {
+      expect(find.text(l), findsWidgets);
+    }
+    await t.tap(find.text('Mehr'));
     await t.pumpAndSettle();
-    expect(find.textContaining('Entwurf folgt'), findsOneWidget);
+    expect(find.text('Schriftgröße'), findsOneWidget);
+    await t.tap(find.text('Kalender'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Termine'));
+    await t.pumpAndSettle();
+    expect(t.takeException(), isNull);
   });
 }

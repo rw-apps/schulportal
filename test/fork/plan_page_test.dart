@@ -29,7 +29,12 @@ Widget _app({Brightness b = Brightness.light, double scale = 1.0}) =>
     );
 
 Future<void> _openPlan(WidgetTester t, {String? kid}) async {
-  await t.tap(find.text('Plan'));
+  await t.tap(
+    find.descendant(
+      of: find.byType(FloatingNavBar),
+      matching: find.text('Kalender'),
+    ),
+  );
   await t.pumpAndSettle();
   if (kid != null) {
     await t.tap(find.text(kid));
@@ -144,6 +149,10 @@ void main() {
         await t.tap(find.text('Tag'));
         await t.pumpAndSettle();
         expect(t.takeException(), isNull);
+        await t.tap(find.text('Termine'));
+        await t.pumpAndSettle();
+        expect(t.takeException(), isNull);
+        expect(find.textContaining(RegExp(r'^(HEUTE · |MORGEN · )?[A-Z]+, \d+\. ')), findsWidgets);
       });
     }
   }

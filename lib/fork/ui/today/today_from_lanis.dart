@@ -277,6 +277,10 @@ ChildToday childTodayFromLanis({
   String className = '',
   bool canReportAbsence = false,
   String Function(String code)? subjectName,
+  String? mealHint,
+  String? mensaUrl,
+  int openHomework = 0,
+  int unreadMessages = 0,
 }) {
   final r = applySubstitutions(
     plan: plan,
@@ -294,6 +298,10 @@ ChildToday childTodayFromLanis({
     periodsLabel: periodsLabelFor(plan, now.weekday - 1, choice),
     changes: r.changes,
     canReportAbsence: canReportAbsence,
+    mealHint: mealHint,
+    mensaUrl: mensaUrl,
+    openHomework: openHomework,
+    unreadMessages: unreadMessages,
   );
 }
 
@@ -321,19 +329,35 @@ String classFromCourses(List<String> courseNames) {
 
 // ---- Kalender ---------------------------------------------------------------
 
-/// Termine der nächsten [days] Tage für „Demnächst“ und die Wochenleiste.
+/// Hinweis zum Mittagessen („Kein Essen für alle Jg.!“)? Solche Einträge
+/// stehen an Schule A fast jede Woche im Kalender (Kategorie „Erinnerung“,
+/// Export 16.10.26: 6 von 23 Terminen). Als Kachel unter „Demnächst“
+/// verdrängten sie die echten Termine; sie erscheinen stattdessen als
+/// Hinweis am Tag neben „Essen bestellen“ ([mealHintFor]). Grenze: Nur das
+/// Wort „Essen“/„Mittagessen“/„Mensa“ als ganzes Wort („Interessen“ nicht).
+bool isMealNote(String title) => RegExp(
+  r'\b(mittag)?essen\b|\bmensa\b',
+  caseSensitive: false,
+).hasMatch(title);
+
+/// Termine ab jetzt für die nächsten [days] Tage.
+///
+/// [includeMeals] = false für „Heute“ (dort steht der Essenshinweis an der
+/// Kinderkarte), true für die vollständige Liste im Kalender.
 ///
 /// Art nach Kategorie der Schule (Schule A: „Arbeiten“, „Ferien/Schulfreie
 /// Tage“, „Erinnerung“ …) und Stichworten im Titel. Ausgelassen:
 /// „Pausenaufsicht“ und „Schulwochen“ (Lehrerdienst bzw. A/B-Wochen, für
 /// Eltern nur Rauschen) sowie Termine für andere Jahrgänge, wenn der Titel
-/// einen Bereich nennt („8-10 Klassen …“) und die Klasse bekannt ist.
+/// sie nennt („8-10 Klassen …“, „nur für 5, 6 und 7 Jg.“) und die Klasse
+/// bekannt ist.
 List<WeekItem> weekItemsFromCalendar(
   List<CalendarEvent> events,
   DateTime now, {
   int? childIndex,
   String className = '',
   int days = 14,
+  bool includeMeals = false,
 }) {
   final today = DateTime(now.year, now.month, now.day);
   final horizon = DateTime(now.year, now.month, now.day + days);
@@ -345,13 +369,16 @@ List<WeekItem> weekItemsFromCalendar(
     if (cat.contains('pausenaufsicht') || cat.contains('schulwoche')) continue;
     final title = e.title.trim();
     if (title.isEmpty) continue;
-    if (grade != null && !_forGrade(title, grade)) continue;
+    if (grade != null && !forGrade(title, grade)) continue;
+    final meal = isMealNote(title);
+    if (meal && !includeMeals) continue;
     final lower = title.toLowerCase();
-    final kind =
-        cat.contains('arbeit') ||
-            RegExp(
-              r'lernkontrolle|klassenarbeit|klausur|\btest\b',
-            ).hasMatch(lower)
+    final kind = meal
+        ? WeekKind.meal
+        : cat.contains('arbeit') ||
+              RegExp(
+                r'lernkontrolle|klassenarbeit|klausur|\btest\b',
+              ).hasMatch(lower)
         ? WeekKind.exam
         : (cat.contains('ferien') ||
                   cat.contains('frei') ||
@@ -364,6 +391,8 @@ List<WeekItem> weekItemsFromCalendar(
     final day = start.isBefore(today)
         ? today
         : DateTime(start.year, start.month, start.day);
+    final end = e.endTime;
+    final endDay = DateTime(end.year, end.month, end.day);
     final timed = !e.allDay && !(start.hour == 0 && start.minute == 0);
     out.add((
       start,
@@ -372,10 +401,9 @@ List<WeekItem> weekItemsFromCalendar(
         title: title,
         kind: kind,
         childIndex: childIndex,
-        time: timed
-            ? '${start.hour.toString().padLeft(2, '0')}:'
-                  '${start.minute.toString().padLeft(2, '0')}'
-            : null,
+        time: timed ? _hhmm(start) : null,
+        until: endDay.isAfter(day) ? endDay : null,
+        place: _blank(e.place),
       ),
     ));
   }
@@ -386,9 +414,42 @@ List<WeekItem> weekItemsFromCalendar(
   return [for (final x in out) x.$2];
 }
 
-/// „5-7 Klassen …“, „Jg. 8–10“: nur, wenn [grade] im Bereich liegt.
-bool _forGrade(String title, int grade) {
-  final m =
+String _hhmm(DateTime t) =>
+    '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+String? _blank(String? s) {
+  final t = s?.trim();
+  return t == null || t.isEmpty ? null : t;
+}
+
+/// Essenshinweis für die Kinderkarte: die von heute, ab 14 Uhr die von
+/// morgen (dann ist das heutige Essen vorbei, das morgige noch planbar).
+String? mealHintFor(
+  List<CalendarEvent> events,
+  DateTime now, {
+  String className = '',
+}) {
+  final afternoon = now.hour >= 14;
+  final target = DateTime(now.year, now.month, now.day + (afternoon ? 1 : 0));
+  final grade = int.tryParse(RegExp(r'^\d+').stringMatch(className) ?? '');
+  final notes = <String>{};
+  for (final e in events) {
+    final title = e.title.trim();
+    if (!isMealNote(title)) continue;
+    if (grade != null && !forGrade(title, grade)) continue;
+    final a = DateTime(e.startTime.year, e.startTime.month, e.startTime.day);
+    final b = DateTime(e.endTime.year, e.endTime.month, e.endTime.day);
+    if (target.isBefore(a) || target.isAfter(b)) continue;
+    notes.add(title);
+  }
+  if (notes.isEmpty) return null;
+  return '${afternoon ? 'Morgen' : 'Heute'}: ${notes.join(' · ')}';
+}
+
+/// Gilt der Titel für [grade]? Erkennt Bereiche („5-7 Klassen“, „Jg. 8–10“)
+/// und Aufzählungen („nur für 5, 6 und 7 Jg.“). Ohne Angabe: für alle.
+bool forGrade(String title, int grade) {
+  final range =
       RegExp(
         r'(\d{1,2})\s*[-–]\s*(\d{1,2})\s*\.?\s*(?:klass|jg|jahrg)',
         caseSensitive: false,
@@ -397,8 +458,20 @@ bool _forGrade(String title, int grade) {
         r'(?:klassen?|jg\.?|jahrgang|jahrgänge)\s*(\d{1,2})\s*[-–]\s*(\d{1,2})',
         caseSensitive: false,
       ).firstMatch(title);
-  if (m == null) return true;
-  final a = int.parse(m[1]!);
-  final b = int.parse(m[2]!);
-  return grade >= a && grade <= b;
+  if (range != null) {
+    final a = int.parse(range[1]!);
+    final b = int.parse(range[2]!);
+    return grade >= a && grade <= b;
+  }
+  final list = RegExp(
+    r'((?:\d{1,2}\s*(?:,|und|u\.|/)\s*)+\d{1,2})\.?\s*(?:klass|jg|jahrg)',
+    caseSensitive: false,
+  ).firstMatch(title);
+  if (list != null) {
+    final grades = RegExp(
+      r'\d{1,2}',
+    ).allMatches(list[1]!).map((m) => int.parse(m[0]!)).toSet();
+    return grades.contains(grade);
+  }
+  return true;
 }
