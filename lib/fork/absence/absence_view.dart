@@ -244,7 +244,17 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
     );
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      // Unterkante = 32 + Höhe der System-Navigationsleiste. Ursache: Die App
+      // läuft randlos (SystemUiMode.edgeToEdge, main.dart), und ein ListView
+      // mit eigenem `padding` übernimmt die MediaQuery-Ränder NICHT selbst.
+      // Ohne den Zuschlag lag der letzte Knopf auf dem Pixel 9a halb unter
+      // der Gestenleiste (Screenshot 16.10.26, 9311).
+      padding: EdgeInsets.fromLTRB(
+        16,
+        8,
+        16,
+        32 + MediaQuery.paddingOf(context).bottom,
+      ),
       children: [
         if (f.rules.isNotEmpty)
           Card(

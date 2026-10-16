@@ -79,4 +79,19 @@ void main() {
     await t.pumpWidget(_app(_form(to: DateRange(DateTime(2026, 10, 16), DateTime(2026, 10, 23)))));
     expect(find.textContaining('Anna – verspätet'), findsOneWidget);
   });
+
+  testWidgets('letzter Knopf bleibt über der Navigationsleiste', (t) async {
+    // Pixel-9a-ähnlich: schmal, Gestenleiste unten (randlose App).
+    t.view.physicalSize = const Size(1080, 1500);
+    t.view.devicePixelRatio = 2.5;
+    t.view.padding = const FakeViewPadding(bottom: 120);
+    addTearDown(t.view.reset);
+    await t.pumpWidget(_app(_form()));
+    await t.drag(find.byType(ListView), const Offset(0, -3000));
+    await t.pumpAndSettle();
+    final button = find.widgetWithText(OutlinedButton, 'Vorschau der Portal-Felder');
+    final screenH = 1500 / 2.5;
+    final insetH = 120 / 2.5;
+    expect(t.getBottomLeft(button).dy, lessThanOrEqualTo(screenH - insetH));
+  });
 }
