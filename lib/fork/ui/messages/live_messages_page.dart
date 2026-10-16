@@ -34,6 +34,16 @@ class LiveMessagesPage extends ConsumerWidget {
             ),
           );
         }
+        if (s.conversations.failed) {
+          return LiveMessage(
+            text: 'Die Nachrichten ließen sich nicht laden.',
+            style: k.meta,
+            action: TextButton(
+              onPressed: s.refresh,
+              child: Text('Erneut versuchen', style: k.link),
+            ),
+          );
+        }
         final entries = s.conversations.content ?? const <OverviewEntry>[];
         final items = [
           for (final e in entries)

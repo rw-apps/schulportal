@@ -419,7 +419,9 @@ class HomePageState extends ConsumerState<HomePage> {
           ),
         ),
         for (var i = 0; i < destinations.length; i++) ...[
-          if (i == homeCount) const Divider(),
+          // Fork: Index 0 ist „Neue Oberfläche“ (vor den Lanis-Bereichen),
+          // daher alle Trennlinien um eins verschoben.
+          if (i == 1 || i == homeCount + 1) const Divider(),
           NavigationDrawerDestination(
             label: Text(destinations[i].label),
             icon: destinations[i].icon,

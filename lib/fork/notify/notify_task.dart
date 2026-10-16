@@ -5,6 +5,7 @@ import 'package:liblanis/liblanis.dart';
 import 'package:lanis/applets/substitutions/background.dart';
 import 'package:lanis/background_service.dart';
 import 'package:lanis/utils/applet_settings.dart';
+import 'package:lanis/utils/logger.dart';
 
 import '../lessons_parent.dart';
 import '../parent_support.dart';
@@ -47,7 +48,19 @@ Future<void> forkSubstitutionsTask(
   final now = DateTime.now();
   if (inQuietHours(now)) return;
 
-  final tt = await container.read(timetableParserProvider).getHome();
+  // Ein Fehler hier darf die Schleife über die Konten nicht abbrechen
+  // (callbackDispatcher, background_service.dart): sonst entfiele für alle
+  // folgenden Konten die Meldung und das Abmelden (Prüfbefund 17.10.26).
+  final TimeTable tt;
+  final SubstitutionPlan subs;
+  try {
+    tt = await container.read(timetableParserProvider).getHome();
+    subs = await container.read(substitutionsParserProvider).getHome();
+  } catch (e, st) {
+    backgroundLogger.w('Fork-Benachrichtigung übersprungen: $e');
+    backgroundLogger.e(e, stackTrace: st);
+    return;
+  }
   Lessons lessons = const [];
   try {
     if (offers(Applets.byPhpUrl('meinunterricht.php'))) {
@@ -60,11 +73,10 @@ Future<void> forkSubstitutionsTask(
   final kids = parser is LessonsParentAwareParser
       ? parser.lastKids
       : const <ChildLessons>[];
-  final firstName = kids.isNotEmpty
-      ? kids.first.firstName
-      : (session.userData['vorname'] ?? 'deinem Kind');
+  // Schülerkonto (keine Kinder): ohne Namen („Heute in der Schule“). Die
+  // Anmeldung im Hintergrund lädt keine Benutzerdaten (withoutData).
+  final firstName = kids.isNotEmpty ? kids.first.firstName : '';
 
-  final subs = await container.read(substitutionsParserProvider).getHome();
   var events = const <CalendarEvent>[];
   if (now.hour >= eveningHour) {
     try {
@@ -113,7 +125,7 @@ Future<void> forkSubstitutionsTask(
     substitutions: subs.days,
     events: events,
     now: now,
-    className: classFromCourses(courses),
+    className: session.userData['klasse'] ?? classFromCourses(courses),
     sent: sent.toSet(),
     subjectName: (c) => subjectFullName(c, courses, schoolId: schoolId),
   );

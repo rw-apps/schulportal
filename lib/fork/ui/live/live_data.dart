@@ -91,7 +91,7 @@ class Feed<T> {
 /// Stundenplan, Unterricht, Vertretungen und Kalender teilen, hätte das jede
 /// Quelle bis zu dreimal angefragt und die Gruppenwahl an mehreren Stellen
 /// gelesen. Grenze: ein Konto; die Familienansicht über mehrere Konten
-/// (Schule B) setzt hier später eine Liste darüber.
+/// (zweite Schule) setzt hier später eine Liste darüber.
 class LiveSnapshot {
   const LiveSnapshot({
     required this.session,
@@ -186,10 +186,17 @@ class _Source<T> {
     });
   }
 
+  /// Fehler, die fetchData selbst wirft (Neuanmeldung im zweiten Versuch,
+  /// AppletParser.fetchData), statt sie als Antwort zu melden.
+  void fail(Object e) {
+    feed = Feed(content: feed.content, error: e, fetchedAt: feed.fetchedAt);
+  }
+
   void dispose() => sub?.cancel();
 }
 
-class _LiveDataScopeState extends ConsumerState<LiveDataScope> {
+class _LiveDataScopeState extends ConsumerState<LiveDataScope>
+    with WidgetsBindingObserver {
   final _tt = _Source<TimeTable>('stundenplan.php');
   final _lessons = _Source<Lessons>('meinunterricht.php');
   final _subs = _Source<SubstitutionPlan>('vertretungsplan.php');
@@ -199,8 +206,39 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope> {
   GroupChoice _choice = const {};
   Map<String, String> _names = const {};
   int? _settingsFor;
-  bool _loading = false;
+  Future<void>? _running;
+  bool _again = false;
+  bool _againForce = false;
   Set<String> _loadedFor = const {};
+  Set<String> _supported = const {};
+  Timer? _timer;
+  DateTime? _lastLoad;
+
+  /// Eigener Takt statt AppletParser.startAutoRefresh. Ursache: Die
+  /// bisherigen Ansichten teilen dieselben Parser und schalten deren Takt
+  /// beim Schließen ab (CombinedAppletBuilder.dispose → stopAutoRefresh);
+  /// danach wäre „Heute“ bis zum Neustart nicht mehr nachgeladen worden
+  /// (Prüfbefund 17.10.26). 10 Minuten wie refreshInterval des
+  /// Vertretungsplans (applets/substitutions/definition.dart).
+  static const _period = Duration(minutes: 10);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _timer = Timer.periodic(_period, (_) => _loadAll(_supported, force: true));
+  }
+
+  /// Zurück in die App nach mehr als 10 Minuten: neu laden, damit „Heute“
+  /// nicht den Stand vom Morgen zeigt.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    final last = _lastLoad;
+    if (last == null || DateTime.now().difference(last) > _period) {
+      _loadAll(_supported, force: true);
+    }
+  }
 
   void _changed() {
     if (mounted) setState(() {});
@@ -208,8 +246,9 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _timer?.cancel();
     for (final s in [_tt, _lessons, _subs, _cal, _conv]) {
-      s.parser?.stopAutoRefresh();
       s.dispose();
     }
     super.dispose();
@@ -246,18 +285,45 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope> {
   /// teilen eine Sitzung; schlägt einer fehl, meldet er sich neu an
   /// (AppletParser.fetchData, secondTry). Parallel hätten sich mehrere
   /// Neuanmeldungen überholt.
-  Future<void> _loadAll(Set<String> supported, {bool force = false}) async {
-    if (_loading) return;
-    _loading = true;
+  ///
+  /// Läuft schon ein Durchgang, wird danach genau einer nachgeholt (statt
+  /// den Wunsch zu verwerfen) – „Ziehen zum Aktualisieren“ wartet darauf.
+  /// Wirft ein Parser (Neuanmeldung fehlgeschlagen), gilt das nur für diese
+  /// Quelle; die übrigen werden trotzdem geladen.
+  Future<void> _loadAll(Set<String> supported, {bool force = false}) {
+    final running = _running;
+    if (running != null) {
+      _again = true;
+      _againForce |= force;
+      return running.then((_) => _running ?? Future<void>.value());
+    }
+    final f = _run(supported, force);
+    _running = f;
+    return f;
+  }
+
+  Future<void> _run(Set<String> supported, bool force) async {
     try {
       for (final s in [_tt, _lessons, _subs, _cal, _conv]) {
         final p = s.parser;
         if (p == null || !supported.contains(s.phpUrl)) continue;
-        await p.fetchData(forceRefresh: force);
+        try {
+          await p.fetchData(forceRefresh: force);
+        } catch (e) {
+          s.fail(e);
+          _changed();
+        }
         if (!mounted) return;
       }
+      _lastLoad = DateTime.now();
     } finally {
-      _loading = false;
+      _running = null;
+      if (_again && mounted) {
+        final f = _againForce;
+        _again = false;
+        _againForce = false;
+        await _loadAll(_supported, force: f);
+      }
     }
   }
 
@@ -276,15 +342,12 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope> {
     _cal.attach(ref.watch(calendarParserProvider), _changed);
     _conv.attach(ref.watch(conversationsParserProvider), _changed);
 
+    _supported = supported;
     final key = {'${account.localId}', ...supported};
     if (!_setEquals(key, _loadedFor)) {
       _loadedFor = key;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        for (final s in [_tt, _subs]) {
-          if (supported.contains(s.phpUrl)) s.parser?.startAutoRefresh();
-        }
-        _loadAll(supported);
+        if (mounted) _loadAll(supported);
       });
     }
 
@@ -372,14 +435,14 @@ class LiveGate extends StatelessWidget {
     if (s == null) return const Center(child: CircularProgressIndicator());
     if (!needsTimetable) return builder(context, s);
     if (!s.offers('stundenplan.php')) {
-      return _Message(
+      return LiveMessage(
         text: 'Die Schule bietet für dieses Konto keinen Stundenplan an.',
         style: k.meta,
       );
     }
     if (s.timetable.content == null) {
       if (s.timetable.failed) {
-        return _Message(
+        return LiveMessage(
           text: s.timetable.offline
               ? 'Keine Verbindung und noch nichts gespeichert.'
               : 'Der Stundenplan ließ sich nicht laden.',
@@ -396,8 +459,8 @@ class LiveGate extends StatelessWidget {
   }
 }
 
-class _Message extends StatelessWidget {
-  const _Message({required this.text, required this.style, this.action});
+class LiveMessage extends StatelessWidget {
+  const LiveMessage({required this.text, required this.style, this.action});
 
   final String text;
   final TextStyle style;

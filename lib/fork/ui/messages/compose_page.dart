@@ -41,7 +41,14 @@ class PortalComposeBackend implements ComposeBackend {
       subject,
       text,
     );
-    if (r.success) await parser.fetchData(forceRefresh: true);
+    if (r.success) {
+      // Liste nachladen darf das Ergebnis nicht kippen: Die Nachricht ist
+      // schon beim Portal. Ursache: Ein Fehler hier hätte „nicht angenommen“
+      // gemeldet und zum doppelten Senden verleitet (Prüfbefund 17.10.26).
+      try {
+        await parser.fetchData(forceRefresh: true);
+      } catch (_) {}
+    }
     return r.success;
   }
 }

@@ -1,5 +1,15 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9328**
+
+Korrekturen nach einer unabhängigen Prüfung des Codes:
+- „Heute“ und die anderen Bereiche laden alle 10 Minuten und beim Zurückkehren in die App neu. Vorher konnte das Nachladen nach einem Besuch der bisherigen Ansicht stehen bleiben.
+- Schlägt eine Quelle fehl (z. B. Neuanmeldung), werden die übrigen trotzdem geladen; Unterricht und Nachrichten zeigen dann „Erneut versuchen“ statt endlos „Wird geladen …“.
+- „Ziehen zum Aktualisieren“ während eines laufenden Ladens wird nachgeholt statt verworfen.
+- Nachricht schreiben: Ist die Nachricht beim Portal angekommen, meldet die App keinen Fehler mehr, nur weil das anschließende Nachladen der Liste scheitert (verhinderte doppeltes Senden).
+- Benachrichtigungen: Ein Fehler bei einem Konto bricht die Prüfung der übrigen Konten nicht mehr ab; Schülerkonten heißen „Heute in der Schule“.
+- Menü der bisherigen Ansicht: Trennlinien wieder an der richtigen Stelle.
+
 **4.1.0+9327**
 
 - **Benachrichtigungen neu** (ersetzen die bisherige Vertretungsplan-Meldung, die jede Zeile der ganzen Klasse schickte):

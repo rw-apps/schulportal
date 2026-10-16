@@ -62,6 +62,10 @@ String _changeKey(ChangeItem c) =>
 String _eventKey(WeekItem w) =>
     'e|${w.day.year}-${w.day.month}-${w.day.day}|${w.title}';
 
+/// „Heute bei Lena“; ohne Namen (Schülerkonto) „Heute in der Schule“.
+String _title(String when, String name) =>
+    name.trim().isEmpty ? '$when in der Schule' : '$when bei $name';
+
 bool _sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
@@ -109,7 +113,7 @@ List<Notice> buildNotices({
     out.add(
       Notice(
         id: 1,
-        title: 'Heute bei ${plan.firstName}',
+        title: _title('Heute', plan.firstName),
         lines: [for (final c in today) _changeLine(c)],
         keys: [for (final c in today) _changeKey(c)],
       ),
@@ -139,7 +143,7 @@ List<Notice> buildNotices({
       out.add(
         Notice(
           id: 2,
-          title: 'Morgen bei ${plan.firstName}',
+          title: _title('Morgen', plan.firstName),
           lines: [
             for (final c in changes) _changeLine(c),
             for (final w in big) [w.title, ?w.time].join(' · '),

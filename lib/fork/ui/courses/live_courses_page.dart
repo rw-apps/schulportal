@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:lanis/applets/lessons/student/course_overview.dart';
 
+import '../kit.dart';
 import '../live/live_data.dart';
 import 'courses_model.dart';
 import 'courses_page.dart';
@@ -21,6 +22,16 @@ class LiveCoursesPage extends StatelessWidget {
         if (!s.offers('meinunterricht.php')) {
           return CoursesPage(items: const [], firstName: s.firstName);
         }
+        if (s.lessons.failed) {
+          return LiveMessage(
+            text: 'Der Unterricht ließ sich nicht laden.',
+            style: Kit.of(context).meta,
+            action: TextButton(
+              onPressed: s.refresh,
+              child: Text('Erneut versuchen', style: Kit.of(context).link),
+            ),
+          );
+        }
         final items = courseItemsFrom(
           s.lessons.content ?? const [],
           ownNames: s.ownNames,
@@ -28,7 +39,7 @@ class LiveCoursesPage extends StatelessWidget {
         return CoursesPage(
           items: items,
           firstName: s.kids.isNotEmpty ? s.firstName : null,
-          loading: s.lessons.loading || s.lessons.content == null,
+          loading: s.lessons.content == null && !s.lessons.failed,
           onRefresh: s.refresh,
           onOpen: (i) => Navigator.of(context).push(
             MaterialPageRoute<void>(

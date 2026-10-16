@@ -174,4 +174,22 @@ void main() {
     );
     expect(keys, ['k3', 'k4', 'k1', 'n']);
   });
+
+  test('ohne Kindernamen (Schülerkonto): „in der Schule“', () {
+    final p = _plan();
+    final anon = KidPlan(
+      firstName: '',
+      colorIndex: 0,
+      slots: p.slots,
+      days: p.days,
+    );
+    final n = buildNotices(
+      plan: anon,
+      choice: const {},
+      substitutions: subs,
+      events: const [],
+      now: DateTime(2026, 10, 19, 8),
+    );
+    expect(n.single.title, 'Heute in der Schule');
+  });
 }

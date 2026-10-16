@@ -31,7 +31,7 @@ Future<void> openAbsence(BuildContext context) => Navigator.of(
 /// Fehlt Vertretungsplan oder Kalender (nicht freigeschaltet, offline,
 /// Fehler), zeigt die Seite den Rest – der Stundenplan allein ist schon
 /// nützlich. Grenze: ein Kind je Konto; die Familienansicht über mehrere
-/// Konten (Schule B) folgt, wenn deren Zugang geklärt ist.
+/// Konten (zweite Schule) folgt, wenn deren Zugang geklärt ist.
 class LiveTodayPage extends StatefulWidget {
   const LiveTodayPage({
     super.key,
