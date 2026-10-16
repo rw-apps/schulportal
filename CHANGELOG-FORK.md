@@ -1,5 +1,15 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9327**
+
+- **Benachrichtigungen neu** (ersetzen die bisherige Vertretungsplan-Meldung, die jede Zeile der ganzen Klasse schickte):
+  - **Heute:** Ausfall, Vertretung oder Raumwechsel einer noch kommenden Stunde des Kindes – sobald es im Plan steht.
+  - **Vorabend ab 19 Uhr:** Änderungen für den nächsten Schultag plus große Termine (Arbeiten, schulfreie Tage, Fristen, Elternabende, Feste, Ausflüge). Freitagabend nichts, Sonntagabend für Montag.
+  - **Ruhezeit 21–6 Uhr.** Nichts kommt doppelt; kommt etwas hinzu, ersetzt eine vollständige Meldung die vorige.
+  - Es gelten dieselben Stunden und Gruppen wie in „Heute“ (andere Projekt-Text-Gruppen bleiben stumm).
+- Standard der Benachrichtigungszeiten jetzt **alle Tage 6–21 Uhr** (vorher angezeigt Mo–Fr 6:30–15:00). Wer die Zeiten selbst eingestellt hat, behält seine Werte – für die Vorabend-Meldung muss das Ende nach 19 Uhr liegen.
+- Grenze: Android lässt die App nur etwa alle 15–60 Minuten nachsehen; eine Meldung kann entsprechend später kommen.
+
 **4.1.0+9326**
 
 - **Die neue Oberfläche ist jetzt die Startseite.** Nach dem Öffnen und nach einem Kontowechsel erscheint direkt „Heute“.

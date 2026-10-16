@@ -18,11 +18,16 @@ import '../../../utils/logger.dart';
 import 'package:lanis/widgets/range_slider_tile.dart';
 import 'package:lanis/widgets/slider_tile.dart';
 
+// Fork: Standard wie in background_service.isTaskWithinConstraints – alle
+// Tage, 6–21 Uhr. Ursache: Die Seite zeigte 6:30–15:00 Mo–Fr, die
+// Hintergrundaufgabe nutzte ohne gespeicherte Werte 6–22 Uhr Mo–Fr; die
+// Vorabend-Meldung (19 Uhr, auch Sonntag für Montag, fork/notify) wäre mit
+// den angezeigten Werten nie gekommen.
 final Map<String, dynamic> _notificationDefaults = {
   "notifications-target-interval-minutes": 30,
-  "notifications-allowed-days": [true, true, true, true, true, false, false],
-  "notifications-start-time": Platform.isIOS ? [5, 30] : [6, 30],
-  "notifications-end-time": Platform.isIOS ? [16, 30] : [15, 0],
+  "notifications-allowed-days": [true, true, true, true, true, true, true],
+  "notifications-start-time": [6, 0],
+  "notifications-end-time": [21, 0],
 };
 
 class NotificationSettings extends ConsumerSettingsColours {

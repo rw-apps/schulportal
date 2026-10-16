@@ -5,7 +5,7 @@ import 'package:lanis/applets/substitutions/routes.dart';
 import 'package:lanis/applets/substitutions/substitutions_view.dart';
 import 'package:lanis/l10n/account_type_ui.dart';
 import 'package:lanis/utils/deep_link.dart';
-import 'background.dart';
+import 'package:lanis/fork/notify/notify_task.dart';
 
 final substitutionDefinition = AppletDefinition(
   appletPhpUrl: 'vertretungsplan.php',
@@ -25,7 +25,8 @@ final substitutionDefinition = AppletDefinition(
   ],
   refreshInterval: Duration(minutes: 10),
   settingsDefaults: {},
-  notificationTask: substitutionsBackgroundTask,
+  // Fork: nur, was die Stunden des Kindes betrifft (fork/notify).
+  notificationTask: forkSubstitutionsTask,
   bodyBuilder: (context, accountType, openDrawerCb) {
     return SubstitutionsView(openDrawerCb: openDrawerCb);
   },

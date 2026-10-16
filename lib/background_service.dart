@@ -322,12 +322,16 @@ class BackgroundTaskToolkit {
 
 Future<bool> isTaskWithinConstraints(ProviderContainer container) async {
   final shared = container.read(sharedOverAccountSettingsProvider);
+  // Fork: ohne eigene Auswahl alle Tage. Ursache: Die Sammelmeldung für
+  // Montag kommt Sonntagabend (fork/notify/notices.dart); mit dem Lanis-
+  // Standard Mo–Fr wäre sie nie gelaufen. Eine eigene Auswahl in den
+  // Einstellungen gilt weiter.
   final days =
       shared.getJsonList('notifications-allowed-days') ??
-      [true, true, true, true, true, false, false];
+      [true, true, true, true, true, true, true];
   final start =
       shared.getJsonList('notifications-start-time') ?? [6, 0];
-  final end = shared.getJsonList('notifications-end-time') ?? [22, 0];
+  final end = shared.getJsonList('notifications-end-time') ?? [21, 0];
 
   final now = TimeOfDay.now();
   final startMinutes = (start[0] as int) * 60 + (start[1] as int);
