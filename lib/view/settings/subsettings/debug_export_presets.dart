@@ -20,6 +20,7 @@ const _conversationsXhrHeaders = <String, String>{
 
 enum DebugExportPresetId {
   appOverview,
+  absences,
   substitutionsMain,
   timetable,
   calendarMain,
@@ -99,9 +100,19 @@ class DebugExportPreset {
 
   final DebugExportSectionBuilder buildSections;
 
+  /// Fork: Modul-Datei laut App-Liste der Schule (`link` in
+  /// startseite.php?a=ajax&f=apps), null = immer abfragen.
+  ///
+  /// Ursache: Export Schule A/Eltern 16.10.26 10:19 — `dateispeicher.php` gibt es
+  /// an der Schule nicht; das Portal antwortete mit einer Fehlerseite, setzte
+  /// einen neuen, NICHT angemeldeten sid und alle folgenden Presets liefen auf
+  /// „Login nötig“. Nicht freigeschaltete Module werden daher übersprungen.
+  final String? modulePhp;
+
   const DebugExportPreset({
     required this.id,
     required this.label,
+    this.modulePhp,
     required this.buildSections,
     this.needsSubstitutionHtml = false,
   });
@@ -229,8 +240,21 @@ final debugExportPresets = <DebugExportPreset>[
       _get('startseite.php?a=ajax&f=apps'),
     ),
   ),
+  // Fork: Krankmeldung. Ursache: Schule A führt das Modul „Abwesenheiten“
+  // (abwesenheitsmeldung.php, App-Liste 16.10.26); liblanis kennt es nicht.
+  // Grenze: nur GET der Übersichtsseite — es wird nichts abgeschickt.
+  DebugExportPreset(
+    id: DebugExportPresetId.absences,
+    label: (l) => l.debugExportPresetAbsences,
+    modulePhp: 'abwesenheitsmeldung.php',
+    buildSections: (_) => _single(
+      DebugExportPresetId.absences,
+      _get('abwesenheitsmeldung.php'),
+    ),
+  ),
   DebugExportPreset(
     id: DebugExportPresetId.substitutionsMain,
+    modulePhp: 'vertretungsplan.php',
     label: (l) => l.debugExportPresetSubstitutionsMain,
     needsSubstitutionHtml: true,
     buildSections: (_) =>
@@ -238,24 +262,28 @@ final debugExportPresets = <DebugExportPreset>[
   ),
   DebugExportPreset(
     id: DebugExportPresetId.timetable,
+    modulePhp: 'stundenplan.php',
     label: (l) => l.debugExportPresetTimetable,
     buildSections: (_) =>
         _single(DebugExportPresetId.timetable, _get('stundenplan.php')),
   ),
   DebugExportPreset(
     id: DebugExportPresetId.calendarMain,
+    modulePhp: 'kalender.php',
     label: (l) => l.debugExportPresetCalendarMain,
     buildSections: (_) =>
         _single(DebugExportPresetId.calendarMain, _get('kalender.php')),
   ),
   DebugExportPreset(
     id: DebugExportPresetId.lessonsStudent,
+    modulePhp: 'meinunterricht.php',
     label: (l) => l.debugExportPresetLessonsStudent,
     buildSections: (_) =>
         _single(DebugExportPresetId.lessonsStudent, _get('meinunterricht.php')),
   ),
   DebugExportPreset(
     id: DebugExportPresetId.lessonsTeacher,
+    modulePhp: 'meinunterricht.php',
     label: (l) => l.debugExportPresetLessonsTeacher,
     buildSections: (_) => _single(
       DebugExportPresetId.lessonsTeacher,
@@ -264,6 +292,7 @@ final debugExportPresets = <DebugExportPreset>[
   ),
   DebugExportPreset(
     id: DebugExportPresetId.dataStorage,
+    modulePhp: 'dateispeicher.php',
     label: (l) => l.debugExportPresetDataStorage,
     buildSections: (_) => _single(
       DebugExportPresetId.dataStorage,
@@ -272,23 +301,27 @@ final debugExportPresets = <DebugExportPreset>[
   ),
   DebugExportPreset(
     id: DebugExportPresetId.studyGroups,
+    modulePhp: 'lerngruppen.php',
     label: (l) => l.debugExportPresetStudyGroups,
     buildSections: (_) =>
         _single(DebugExportPresetId.studyGroups, _get('lerngruppen.php')),
   ),
   DebugExportPreset(
     id: DebugExportPresetId.substitutionsAjax,
+    modulePhp: 'vertretungsplan.php',
     label: (l) => l.debugExportPresetSubstitutionsAjax,
     needsSubstitutionHtml: true,
     buildSections: _buildSubstitutionsAjax,
   ),
   DebugExportPreset(
     id: DebugExportPresetId.calendarEvents,
+    modulePhp: 'kalender.php',
     label: (l) => l.debugExportPresetCalendarEvents,
     buildSections: _buildCalendarEvents,
   ),
   DebugExportPreset(
     id: DebugExportPresetId.conversations,
+    modulePhp: 'nachrichten.php',
     label: (l) => l.debugExportPresetConversations,
     buildSections: (_) => _single(
       DebugExportPresetId.conversations,

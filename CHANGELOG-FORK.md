@@ -1,9 +1,15 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9306**
+
+- Debug-Export fragt nur noch Module ab, die die Schule freigeschaltet hat. Ruft man ein anderes auf, beendet das Portal die Anmeldung, und alle weiteren Abfragen wären leer gewesen.
+- Neuer Export-Punkt „Abwesenheiten“ (Krankmeldung), nur die Ansicht, es wird nichts abgeschickt.
+- Zurückgenommen: die Cookie-Korrektur aus 4.1.0+9305. Der Export hat gezeigt, dass das Portal die Sitzung absichtlich beendet und keinen Schlüssel austauscht; die Korrektur war wirkungslos.
+
 **4.1.0+9305**
 
-- Behoben: Die App wurde abgemeldet, sobald das Schulportal den Sitzungsschlüssel austauschte (zum Beispiel beim Öffnen des Dateispeichers). Danach schlugen Vertretungsplan, Nachrichten und Termine fehl.
 - Debug-Export schwärzt den Sitzungsschlüssel und prüft die Anmeldung auch nach allen Abfragen.
+- (Zurückgenommen in 9306: vermutete Korrektur zum Sitzungsschlüssel, sie war wirkungslos.)
 
 **4.1.0+9304**
 

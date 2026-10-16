@@ -187,6 +187,7 @@
   "debugExportSelectAtLeastOne": "Bitte mindestens ein Preset auswählen.",
   "debugExportPresetSubstitutionsMain": "Vertretungsplan (Hauptseite)",
   "debugExportPresetAppOverview": "App-Übersicht der Schule",
+  "debugExportPresetAbsences": "Abwesenheiten (Krankmeldung, nur Ansicht)",
   "debugExportPresetTimetable": "Stundenplan",
   "debugExportPresetCalendarMain": "Kalender (Hauptseite)",
   "debugExportPresetLessonsStudent": "Mein Unterricht (Schüler)",

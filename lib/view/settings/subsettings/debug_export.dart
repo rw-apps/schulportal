@@ -401,6 +401,32 @@ Future<String?> appendRequestSection({
   return finalBody;
 }
 
+/// Teilt die gewählten Presets in abfragbare und übersprungene.
+///
+/// Ursache und Beleg bei [DebugExportPreset.modulePhp]: Ein Modul, das die
+/// Schule nicht führt, beendet die Anmeldung. Grenze: Ist die App-Liste leer
+/// (keine Sitzung), wird nichts gefiltert — dann gibt es nichts zu verlieren.
+({List<DebugExportPreset> kept, List<DebugExportPreset> skipped})
+filterPresetsForSchool({
+  required Set<DebugExportPresetId> selected,
+  required List<dynamic> travelMenu,
+}) {
+  final modules = <String>{
+    for (final e in travelMenu)
+      if (e is Map && e['link'] is String)
+        (e['link'] as String).split('?').first,
+  };
+  final kept = <DebugExportPreset>[];
+  final skipped = <DebugExportPreset>[];
+  for (final p in debugExportPresets) {
+    if (!selected.contains(p.id)) continue;
+    final ok =
+        p.modulePhp == null || modules.isEmpty || modules.contains(p.modulePhp);
+    (ok ? kept : skipped).add(p);
+  }
+  return (kept: kept, skipped: skipped);
+}
+
 Future<String> runDebugExportPresets({
   required WidgetRef ref,
   required Set<DebugExportPresetId> selected,
@@ -415,17 +441,25 @@ Future<String> runDebugExportPresets({
     await writeSessionCheck(report: report, session: session);
   }
 
-  final selectedPresets = [
-    for (final preset in debugExportPresets)
-      if (selected.contains(preset.id)) preset,
-  ];
+  // Fork: nur freigeschaltete Module (s. filterPresetsForSchool).
+  final filtered = filterPresetsForSchool(
+    selected: selected,
+    travelMenu: session?.travelMenu ?? const [],
+  );
+  for (final p in filtered.skipped) {
+    report.log(
+      'ÜBERSPRUNGEN: ${p.id.name} (${p.modulePhp} ist an dieser Schule nicht '
+      'freigeschaltet; der Aufruf würde abmelden)',
+    );
+  }
+  final selectedPresets = filtered.kept;
 
   final ctx = DebugExportPresetContext();
   final needsSubstitutionHtml = selectedPresets.any(
     (p) => p.needsSubstitutionHtml,
   );
-  final wantsSubstMain = selected.contains(
-    DebugExportPresetId.substitutionsMain,
+  final wantsSubstMain = selectedPresets.any(
+    (p) => p.id == DebugExportPresetId.substitutionsMain,
   );
 
   // Fetch substitutions main once when any selected preset needs its HTML.

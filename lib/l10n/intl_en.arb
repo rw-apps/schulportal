@@ -218,6 +218,7 @@
   "debugExportSelectAtLeastOne": "Select at least one preset.",
   "debugExportPresetSubstitutionsMain": "Substitutions (main page)",
   "debugExportPresetAppOverview": "School app overview",
+  "debugExportPresetAbsences": "Absences (sick notes, view only)",
   "debugExportPresetTimetable": "Timetable",
   "debugExportPresetCalendarMain": "Calendar (main page)",
   "debugExportPresetLessonsStudent": "Lessons / Mein Unterricht (student)",
