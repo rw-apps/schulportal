@@ -1,5 +1,6 @@
 import 'package:liblanis/liblanis.dart';
 
+import '../../error_log.dart';
 import 'lesson_times.dart';
 import 'plan_model.dart';
 import '../../data/portal_rules.dart';
@@ -121,6 +122,23 @@ KidPlan kidPlanFromTimetable(
                 ]),
             ],
         ];
+
+  // Diagnose: Einträge im Portal, aber keiner fand eine Stunde (Zuordnung
+  // über Uhrzeit bzw. Nummer gescheitert) – mit Zählwerten ins Protokoll.
+  final srcCount = source.fold<int>(0, (a, d) => a + d.length);
+  final placed = finalDays.fold<int>(
+    0,
+    (a, d) => a + d.where((c) => !c.isEmpty).length,
+  );
+  if (srcCount > 0 && placed == 0) {
+    ErrorLog.instance.notice('plan', 'EmptyPlan', {
+      'entries': srcCount,
+      'rows': rows.length,
+      'slots': slots.length,
+      'untimed': untimed.length,
+      'times': lessonTimes == null ? 0 : 1,
+    });
+  }
 
   return KidPlan(
     firstName: firstName,

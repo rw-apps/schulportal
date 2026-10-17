@@ -1,5 +1,10 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9349** – Kindwahl bleibt beim Reiterwechsel
+
+- **Ein Kind für alle Bereiche:** Die Wahl oben (Kalender, Unterricht, Nachrichten, Mehr) gilt jetzt für alle Reiter; nach einem Wechsel bleibt das gewählte Kind stehen.
+- **Fehlersuche:** Bleibt ein Stundenplan leer, obwohl das Portal Einträge liefert, steht unter Einstellungen → Fehlersuche ein Eintrag mit Zählwerten (ohne Inhalte), damit sich die Ursache eingrenzen lässt.
+
 **4.1.0+9348** – Stundenzeiten selbst eintragen
 
 - **Für Schulen ohne Uhrzeiten im Stundenplan:** Im Kalender (Tag) steht „Stundenzeiten eintragen“. Einmal Beginn der 1. Stunde, Länge einer Stunde, Pause nach je wie vielen Stunden und Pausenlänge wählen (Vorgabe: 8:00, 45 Minuten, Pause nach je 2 Stunden, 15 Minuten) – die Vorschau zeigt sofort die Zeiten. Danach gibt es wieder „Jetzt“, „Danach“, die Zeitlinie und Uhrzeiten in Heute, Kalender und Kursseite.

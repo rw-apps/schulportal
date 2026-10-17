@@ -141,6 +141,24 @@ class ErrorLog {
     _save();
   }
 
+  /// Auffälligkeit ohne Ausnahme, z. B. „Stundenplan ohne Einträge“, mit
+  /// Zählwerten zur Eingrenzung. Nur Zahlen – nie Text aus dem Portal.
+  void notice(String area, String what, Map<String, int> counts) {
+    final t = DateTime.now();
+    final detail = counts.entries.map((e) => '${e.key}=${e.value}').join(' ');
+    _merge(
+      ErrorRecord(
+        first: t,
+        last: t,
+        version: version,
+        area: area,
+        type: detail.isEmpty ? what : '$what($detail)',
+        stack: const [],
+      ),
+    );
+    _save();
+  }
+
   void clear() {
     _records.clear();
     _save();

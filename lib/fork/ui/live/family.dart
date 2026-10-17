@@ -66,14 +66,30 @@ class _MemberMarker extends InheritedWidget {
 
 /// Alle Konten des Geräts, aktives zuerst nach Kontoreihenfolge sortiert.
 class FamilyData extends InheritedWidget {
-  const FamilyData({super.key, required this.members, required super.child});
+  const FamilyData({
+    super.key,
+    required this.members,
+    required super.child,
+    this.selectedAccount,
+    this.onSelect,
+  });
 
   final List<FamilyMember> members;
+
+  /// Gewähltes Kind (Konto) für Kalender, Unterricht, Nachrichten und Mehr –
+  /// EINE Wahl für alle Reiter. Ursache (Rückmeldung 17.10.26): Jeder
+  /// Bereich merkte sich seine eigene Wahl; nach dem Reiterwechsel stand
+  /// wieder das erste Kind da. Grenze: gilt bis zum Neustart der App.
+  final int? selectedAccount;
+  final void Function(int accountId)? onSelect;
 
   /// Leer, solange nichts geladen ist (oder in Tests ohne Familie).
   static List<FamilyMember> of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<FamilyData>()?.members ??
       const [];
+
+  static FamilyData? scopeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<FamilyData>();
 
   @override
   bool updateShouldNotify(FamilyData old) => true;
@@ -110,6 +126,7 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
   final _containers = <int, ProviderContainer>{};
   final _hosts = <int, Widget>{};
   final _snaps = <int, LiveSnapshot>{};
+  int? _selected;
 
   @override
   void dispose() {
@@ -256,7 +273,12 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        FamilyData(members: members, child: widget.child),
+        FamilyData(
+          members: members,
+          selectedAccount: _selected,
+          onSelect: (id) => setState(() => _selected = id),
+          child: widget.child,
+        ),
         // Zwischengespeicherte Widgets: Ein Neuaufbau hier baut die weiteren
         // Konten nicht neu (sonst neuer Stand → _report → Neuaufbau …).
         for (final h in _hosts.values) Offstage(child: h),
@@ -302,14 +324,17 @@ class FamilySwitch extends StatefulWidget {
 }
 
 class _FamilySwitchState extends State<FamilySwitch> {
+  /// Nur ohne FamilyScope (Tests): eigene Wahl.
   int? _account;
 
   @override
   Widget build(BuildContext context) {
-    final members = FamilyData.of(context);
+    final scope = FamilyData.scopeOf(context);
+    final members = scope?.members ?? const <FamilyMember>[];
     if (members.length < 2) return widget.child;
+    final wanted = scope?.onSelect == null ? _account : scope?.selectedAccount;
     final sel =
-        members.where((m) => m.accountId == _account).firstOrNull ??
+        members.where((m) => m.accountId == wanted).firstOrNull ??
         members.first;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -327,7 +352,15 @@ class _FamilySwitchState extends State<FamilySwitch> {
                   ),
               ],
               selected: members.indexOf(sel),
-              onSelect: (i) => setState(() => _account = members[i].accountId),
+              onSelect: (i) {
+                final id = members[i].accountId;
+                final pick = scope?.onSelect;
+                if (pick != null) {
+                  pick(id);
+                } else {
+                  setState(() => _account = id);
+                }
+              },
             ),
           ),
         ),

@@ -84,6 +84,15 @@ class LiveCalendarPage extends StatelessWidget {
               ),
           ],
           now: now,
+          // Gemeinsame Kindwahl aller Reiter (FamilyData.selectedAccount).
+          selectedKid: () {
+            final id = FamilyData.scopeOf(context)?.selectedAccount;
+            final i = shown.indexWhere((x) => x.$1.accountId == id);
+            return i < 0 ? null : i;
+          }(),
+          onSelectKid: (i) => FamilyData.scopeOf(
+            context,
+          )?.onSelect?.call(shown[i].$1.accountId),
           onEditTimes: (i) async {
             final m = shown[i].$1.snapshot;
             final save = m.setLessonTimes;

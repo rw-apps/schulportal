@@ -30,7 +30,14 @@ class PlanPage extends StatefulWidget {
     this.onRefresh,
     this.plansForWeek,
     this.onEditTimes,
+    this.selectedKid,
+    this.onSelectKid,
   });
+
+  /// Von außen gewähltes Kind (Index in [plans], FamilyData); null = eigene
+  /// Wahl der Seite.
+  final int? selectedKid;
+  final ValueChanged<int>? onSelectKid;
 
   /// Stundenzeiten des Kindes [kid] (Index in [plans]) eintragen; null =
   /// ohne Knopf (Vorschau, Tests).
@@ -133,6 +140,18 @@ class _PlanPageState extends State<PlanPage> {
   void initState() {
     super.initState();
     _day = _todayIndex ?? 0;
+    _kid = _validKid(widget.selectedKid) ?? 0;
+  }
+
+  int? _validKid(int? i) =>
+      i != null && i >= 0 && i < widget.plans.length ? i : null;
+
+  @override
+  void didUpdateWidget(covariant PlanPage old) {
+    super.didUpdateWidget(old);
+    final k = _validKid(widget.selectedKid);
+    if (k != null && k != _kid) _kid = k;
+    if (_kid >= widget.plans.length) _kid = 0;
   }
 
   KidPlan get _plan => _plans[_kid].withTeacherNames(_names[_kid] ?? const {});
@@ -266,7 +285,10 @@ class _PlanPageState extends State<PlanPage> {
               (name: p.firstName, color: p.colorIndex),
           ],
           selected: _kid,
-          onSelect: (i) => setState(() => _kid = i),
+          onSelect: (i) {
+            setState(() => _kid = i);
+            widget.onSelectKid?.call(i);
+          },
         ),
       ),
       if (_view != PlanView.events)
