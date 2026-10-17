@@ -232,3 +232,63 @@ IconData subjectIconFor(String title) {
   }
   return CourseRules.fallbackIcon;
 }
+
+/// Ein Eintrag der Leistungskontrollen („02.11.2026 Lernkontrolle, 1. Std.“).
+typedef ExamLine = ({DateTime? date, String text});
+
+/// Leistungskontrollen als Überschrift + Zeilen, ohne Doppelungen.
+///
+/// Ursache (Bildschirmfoto Pixel 17.10.26): liblanis liefert je Abschnitt
+/// den Titel („Kommende Leistungskontrollen“) als Name und ALLE Einträge als
+/// einen mehrzeiligen Wert; jeder Eintrag kam zweimal (einmal mit Stunde und
+/// Dauer, einmal nur „Lernkontrolle“). Die Seite setzte den Wert rechts
+/// neben den Namen – der Name brach Buchstabe für Buchstabe um. Jetzt: Zeilen
+/// einzeln, das Datum vorn erkannt, je Datum nur die ausführlichste Zeile.
+/// Grenze: Zeilen ohne Datum bleiben, wie sie sind.
+List<({String title, List<ExamLine> lines})> examSections(
+  List<LessonExam> exams,
+) {
+  final out = <({String title, List<ExamLine> lines})>[];
+  final dateRe = RegExp(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})\s*');
+  for (final e in exams) {
+    final lines = <ExamLine>[];
+    for (final raw in (e.value ?? '').split('\n')) {
+      final line = raw.trim();
+      if (line.isEmpty || line == 'Keine Daten!') continue;
+      final m = dateRe.firstMatch(line);
+      final date = m == null
+          ? null
+          : DateTime(int.parse(m[3]!), int.parse(m[2]!), int.parse(m[1]!));
+      final text = m == null ? line : line.substring(m.end).trim();
+      final same = lines.indexWhere(
+        (x) =>
+            x.date == date &&
+            (x.text.startsWith(text) || text.startsWith(x.text)),
+      );
+      if (same >= 0) {
+        if (text.length > lines[same].text.length) {
+          lines[same] = (date: date, text: text);
+        }
+        continue;
+      }
+      lines.add((date: date, text: text));
+    }
+    if (lines.isEmpty) continue;
+    out.add((title: e.name.trim(), lines: lines));
+  }
+  return out;
+}
+
+/// Nächste Leistungskontrolle ab heute aus der Kursmappe.
+ExamLine? nextExamLine(List<LessonExam> exams, DateTime now) {
+  final today = DateTime(now.year, now.month, now.day);
+  ExamLine? best;
+  for (final s in examSections(exams)) {
+    for (final l in s.lines) {
+      final d = l.date;
+      if (d == null || d.isBefore(today)) continue;
+      if (best == null || d.isBefore(best.date!)) best = l;
+    }
+  }
+  return best;
+}

@@ -245,5 +245,6 @@
   "offlineEntry": "View last saved state",
   "offlineEntryDetail": "{school} · as of {when}",
   "offlineHint": "Without a connection the app shows the last loaded timetable and substitutions. Messages, lessons and events need a connection.",
-  "yourChild": "Your child"
+  "yourChild": "Your child",
+  "fromCourseFolder": "from the course folder"
 }

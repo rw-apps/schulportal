@@ -47,7 +47,13 @@ DetailedLesson _lesson() => DetailedLesson(
     _e('1', null, DateTime(2026, 9, 22), presence: 'nicht erfasst'),
   ],
   marks: [LessonMark(name: 'Vokabeltest', date: '24.09.2026', mark: '2')],
-  exams: [],
+  exams: [
+    LessonExam(
+      name: 'Kommende Leistungskontrollen',
+      value:
+          '02.11.2099 Lernkontrolle, 1. Std. (60 Min.)\n02.11.2099 Lernkontrolle',
+    ),
+  ],
   attendances: {'anwesend': '26', 'entschuldigt': '1', 'fehlend': '1'},
 );
 
@@ -182,6 +188,32 @@ void main() {
     );
     expect(items.single.teachers, ['Anna Alt', 'Ben Berg']);
     expect(items.single.teacherCodes, ['AAA', 'BBB']);
+  });
+
+  test('Leistungskontrollen: Zeilen mit Datum, ohne Doppelungen', () {
+    // Form wie im Portal (Bildschirmfoto 17.10.26), erfundene Daten.
+    final s = examSections([
+      LessonExam(
+        name: 'Kommende Leistungskontrollen',
+        value:
+            '02.11.2026 Lernkontrolle, 1. Std. (60 Min.)\n'
+            '08.03.2027 Lernkontrolle, 1. Std. (60 Min.)\n'
+            '02.11.2026 Lernkontrolle\n'
+            '08.03.2027 Lernkontrolle',
+      ),
+      LessonExam(name: 'Leer', value: 'Keine Daten!'),
+    ]);
+    expect(s, hasLength(1));
+    expect(s.single.title, 'Kommende Leistungskontrollen');
+    expect(s.single.lines.map((l) => l.text), [
+      'Lernkontrolle, 1. Std. (60 Min.)',
+      'Lernkontrolle, 1. Std. (60 Min.)',
+    ]);
+    expect(s.single.lines.first.date, DateTime(2026, 11, 2));
+    final next = nextExamLine([
+      LessonExam(name: 'x', value: '01.10.2026 alt\n02.11.2026 neu'),
+    ], DateTime(2026, 10, 17));
+    expect(next?.text, 'neu');
   });
 
   for (final (lang, scale) in [('de', 1.0), ('tr', 1.26 * 1.3)]) {

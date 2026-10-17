@@ -218,6 +218,9 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
         );
       }
       final e = c.exam;
+      // Ohne Termin im Schulkalender: die nächste Leistungskontrolle aus der
+      // Kursmappe (Abschnitt „Leistungskontrollen“, examSections).
+      final x = e == null ? nextExamLine(d.exams, now) : null;
       if (e != null) {
         lines.add(
           _Line(
@@ -229,6 +232,20 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
               formatDate(t, t.dateShort, e.day),
               t.inDays(dayDiff(now, e.day)),
               t.fromSchoolCalendar,
+            ].join(' · '),
+          ),
+        );
+      } else if (x != null) {
+        lines.add(
+          _Line(
+            icon: Icons.edit_note,
+            color: k.p.cancel.ink,
+            title: x.text,
+            titleColor: k.p.cancel.ink,
+            meta: [
+              formatDate(t, t.dateShort, x.date!),
+              t.inDays(dayDiff(now, x.date!)),
+              t.fromCourseFolder,
             ].join(' · '),
           ),
         );
@@ -446,7 +463,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
         ),
       );
     }
-    if (d.exams.isNotEmpty) {
+    if (examSections(d.exams).isNotEmpty) {
       out.add(
         _Block(
           icon: Icons.event_note_outlined,
@@ -454,8 +471,32 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
           ink: marks.ink,
           title: t.blockExams,
           children: [
-            for (final e in d.exams)
-              _ValueRow(name: e.name, note: '', value: e.value ?? ''),
+            for (final (i, s) in examSections(d.exams).indexed) ...[
+              if (s.title.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.only(
+                    top: i == 0 ? 0 : Sp.m,
+                    bottom: Sp.xs,
+                  ),
+                  child: Text(upperFor(t, s.title), style: k.dateCaps),
+                ),
+              for (final l in s.lines)
+                _ExamRow(
+                  // Ohne Wochentag, mit kurzem Jahr, wenn es nicht das laufende
+                  // ist („2.11.“, „8.3.27“) – passt in die schmale Spalte.
+                  date: l.date == null
+                      ? null
+                      : formatDate(t, t.dateDayMonth, l.date!) +
+                            (l.date!.year == now.year
+                                ? ''
+                                : (l.date!.year % 100).toString().padLeft(
+                                    2,
+                                    '0',
+                                  )),
+                  text: l.text,
+                  past: l.date != null && dayDiff(now, l.date!) < 0,
+                ),
+            ],
           ],
         ),
       );
@@ -1066,7 +1107,16 @@ class _ValueRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: Sp.m),
-          Text(value, style: k.planSubject(k.p.ink)),
+          // Begrenzt, damit ein langer Wert den Namen nicht auf eine Spalte
+          // zusammendrückt (Bildschirmfoto 17.10.26, Leistungskontrollen).
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: Sz.tileWidth),
+            child: Text(
+              value,
+              style: k.planSubject(k.p.ink),
+              textAlign: TextAlign.right,
+            ),
+          ),
         ],
       ),
     );
@@ -1095,6 +1145,39 @@ class _Empty extends StatelessWidget {
           Text(title, style: k.planSubject(k.p.ink)),
           const SizedBox(height: Sp.xs),
           Text(text, style: k.meta, textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+}
+
+/// Eine Leistungskontrolle: Datum vorn, Text daneben (umbrechend).
+class _ExamRow extends StatelessWidget {
+  const _ExamRow({required this.text, this.date, this.past = false});
+
+  final String? date;
+  final String text;
+  final bool past;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final ink = past ? k.p.faint : k.p.ink;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Sp.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (date != null) ...[
+            SizedBox(
+              width: Sz.slotColumn + Sp.xl,
+              child: Text(date!, style: k.planSubject(ink)),
+            ),
+            const SizedBox(width: Sp.s),
+          ],
+          Expanded(
+            child: Text(text, style: k.body.copyWith(color: ink)),
+          ),
         ],
       ),
     );

@@ -1,5 +1,10 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9340**
+
+- **Kursseite, Leistungskontrollen:** Jede Kontrolle steht als eigene Zeile mit Datum vorn, doppelte Einträge entfallen. Vorher brach die Überschrift Buchstabe für Buchstabe um.
+- Die nächste Leistungskontrolle aus der Kursmappe erscheint unter „Als Nächstes“, wenn der Schulkalender keine Arbeit für das Fach nennt.
+
 **4.1.0+9339** – Korrekturen nach der Code-Prüfung
 
 - **Kursseite:** „Schreiben“ wählt immer die richtige Lehrkraft (vorher verschoben, wenn ein eigener Lehrername gelöscht war). Schnelles Umschalten der Halbjahre zeigt nicht mehr das falsche; Aktualisieren behält den Stand, bis der neue da ist.

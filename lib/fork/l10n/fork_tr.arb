@@ -245,5 +245,6 @@
   "offlineEntry": "Son kaydedilen durumu göster",
   "offlineEntryDetail": "{school} · {when} itibarıyla",
   "offlineHint": "Bağlantı yokken uygulama son yüklenen ders programını ve ders değişikliklerini gösterir. Mesajlar, dersler ve etkinlikler bağlantı gerektirir.",
-  "yourChild": "Çocuğunuz"
+  "yourChild": "Çocuğunuz",
+  "fromCourseFolder": "ders dosyasına göre"
 }
