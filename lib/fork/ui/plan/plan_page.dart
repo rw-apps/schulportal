@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
 import '../calendar/event_list.dart';
+import '../kid_chips.dart';
 import '../kit.dart';
 import '../today/today_model.dart' show ChangeKind, WeekItem, minutesOf;
 import '../today/today_page.dart' show schoolWeek, dayDiff, weekdayShort;
@@ -210,8 +211,11 @@ class _PlanPageState extends State<PlanPage> {
       ),
       Padding(
         padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
-        child: _KidChips(
-          plans: widget.plans,
+        child: KidChips(
+          kids: [
+            for (final p in widget.plans)
+              (name: p.firstName, color: p.colorIndex),
+          ],
           selected: _kid,
           onSelect: (i) => setState(() => _kid = i),
         ),
@@ -387,67 +391,6 @@ class _ViewToggle extends StatelessWidget {
           if (withEvents) seg(PlanView.events, context.t.viewEvents),
         ],
       ),
-    );
-  }
-}
-
-class _KidChips extends StatelessWidget {
-  const _KidChips({
-    required this.plans,
-    required this.selected,
-    required this.onSelect,
-  });
-
-  final List<KidPlan> plans;
-  final int selected;
-  final ValueChanged<int> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    return Wrap(
-      spacing: Sp.s,
-      runSpacing: Sp.s,
-      children: [
-        for (final (i, p) in plans.indexed)
-          Builder(
-            builder: (context) {
-              final tone = k.kid(p.colorIndex);
-              final sel = i == selected;
-              return Semantics(
-                selected: sel,
-                button: true,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(Rad.pill),
-                  onTap: () => onSelect(i),
-                  child: Container(
-                    height: Sz.buttonSmall,
-                    padding: const EdgeInsets.symmetric(horizontal: Sp.l),
-                    decoration: BoxDecoration(
-                      color: sel ? tone.tint : k.p.card,
-                      borderRadius: BorderRadius.circular(Rad.pill),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: Sz.dot + Sp.xxs,
-                          height: Sz.dot + Sp.xxs,
-                          decoration: BoxDecoration(
-                            color: tone.accent,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: Sp.s),
-                        Text(p.firstName, style: k.chipLabel(sel, tone.onTint)),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-      ],
     );
   }
 }

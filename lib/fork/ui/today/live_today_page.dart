@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:lanis/fork/absence/absence_view.dart';
 
 import '../../l10n/l10n.dart';
+import '../live/family.dart';
 import '../live/live_data.dart';
 import '../mensa/mensa_page.dart';
 import '../plan/plan_from_lanis.dart' show subjectFullName;
@@ -38,8 +39,9 @@ Future<void> openAbsence(BuildContext context) =>
 ///
 /// Fehlt Vertretungsplan oder Kalender (nicht freigeschaltet, offline,
 /// Fehler), zeigt die Seite den Rest – der Stundenplan allein ist schon
-/// nützlich. Grenze: ein Kind je Konto; die Familienansicht über mehrere
-/// Konten (zweite Schule) folgt, wenn deren Zugang geklärt ist.
+/// nützlich. Mehrere Konten (zweite Schule): eine Karte je Konto
+/// ([FamilyData]). Grenze: Im Elternkonto erscheint wie bisher nur das Kind,
+/// dessen Stundenplan das Portal liefert.
 class LiveTodayPage extends StatefulWidget {
   const LiveTodayPage({
     super.key,
@@ -75,61 +77,95 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
     super.dispose();
   }
 
+  /// Karte eines Kontos; null, solange dessen Stundenplan fehlt.
+  ChildToday? _kidOf(FamilyMember m, DateTime now) {
+    final s = m.snapshot;
+    if (!s.offers('stundenplan.php')) return null;
+    final live = livePlanOf(
+      s,
+      fallbackName: context.t.yourChild,
+      colorIndex: m.colorIndex,
+    );
+    if (live == null) return null;
+    final className = liveClassName(s);
+    final courses = s.courseNames;
+    final events = s.calendar.content ?? const [];
+    return childTodayFromLanis(
+      plan: live.plan,
+      choice: effectiveChoice(live.auto, s.userChoice),
+      substitutions: s.substitutions.content?.days ?? const [],
+      now: now,
+      school: shortSchoolName(s.schoolName),
+      t: context.t,
+      className: className,
+      canReportAbsence: s.offers('abwesenheitsmeldung.php'),
+      subjectName: (code) => subjectFullName(code, courses),
+      mealHint: mealHintFor(events, now, t: context.t, className: className),
+      mensaUrl: s.mensaUrl,
+      openHomework: liveOpenHomework(s),
+      unreadMessages: liveUnreadMessages(s),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return LiveGate(
-      builder: (context, s) {
-        final (:plan, :auto) = livePlanOf(
-          s,
-          fallbackName: context.t.yourChild,
-        )!;
+      builder: (context, active) {
         final now = DateTime.now();
-        final className = liveClassName(s);
-        final courses = s.courseNames;
-        final events = s.calendar.content ?? const [];
-        final mensa = s.mensaUrl;
-        final kid = childTodayFromLanis(
-          plan: plan,
-          choice: effectiveChoice(auto, s.userChoice),
-          substitutions: s.substitutions.content?.days ?? const [],
-          now: now,
-          school: shortSchoolName(s.schoolName),
-          t: context.t,
-          className: className,
-          canReportAbsence: s.offers('abwesenheitsmeldung.php'),
-          subjectName: (code) => subjectFullName(code, courses),
-          mealHint: mealHintFor(
-            events,
-            now,
-            t: context.t,
-            className: className,
-          ),
-          mensaUrl: mensa,
-          openHomework: liveOpenHomework(s),
-          unreadMessages: liveUnreadMessages(s),
-        );
-        return TodayPage(
-          data: FamilyToday(
-            now: now,
-            kids: [kid],
-            week: weekItemsFromCalendar(
-              events,
-              now,
-              childIndex: 0,
-              className: className,
-            ),
-          ),
-          onReportAbsence: kid.canReportAbsence
-              ? (_) => openAbsence(context)
-              : null,
-          onOrderMeal: mensa == null
-              ? null
-              : (_) => openMensa(
-                  context,
-                  s,
-                  s.mensaKid,
-                  name: s.kids.length > 1 ? s.firstName : null,
+        // Familienansicht (family.dart): eine Karte je Konto mit Plan. Ohne
+        // FamilyScope (Tests) nur das aktive Konto.
+        final family = FamilyData.of(context);
+        final members = family.isEmpty
+            ? [FamilyMember(accountId: -1, snapshot: active, colorIndex: 0)]
+            : family;
+        final shown = <(FamilyMember, ChildToday)>[
+          for (final m in members)
+            if (_kidOf(m, now) case final kid?) (m, kid),
+        ];
+        final kids = [for (final x in shown) x.$2];
+        FamilyMember memberOf(ChildToday c) =>
+            shown[kids.indexOf(c).clamp(0, shown.length - 1)].$1;
+        // Nach Tag zusammenführen; innerhalb eines Tages bleibt die
+        // Reihenfolge je Konto (Uhrzeit) erhalten – Dart sortiert nicht
+        // stabil, daher die Position als zweiter Schlüssel.
+        final merged =
+            [
+              for (final (i, (m, _)) in shown.indexed)
+                ...weekItemsFromCalendar(
+                  m.snapshot.calendar.content ?? const [],
+                  now,
+                  childIndex: i,
+                  className: liveClassName(m.snapshot),
                 ),
+            ].indexed.toList()..sort((a, b) {
+              final d = a.$2.day.compareTo(b.$2.day);
+              return d != 0 ? d : a.$1.compareTo(b.$1);
+            });
+        final week = [for (final x in merged) x.$2];
+        return TodayPage(
+          data: FamilyToday(now: now, kids: kids, week: week),
+          onReportAbsence: kids.any((k) => k.canReportAbsence)
+              ? (c) {
+                  final m = memberOf(c);
+                  pushFullScreen<void>(
+                    context,
+                    (_) => m.scope(const AbsencePage()),
+                  );
+                }
+              : null,
+          onOrderMeal: kids.any((k) => k.mensaUrl != null)
+              ? (c) {
+                  final s = memberOf(c).snapshot;
+                  openMensa(
+                    context,
+                    s,
+                    s.mensaKid,
+                    name: kids.length > 1 || s.kids.length > 1
+                        ? c.firstName
+                        : null,
+                  );
+                }
+              : null,
           onOpenCalendar: widget.onOpenCalendar,
           onOpenHomework: widget.onOpenHomework == null
               ? null
@@ -137,7 +173,9 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
           onOpenMessages: widget.onOpenMessages == null
               ? null
               : (_) => widget.onOpenMessages!(),
-          onRefresh: s.refresh,
+          onRefresh: () async {
+            await Future.wait([for (final m in members) m.snapshot.refresh()]);
+          },
         );
       },
     );

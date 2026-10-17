@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lanis/fork/ui/nav.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lanis/applets/conversations/chat_pages.dart';
 import 'package:lanis/fork/start.dart';
@@ -89,11 +90,11 @@ class ConversationsChatAppBar extends StatelessWidget {
         if (statistics != null)
           IconButton(
             // Fork: als eigene Seite statt Route im entfernten Lanis-Gerüst.
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) =>
-                    ConversationStatsPage(id: conversationId, title: title),
-              ),
+            // pushInTab: im Rahmen des Kontos der Unterhaltung (Familien-
+            // ansicht, fork/ui/live/family.dart).
+            onPressed: () => pushInTab<void>(
+              context,
+              (_) => ConversationStatsPage(id: conversationId, title: title),
             ),
             icon: const Icon(Icons.people),
           ),

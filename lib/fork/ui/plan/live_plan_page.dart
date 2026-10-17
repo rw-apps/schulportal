@@ -1,57 +1,101 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
+import '../live/family.dart';
 import '../live/live_data.dart';
 import '../today/today_from_lanis.dart'
     show planWithSubstitutions, weekItemsFromCalendar;
 import '../today/today_page.dart' show schoolWeek;
 import 'plan_page.dart';
 
-/// Bereich „Kalender“ mit echten Daten: Stunden des Kindes (Gruppenwahl und
+/// Bereich „Kalender“ mit echten Daten: Stunden je Kind (Gruppenwahl und
 /// eigene Lehrernamen je Konto gespeichert, siehe LiveDataScope) und die
-/// Termine der Schule für die nächsten vier Monate.
+/// Termine der Schulen für die nächsten vier Monate.
 ///
-/// Grenze: Bei mehreren Kindern an EINER Schule zeigt das Portal unter
-/// stundenplan.php nur ein Kind; das zweite folgt mit der Familienansicht.
+/// Mehrere Konten ([FamilyData]): ein Plan je Konto, Auswahl oben wie im
+/// Entwurf (KidChips in PlanPage); Termine aller Schulen zusammen, je Kind
+/// gefärbt. Grenze: Bei mehreren Kindern an EINER Schule zeigt das Portal
+/// unter stundenplan.php nur ein Kind.
 class LiveCalendarPage extends StatelessWidget {
   const LiveCalendarPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return LiveGate(
-      builder: (context, s) {
-        final (:plan, :auto) = livePlanOf(
-          s,
-          fallbackName: context.t.yourChild,
-        )!;
+      builder: (context, active) {
         final now = DateTime.now();
-        final withSubs = planWithSubstitutions(
-          plan: plan,
-          days: s.substitutions.content?.days ?? const [],
-          week: schoolWeek(now),
-          t: context.t,
+        final family = FamilyData.of(context);
+        final members = family.isEmpty
+            ? [FamilyMember(accountId: -1, snapshot: active, colorIndex: 0)]
+            : family;
+        final shown = [
+          for (final m in members)
+            if (m.snapshot.offers('stundenplan.php'))
+              if (livePlanOf(
+                    m.snapshot,
+                    fallbackName: context.t.yourChild,
+                    colorIndex: m.colorIndex,
+                  )
+                  case final live?)
+                (m, live),
+        ];
+        final plans = [
+          for (final (m, live) in shown)
+            planWithSubstitutions(
+              plan: live.plan,
+              days: m.snapshot.substitutions.content?.days ?? const [],
+              week: schoolWeek(now),
+              t: context.t,
+            ),
+        ];
+        final anyEvents = shown.any(
+          (x) => x.$1.snapshot.offers('kalender.php'),
         );
-        final events = s.offers('kalender.php')
-            ? weekItemsFromCalendar(
-                s.calendar.content ?? const [],
-                now,
-                childIndex: 0,
-                className: liveClassName(s),
-                days: 120,
-                includeMeals: true,
-              )
-            : null;
+        final merged =
+            [
+              for (final (i, (m, _)) in shown.indexed)
+                if (m.snapshot.offers('kalender.php'))
+                  ...weekItemsFromCalendar(
+                    m.snapshot.calendar.content ?? const [],
+                    now,
+                    childIndex: i,
+                    className: liveClassName(m.snapshot),
+                    days: 120,
+                    includeMeals: true,
+                  ),
+            ].indexed.toList()..sort((a, b) {
+              final d = a.$2.day.compareTo(b.$2.day);
+              return d != 0 ? d : a.$1.compareTo(b.$1);
+            });
         return PlanPage(
-          key: ValueKey('plan-${s.session.account.localId}'),
-          plans: [withSubs],
+          key: ValueKey(
+            'plan-${[for (final (m, _) in shown) m.snapshot.session.account.localId].join('-')}',
+          ),
+          plans: plans,
           now: now,
-          initialChoices: {0: s.userChoice},
-          onChoicesChanged: (c) => s.setUserChoice(c[0] ?? const {}),
-          autoChoices: {0: auto},
-          initialNames: {0: s.ownNames},
-          onNamesChanged: (n) => s.setOwnNames(n[0] ?? const {}),
-          events: events,
-          onRefresh: s.refresh,
+          initialChoices: {
+            for (final (i, (m, _)) in shown.indexed) i: m.snapshot.userChoice,
+          },
+          onChoicesChanged: (c) {
+            for (final (i, (m, _)) in shown.indexed) {
+              if (c[i] case final v?) m.snapshot.setUserChoice(v);
+            }
+          },
+          autoChoices: {
+            for (final (i, (_, live)) in shown.indexed) i: live.auto,
+          },
+          initialNames: {
+            for (final (i, (m, _)) in shown.indexed) i: m.snapshot.ownNames,
+          },
+          onNamesChanged: (n) {
+            for (final (i, (m, _)) in shown.indexed) {
+              if (n[i] case final v?) m.snapshot.setOwnNames(v);
+            }
+          },
+          events: anyEvents ? [for (final x in merged) x.$2] : null,
+          onRefresh: () async {
+            await Future.wait([for (final m in members) m.snapshot.refresh()]);
+          },
         );
       },
     );

@@ -9,6 +9,7 @@ import 'package:lanis/utils/file_operations.dart' as fo;
 
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import '../nav.dart';
 import '../live/live_data.dart';
 import '../messages/compose_model.dart';
 import '../messages/compose_page.dart';
@@ -60,10 +61,9 @@ class LiveCoursesPage extends ConsumerWidget {
           className: liveClassName(s),
           loading: s.lessons.content == null && !s.lessons.failed,
           onRefresh: s.refresh,
-          onOpen: (i) => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => _detail(context, ref, s, i, live),
-            ),
+          onOpen: (i) => pushInTab<void>(
+            context,
+            (_) => _detail(context, ref, s, i, live),
           ),
         );
       },
@@ -90,10 +90,9 @@ class LiveCoursesPage extends ConsumerWidget {
       if (!codes.contains(kz) || last.containsKey(kz) || e.hidden) continue;
       last[kz] = (
         e.date,
-        () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => ConversationChatPage(id: e.id, title: e.title),
-          ),
+        () => pushInTab<void>(
+          context,
+          (_) => ConversationChatPage(id: e.id, title: e.title),
         ),
       );
     }
@@ -132,13 +131,12 @@ class LiveCoursesPage extends ConsumerWidget {
       ),
       onWrite: s.offers('nachrichten.php')
           // Eingabe-Seiten über der ganzen App (nav.dart, pushFullScreen).
-          ? (kz) => Navigator.of(context, rootNavigator: true).push(
-              MaterialPageRoute<bool>(
-                builder: (_) => ComposePage(
-                  candidates: candidatesFrom(s.lessons.content ?? const []),
-                  backend: portalBackend(ref),
-                  initialKuerzel: kz,
-                ),
+          ? (kz) => pushFullScreen<bool>(
+              context,
+              (_) => ComposePage(
+                candidates: candidatesFrom(s.lessons.content ?? const []),
+                backend: portalBackend(ref),
+                initialKuerzel: kz,
               ),
             )
           : null,
@@ -153,13 +151,12 @@ class LiveCoursesPage extends ConsumerWidget {
       onOpenUpload: student
           ? (u) {
               if (!isLessonsUploadUrl(u.url.toString())) return;
-              Navigator.of(context, rootNavigator: true).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => UploadScreen(
-                    url: u.url.toString(),
-                    name: u.name,
-                    status: u.status,
-                  ),
+              pushFullScreen<void>(
+                context,
+                (_) => UploadScreen(
+                  url: u.url.toString(),
+                  name: u.name,
+                  status: u.status,
                 ),
               );
             }

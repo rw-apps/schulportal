@@ -1,5 +1,11 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9345** – Familienansicht über mehrere Konten
+
+- **Alle Kinder zusammen:** Sind mehrere Konten eingerichtet (z. B. Elternkonto an der einen Schule, Schülerkonto an der anderen), meldet die App alle an. „Heute“ zeigt eine Karte je Kind, der Kalender die Pläne aller Kinder zur Auswahl und die Termine beider Schulen.
+- **Unterricht, Nachrichten und Mehr** bleiben je Kind getrennt: oben wählt man das Kind. Schreiben, Krankmeldung, Abgabe und Unterhaltungen laufen immer über das Konto dieses Kindes.
+- Die Zahlen an der Leiste (Hausaufgaben, ungelesene Nachrichten) zählen alle Kinder. Einstellungen und Abmelden gelten weiter für das aktive Konto.
+
 **4.1.0+9344** – Leiste auf allen Lese-Seiten, mehrere Konten beim Einrichten
 
 - **Leiste unten bleibt sichtbar** auf Kursseite, Unterhaltung, Statistik und Einstellungen. Jeder Bereich merkt sich, wo man war; erneutes Antippen des Bereichs führt an seinen Anfang. „Zurück“ geht erst im Bereich zurück, dann nach „Heute“.

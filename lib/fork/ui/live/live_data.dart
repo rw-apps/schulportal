@@ -48,6 +48,7 @@ Map<String, String> settingStrings(Object? m) => <String, String>{
   required TimeTable tt,
   required Lessons lessons,
   required String firstName,
+  int colorIndex = 0,
 }) {
   final names = <String, String>{};
   for (final l in lessons) {
@@ -66,7 +67,7 @@ Map<String, String> settingStrings(Object? m) => <String, String>{
   final plan = kidPlanFromTimetable(
     tt,
     firstName: firstName,
-    colorIndex: 0,
+    colorIndex: colorIndex,
     teacherNames: names,
     courseNames: [for (final l in lessons) l.name],
     courses: courses,
@@ -455,6 +456,7 @@ String liveClassName(LiveSnapshot s) =>
 ({KidPlan plan, GroupChoice auto})? livePlanOf(
   LiveSnapshot s, {
   String fallbackName = '',
+  int colorIndex = 0,
 }) {
   final tt = s.timetable.content;
   if (tt == null) return null;
@@ -462,6 +464,7 @@ String liveClassName(LiveSnapshot s) =>
     tt: tt,
     lessons: s.lessons.content ?? const [],
     firstName: s.firstName.isEmpty ? fallbackName : s.firstName,
+    colorIndex: colorIndex,
   );
   return (plan: r.plan.withTeacherNames(s.ownNames), auto: r.auto);
 }

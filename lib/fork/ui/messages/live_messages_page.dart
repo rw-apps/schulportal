@@ -7,6 +7,7 @@ import 'package:lanis/applets/conversations/chat_pages.dart'
 
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import '../nav.dart';
 import '../live/live_data.dart';
 import 'compose_model.dart';
 import 'compose_page.dart';
@@ -64,21 +65,18 @@ class LiveMessagesPage extends ConsumerWidget {
           loading: s.conversations.content == null,
           onRefresh: reload,
           onOpen: (m) async {
-            await Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) =>
-                    ConversationChatPage(id: m.id, title: m.subject),
-              ),
+            await pushInTab<void>(
+              context,
+              (_) => ConversationChatPage(id: m.id, title: m.subject),
             );
             await reload();
           },
           // Eingabe-Seite über der ganzen App (nav.dart, pushFullScreen).
-          onCompose: () => Navigator.of(context, rootNavigator: true).push(
-            MaterialPageRoute<bool>(
-              builder: (_) => ComposePage(
-                candidates: candidatesFrom(s.lessons.content ?? const []),
-                backend: portalBackend(ref),
-              ),
+          onCompose: () => pushFullScreen<bool>(
+            context,
+            (_) => ComposePage(
+              candidates: candidatesFrom(s.lessons.content ?? const []),
+              backend: portalBackend(ref),
             ),
           ),
         );

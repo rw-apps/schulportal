@@ -12,6 +12,7 @@ import '../courses/course_detail_page.dart';
 import '../courses/courses_page.dart';
 import '../courses/live_courses_page.dart';
 import '../kit.dart';
+import '../live/family.dart';
 import '../live/live_data.dart';
 import '../messages/live_messages_page.dart';
 import '../messages/messages_page.dart';
@@ -267,7 +268,9 @@ class _PreviewShellState extends State<PreviewShell> {
             if (url != null && mounted) _saveMensa(s, pick.$1, url);
           },
         ),
-      if (offersMoodle(s.session.travelMenu))
+      // Moodle öffnet über den Router, also immer im aktiven Konto.
+      if (offersMoodle(s.session.travelMenu) &&
+          (FamilyMember.around(context)?.active ?? true))
         MoreEntry(
           icon: Icons.school_outlined,
           label: t.learningPlatform,
@@ -290,7 +293,6 @@ class _PreviewShellState extends State<PreviewShell> {
   }
 
   Widget _liveBody(BuildContext context, ShellTab tab) {
-    final s = LiveData.of(context);
     return switch (tab) {
       ShellTab.today => LiveTodayPage(
         onOpenCalendar: () => _select(ShellTab.calendar),
@@ -298,9 +300,14 @@ class _PreviewShellState extends State<PreviewShell> {
         onOpenMessages: () => _select(ShellTab.messages),
       ),
       ShellTab.calendar => const LiveCalendarPage(),
-      ShellTab.courses => const LiveCoursesPage(),
-      ShellTab.messages => const LiveMessagesPage(),
-      ShellTab.more => MorePage(entries: _liveEntries(context, s)),
+      // Je Kind getrennt; bei mehreren Konten mit Auswahl oben (family.dart).
+      ShellTab.courses => const FamilySwitch(child: LiveCoursesPage()),
+      ShellTab.messages => const FamilySwitch(child: LiveMessagesPage()),
+      ShellTab.more => FamilySwitch(
+        child: Builder(
+          builder: (c) => MorePage(entries: _liveEntries(c, LiveData.of(c))),
+        ),
+      ),
     };
   }
 
@@ -378,9 +385,7 @@ class _PreviewShellState extends State<PreviewShell> {
           selected: _tab.index,
           items: _dest(
             c.t,
-            widget.liveData
-                ? navBadgesOf(LiveData.of(c), c.t)
-                : const NavBadges(),
+            widget.liveData ? familyBadges(c) : const NavBadges(),
           ),
           onSelect: (i) => _select(ShellTab.values[i]),
         ),
@@ -399,7 +404,9 @@ class _PreviewShellState extends State<PreviewShell> {
           onPopInvokedWithResult: (didPop, _) {
             if (!didPop) _back();
           },
-          child: widget.liveData ? LiveDataScope(child: scaffold) : scaffold,
+          child: widget.liveData
+              ? LiveDataScope(child: FamilyScope(child: scaffold))
+              : scaffold,
         ),
       ),
     );
@@ -572,6 +579,22 @@ class NavBadges {
 /// Marken aus den geladenen Daten. Grenze: Der Ausfall zählt nur für die
 /// Stunden des Kindes (applySubstitutions, wie „Heute“); ohne Stundenplan
 /// gibt es kein „!“.
+/// Marken über alle Konten der Familie (FamilyData); ohne Familie nur das
+/// aktive Konto.
+NavBadges familyBadges(BuildContext c) {
+  final members = FamilyData.of(c);
+  if (members.isEmpty) return navBadgesOf(LiveData.of(c), c.t);
+  var homework = 0, unread = 0;
+  var alert = false;
+  for (final m in members) {
+    final b = navBadgesOf(m.snapshot, c.t);
+    homework += b.homework;
+    unread += b.unread;
+    alert = alert || b.todayAlert;
+  }
+  return NavBadges(homework: homework, unread: unread, todayAlert: alert);
+}
+
 NavBadges navBadgesOf(LiveSnapshot? s, ForkL10n t) {
   if (s == null) return const NavBadges();
   var alert = false;

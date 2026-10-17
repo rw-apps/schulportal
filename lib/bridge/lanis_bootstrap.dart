@@ -55,5 +55,13 @@ Future<List<Override>> bootstrapLanisClient({
     },
   );
   // Fork: Eltern-Freischaltungen (fork/parent_support.dart).
-  return [...overrides, ...forkProviderOverrides()];
+  final all = [...overrides, ...forkProviderOverrides()];
+  bootstrapOverrides = all;
+  return all;
 }
+
+/// Zuletzt erzeugte Overrides; die Familienansicht (fork/ui/live/family.dart)
+/// baut damit je weiterem Konto einen eigenen ProviderContainer. Ursache:
+/// liblanis kennt nur EIN aktives Konto je Container (activeAccountProvider,
+/// sessionProvider); zwei Schulen gleichzeitig brauchen zwei Container.
+List<Override> bootstrapOverrides = const [];
