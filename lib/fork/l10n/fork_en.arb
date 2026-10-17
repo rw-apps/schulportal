@@ -325,5 +325,7 @@
   "addAnotherText": "Does another child go to a different school? Then set up that login now. Siblings at the same school are already in the parent account.",
   "addAnotherAccount": "Add another account",
   "done": "Done",
-  "anotherAccountTitle": "Another account"
+  "anotherAccountTitle": "Another account",
+  "todayFromSlot": "Today · from {slot}",
+  "noTimesHint": "The school shows no times in the timetable – so lesson numbers instead of times."
 }

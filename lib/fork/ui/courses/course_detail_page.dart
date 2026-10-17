@@ -211,7 +211,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
             color: k.kid(0).accent,
             title: '${relativeDay(t, n.day, now)} · ${n.slot}',
             meta: [
-              '${n.start}–${n.end}',
+              if (n.start.isNotEmpty) '${n.start}–${n.end}',
               if (n.room != null) n.room!,
             ].join(' · '),
           ),

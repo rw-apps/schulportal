@@ -31,8 +31,9 @@ List<DayLesson> dayLessonsFor(
 }
 
 DayLesson? _lessonOfBlock(ForkL10n t, KidPlan plan, DayBlock b) {
-  final start = plan.slots[b.firstSlot].start;
-  final end = plan.slots[b.lastSlot].end;
+  // Ohne Uhrzeiten der Schule (KidPlan.timed) leer statt Ersatzzeit.
+  final start = plan.timed ? plan.slots[b.firstSlot].start : '';
+  final end = plan.timed ? plan.slots[b.lastSlot].end : '';
   final slot = blockLabel(plan, b);
   return switch (b.content) {
     ResolvedNone() => null,
@@ -239,6 +240,7 @@ KidPlan planWithSubstitutions({
       for (final d in out) [for (final o in d) PlanCell(o)],
     ],
     teacherNames: plan.teacherNames,
+    timed: plan.timed,
   );
 }
 

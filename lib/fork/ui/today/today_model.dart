@@ -148,7 +148,9 @@ class FamilyToday {
 
 // ---- Berechnung „Jetzt“ ---------------------------------------------------
 
-enum DayPhase { noLessons, before, running, gap, over }
+/// [untimed]: Die Schule zeigt keine Uhrzeiten (KidPlan.timed) – dann gibt
+/// es kein „läuft“/„danach“, nur die erste Stunde des Tages.
+enum DayPhase { noLessons, before, running, gap, over, untimed }
 
 /// Zustand des Schultags eines Kindes zu einem Zeitpunkt.
 class DayStatus {
@@ -181,10 +183,19 @@ class Hm {
   final int minutes;
 }
 
+/// Leere Zeit (Stunde ohne Uhrzeit, KidPlan.timed) bzw. Unlesbares → -1.
+/// Ursache: Schule B zeigt keine Uhrzeiten (Export 17.10.26); vorher warf
+/// int.parse hier. Aufrufer prüfen [hasTime], wo -1 falsch rechnen würde.
 Hm minutesOf(String hm) {
   final parts = hm.split(':');
-  return Hm(int.parse(parts[0]) * 60 + int.parse(parts[1]));
+  if (parts.length != 2) return const Hm(-1);
+  final h = int.tryParse(parts[0]);
+  final m = int.tryParse(parts[1]);
+  return h == null || m == null ? const Hm(-1) : Hm(h * 60 + m);
 }
+
+/// Hat die Stunde eine Uhrzeit?
+bool hasTime(DayLesson l) => l.start.isNotEmpty && l.end.isNotEmpty;
 
 int _nowMin(DateTime now) => now.hour * 60 + now.minute;
 
@@ -196,6 +207,9 @@ DayStatus dayStatus(List<DayLesson> lessons, DateTime now) {
       if (!lessons[i].cancelled) i,
   ];
   if (held.isEmpty) return const DayStatus(phase: DayPhase.noLessons);
+  if (!lessons.every(hasTime)) {
+    return DayStatus(phase: DayPhase.untimed, next: held.first);
+  }
   final t = _nowMin(now);
   for (final i in held) {
     final s = minutesOf(lessons[i].start).minutes;
@@ -224,13 +238,14 @@ DayStatus dayStatus(List<DayLesson> lessons, DateTime now) {
 
 /// Ist der Abschnitt vorbei?
 bool lessonDone(DayLesson l, DateTime now) =>
-    minutesOf(l.end).minutes <= _nowMin(now);
+    hasTime(l) && minutesOf(l.end).minutes <= _nowMin(now);
 
 /// Dauer in Minuten (für die Breite in der Tagesleiste).
 int lessonMinutes(DayLesson l) =>
-    minutesOf(l.end).minutes - minutesOf(l.start).minutes;
+    hasTime(l) ? minutesOf(l.end).minutes - minutesOf(l.start).minutes : 45;
 
 /// Pause vor Abschnitt [i] in Minuten (0 beim ersten).
-int gapBefore(List<DayLesson> l, int i) => i == 0
+int gapBefore(List<DayLesson> l, int i) =>
+    i == 0 || !hasTime(l[i]) || !hasTime(l[i - 1])
     ? 0
     : minutesOf(l[i].start).minutes - minutesOf(l[i - 1].end).minutes;

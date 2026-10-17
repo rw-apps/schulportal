@@ -865,5 +865,14 @@
   "addAnotherText": "Geht ein weiteres Kind auf eine andere Schule? Dann richte gleich dessen Zugang ein. Geschwister an derselben Schule sieht das Elternkonto schon.",
   "addAnotherAccount": "Weiteres Konto hinzufügen",
   "done": "Fertig",
-  "anotherAccountTitle": "Weiteres Konto"
+  "anotherAccountTitle": "Weiteres Konto",
+  "todayFromSlot": "Heute · ab {slot}",
+  "@todayFromSlot": {
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      }
+    }
+  },
+  "noTimesHint": "Die Schule zeigt im Stundenplan keine Uhrzeiten – daher Stundennummern statt Zeiten."
 }

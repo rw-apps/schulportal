@@ -117,7 +117,11 @@ List<Notice> buildNotices({
   final out = <Notice>[];
 
   // Heute: nur Stunden, die noch kommen oder laufen.
-  final endOf = {for (final l in r.today) l.slot: minutesOf(l.end).minutes};
+  // Ohne Uhrzeit (Schule ohne Zeiten): bis Tagesende als „noch offen“.
+  final endOf = {
+    for (final l in r.today)
+      l.slot: hasTime(l) ? minutesOf(l.end).minutes : 24 * 60,
+  };
   final nowMin = now.hour * 60 + now.minute;
   // Meldet alle noch offenen Änderungen des Tages, sobald EINE neu ist –
   // die Meldung ersetzt die vorige auf demselben Platz (id), darf also

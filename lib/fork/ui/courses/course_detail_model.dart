@@ -136,10 +136,28 @@ List<LessonUpload> openUploads(List<CurrentEntry> history) => [
 bool lessonBelongsTo(PlanLesson l, String courseTitle, Set<String> teachers) {
   final title = courseTitle.toLowerCase();
   if (l.subject.toLowerCase() == title) return true;
+  // Kurs heißt wie das Kürzel („MU 09/1 (091MU03-GYM)“ → Titel „MU“) oder
+  // gleiche Wörter in anderer Form („Ev. Religion“ ↔ „Religion -
+  // evangelisch“, Export Schule B 17.10.26). Grenze: Jedes Wort des Fachs
+  // muss Anfang eines Wortes im Kurstitel sein – „Kath. Religion“ trifft
+  // „Religion - evangelisch“ daher nicht.
+  if (l.short.toLowerCase() == title) return true;
+  if (_wordsMatch(l.subject.toLowerCase(), title)) return true;
   final shared = KidPlan.kuerzelOf(l.teacher).any(teachers.contains);
   if (!shared) return false;
   final a = l.subject.toLowerCase();
   return a.length >= 3 && title.startsWith(a.substring(0, 3));
+}
+
+bool _wordsMatch(String subject, String title) {
+  List<String> words(String x) => [
+    for (final w in x.split(RegExp(r'[^a-zäöüß]+')))
+      if (w.length >= 2) w,
+  ];
+  final a = words(subject);
+  final b = words(title);
+  if (a.length < 2 || b.isEmpty) return false;
+  return a.every((w) => b.any((v) => v.startsWith(w)));
 }
 
 /// Fachkürzel des Kurses im Plan (für Fachfarbe und nächste Stunde), sonst
@@ -185,12 +203,17 @@ nextLessonOf(
       final l = content.lesson;
       if (!lessonBelongsTo(l, courseTitle, teachers)) continue;
       final start = plan.slots[b.firstSlot].start;
-      if (add == 0 && _minutes(start) <= nowMin) continue;
+      // Ohne Uhrzeiten (KidPlan.timed) ist unklar, ob die Stunde heute
+      // schon war: heute nur bis 12 Uhr zählen, Zeiten bleiben leer.
+      if (add == 0 &&
+          (plan.timed ? _minutes(start) <= nowMin : now.hour >= 12)) {
+        continue;
+      }
       return (
         day: day,
         slot: blockLabel(plan, b),
-        start: start,
-        end: plan.slots[b.lastSlot].end,
+        start: plan.timed ? start : '',
+        end: plan.timed ? plan.slots[b.lastSlot].end : '',
         room: l.room,
       );
     }

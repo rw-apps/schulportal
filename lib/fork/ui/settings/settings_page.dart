@@ -20,6 +20,7 @@ import '../../l10n/l10n.dart';
 import '../font_step.dart';
 import '../language.dart';
 import '../kit.dart';
+import '../live/family.dart';
 import '../today/today_from_lanis.dart' show shortSchoolName;
 import 'error_report_page.dart';
 
@@ -66,6 +67,19 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
         })
         .catchError((Object _) {});
   }
+
+  static String _nameOf(LanisSession session) =>
+      [session.userData['vorname'], session.userData['nachname']].nonNulls
+          .where((s) => s.isNotEmpty)
+          .join(' ')
+          .ifEmpty(session.account.username);
+
+  static String? _typeOf(ForkL10n t, AccountType? type) => switch (type) {
+    AccountType.parent => t.parentAccount,
+    AccountType.student => t.studentAccount,
+    AccountType.teacher => t.teacherAccount,
+    _ => null,
+  };
 
   void _tapVersion() {
     if (_debugUnlocked) return;
@@ -224,16 +238,8 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
     final font = ref.watch(fontStepProvider);
     final language = ref.watch(languageProvider);
 
-    final name = [
-      session?.userData['vorname'],
-      session?.userData['nachname'],
-    ].nonNulls.where((s) => s.isNotEmpty).join(' ');
-    final type = switch (account?.accountType ?? session?.accountTypeOrNull) {
-      AccountType.parent => t.parentAccount,
-      AccountType.student => t.studentAccount,
-      AccountType.teacher => t.teacherAccount,
-      _ => null,
-    };
+    final name = session == null ? '' : _nameOf(session);
+    final type = _typeOf(t, account?.accountType ?? session?.accountTypeOrNull);
     final allow = accountSettings?.getBool('notifications-allow') ?? true;
     final granted = _permission?.isGranted ?? true;
     final start = [
@@ -287,6 +293,19 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
                     shortSchoolName(account.schoolName),
                   ].join(' · '),
                 ),
+              // Weitere Konten der Familienansicht (family.dart) – angemeldet
+              // und in Heute/Kalender sichtbar; Einstellungen hier gelten
+              // aber nur für das obere, aktive Konto.
+              for (final m in FamilyData.of(context))
+                if (!m.active)
+                  _Item(
+                    icon: Icons.person_outline,
+                    label: _nameOf(m.snapshot.session),
+                    detail: [
+                      ?_typeOf(t, m.snapshot.session.accountTypeOrNull),
+                      shortSchoolName(m.snapshot.schoolName),
+                    ].join(' · '),
+                  ),
               if (session != null && session.userData.isNotEmpty)
                 _Item(
                   icon: Icons.badge_outlined,
@@ -734,4 +753,8 @@ class _UserDataPage extends StatelessWidget {
       ),
     );
   }
+}
+
+extension on String {
+  String ifEmpty(String other) => isEmpty ? other : this;
 }

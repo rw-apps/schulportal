@@ -1,5 +1,11 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9346** – Stundenplan ohne Uhrzeiten
+
+- **Schulen ohne Uhrzeiten im Stundenplan:** Der Plan blieb leer, und alle Kurse landeten unter „Weitere Angebote“. Jetzt baut die App den Plan aus den Stundennummern: Kalender, Heute und Unterricht zeigen die Stunden mit „1. Stunde“ usw. statt Uhrzeiten. „Heute“ nennt dann die erste Stunde des Tages; was gerade läuft, kann die App ohne Uhrzeiten nicht wissen.
+- Kurse werden ihrem Fach im Plan auch bei anderer Schreibweise zugeordnet („Ev. Religion“ ↔ „Religion - evangelisch“, Kurs mit Kürzel als Namen).
+- Einstellungen zeigen die weiteren angemeldeten Konten der Familie.
+
 **4.1.0+9345** – Familienansicht über mehrere Konten
 
 - **Alle Kinder zusammen:** Sind mehrere Konten eingerichtet (z. B. Elternkonto an der einen Schule, Schülerkonto an der anderen), meldet die App alle an. „Heute“ zeigt eine Karte je Kind, der Kalender die Pläne aller Kinder zur Auswahl und die Termine beider Schulen.

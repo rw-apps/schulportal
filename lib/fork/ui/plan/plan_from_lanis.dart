@@ -27,17 +27,23 @@ KidPlan kidPlanFromTimetable(
     for (final r in tt.hours ?? const <TimeTableRow>[])
       if (r.type == TimeTableRowType.lesson) r,
   ];
-  final slots = [
-    for (final r in rows)
-      PlanSlot(
-        label: _slotLabel(r.label),
-        start: _hm(r.startTime),
-        end: _hm(r.endTime),
-      ),
-  ];
   final source = (tt.planForOwn?.any((d) => d.isNotEmpty) ?? false)
       ? tt.planForOwn!
       : (tt.planForAll ?? const <TimetableDay>[]);
+  // Ohne Uhrzeiten im Plan liefert liblanis kein Zeitraster (hours leer,
+  // .VonBis fehlt; Export Schule B 17.10.26: 13 Zeilen „0.–12. Stunde“, alle
+  // Einträge 00:00). Dann Stunden aus den Nummern der Einträge bilden.
+  final untimed = rows.isEmpty ? untimedLessonNumbers(source) : const <int>[];
+  final slots = rows.isNotEmpty
+      ? [
+          for (final r in rows)
+            PlanSlot(
+              label: _slotLabel(r.label),
+              start: _hm(r.startTime),
+              end: _hm(r.endTime),
+            ),
+        ]
+      : [for (final n in untimed) placeholderSlot(n)];
 
   final days = <List<PlanCell>>[];
   for (var d = 0; d < 5; d++) {
@@ -52,7 +58,10 @@ KidPlan kidPlanFromTimetable(
         room: _blankToNull(subj.raum),
         teacher: _blankToNull(subj.lehrer),
       );
-      for (final s in _slotsOf(subj, rows)) {
+      for (final s
+          in rows.isEmpty
+              ? _untimedSlotsOf(subj, untimed)
+              : _slotsOf(subj, rows)) {
         if (!cells[s].any((o) => o.sameAs(lesson))) cells[s].add(lesson);
       }
     }
@@ -108,7 +117,44 @@ KidPlan kidPlanFromTimetable(
     slots: slots,
     days: finalDays,
     teacherNames: teacherNames,
+    timed: rows.isNotEmpty,
   );
+}
+
+/// Stundennummern von der ersten bis zur letzten belegten Stunde (Lücken
+/// bleiben als leere Stunde, damit das Raster stimmt).
+List<int> untimedLessonNumbers(List<TimetableDay> days) {
+  int? lo, hi;
+  for (final d in days) {
+    for (final s in d) {
+      final y = s.stunde;
+      if (y == null || (s.name ?? '').trim().isEmpty) continue;
+      final end = y + (s.duration < 1 ? 1 : s.duration) - 1;
+      lo = lo == null || y < lo ? y : lo;
+      hi = hi == null || end > hi ? end : hi;
+    }
+  }
+  if (lo == null || hi == null) return const [];
+  return [for (var n = lo; n <= hi; n++) n];
+}
+
+/// Stunde ohne Uhrzeit. Ersatzzeit: lückenlos 45 Minuten ab 7:00 – nur für
+/// Reihenfolge und Rasterhöhe, angezeigt wird sie nie (KidPlan.timed).
+/// Bezeichnung wie im Portal („3. Stunde“).
+PlanSlot placeholderSlot(int n) {
+  String hm(int m) =>
+      '${(m ~/ 60).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
+  final start = 7 * 60 + n * 45;
+  return PlanSlot(label: '$n. Stunde', start: hm(start), end: hm(start + 45));
+}
+
+Iterable<int> _untimedSlotsOf(TimetableSubject s, List<int> numbers) sync* {
+  final y = s.stunde;
+  if (y == null) return;
+  for (var k = 0; k < (s.duration < 1 ? 1 : s.duration); k++) {
+    final i = numbers.indexOf(y + k);
+    if (i >= 0) yield i;
+  }
 }
 
 /// Fachnamen für Kürzel ohne bekannten Namen über die Lehrkräfte: Der Kurs

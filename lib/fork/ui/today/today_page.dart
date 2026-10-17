@@ -551,7 +551,7 @@ class _NowPanel extends StatelessWidget {
     String? meta;
 
     String details(DayLesson x) => [
-      '${x.start}–${x.end}',
+      hasTime(x) ? '${x.start}–${x.end}' : x.slot,
       ?x.room,
       ?x.teacher,
       if (x.change == ChangeKind.substitution)
@@ -586,6 +586,11 @@ class _NowPanel extends StatelessWidget {
         label = upperFor(t, t.dayToday);
         title = t.noLessons;
         meta = null;
+      case DayPhase.untimed:
+        final x = l[status.next!];
+        label = upperFor(t, t.todayFromSlot(x.slot));
+        title = x.subject;
+        meta = details(x);
     }
 
     return Container(
@@ -636,7 +641,11 @@ class _DayBar extends StatelessWidget {
 
     final next = status.next == null ? null : l[status.next!];
     final t = context.t;
-    final center = next == null ? '' : t.barThen(next.start, next.subject);
+    // Ohne Uhrzeiten (DayPhase.untimed): Leiste ohne Zeitbeschriftung.
+    final timed = status.phase != DayPhase.untimed;
+    final center = next == null || !timed
+        ? ''
+        : t.barThen(next.start, next.subject);
     final lastEnd = l.lastWhere((x) => !x.cancelled, orElse: () => l.last).end;
 
     return Column(
@@ -673,7 +682,7 @@ class _DayBar extends StatelessWidget {
         const SizedBox(height: Sp.xs + Sp.xxs),
         Row(
           children: [
-            Text(l.first.start, style: k.barLabel),
+            Text(timed ? l.first.start : '', style: k.barLabel),
             Expanded(
               child: Text(
                 center,
@@ -682,7 +691,7 @@ class _DayBar extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            Text(t.barUntil(lastEnd), style: k.barLabel),
+            Text(timed ? t.barUntil(lastEnd) : '', style: k.barLabel),
           ],
         ),
       ],
@@ -752,7 +761,10 @@ class _DayList extends StatelessWidget {
     // Rechts nur die Uhrzeit (und Raum); Angaben zur Änderung stehen als
     // zweite Zeile unter dem Fach. Ursache: „11:40 · Tim Sommer, R 112“
     // rechts drückte das Fach bei Schrift ×1,15 in zwei Zeilen.
-    var right = [x.start, if (x.change == null) ?x.room].join(' · ');
+    var right = [
+      if (hasTime(x)) x.start,
+      if (x.change == null) ?x.room,
+    ].join(' · ');
     String? second;
     var strong = false;
 

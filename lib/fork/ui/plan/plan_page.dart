@@ -549,7 +549,13 @@ class DayPlan extends StatelessWidget {
         ),
       );
     }
-    final rows = <Widget>[];
+    final rows = <Widget>[
+      if (!plan.timed)
+        Padding(
+          padding: const EdgeInsets.only(left: Sp.xs, bottom: Sp.s),
+          child: Text(context.t.noTimesHint, style: k.meta),
+        ),
+    ];
     for (var i = 0; i < blocks.length; i++) {
       final b = blocks[i];
       if (i > 0) {
@@ -611,11 +617,13 @@ class _DayRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final tone = k.kid(plan.colorIndex);
-    final start = plan.slots[block.firstSlot].start;
-    final end = plan.slots[block.lastSlot].end;
+    // Ohne Uhrzeiten der Schule (KidPlan.timed): Stundennummer statt Zeit,
+    // kein „läuft“/„vorbei“ – die Ersatzzeiten stimmen nicht.
+    final start = plan.timed ? plan.slots[block.firstSlot].start : '';
+    final end = plan.timed ? plan.slots[block.lastSlot].end : '';
     final s = minutesOf(start).minutes;
     final e = minutesOf(end).minutes;
-    final t = now == null ? null : now!.hour * 60 + now!.minute;
+    final t = now == null || !plan.timed ? null : now!.hour * 60 + now!.minute;
     final running = t != null && t >= s && t < e;
     final done = t != null && t >= e;
     final label = blockLabel(plan, block);
@@ -652,7 +660,10 @@ class _DayRow extends StatelessWidget {
         meta = x.room;
         teacher = plan.teacherFull(x.teacher);
         if (onOpenLesson != null) {
-          onTap = () => onOpenLesson!(x, '$start–$end');
+          onTap = () => onOpenLesson!(
+            x,
+            plan.timed ? '$start–$end' : blockLabel(plan, block),
+          );
         }
         if (x.change == ChangeKind.cancelled) {
           bg = k.p.cancel.bg;
@@ -694,8 +705,14 @@ class _DayRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(start, style: done ? k.timeEnd : k.timeStart),
-                Text(end, style: k.timeEnd),
+                if (plan.timed) ...[
+                  Text(start, style: done ? k.timeEnd : k.timeStart),
+                  Text(end, style: k.timeEnd),
+                ] else
+                  Text(
+                    plan.slots[block.firstSlot].label.split(' ').first,
+                    style: k.timeStart,
+                  ),
               ],
             ),
           ),
@@ -951,13 +968,14 @@ class WeekGrid extends StatelessWidget {
                                 style: k.gridSlot,
                               ),
                             ),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                plan.slots[s].start,
-                                style: k.gridTime,
+                            if (plan.timed)
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  plan.slots[s].start,
+                                  style: k.gridTime,
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       ),
@@ -990,7 +1008,7 @@ class WeekGrid extends StatelessWidget {
     final tone = k.kid(plan.colorIndex);
     final isToday = d == today;
     final blocks = _blocks(d, used);
-    final nowY = isToday ? _nowY(used, tops, rowH) : null;
+    final nowY = isToday && plan.timed ? _nowY(used, tops, rowH) : null;
 
     return Stack(
       clipBehavior: Clip.none,
@@ -1105,7 +1123,7 @@ class _GridCell extends StatelessWidget {
     final s = minutesOf(plan.slots[block.firstSlot].start).minutes;
     final e = minutesOf(plan.slots[block.lastSlot].end).minutes;
     final t = now.hour * 60 + now.minute;
-    final running = isToday && t >= s && t < e;
+    final running = isToday && plan.timed && t >= s && t < e;
 
     Color bg;
     Color ink;

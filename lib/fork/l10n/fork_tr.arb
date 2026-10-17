@@ -325,5 +325,7 @@
   "addAnotherText": "Başka bir çocuk farklı bir okula mı gidiyor? O zaman onun girişini şimdi kurun. Aynı okuldaki kardeşler veli hesabında zaten görünür.",
   "addAnotherAccount": "Başka hesap ekle",
   "done": "Tamam",
-  "anotherAccountTitle": "Başka hesap"
+  "anotherAccountTitle": "Başka hesap",
+  "todayFromSlot": "Bugün · {slot} itibarıyla",
+  "noTimesHint": "Okul ders programında saat göstermiyor – bu yüzden saat yerine ders numaraları."
 }

@@ -72,9 +72,17 @@ class KidPlan {
     required this.slots,
     required this.days,
     this.teacherNames = const {},
+    this.timed = true,
   });
 
   final String firstName;
+
+  /// Zeigt die Schule Uhrzeiten? Ursache (Export Schule B 17.10.26): Manche
+  /// Schulen blenden sie im Stundenplan aus – dann tragen die [slots]
+  /// Ersatzzeiten (lückenlos, nur für Reihenfolge und Rasterhöhe) und die
+  /// Oberfläche zeigt Stundennummern statt Uhrzeiten, ohne „Jetzt“, Pausen
+  /// oder Zeitlinie. Grenze: Was „gerade läuft“, weiß die App dann nicht.
+  final bool timed;
   final int colorIndex;
   final List<PlanSlot> slots;
 
@@ -107,6 +115,7 @@ class KidPlan {
       slots: slots,
       days: days,
       teacherNames: merged,
+      timed: timed,
     );
   }
 

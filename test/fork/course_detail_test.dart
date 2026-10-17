@@ -128,6 +128,13 @@ void main() {
       isTrue,
     );
     expect(isExtraOffer('Englisch 07 b', inPlan: true), isFalse);
+    // Wortformen und Kürzel als Kurstitel (Form wie Schule B, erfunden).
+    const rev = PlanLesson(subject: 'Ev. Religion', short: 'REV', room: 'R1');
+    expect(lessonBelongsTo(rev, 'Religion - evangelisch', const {}), isTrue);
+    const rka = PlanLesson(subject: 'Kath. Religion', short: 'RKA', room: 'R1');
+    expect(lessonBelongsTo(rka, 'Religion - evangelisch', const {}), isFalse);
+    const mu = PlanLesson(subject: 'Musik', short: 'MU', room: 'R1');
+    expect(lessonBelongsTo(mu, 'MU', const {}), isTrue);
 
     final now = DateTime(2026, 10, 19);
     final items = [
