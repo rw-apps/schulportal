@@ -379,9 +379,9 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
               for (final step in KitFontStep.values)
                 _Choice(
                   label: switch (step) {
+                    KitFontStep.small => t.fontSmall,
                     KitFontStep.normal => t.fontNormal,
                     KitFontStep.large => t.fontLarge,
-                    KitFontStep.xlarge => t.fontXLarge,
                   },
                   selected: step == font,
                   onTap: () => ref.read(fontStepProvider.notifier).set(step),

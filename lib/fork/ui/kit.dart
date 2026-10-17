@@ -28,18 +28,26 @@ const kitFont = 'Manrope';
 /// Rasterzeilen) wachsen nicht mit; dort verkleinern FittedBox bzw. das
 /// Raster scrollt ab der Mindesthöhe.
 enum KitFontStep {
-  normal(1.12),
-  large(1.25),
-  xlarge(1.4);
+  small(0.98),
+  normal(1.11),
+  large(1.26);
 
-  // Beschriftung in den Sprachdateien (fontNormal/fontLarge/fontXLarge).
+  // Ursache der Werte (Rückmeldung 17.10.26: „Normal ist schon groß“): Jede
+  // Stufe liegt etwa 2 Punkte unter der bisherigen nächsthöheren – bei 14 pt
+  // Grundschrift 13,7 / 15,5 / 17,6 statt 15,7 / 17,5 / 19,6. Normal bleibt
+  // damit fast wie bisher (1,12 → 1,11), Klein ist neu, „Sehr groß“ (1,4)
+  // entfällt. Beschriftung in den Sprachdateien (fontSmall/-Normal/-Large).
   const KitFontStep(this.factor);
   final double factor;
 
-  static KitFontStep parse(String? name) => KitFontStep.values.firstWhere(
-    (s) => s.name == name,
-    orElse: () => KitFontStep.normal,
-  );
+  /// Gespeicherter Name → Stufe. Grenze: Das frühere „xlarge“ wird zu
+  /// [large], der größten verbliebenen Stufe.
+  static KitFontStep parse(String? name) => name == 'xlarge'
+      ? KitFontStep.large
+      : KitFontStep.values.firstWhere(
+          (s) => s.name == name,
+          orElse: () => KitFontStep.normal,
+        );
 }
 
 /// Abstände (logische Pixel).
