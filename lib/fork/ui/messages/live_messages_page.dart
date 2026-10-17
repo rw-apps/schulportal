@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
 
-import 'package:lanis/applets/conversations/routes.dart'
+import 'package:lanis/applets/conversations/chat_pages.dart'
     show ConversationChatPage;
 
 import '../kit.dart';

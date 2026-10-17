@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart';
 
-import 'package:lanis/applets/conversations/routes.dart'
+import 'package:lanis/applets/conversations/chat_pages.dart'
     show ConversationChatPage;
+import 'package:lanis/applets/lessons/student/upload_page.dart';
 import 'package:lanis/utils/file_operations.dart' as fo;
 
 import '../../l10n/l10n.dart';
@@ -146,13 +146,22 @@ class LiveCoursesPage extends ConsumerWidget {
         fo.DownloadableFile(name: f.name, size: f.size, url: f.url),
         () {},
       ),
-      // Abgaben nur aus dem Schülerkonto (Upload-Route gibt es nur für
-      // Schüler, applets/lessons/routes.dart).
+      // Abgaben nur aus dem Schülerkonto und nur Adressen aus „Mein
+      // Unterricht“ (isLessonsUploadUrl, Sicherheitsprüfung 17.10.26) – die
+      // Seite lädt sie mit der Portal-Sitzung.
       onOpenUpload: student
-          ? (u) => context.push(
-              '/student/lessons/upload?url=${Uri.encodeComponent(u.url.toString())}'
-              '&name=${Uri.encodeComponent(u.name)}&status=${u.status}',
-            )
+          ? (u) {
+              if (!isLessonsUploadUrl(u.url.toString())) return;
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => UploadScreen(
+                    url: u.url.toString(),
+                    name: u.name,
+                    status: u.status,
+                  ),
+                ),
+              );
+            }
           : null,
     );
   }

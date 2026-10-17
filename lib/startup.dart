@@ -9,7 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:lanis/generated/l10n.dart';
 import 'package:lanis/features/auth/auth_controller.dart';
 import 'package:lanis/utils/privacy_policy.dart';
-import 'package:lanis/widgets/offline_available_applets_section.dart';
+import 'package:lanis/fork/ui/offline/offline_page.dart';
 import 'package:lanis/widgets/reset_account_page.dart';
 import 'package:lanis/utils/safe_launch.dart';
 
@@ -242,8 +242,12 @@ class StartupAuthErrorContent extends StatelessWidget {
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.sizeOf(context).height * 0.45,
               ),
-              child: const SingleChildScrollView(
-                child: OfflineAvailableAppletsSection(),
+              // Fork (17.10.26): statt der alten Lanis-Ansichten der zuletzt
+              // gespeicherte Stand in der neuen Oberfläche.
+              child: SingleChildScrollView(
+                child: (isOffline || isDown)
+                    ? const OfflineEntry()
+                    : const SizedBox.shrink(),
               ),
             ),
           ],

@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/features/auth/auth_controller.dart';
 import 'package:lanis/generated/l10n.dart';
-import 'package:lanis/home_page.dart';
+import 'package:lanis/fork/start.dart';
 import 'package:lanis/utils/privacy_policy.dart';
 import 'package:lanis/utils/safe_launch.dart';
 

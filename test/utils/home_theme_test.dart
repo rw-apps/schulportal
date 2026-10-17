@@ -1,9 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liblanis/liblanis.dart';
-import 'package:lanis/applets/definitions.dart';
-import 'package:lanis/home_page.dart';
-import 'package:lanis/shell_navigation.dart';
 import 'package:lanis/utils/privacy_policy.dart';
 import 'package:lanis/utils/theme_settings.dart';
 
@@ -11,34 +8,6 @@ import '../helpers/test_app.dart';
 
 void main() {
   tearDown(resetAuthTestSeams);
-
-  test('homeAppletPathsFor returns nested home paths', () {
-    final paths = homeAppletPathsFor(AccountType.student);
-    expect(paths, isNotEmpty);
-    expect(paths.every((p) => p.endsWith('/home')), isTrue);
-  });
-
-  test('firstSupportedHomePathFor falls back when support set empty', () {
-    final path = firstSupportedHomePathFor(
-      supported: const {},
-      accountType: AccountType.student,
-    );
-    expect(
-      path,
-      appletHomePath(AppDefinitions.homeApplets.first, AccountType.student),
-    );
-  });
-
-  test('firstSupportedHomePathFor prefers supported applet', () {
-    final calendar = AppDefinitions.homeApplets.firstWhere(
-      (a) => a.appletPhpUrl == 'kalender.php',
-    );
-    final path = firstSupportedHomePathFor(
-      supported: {'kalender.php'},
-      accountType: AccountType.student,
-    );
-    expect(path, appletHomePath(calendar, AccountType.student));
-  });
 
   test('themeSettingsProvider defaults', () {
     final container = ProviderContainer(overrides: LanisClient.configure());

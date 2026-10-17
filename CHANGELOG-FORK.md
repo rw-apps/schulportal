@@ -1,5 +1,11 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9338** – Aufräumen, Teil 2
+
+- **Alte Lanis-Ansichten entfernt** (rund 16 000 Zeilen): Gerüst mit Schublade, alte Bereiche (Vertretungsplan, Kalender, Stundenplan, Unterricht, Nachrichtenliste, Dateispeicher, Lerngruppen), alte Einstellungen und ungenutzte Bausteine. Unterhaltung, Abgabe, Moodle, Kontowechsel und Anmeldung bleiben.
+- **Ohne Verbindung beim Start:** „Letzten Stand ansehen“ öffnet Heute und Kalender aus dem gespeicherten Stundenplan und Vertretungsplan, mit dem Hinweis „Offline · Stand …“. Nachrichten, Unterricht und Termine brauchen eine Verbindung.
+- Sechs nicht mehr benötigte Bibliotheken entfernt.
+
 **4.1.0+9337** – Aufräumen, Teil 1
 
 - Fehlerbericht-Anbindung (Sentry) ausgebaut – sie war ohne Server ohnehin stumm; die APK wird etwas kleiner.

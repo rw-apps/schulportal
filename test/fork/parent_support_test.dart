@@ -1,9 +1,4 @@
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
-import 'package:lanis/applets/definitions.dart';
-import 'package:lanis/applets/timetable/definition.dart';
-import 'package:lanis/applets/timetable/routes.dart';
 import 'package:lanis/fork/absence/absence_parser.dart';
 import 'package:lanis/fork/parent_support.dart';
 import 'package:lanis/utils/deep_link.dart';
@@ -35,25 +30,11 @@ void main() {
       ]),
       isFalse,
     );
-    expect(
-      AppDefinitions.getByPhpIdentifier('abwesenheitsmeldung.php').routePath,
-      '/parent/absence/home',
-    );
   });
 
   test('Schüler unverändert, Lehrkraft bekommt keinen Stundenplan dazu', () {
     expect(forkSupportsApplet(Applets.timetable, AccountType.student, schoolA), isTrue);
     expect(forkSupportsApplet(Applets.timetable, AccountType.teacher, schoolA), isFalse);
-  });
-
-  test('Stundenplan hat einen Routen-Zweig je Kontoart', () {
-    final ctx = AppletRouteContext(
-      rootNavigatorKey: GlobalKey<NavigatorState>(),
-      homeBody: (_) => throw UnimplementedError(),
-    );
-    final paths = buildTimetableRoutes(ctx).whereType<GoRoute>().map((r) => r.path);
-    expect(paths, containsAll(['/student/timetable', '/parent/timetable']));
-    expect(timeTableDefinition.supportedAccountTypes, contains(AccountType.parent));
   });
 
   test('veralteter Schülerpfad wird für Eltern umgeschrieben', () {

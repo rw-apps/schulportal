@@ -651,5 +651,26 @@
       }
     }
   },
-  "dateDayMonth": "d.M."
+  "dateDayMonth": "d.M.",
+  "offlineBanner": "Offline · Stand {when}",
+  "@offlineBanner": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineEntry": "Letzten Stand ansehen",
+  "offlineEntryDetail": "{school} · Stand {when}",
+  "@offlineEntryDetail": {
+    "placeholders": {
+      "school": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineHint": "Ohne Verbindung zeigt die App den zuletzt geladenen Stundenplan und Vertretungsplan. Nachrichten, Unterricht und Termine brauchen eine Verbindung."
 }

@@ -10,7 +10,7 @@ import 'package:webview_flutter/webview_flutter.dart' show WebViewCookieManager;
 
 import 'package:lanis/features/auth/auth_controller.dart';
 import 'package:lanis/fork_identity.dart';
-import 'package:lanis/home_page.dart' show firstSupportedHomePath;
+import 'package:lanis/fork/start.dart' show firstSupportedHomePath;
 import 'package:lanis/utils/safe_launch.dart';
 import 'package:lanis/utils/theme_settings.dart';
 import 'package:lanis/view/settings/subsettings/cache.dart' show CacheSettings;

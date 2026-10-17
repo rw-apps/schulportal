@@ -240,5 +240,9 @@
   "absentCount": "{count, plural, other{{count} devamsızlık}}",
   "subjectsCount": "{count, plural, other{{count} ders}}",
   "lessonOfDay": "{slot} ders",
-  "dateDayMonth": "d MMM"
+  "dateDayMonth": "d MMM",
+  "offlineBanner": "Çevrimdışı · {when} itibarıyla",
+  "offlineEntry": "Son kaydedilen durumu göster",
+  "offlineEntryDetail": "{school} · {when} itibarıyla",
+  "offlineHint": "Bağlantı yokken uygulama son yüklenen ders programını ve ders değişikliklerini gösterir. Mesajlar, dersler ve etkinlikler bağlantı gerektirir."
 }

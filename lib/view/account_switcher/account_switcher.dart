@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/generated/l10n.dart';
-import 'package:lanis/home_page.dart';
+import 'package:lanis/fork/start.dart';
 import 'package:lanis/features/auth/auth_controller.dart';
 import 'account_tile.dart';
 

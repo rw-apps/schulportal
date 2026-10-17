@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lanis/applets/conversations/conversations_nav.dart';
+import 'package:lanis/applets/conversations/chat_pages.dart';
+import 'package:lanis/fork/start.dart';
 import 'package:lanis/applets/conversations/view/shared.dart';
 import 'package:lanis/generated/l10n.dart';
-import 'package:lanis/utils/responsive.dart';
 import 'package:liblanis/liblanis.dart';
 
 /// App bar for an open conversation, including refresh/status actions.
@@ -24,28 +24,25 @@ class ConversationsChatAppBar extends StatelessWidget {
   });
 
   void _leaveChat(BuildContext context) {
-    // Tablet opens chat via go_router.go, so there is often nothing to pop.
-    // Prefer the local navigator; otherwise return to the list home.
+    // Fork: Die Unterhaltung liegt immer als eigene Seite über der neuen
+    // Oberfläche; ohne Seite darunter zurück zur Startseite.
     final nav = Navigator.of(context);
     if (nav.canPop()) {
       nav.pop();
     } else {
-      context.go(conversationsHomePath);
+      context.go(forkHomePath);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Read live — route builders may not rebuild across phone/tablet resize.
-    final showBack = !Responsive.isSplitView(context);
+    // Fork: kein Tablet-Nebeneinander mehr – Zurück immer zeigen.
     return AppBar(
       title: Text(title),
       scrolledUnderElevation: 0.0,
       backgroundColor: Colors.transparent,
       automaticallyImplyLeading: false,
-      leading: showBack
-          ? BackButton(onPressed: () => _leaveChat(context))
-          : null,
+      leading: BackButton(onPressed: () => _leaveChat(context)),
       actions: [
         if (refreshing)
           Padding(
@@ -91,12 +88,13 @@ class ConversationsChatAppBar extends StatelessWidget {
           ),
         if (statistics != null)
           IconButton(
-            onPressed: () {
-              final encoded = Uri.encodeComponent(title);
-              context.push(
-                '/common/conversations/chat/$conversationId/stats?title=$encoded',
-              );
-            },
+            // Fork: als eigene Seite statt Route im entfernten Lanis-Gerüst.
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) =>
+                    ConversationStatsPage(id: conversationId, title: title),
+              ),
+            ),
             icon: const Icon(Icons.people),
           ),
       ],

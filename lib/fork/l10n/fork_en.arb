@@ -240,5 +240,9 @@
   "absentCount": "{count, plural, =1{1 missed lesson} other{{count} missed lessons}}",
   "subjectsCount": "{count, plural, =1{1 subject} other{{count} subjects}}",
   "lessonOfDay": "period {slot}",
-  "dateDayMonth": "M/d"
+  "dateDayMonth": "M/d",
+  "offlineBanner": "Offline · as of {when}",
+  "offlineEntry": "View last saved state",
+  "offlineEntryDetail": "{school} · as of {when}",
+  "offlineHint": "Without a connection the app shows the last loaded timetable and substitutions. Messages, lessons and events need a connection."
 }

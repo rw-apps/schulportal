@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lanis/applets/lessons/routes.dart' show isLessonsUploadUrl;
+import 'package:lanis/applets/lessons/student/upload_page.dart'
+    show isLessonsUploadUrl;
 import 'package:lanis/utils/file_operations.dart'
     show safeFileName, DownloadableFile;
 

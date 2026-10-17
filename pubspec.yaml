@@ -20,7 +20,7 @@ publish_to: 'none'
 # Upstream-Ständen denselben Code. 9301 = Upstream-Build 93, Fork-Ausgabe 01.
 # Grenze: Die Test-APK vom 14.10.26 (arm64, --split-per-abi) hatte 2093;
 # 9301 > 2093, das Update darüber klappt also.
-version: 4.1.0+9337
+version: 4.1.0+9338
 
 environment:
   sdk: ^3.10.0
@@ -51,10 +51,8 @@ dependencies:
   linkify: ^5.0.0
   flutter_svg: ^2.0.10+1
   dynamic_color: ^1.6.9
-  flutter_markdown_plus: ^1.0.12
   file_picker: ^12.0.0
   mime: ^2.0.0
-  table_calendar: ^3.0.9
   flutter_localizations:
     sdk: flutter
   app_settings: ^7.0.0
@@ -63,11 +61,7 @@ dependencies:
   webview_flutter: ^4.14.1
   flutter_secure_storage: ^10.0.0
   native_dio_adapter: ^1.7.0
-  flutter_widget_from_html_core: ^0.17.0
-  flutter_colorpicker: ^1.1.0
-  flutter_masonry_view: ^0.0.2
   image_picker: ^1.1.2
-  html_unescape: ^2.0.0
   custom_refresh_indicator: ^4.0.1
   intl: ^0.20.2
   colored_logger: ^2.1.1
@@ -254,7 +248,6 @@ flutter:
   assets:
     - assets/
     - assets/undraw/
-    - assets/undraw/chat/
     - fonts/manrope/OFL.txt
 
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -938,3 +938,14 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
     );
   }
 }
+
+/// Abgabe-URL aus „Mein Unterricht“: relativ („meinunterricht.php?…“) oder
+/// https auf start.schulportal.hessen.de mit Pfad meinunterricht.php.
+bool isLessonsUploadUrl(String raw) {
+  final u = Uri.tryParse(raw.trim());
+  if (u == null) return false;
+  final path = u.path.replaceFirst(RegExp(r'^/+'), '');
+  if (path != 'meinunterricht.php') return false;
+  if (!u.hasScheme && u.host.isEmpty) return true;
+  return u.scheme == 'https' && u.host == 'start.schulportal.hessen.de';
+}
