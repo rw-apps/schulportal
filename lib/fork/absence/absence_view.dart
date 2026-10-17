@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
 
-import 'package:lanis/utils/responsive.dart';
 import 'package:lanis/widgets/combined_applet_builder.dart';
 
 import '../l10n/l10n.dart';
@@ -22,12 +21,12 @@ class AbsencePage extends ConsumerWidget {
     if (session == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final openDrawer = Responsive.isTablet(context)
-        ? null
-        : () => Scaffold.of(context).openDrawer();
-    Widget? leading() => openDrawer != null
-        ? IconButton(icon: const Icon(Icons.menu), onPressed: openDrawer)
-        : null;
+    // Kein Menü-Knopf mehr: Die Seite öffnet über der neuen Oberfläche
+    // (pushFullScreen), dort gibt es keine Schublade. Ursache (Fehlerbericht
+    // 9346, symbolisiert: Scaffold.of in AbsencePage.build, 128×): Der alte
+    // Knopf rief openDrawer ohne Scaffold mit Schublade auf. Jetzt der
+    // übliche Zurück-Pfeil der AppBar.
+    Widget? leading() => null;
 
     return CombinedAppletBuilder<AbsenceForm>(
       parser: ref.watch(absenceParserProvider),

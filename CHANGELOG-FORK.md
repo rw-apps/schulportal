@@ -1,5 +1,9 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9351** – Krankmeldung: Zurück statt totem Menü-Knopf
+
+- Oben links in der Krankmeldung stand noch der Menü-Knopf der alten Ansicht; Antippen tat nichts und erzeugte einen Fehler. Jetzt steht dort der Zurück-Pfeil.
+
 **4.1.0+9350** – Absturz in „Unterricht“ behoben
 
 - Nach einem Kindwechsel konnte „Unterricht“ mit „Ein Fehler ist aufgetreten“ abstürzen, wenn eine Kursseite offen war. Geöffnete Seiten werden jetzt einmal aufgebaut und hängen nicht mehr an der Seite, aus der sie kamen.
