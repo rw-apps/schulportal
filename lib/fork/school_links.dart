@@ -1,20 +1,26 @@
-/// Verweise, die nur an einer Schule gelten (Schulnummer → Adresse).
+/// Normalisiert eine eingetragene Adresse der Mensa-Bestellseite:
+/// „bestellung.example.de“ → „https://bestellung.example.de“; leer = null.
 ///
-/// Mensa: Die Schule A (0000) lässt das Mittagessen über den
-/// Caterer Caterer bestellen (Angabe der Eltern 17.10.26 mit
-/// Bildschirmfoto der Anmeldeseite). Grenze: Die App öffnet nur die Seite im
-/// Browser; Anmeldung und Bestellung bleiben dort, die App speichert kein
-/// Passwort. Andere Schulen haben (noch) keinen Eintrag – dann kein Knopf.
-const mensaLinks = <String, String>{
-  '0000': 'https://example.org/login/',
-};
-
-String? mensaUrlFor(String schoolId) => mensaLinks[schoolId];
+/// Die Adresse trägt jede Familie selbst ein (Mehr → Essen bestellen),
+/// gespeichert je Konto auf dem Gerät. Ursache: Eine feste Zuordnung
+/// Schulnummer → Caterer im Code verriet im öffentlichen Repository die
+/// Schule (Entscheidung 17.10.26). Grenze: Die App öffnet nur die Seite im
+/// Browser; Anmeldung und Bestellung bleiben dort, kein Passwort in der App.
+String? normalizeMensaUrl(String? raw) {
+  final t = raw?.trim() ?? '';
+  if (t.isEmpty) return null;
+  final withScheme = RegExp(r'^https?://', caseSensitive: false).hasMatch(t)
+      ? t
+      : 'https://$t';
+  final uri = Uri.tryParse(withScheme);
+  if (uri == null || uri.host.isEmpty || !uri.host.contains('.')) return null;
+  return withScheme;
+}
 
 /// Bietet die Schule eine Lernplattform (Moodle) an?
 ///
 /// Ursache: Lanis zeigte „Moodle öffnen“ bei jedem Konto (home_page.dart);
-/// die Schule A führt Moodle aber nicht in ihrer App-Liste (Export 16.10.26:
+/// Schule A führt Moodle aber nicht in ihrer App-Liste (Export 16.10.26:
 /// Abwesenheiten, Dateiverteilung, Kalender, mein Unterricht, Nachrichten,
 /// Stundenplan, Vertretungsplan, Videokonferenz …), und das Öffnen schlug
 /// fehl (Rückmeldung 17.10.26). Erkannt am Eintrag der App-Liste

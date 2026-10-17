@@ -1,5 +1,11 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9330**
+
+- **Datenschutz:** Schulnamen, Schulnummer, Räume und der Caterer stehen nicht mehr im öffentlichen Code. Die Fachnamen-Zuordnung „TXT → Projekt Text“ stand fest im Code an der Schulnummer; jetzt erkennt die App den Fachnamen allgemein über die Lehrkräfte des passenden Kurses in „Mein Unterricht“.
+- **Essen bestellen:** Die Adresse der Bestellseite trägst du einmal selbst ein (Mehr → Essen bestellen); sie bleibt nur auf dem Gerät. Danach erscheint der Knopf wieder auf der Kinderkarte.
+- **Hintergrund-Abfrage abgesichert:** Schlägt bei einem Konto die Anmeldung oder eine Abfrage fehl, wird dieses Konto übersprungen und sauber abgemeldet; die übrigen Konten werden weiter geprüft.
+
 **4.1.0+9329**
 
 Korrekturen nach der Nachprüfung von 9328:
@@ -52,9 +58,9 @@ Korrekturen nach einer unabhängigen Prüfung des Codes:
 
 - Neue Leiste nach dem Konzept vom 17.10.: **Heute · Kalender · Unterricht · Nachrichten · Mehr**. Jedes Ding hat einen Ort, „Heute“ zeigt nur Auszüge.
 - **Kalender** vereint Stundenplan und Termine: Tag, Woche und neu „Termine“ (alle Schultermine der nächsten vier Monate, nach Tagen gruppiert, Arbeiten und schulfreie Tage markiert, mehrtägige mit „bis …“).
-- **Mittagessen:** „Kein Essen …“ erscheint nicht mehr als Kachel unter „Demnächst“, sondern als Hinweis an der Kinderkarte (ab 14 Uhr der von morgen). Neuer Knopf **„Essen bestellen“** öffnet die Bestellseite der Mensa (Schule A: Caterer) im Browser.
+- **Mittagessen:** „Kein Essen …“ erscheint nicht mehr als Kachel unter „Demnächst“, sondern als Hinweis an der Kinderkarte (ab 14 Uhr der von morgen). Neuer Knopf **„Essen bestellen“** öffnet die Bestellseite der Mensa im Browser.
 - **Mehr:** Krank melden, Essen bestellen, Termine in eigenen Kalender, Schulportal im Browser, alle bisherigen Funktionen, Einstellungen, Schriftgröße.
-- **Moodle** erscheint nur noch, wenn die Schule es anbietet (an Schule A nicht).
+- **Moodle** erscheint nur noch, wenn die Schule es anbietet (an manchen Schulen nicht).
 - Alle Bereiche teilen sich die Daten: Stundenplan, Unterricht, Vertretungen, Kalender und Nachrichten werden einmal und nacheinander geladen. Ziehen nach unten lädt neu.
 - Unterricht und Nachrichten im neuen Stil folgen in den nächsten Versionen; bis dahin führt ein Knopf in die bisherige Ansicht.
 
@@ -69,7 +75,7 @@ Korrekturen nach einer unabhängigen Prüfung des Codes:
 **4.1.0+9321**
 
 - Gruppen werden automatisch vorgewählt, wenn „Mein Unterricht“ sie verrät. Projekt Text: Der Kurs nennt zwei Lehrkräfte, beide stehen in jeder TXT-Stunde – die App zeigt beide als eine Stunde. Ändern über das Tauschen-Symbol; die Wahl ist mit „Erkannt über den Kurs in „Mein Unterricht““ markiert.
-- Fachnamen: TXT = „Projekt Text“ (nur Schule A), ÄSTH = „Ästhetik“, KL = „Klassenstunde“.
+- Fachnamen: TXT = „Projekt Text“ (an einer Schule), ÄSTH = „Ästhetik“, KL = „Klassenstunde“.
 - Schriftgröße in der Vorschau unter „Mehr“: Normal / Groß / Sehr groß, alle Stufen größer als bisher.
 - Lehrernamen fett.
 - Unbekannte Kürzel lassen sich benennen: Stunde antippen → „Name für …“. Die Namen bleiben nur auf diesem Gerät, je Konto.
@@ -96,7 +102,7 @@ Korrekturen nach einer unabhängigen Prüfung des Codes:
 
 **4.1.0+9317**
 
-- Wochenansicht: Zeilen höchstens 72 dp hoch; bei wenigen Blöcken (Schule A) nicht mehr aufgebläht, unten bleibt Platz frei.
+- Wochenansicht: Zeilen höchstens 72 dp hoch; bei wenigen Blöcken nicht mehr aufgebläht, unten bleibt Platz frei.
 - Lehrkräfte ausgeschrieben statt Kürzel: Tagesansicht und Gruppenwahl mit Vor- und Nachname, Wochenraster mit Nachname. Die Namen kommen später aus „Mein Unterricht“; wer dort nicht vorkommt (z. B. Vertretung), bleibt als Kürzel.
 
 **4.1.0+9316**

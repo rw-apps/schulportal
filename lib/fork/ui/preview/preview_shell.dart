@@ -158,9 +158,22 @@ class _PreviewShellState extends State<PreviewShell> {
     (Icons.more_horiz, Icons.more_horiz, 'Mehr'),
   ];
 
+  void _saveMensa(LiveSnapshot s, String raw) {
+    final ok = raw.trim().isEmpty || normalizeMensaUrl(raw) != null;
+    if (ok) {
+      s.setMensaUrl(raw);
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Das sieht nicht nach einer Web-Adresse aus.'),
+      ),
+    );
+  }
+
   List<MoreEntry> _liveEntries(BuildContext context, LiveSnapshot? s) {
     if (s == null) return const [];
-    final mensa = mensaUrlFor(s.schoolId);
+    final mensa = s.mensaUrl;
     return [
       if (s.offers('abwesenheitsmeldung.php'))
         MoreEntry(
@@ -169,12 +182,29 @@ class _PreviewShellState extends State<PreviewShell> {
           detail: 'Vorerst nur beim Portal prüfen',
           onTap: () => openAbsence(context),
         ),
+      MoreEntry(
+        icon: Icons.restaurant_menu,
+        label: 'Essen bestellen',
+        detail: mensa == null
+            ? 'Bestellseite der Mensa einmal eintragen'
+            : Uri.parse(mensa).host,
+        onTap: () async {
+          if (mensa != null) {
+            await openMensa(context, mensa);
+            return;
+          }
+          final url = await askMensaUrl(context, null);
+          if (url != null) _saveMensa(s, url);
+        },
+      ),
       if (mensa != null)
         MoreEntry(
-          icon: Icons.restaurant_menu,
-          label: 'Essen bestellen',
-          detail: 'Bestellseite der Mensa im Browser',
-          onTap: () => openMensa(context, mensa),
+          icon: Icons.edit_outlined,
+          label: 'Mensa-Adresse ändern',
+          onTap: () async {
+            final url = await askMensaUrl(context, mensa);
+            if (url != null) _saveMensa(s, url);
+          },
         ),
       if (offersMoodle(s.session.travelMenu))
         MoreEntry(

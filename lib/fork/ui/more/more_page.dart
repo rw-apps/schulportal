@@ -164,3 +164,53 @@ class _EntryTile extends StatelessWidget {
     );
   }
 }
+
+/// Fragt die Adresse der Mensa-Bestellseite ab. null = abgebrochen, '' =
+/// Eintrag löschen.
+Future<String?> askMensaUrl(BuildContext context, String? current) {
+  final k = Kit.of(context);
+  final c = TextEditingController(text: current ?? '');
+  return showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Bestellseite der Mensa', style: k.sheetTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Adresse der Seite, auf der ihr das Essen bestellt. Die App '
+            'öffnet sie im Browser; die Anmeldung bleibt dort.',
+            style: k.meta,
+          ),
+          const SizedBox(height: Sp.m),
+          TextField(
+            controller: c,
+            autofocus: true,
+            keyboardType: TextInputType.url,
+            style: k.body,
+            decoration: InputDecoration(
+              hintText: 'z. B. bestellung.example.de',
+              hintStyle: k.meta,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        if (current != null)
+          TextButton(
+            onPressed: () => Navigator.pop(context, ''),
+            child: Text('Löschen', style: k.link),
+          ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Abbrechen', style: k.link),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, c.text),
+          child: Text('Speichern', style: k.link),
+        ),
+      ],
+    ),
+  );
+}

@@ -62,6 +62,12 @@ TimeTable _tt({bool ownEmpty = false}) {
   );
 }
 
+/// Kurse wie in „Mein Unterricht“ (erfunden): Projekt Text bei CCC und DDD.
+const List<CourseRef> _courses = [
+  (name: 'Projekt Text 6 xy', teachers: {'CCC', 'DDD'}),
+  (name: 'Mathematik 06 xy', teachers: {'AAA', 'BBB'}),
+];
+
 void main() {
   final plan = kidPlanFromTimetable(
     _tt(),
@@ -120,9 +126,8 @@ void main() {
     expect(
       subjectFullName('TXT', courses),
       'TXT',
-      reason: 'ohne Schulnummer nicht raten (anderswo Textil)',
+      reason: 'aus dem Kürzel allein nicht raten (anderswo Textil)',
     );
-    expect(subjectFullName('TXT', courses, schoolId: '0000'), 'Projekt Text');
     expect(subjectFullName('ÄSTH', const []), 'Ästhetik');
     expect(subjectFullName('ZFU6', const []), 'ZFU6');
   });
@@ -141,7 +146,7 @@ void main() {
       _tt(),
       firstName: 'K',
       colorIndex: 0,
-      schoolId: '0000',
+      courses: _courses,
     );
     expect(openGroupSubjects(p, {}), {'TXT'});
     final auto = autoGroupChoice(p, [
@@ -160,7 +165,7 @@ void main() {
       _tt(),
       firstName: 'K',
       colorIndex: 0,
-      schoolId: '0000',
+      courses: _courses,
     );
     expect(
       autoGroupChoice(p, [
@@ -183,7 +188,7 @@ void main() {
       _tt(),
       firstName: 'K',
       colorIndex: 0,
-      schoolId: '0000',
+      courses: _courses,
     );
     final auto = autoGroupChoice(p, [
       (name: 'Projekt Text 6', teachers: {'CCC', 'DDD'}),
@@ -207,5 +212,41 @@ void main() {
     expect(p.teacherFull('CCC'), 'Frau Muster');
     expect(p.teacherFull('AAA'), 'AAA');
     expect(p.teacherFull('BBB'), 'Bernd Bau');
+  });
+
+  test('Fachname über die Lehrkräfte des Kurses, nicht aus dem Kürzel', () {
+    final p = kidPlanFromTimetable(
+      _tt(),
+      firstName: 'K',
+      colorIndex: 0,
+      courses: _courses,
+    );
+    expect(p.days[0][1].options.first.subject, 'Projekt Text');
+    expect(
+      subjectsByCourseTeachers(
+        {
+          'X': {'AAA'},
+        },
+        const [
+          (name: 'Kurs A', teachers: {'AAA'}),
+          (name: 'Kurs B', teachers: {'AAA'}),
+        ],
+      ),
+      isEmpty,
+      reason: 'Gleichstand → Kürzel bleibt',
+    );
+    final mitMathe = kidPlanFromTimetable(
+      _tt(),
+      firstName: 'K',
+      colorIndex: 0,
+      courses: const [
+        (name: 'Mathematik 06 xy', teachers: {'CCC', 'DDD'}),
+      ],
+    );
+    expect(
+      mitMathe.days[0][1].options.first.subject,
+      'TXT',
+      reason: 'Mathematik gehört schon zu „M“',
+    );
   });
 }

@@ -6,7 +6,6 @@ import 'package:lanis/fork/absence/absence_view.dart';
 import 'package:lanis/utils/safe_launch.dart';
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 
-import '../../school_links.dart';
 import '../live/live_data.dart';
 import '../plan/plan_from_lanis.dart' show subjectFullName;
 import '../plan/plan_model.dart';
@@ -76,7 +75,7 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
         final className = liveClassName(s);
         final courses = s.courseNames;
         final events = s.calendar.content ?? const [];
-        final mensa = mensaUrlFor(s.schoolId);
+        final mensa = s.mensaUrl;
         final kid = childTodayFromLanis(
           plan: plan,
           choice: effectiveChoice(auto, s.userChoice),
@@ -85,8 +84,7 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
           school: shortSchoolName(s.schoolName),
           className: className,
           canReportAbsence: s.offers('abwesenheitsmeldung.php'),
-          subjectName: (code) =>
-              subjectFullName(code, courses, schoolId: s.schoolId),
+          subjectName: (code) => subjectFullName(code, courses),
           mealHint: mealHintFor(events, now, className: className),
           mensaUrl: mensa,
           openHomework: liveOpenHomework(s),

@@ -374,7 +374,7 @@ void main() {
     });
   });
 
-  test('Moodle nur, wenn die Schule es anbietet; Mensa je Schule', () {
+  test('Moodle nur, wenn die Schule es anbietet; Mensa-Adresse', () {
     expect(
       offersMoodle(const [
         {'Name': 'Stundenplan', 'link': 'stundenplan.php'},
@@ -390,7 +390,15 @@ void main() {
       ]),
       isTrue,
     );
-    expect(mensaUrlFor('0000'), startsWith('https://'));
-    expect(mensaUrlFor('9999'), isNull);
+    expect(
+      normalizeMensaUrl('bestellung.example.de'),
+      'https://bestellung.example.de',
+    );
+    expect(
+      normalizeMensaUrl(' https://x.example/login '),
+      'https://x.example/login',
+    );
+    expect(normalizeMensaUrl('kein link'), isNull);
+    expect(normalizeMensaUrl(''), isNull);
   });
 }

@@ -20,7 +20,7 @@ KidPlan kidPlanFromTimetable(
   required int colorIndex,
   Map<String, String> teacherNames = const {},
   List<String> courseNames = const [],
-  String? schoolId,
+  List<CourseRef> courses = const [],
 }) {
   final rows = [
     for (final r in tt.hours ?? const <TimeTableRow>[])
@@ -46,7 +46,7 @@ KidPlan kidPlanFromTimetable(
       final code = (subj.name ?? '').trim();
       if (code.isEmpty) continue;
       final lesson = PlanLesson(
-        subject: subjectFullName(code, courseNames, schoolId: schoolId),
+        subject: subjectFullName(code, courseNames),
         short: code,
         room: _blankToNull(subj.raum),
         teacher: _blankToNull(subj.lehrer),
@@ -58,13 +58,100 @@ KidPlan kidPlanFromTimetable(
     days.add([for (final c in cells) PlanCell(mergeCoTeaching(c))]);
   }
 
+  // Kürzel ohne Namen (Ergebnis = Kürzel) über die Lehrkräfte einem Kurs
+  // zuordnen, siehe subjectsByCourseTeachers.
+  final codeTeachers = <String, Set<String>>{};
+  for (final d in days) {
+    for (final c in d) {
+      for (final o in c.options) {
+        if (o.subject != o.short) continue;
+        (codeTeachers[o.short] ??= {}).addAll(KidPlan.kuerzelOf(o.teacher));
+      }
+    }
+  }
+  final claimed = <String>{
+    for (final d in days)
+      for (final c in d)
+        for (final o in c.options)
+          if (o.subject != o.short) o.subject,
+  };
+  final named = subjectsByCourseTeachers(codeTeachers, [
+    for (final c in courses)
+      if (!claimed.contains(_courseBaseName(c.name) ?? c.name.trim())) c,
+  ]);
+  final finalDays = named.isEmpty
+      ? days
+      : [
+          for (final d in days)
+            [
+              for (final c in d)
+                PlanCell([
+                  for (final o in c.options)
+                    named[o.short] != null && o.subject == o.short
+                        ? PlanLesson(
+                            subject: named[o.short]!,
+                            short: o.short,
+                            room: o.room,
+                            teacher: o.teacher,
+                            change: o.change,
+                            changeDetail: o.changeDetail,
+                          )
+                        : o,
+                ]),
+            ],
+        ];
+
   return KidPlan(
     firstName: firstName,
     colorIndex: colorIndex,
     slots: slots,
-    days: days,
+    days: finalDays,
     teacherNames: teacherNames,
   );
+}
+
+/// Fachnamen für Kürzel ohne bekannten Namen über die Lehrkräfte: Der Kurs
+/// aus „Mein Unterricht“, mit dem die Lehrkräfte des Kürzels am meisten
+/// gemeinsam haben, liefert den Namen („TXT“ → „Projekt Text“).
+///
+/// Ursache: Vorher stand die Zuordnung TXT → „Projekt Text“ fest im Code,
+/// gebunden an eine Schulnummer – das verriet im öffentlichen Repository
+/// die Schule (Entscheidung 17.10.26: Schulnamen neutralisieren). Grenze:
+/// Erst ab zwei gemeinsamen Lehrkräften und nur bei eindeutigem Sieger;
+/// eine einzelne gemeinsame Lehrkraft (die oft mehrere Kurse gibt) reicht
+/// nicht – dann bleibt das Kürzel.
+Map<String, String> subjectsByCourseTeachers(
+  Map<String, Set<String>> codeTeachers,
+  List<CourseRef> courses,
+) {
+  final out = <String, String>{};
+  for (final e in codeTeachers.entries) {
+    // Anteil der Kurs-Lehrkräfte, die das Kürzel unterrichten. Ursache:
+    // Große Teams (Ganztagsangebot mit sechs Lehrkräften, Export von Schule
+    // A 16.10.26) teilen zufällig mehrere Lehrkräfte mit vielen Kürzeln; ein
+    // kleiner Kurs, dessen Lehrkräfte ALLE dazugehören, ist der Treffer.
+    var best = 0.0;
+    var tie = false;
+    CourseRef? pick;
+    for (final c in courses) {
+      if (c.teachers.isEmpty) continue;
+      final n = c.teachers.intersection(e.value).length;
+      if (n == 0) continue;
+      final score = n / c.teachers.length;
+      if (score > best) {
+        best = score;
+        pick = c;
+        tie = false;
+      } else if (score == best &&
+          (_courseBaseName(c.name) ?? c.name) !=
+              (_courseBaseName(pick!.name) ?? pick.name)) {
+        tie = true;
+      }
+    }
+    if (pick == null || tie) continue;
+    out[e.key] = _courseBaseName(pick.name) ?? pick.name.trim();
+  }
+  return out;
 }
 
 Iterable<int> _slotsOf(TimetableSubject s, List<TimeTableRow> rows) sync* {
@@ -110,22 +197,14 @@ String? _blankToNull(String? s) {
 /// Klammern eines Kurses aus „Mein Unterricht“ („Naturwissenschaften 06 xy
 /// (061NAWI05-IGS)“); (3) ein Wort eines Kursnamens beginnt mit dem Kürzel
 /// (TRAIN → „Training Klasse 6“, erst ab 3 Buchstaben). Sonst bleibt das
-/// Kürzel – lieber „TXT“ als ein geratener Name. Beleg für die Vorsicht: Im
+/// Kürzel – lieber „TXT“ als ein geratener Name; kidPlanFromTimetable
+/// versucht danach noch die Lehrkräfte (subjectsByCourseTeachers). Beleg für die Vorsicht: Im
 /// Export von Schule A hieß der passende Kurs „Projekt Text“, nicht „Textil“, wie die
 /// Beispieldaten angenommen hatten.
-String subjectFullName(
-  String code,
-  List<String> courseNames, {
-  String? schoolId,
-}) {
+String subjectFullName(String code, List<String> courseNames) {
   final up = code.toUpperCase().trim();
   final base = up.replaceAll(RegExp(r'\d+$'), ''); // SP5 → SP
-  final bySchool = _schoolSubjects[schoolId];
-  final known =
-      bySchool?[up] ??
-      bySchool?[base] ??
-      _knownSubjects[up] ??
-      _knownSubjects[base];
+  final known = _knownSubjects[up] ?? _knownSubjects[base];
   if (known != null) return known;
 
   for (final c in courseNames) {
@@ -160,14 +239,6 @@ String? _courseBaseName(String course) {
   }
   return words.isEmpty ? null : words.join(' ');
 }
-
-/// Kürzel, die nur an einer Schule eindeutig sind (Schulnummer → Kürzel →
-/// Name). Beleg 0000 (Schule A): Angabe der Eltern 16.10.26,
-/// passend zum Kurs „Projekt Text 6 …“ in „Mein Unterricht“. Grenze: An
-/// anderen Schulen kann TXT „Textil“ heißen, deshalb nicht global.
-const _schoolSubjects = <String, Map<String, String>>{
-  '0000': {'TXT': 'Projekt Text'},
-};
 
 /// Nur eindeutige Kürzel. Doppeldeutige (TXT, WPU …) bewusst nicht.
 const _knownSubjects = <String, String>{
@@ -214,7 +285,7 @@ const _knownSubjects = <String, String>{
 /// Doppelbesetzung zu EINER Stunde zusammenfassen.
 ///
 /// Gleiches Fach im selben Raum = zwei Lehrkräfte für die ganze Klasse, keine
-/// Parallelgruppe (Export von Schule A 16.10.26: D, M und E jeweils zweimal in R106).
+/// Parallelgruppe (Export von Schule A 16.10.26: D, M und E jeweils zweimal im selben Raum).
 /// Ohne Raumangabe nur, wenn ALLE Einträge des Fachs keinen Raum haben
 /// (Training: zweimal ohne Raum). Grenze: Gemischt (TXT: R106 und zweimal
 /// ohne Raum) bleiben es Gruppen – lieber einmal zu viel „Gruppe wählen“ als

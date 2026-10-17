@@ -128,12 +128,10 @@ Future<void> _run(
       const <String, dynamic>{},
     ),
   );
-  final schoolId = session.account.schoolID.toString();
   final (:plan, :auto) = livePlan(
     tt: tt,
     lessons: lessons,
     firstName: firstName,
-    schoolId: schoolId,
   );
   final courses = [for (final l in lessons) l.name];
   final sent = [
@@ -149,7 +147,7 @@ Future<void> _run(
     // Benutzerdaten (authenticate(withoutData: true), background_service).
     className: classFromCourses(courses),
     sent: sent.toSet(),
-    subjectName: (c) => subjectFullName(c, courses, schoolId: schoolId),
+    subjectName: (c) => subjectFullName(c, courses),
   );
   var remembered = sent;
   for (final n in notices) {

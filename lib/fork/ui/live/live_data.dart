@@ -9,6 +9,7 @@ import 'package:lanis/utils/applet_settings.dart';
 import '../../lessons_parent.dart';
 import '../kit.dart';
 import 'serial_loader.dart';
+import '../../school_links.dart' show normalizeMensaUrl;
 import '../plan/plan_from_lanis.dart';
 import '../plan/plan_model.dart';
 import '../today/today_from_lanis.dart' show classFromCourses;
@@ -25,6 +26,9 @@ const teacherNamesSetting = 'fork-teacher-names';
 
 const _settingsApplet = 'stundenplan.php';
 
+/// Adresse der Mensa-Bestellseite, je Konto (normalizeMensaUrl).
+const mensaUrlSetting = 'fork-mensa-url';
+
 /// Gespeicherte Map (JSON) als Kürzel → Text; Fremdes wird übergangen.
 Map<String, String> settingStrings(Object? m) => <String, String>{
   if (m is Map)
@@ -39,7 +43,6 @@ Map<String, String> settingStrings(Object? m) => <String, String>{
   required TimeTable tt,
   required Lessons lessons,
   required String firstName,
-  required String schoolId,
 }) {
   final names = <String, String>{};
   for (final l in lessons) {
@@ -51,18 +54,19 @@ Map<String, String> settingStrings(Object? m) => <String, String>{
       }
     }
   }
+  final courses = <CourseRef>[
+    for (final l in lessons)
+      (name: l.name, teachers: {for (final t in l.teachers) ?t.teacherKuerzel}),
+  ];
   final plan = kidPlanFromTimetable(
     tt,
     firstName: firstName,
     colorIndex: 0,
     teacherNames: names,
     courseNames: [for (final l in lessons) l.name],
-    schoolId: schoolId,
+    courses: courses,
   );
-  final auto = autoGroupChoice(plan, [
-    for (final l in lessons)
-      (name: l.name, teachers: {for (final t in l.teachers) ?t.teacherKuerzel}),
-  ]);
+  final auto = autoGroupChoice(plan, courses);
   return (plan: plan, auto: auto);
 }
 
@@ -108,6 +112,8 @@ class LiveSnapshot {
     required this.setOwnNames,
     required this.refresh,
     required this.refreshMessages,
+    required this.setMensaUrl,
+    this.mensaUrl,
     this.kids = const [],
   });
 
@@ -122,6 +128,10 @@ class LiveSnapshot {
   /// Eigene Gruppenwahl ('' = bewusst alle zeigen) und Lehrernamen.
   final GroupChoice userChoice;
   final Map<String, String> ownNames;
+
+  /// Selbst eingetragene Mensa-Bestellseite (null = keine).
+  final String? mensaUrl;
+  final void Function(String? url) setMensaUrl;
   final void Function(GroupChoice) setUserChoice;
   final void Function(Map<String, String>) setOwnNames;
 
@@ -210,6 +220,7 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
 
   GroupChoice _choice = const {};
   Map<String, String> _names = const {};
+  String? _mensa;
   int? _settingsFor;
   late final _loader = SerialLoader(
     (force, only) => _run(_supported, force, only),
@@ -290,6 +301,7 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
         const <String, dynamic>{},
       ),
     );
+    _mensa = normalizeMensaUrl(s.getString('fork/$mensaUrlSetting'));
   }
 
   void _write(String key, Map<String, String> value) {
@@ -371,6 +383,14 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
           _write(teacherNamesSetting, n);
         },
         refresh: () => _loader.run(force: true),
+        mensaUrl: _mensa,
+        setMensaUrl: (u) {
+          final v = normalizeMensaUrl(u);
+          setState(() => _mensa = v);
+          ref
+              .read(accountSpecificSettingsProvider)
+              ?.setString('fork/$mensaUrlSetting', v);
+        },
         refreshMessages: () =>
             _loader.run(force: true, only: const {'nachrichten.php'}),
         kids: kids,
@@ -408,7 +428,6 @@ String liveClassName(LiveSnapshot s) =>
     tt: tt,
     lessons: s.lessons.content ?? const [],
     firstName: s.firstName,
-    schoolId: s.schoolId,
   );
   return (plan: r.plan.withTeacherNames(s.ownNames), auto: r.auto);
 }

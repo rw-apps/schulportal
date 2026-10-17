@@ -6,11 +6,11 @@ void main() {
   // (Set-Cookie nach dateispeicher.php). Zeile wortgleich, Wert ersetzt.
   test('sid-Wert wird geschwärzt, Rest bleibt lesbar', () {
     const line =
-        'set-cookie: i=0000; secure,sid=016d0000aaaabbbbccccdddd; path=/; '
+        'set-cookie: i=1234; secure,sid=016d0000aaaabbbbccccdddd; path=/; '
         'domain=schulportal.hessen.de; secure';
     final out = redactSessionCookies(line);
     expect(out, contains('sid=<geschwaerzt>; path=/'));
-    expect(out, contains('i=0000'));
+    expect(out, contains('i=1234'));
     expect(out, isNot(contains('016d0000')));
     expect(out, isNot(contains(r'$1')));
   });

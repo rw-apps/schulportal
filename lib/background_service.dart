@@ -170,6 +170,13 @@ Future<void> callbackDispatcher() async {
       final accounts = await container.read(accountsProvider.future);
 
       // One shared activeAccount/session — must run accounts sequentially.
+      //
+      // Fork: jedes Konto für sich abgesichert. Ursache (Prüfbefund
+      // 17.10.26): Schlug die Anmeldung oder eine Aufgabe eines Kontos fehl,
+      // brach die Schleife ab – alle folgenden Konten blieben ohne Meldung,
+      // und das Abmelden (deAuthenticate) entfiel. Jetzt: Fehler protokollieren,
+      // dieses Konto abmelden, mit dem nächsten weitermachen. Grenze: Ein
+      // Konto mit dauerhaft falschem Passwort versucht es bei jedem Lauf neu.
       for (final summary in accounts) {
         final db = container.read(lanisDatabaseProvider);
         final settings = TypedSettings.account(db, summary.localId);
@@ -177,57 +184,70 @@ Future<void> callbackDispatcher() async {
           continue;
         }
 
-        await container
-            .read(activeAccountProvider.notifier)
-            .select(summary.localId);
-        final account = container.read(activeAccountProvider);
-        if (account == null) continue;
-
         var authenticated = false;
+        try {
+          await container
+              .read(activeAccountProvider.notifier)
+              .select(summary.localId);
+          final account = container.read(activeAccountProvider);
+          if (account == null) continue;
 
-        for (final applet in AppDefinitions.applets.where(
-          (a) => a.notificationTask != null,
-        )) {
-          final accountType = account.accountType ?? AccountType.student;
-          final enabled =
-              settings.getBool('notification-${applet.appletPhpUrl}') ?? true;
-          if (!applet.supportedAccountTypes.contains(accountType) ||
-              !enabled) {
-            continue;
-          }
-
-          if (!authenticated) {
-            await container
-                .read(sessionProvider.notifier)
-                .authenticate(withoutData: true);
-            authenticated = true;
-          }
-
-          final session = container.read(sessionProvider).asData?.value;
-          if (session == null) continue;
-          if (!session.doesSupportFeature(
-            Applets.byPhpUrl(applet.appletPhpUrl),
-            overrideAccountType: accountType,
+          for (final applet in AppDefinitions.applets.where(
+            (a) => a.notificationTask != null,
           )) {
-            continue;
-          }
+            final accountType = account.accountType ?? AccountType.student;
+            final enabled =
+                settings.getBool('notification-${applet.appletPhpUrl}') ?? true;
+            if (!applet.supportedAccountTypes.contains(accountType) ||
+                !enabled) {
+              continue;
+            }
 
-          // One shared session/Dio — run applet tasks sequentially.
-          await applet.notificationTask!(
-            container,
-            accountType,
-            BackgroundTaskToolkit(
-              accountId: account.localId,
-              username: account.username,
-              schoolName: account.schoolName,
-              settings: settings,
-              appletId: applet.appletPhpUrl,
-              multiAccount: accounts.length > 1,
-            ),
-          );
-        }
-        if (authenticated) {
-          await container.read(sessionProvider.notifier).deAuthenticate();
+            if (!authenticated) {
+              await container
+                  .read(sessionProvider.notifier)
+                  .authenticate(withoutData: true);
+              authenticated = true;
+            }
+
+            final session = container.read(sessionProvider).asData?.value;
+            if (session == null) continue;
+            if (!session.doesSupportFeature(
+              Applets.byPhpUrl(applet.appletPhpUrl),
+              overrideAccountType: accountType,
+            )) {
+              continue;
+            }
+
+            // One shared session/Dio — run applet tasks sequentially.
+            // Fork: eine fehlerhafte Aufgabe stoppt die übrigen nicht.
+            try {
+              await applet.notificationTask!(
+                container,
+                accountType,
+                BackgroundTaskToolkit(
+                  accountId: account.localId,
+                  username: account.username,
+                  schoolName: account.schoolName,
+                  settings: settings,
+                  appletId: applet.appletPhpUrl,
+                  multiAccount: accounts.length > 1,
+                ),
+              );
+            } catch (e, s) {
+              backgroundLogger.e('Task ${applet.appletPhpUrl} failed');
+              backgroundLogger.e(e, stackTrace: s);
+            }
+          }
+        } catch (e, s) {
+          backgroundLogger.e('Account ${summary.localId} skipped');
+          backgroundLogger.e(e, stackTrace: s);
+        } finally {
+          if (authenticated) {
+            try {
+              await container.read(sessionProvider.notifier).deAuthenticate();
+            } catch (_) {}
+          }
         }
       }
 
@@ -329,8 +349,7 @@ Future<bool> isTaskWithinConstraints(ProviderContainer container) async {
   final days =
       shared.getJsonList('notifications-allowed-days') ??
       [true, true, true, true, true, true, true];
-  final start =
-      shared.getJsonList('notifications-start-time') ?? [6, 0];
+  final start = shared.getJsonList('notifications-start-time') ?? [6, 0];
   final end = shared.getJsonList('notifications-end-time') ?? [21, 0];
 
   final now = TimeOfDay.now();
