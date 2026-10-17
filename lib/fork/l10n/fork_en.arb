@@ -334,15 +334,12 @@
   "pickWeek": "Choose week",
   "thisWeek": "This week",
   "lessonTimesTitle": "Lesson times",
-  "lessonTimesText": "The school shows no times in the timetable. Enter the schedule once – it applies only on this phone and only to this account.",
+  "lessonTimesText": "The school shows no times in the timetable. Enter the times once – they apply only on this phone and only to this account.",
   "lessonTimesStart": "Start of 1st lesson",
   "lessonTimesLength": "Length of a lesson",
-  "lessonTimesEvery": "Break after every",
-  "lessonTimesPause": "Length of the break",
   "minutesShort": "{n} min",
-  "noBreak": "no break",
-  "breakShort": "Break",
   "enterLessonTimes": "Enter lesson times",
   "ownLessonTimes": "Lesson times entered by you",
-  "changeAction": "Change"
+  "changeAction": "Change",
+  "pauseAfter": "Break after"
 }

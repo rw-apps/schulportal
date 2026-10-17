@@ -334,15 +334,12 @@
   "pickWeek": "Hafta seç",
   "thisWeek": "Bu hafta",
   "lessonTimesTitle": "Ders saatleri",
-  "lessonTimesText": "Okul ders programında saat göstermiyor. Düzeni bir kez girin – yalnızca bu telefonda ve bu hesap için geçerlidir.",
+  "lessonTimesText": "Okul ders programında saat göstermiyor. Saatleri bir kez girin – yalnızca bu telefonda ve bu hesap için geçerlidir.",
   "lessonTimesStart": "1. dersin başlangıcı",
   "lessonTimesLength": "Bir dersin süresi",
-  "lessonTimesEvery": "Teneffüs her",
-  "lessonTimesPause": "Teneffüs süresi",
   "minutesShort": "{n} dk",
-  "noBreak": "teneffüs yok",
-  "breakShort": "Teneffüs",
   "enterLessonTimes": "Ders saatlerini gir",
   "ownLessonTimes": "Kendi girdiğiniz ders saatleri",
-  "changeAction": "Değiştir"
+  "changeAction": "Değiştir",
+  "pauseAfter": "Sonraki teneffüs"
 }

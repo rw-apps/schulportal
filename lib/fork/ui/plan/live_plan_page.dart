@@ -97,7 +97,13 @@ class LiveCalendarPage extends StatelessWidget {
             final m = shown[i].$1.snapshot;
             final save = m.setLessonTimes;
             if (save == null) return;
-            final r = await askLessonTimes(context, m.lessonTimes);
+            // So viele Zeilen, wie der Plan Stunden hat, mindestens zehn.
+            final slots = shown[i].$2.plan.slots.length;
+            final r = await askLessonTimes(
+              context,
+              m.lessonTimes,
+              count: slots > 10 ? slots : 10,
+            );
             if (r != null) save(r.times);
           },
           initialChoices: {

@@ -9,22 +9,27 @@ typedef LessonTimesResult = ({LessonTimes? times});
 
 /// Stundenzeiten eintragen oder ändern; null = abgebrochen.
 ///
-/// Vorgabe für einen neuen Eintrag: 8:00, 45 Minuten, Pause nach je zwei
-/// Stunden, 15 Minuten (Raster laut Rückmeldung 17.10.26, „klassisch“).
-/// Beginn und Pausenlänge kennt die App nicht – die Vorschau zeigt sofort,
-/// was daraus wird.
+/// Aufbau: Beginn und Stundenlänge oben, darunter jede Stunde mit ihrer
+/// errechneten Uhrzeit und rechts der Pause bis zur nächsten. Ursache: Die
+/// Pausen sind je Schule unregelmäßig (lesson_times.dart); die Uhrzeit in
+/// derselben Zeile zeigt sofort, ob es zum Aushang der Schule passt.
+/// Vorgabe für einen neuen Eintrag: 8:00, 45 Minuten,
+/// LessonTimes.defaultPauses. Grenze: [count] Stunden (Vorgabe 10) – eine
+/// gespeicherte Pause nach einer späteren Stunde verlängert die Liste.
 Future<LessonTimesResult?> askLessonTimes(
   BuildContext context,
-  LessonTimes? current,
-) => showDialog<LessonTimesResult>(
+  LessonTimes? current, {
+  int count = 10,
+}) => showDialog<LessonTimesResult>(
   context: context,
-  builder: (_) => _LessonTimesDialog(current: current),
+  builder: (_) => _LessonTimesDialog(current: current, count: count),
 );
 
 class _LessonTimesDialog extends StatefulWidget {
-  const _LessonTimesDialog({this.current});
+  const _LessonTimesDialog({this.current, required this.count});
 
   final LessonTimes? current;
+  final int count;
 
   @override
   State<_LessonTimesDialog> createState() => _LessonTimesDialogState();
@@ -34,16 +39,12 @@ class _LessonTimesDialogState extends State<_LessonTimesDialog> {
   late LessonTimes _v = widget.current ?? const LessonTimes(start: 8 * 60);
 
   static const _lengths = [40, 45, 50, 60, 90];
-  static const _everies = [1, 2, 3, 4, 0];
-  static const _pauses = [5, 10, 15, 20, 25, 30];
+  static const _pauses = [0, 5, 10, 15, 20, 25, 30, 45, 60];
 
-  LessonTimes _with({int? start, int? length, int? every, int? pause}) =>
-      LessonTimes(
-        start: start ?? _v.start,
-        length: length ?? _v.length,
-        every: every ?? _v.every,
-        pause: pause ?? _v.pause,
-      );
+  int get _count {
+    final last = _v.pauses.keys.fold(0, (a, b) => a > b ? a : b);
+    return widget.count > last ? widget.count : last + 1;
+  }
 
   Future<void> _pickStart() async {
     final picked = await showTimePicker(
@@ -51,7 +52,13 @@ class _LessonTimesDialogState extends State<_LessonTimesDialog> {
       initialTime: TimeOfDay(hour: _v.start ~/ 60, minute: _v.start % 60),
     );
     if (picked == null || !mounted) return;
-    setState(() => _v = _with(start: picked.hour * 60 + picked.minute));
+    setState(
+      () => _v = LessonTimes(
+        start: picked.hour * 60 + picked.minute,
+        length: _v.length,
+        pauses: _v.pauses,
+      ),
+    );
   }
 
   Widget _row(Kit k, String label, Widget value) => Padding(
@@ -65,8 +72,10 @@ class _LessonTimesDialogState extends State<_LessonTimesDialog> {
     ),
   );
 
+  /// Auswahl; ein gespeicherter Wert außerhalb der Liste bleibt als Hinweis
+  /// sichtbar, bis man ihn ändert.
   Widget _drop(
-    Kit k,
+    TextStyle style,
     int value,
     List<int> items,
     String Function(int) label,
@@ -74,13 +83,14 @@ class _LessonTimesDialogState extends State<_LessonTimesDialog> {
   ) {
     return DropdownButton<int>(
       value: items.contains(value) ? value : null,
-      hint: Text(label(value), style: k.body),
+      hint: Text(label(value), style: style),
       underline: const SizedBox.shrink(),
+      isDense: true,
       items: [
         for (final i in items)
           DropdownMenuItem(
             value: i,
-            child: Text(label(i), style: k.body),
+            child: Text(label(i), style: style),
           ),
       ],
       onChanged: (v) {
@@ -89,17 +99,32 @@ class _LessonTimesDialogState extends State<_LessonTimesDialog> {
     );
   }
 
-  /// „1. 08:00–08:45 · 2. 08:45–09:30 · Pause · 3. …“ für sechs Stunden.
-  String _preview(ForkL10n t) {
-    final parts = <String>[];
-    for (var n = 1; n <= 6; n++) {
-      final x = _v.of(n);
-      if (n > 1 && _v.every > 0 && (n - 1) % _v.every == 0 && _v.pause > 0) {
-        parts.add(t.breakShort);
-      }
-      parts.add('$n. ${LessonTimes.hm(x.start)}–${LessonTimes.hm(x.end)}');
-    }
-    return parts.join('\n');
+  /// Eine Stunde: „3.  09:50–10:35“ und rechts die Pause danach (nicht bei
+  /// der letzten Zeile).
+  Widget _lesson(Kit k, ForkL10n t, int n) {
+    final x = _v.of(n);
+    final style = k.planMeta(k.p.ink);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Sp.xs),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '$n.  ${LessonTimes.hm(x.start)}–${LessonTimes.hm(x.end)}',
+              style: style,
+            ),
+          ),
+          if (n < _count)
+            _drop(
+              style,
+              _v.pauseAfter(n),
+              _pauses,
+              (i) => i == 0 ? '–' : t.minutesShort(i),
+              (v) => _v = _v.withPause(n, v),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -127,44 +152,31 @@ class _LessonTimesDialogState extends State<_LessonTimesDialog> {
               k,
               t.lessonTimesLength,
               _drop(
-                k,
+                k.body,
                 _v.length,
                 _lengths,
                 (i) => t.minutesShort(i),
-                (v) => _v = _with(length: v),
-              ),
-            ),
-            _row(
-              k,
-              t.lessonTimesEvery,
-              _drop(
-                k,
-                _v.every,
-                _everies,
-                (i) => i == 0 ? t.noBreak : t.lessonsCount(i),
-                (v) => _v = _with(every: v),
-              ),
-            ),
-            if (_v.every > 0)
-              _row(
-                k,
-                t.lessonTimesPause,
-                _drop(
-                  k,
-                  _v.pause,
-                  _pauses,
-                  (i) => t.minutesShort(i),
-                  (v) => _v = _with(pause: v),
+                (v) => _v = LessonTimes(
+                  start: _v.start,
+                  length: v,
+                  pauses: _v.pauses,
                 ),
               ),
+            ),
             const SizedBox(height: Sp.m),
             Container(
-              padding: const EdgeInsets.all(Sp.m),
+              padding: const EdgeInsets.fromLTRB(Sp.m, Sp.s, Sp.m, Sp.s),
               decoration: BoxDecoration(
                 color: k.p.inset,
                 borderRadius: BorderRadius.circular(Rad.row),
               ),
-              child: Text(_preview(t), style: k.planMeta(k.p.ink)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(t.pauseAfter, style: k.meta, textAlign: TextAlign.end),
+                  for (var n = 1; n <= _count; n++) _lesson(k, t, n),
+                ],
+              ),
             ),
           ],
         ),

@@ -891,11 +891,9 @@
   "pickWeek": "Woche wählen",
   "thisWeek": "Diese Woche",
   "lessonTimesTitle": "Stundenzeiten",
-  "lessonTimesText": "Die Schule zeigt im Stundenplan keine Uhrzeiten. Trag das Raster einmal ein – es gilt nur auf diesem Handy und nur für dieses Konto.",
+  "lessonTimesText": "Die Schule zeigt im Stundenplan keine Uhrzeiten. Trag die Zeiten einmal ein – sie gelten nur auf diesem Handy und nur für dieses Konto.",
   "lessonTimesStart": "Beginn der 1. Stunde",
   "lessonTimesLength": "Länge einer Stunde",
-  "lessonTimesEvery": "Pause nach je",
-  "lessonTimesPause": "Länge der Pause",
   "minutesShort": "{n} Min.",
   "@minutesShort": {
     "placeholders": {
@@ -904,9 +902,8 @@
       }
     }
   },
-  "noBreak": "keine Pause",
-  "breakShort": "Pause",
   "enterLessonTimes": "Stundenzeiten eintragen",
   "ownLessonTimes": "Selbst eingetragene Stundenzeiten",
-  "changeAction": "Ändern"
+  "changeAction": "Ändern",
+  "pauseAfter": "Pause danach"
 }

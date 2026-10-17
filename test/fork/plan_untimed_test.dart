@@ -116,6 +116,40 @@ void main() {
     expect(v.of(0), (start: 435, end: 480));
     expect(LessonTimes.fromMap(v.toMap())?.of(3), v.of(3));
     expect(LessonTimes.fromMap(const {}), isNull);
+
+    // Unregelmäßige Pausen (synthetisch, Muster wie Rückmeldung 17.10.26).
+    var w = const LessonTimes(start: 8 * 60, pauses: {});
+    for (final (n, m) in [(2, 20), (4, 20), (5, 5), (6, 10), (8, 5)]) {
+      w = w.withPause(n, m);
+    }
+    String at(int n) =>
+        '${LessonTimes.hm(w.of(n).start)}-${LessonTimes.hm(w.of(n).end)}';
+    expect(at(3), '09:50-10:35');
+    expect(at(5), '11:40-12:25');
+    expect(at(6), '12:30-13:15');
+    expect(at(7), '13:25-14:10');
+    expect(at(9), '15:00-15:45');
+    expect(at(10), '15:45-16:30');
+    expect(w.toMap()['pauses'], '2:20,4:20,5:5,6:10,8:5');
+    expect(LessonTimes.fromMap(w.toMap())?.of(10), w.of(10));
+    expect(w.withPause(2, 0).of(3).start, 9 * 60 + 30);
+    expect(
+      LessonTimes.fromMap(const {
+        'start': '08:00',
+        'length': '45',
+        'pauses': '2:x',
+      }),
+      isNull,
+    );
+    // Form bis 9351: Pause nach je n Stunden wird umgerechnet.
+    final old = LessonTimes.fromMap(const {
+      'start': '08:00',
+      'length': '45',
+      'every': '2',
+      'pause': '15',
+    });
+    expect(old?.of(3), v.of(3));
+    expect(old?.of(7), v.of(7));
     expect(
       LessonTimes.fromMap(const {
         'start': '25:00',
@@ -163,10 +197,18 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.text('Stundenzeiten eintragen'));
     await t.pumpAndSettle();
-    expect(find.textContaining('3. 09:45–10:30'), findsOneWidget);
+    expect(find.text('3.  09:45–10:30'), findsOneWidget);
+    expect(find.text('10.  15:45–16:30'), findsOneWidget);
+    // Pause nach der 2. Stunde auf 20 Min.: die 3. rückt nach.
+    await t.tap(find.text('15 Min.').first);
+    await t.pumpAndSettle();
+    await t.tap(find.text('20 Min.').last);
+    await t.pumpAndSettle();
+    expect(find.text('3.  09:50–10:35'), findsOneWidget);
     expect(t.takeException(), isNull);
     await t.tap(find.text('Speichern'));
     await t.pumpAndSettle();
     expect(got?.times?.of(1).start, 480);
+    expect(got?.times?.pauseAfter(2), 20);
   });
 }

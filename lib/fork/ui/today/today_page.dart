@@ -108,10 +108,11 @@ class TodayPage extends StatelessWidget {
             ),
           ),
         ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
-          sliver: SliverToBoxAdapter(child: WeekStrip(data: data)),
-        ),
+        // Keine Wochenleiste Mo–Fr mehr (entfernt 17.10.26, Rückmeldung
+        // „verstehe ich nicht“): Sie war nicht antippbar, ihre Punkte
+        // unerklärt, und dieselben Termine stehen unten unter „Demnächst“
+        // (UpcomingTiles) und im Reiter Kalender. Samstags zeigte sie schon
+        // die nächste Woche ohne markierten Tag.
         if (importantItems(data).isNotEmpty)
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
@@ -160,108 +161,16 @@ class TodayPage extends StatelessWidget {
   }
 }
 
-// ---- Wochenleiste ---------------------------------------------------------
-
-/// Mo–Fr mit Punkten je Tag: Kinderfarbe für Termine, Signalfarbe für
-/// Änderungen. Höchstens drei Punkte, damit die Zelle ruhig bleibt.
-class WeekStrip extends StatelessWidget {
-  const WeekStrip({super.key, required this.data});
-
-  final FamilyToday data;
-
-  List<Color> _dots(Kit k, DateTime day) {
-    final dots = <Color>[];
-    for (final kid in data.kids) {
-      for (final c in kid.changes) {
-        if (_day(c.day) == day) {
-          dots.add(
-            c.kind == ChangeKind.cancelled ? k.p.cancel.dot : k.p.change.dot,
-          );
-        }
-      }
-    }
-    for (final w in data.week) {
-      if (_day(w.day) != day) continue;
-      final ci = w.childIndex;
-      dots.add(ci == null ? k.p.muted : k.kid(data.kids[ci].colorIndex).accent);
-    }
-    return dots.take(3).toList();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    final today = _day(data.now);
-    return Row(
-      children: [
-        for (final (i, day) in schoolWeek(data.now).indexed) ...[
-          if (i > 0) const SizedBox(width: Sp.xs + Sp.xxs),
-          Expanded(
-            child: _DayCell(
-              day: day,
-              selected: day == today,
-              dots: _dots(k, day),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _DayCell extends StatelessWidget {
-  const _DayCell({
-    required this.day,
-    required this.selected,
-    required this.dots,
-  });
-
-  final DateTime day;
-  final bool selected;
-  final List<Color> dots;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: Sp.s),
-      decoration: BoxDecoration(
-        color: selected ? k.p.strong : null,
-        borderRadius: BorderRadius.circular(Rad.day),
-      ),
-      child: Column(
-        children: [
-          Text(weekdayShort(context.t, day), style: k.weekDay(selected)),
-          Text('${day.day}', style: k.weekNum(selected)),
-          const SizedBox(height: Sp.xxs),
-          SizedBox(
-            height: Sz.dotSmall,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (final (i, c) in dots.indexed) ...[
-                  if (i > 0) const SizedBox(width: Sp.xs - 1),
-                  _Dot(color: c, size: Sz.dotSmall),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
+/// Farbpunkt (Kind bzw. Änderungsart) in Kasten „Wichtig“ und „Demnächst“.
 class _Dot extends StatelessWidget {
-  const _Dot({required this.color, this.size = Sz.dot});
+  const _Dot({required this.color});
 
   final Color color;
-  final double size;
 
   @override
   Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
+    width: Sz.dot,
+    height: Sz.dot,
     decoration: BoxDecoration(color: color, shape: BoxShape.circle),
   );
 }
