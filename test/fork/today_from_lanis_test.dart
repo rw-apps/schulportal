@@ -1,10 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:lanis/fork/school_links.dart';
 import 'package:lanis/fork/ui/plan/plan_model.dart';
 import 'package:lanis/fork/ui/today/today_from_lanis.dart';
 import 'package:lanis/fork/ui/today/today_model.dart';
 import 'package:lanis/fork/ui/today/today_page.dart' show listSlot;
 import 'package:liblanis/liblanis.dart';
+
+final de = forkL10nFor('de');
 
 /// Erfundener Plan im Aufbau von Schule A (Blöcke, Doppelbesetzung, Gruppen).
 KidPlan _plan() {
@@ -96,20 +99,24 @@ void main() {
   final monday = DateTime(2026, 10, 19, 9, 30);
 
   test('Tag aus dem Plan: Abschnitte, Gruppenhinweis, Zählung', () {
-    final l = dayLessonsFor(plan, 0, const {});
+    final l = dayLessonsFor(plan, 0, const {}, t: de);
     expect(l.map((x) => x.subject), ['Mathematik', 'Projekt Text']);
     expect(l.first.teacher, 'Anna Alt, BBB');
     expect(l.last.teacher, 'Gruppe im Plan wählen');
-    expect(dayLessonsFor(plan, 0, const {'TXT': 'DDD'}).last.teacher, 'DDD');
-    final di = dayLessonsFor(plan, 1, const {});
+    expect(
+      dayLessonsFor(plan, 0, const {'TXT': 'DDD'}, t: de).last.teacher,
+      'DDD',
+    );
+    final di = dayLessonsFor(plan, 1, const {}, t: de);
     expect(di.first.slot, '1.–2. Block');
     expect(di.first.end, '11:45');
-    expect(periodsLabelFor(plan, 1, const {}), '3 Blöcke heute');
-    expect(dayLessonsFor(plan, 5, const {}), isEmpty, reason: 'Samstag');
+    expect(periodsLabelFor(plan, 1, const {}, t: de), '3 Blöcke heute');
+    expect(dayLessonsFor(plan, 5, const {}, t: de), isEmpty, reason: 'Samstag');
   });
 
   test('Ausfall, Raumwechsel, Vertretung landen im Tag und im Kasten', () {
     final r = applySubstitutions(
+      t: de,
       plan: plan,
       choice: const {'TXT': 'CCC'},
       now: monday,
@@ -154,6 +161,7 @@ void main() {
     () {
       final week = [for (var i = 0; i < 5; i++) DateTime(2026, 10, 19 + i)];
       final p = planWithSubstitutions(
+        t: de,
         plan: plan,
         week: week,
         days: [
@@ -182,7 +190,7 @@ void main() {
       expect(p.days[1][0].options.single.room, 'H2');
       expect(p.days[1][1].options.single.change, ChangeKind.roomChange);
       expect(
-        planWithSubstitutions(plan: plan, week: week, days: const []),
+        planWithSubstitutions(plan: plan, week: week, days: const [], t: de),
         same(plan),
       );
     },
@@ -190,6 +198,7 @@ void main() {
 
   test('Vertretung der anderen Gruppe wird übergangen', () {
     final r = applySubstitutions(
+      t: de,
       plan: plan,
       choice: const {'TXT': 'CCC'},
       now: monday,
@@ -205,6 +214,7 @@ void main() {
 
   test('Doppelbesetzung: fehlt eine Lehrkraft, findet die Stunde statt', () {
     final r = applySubstitutions(
+      t: de,
       plan: plan,
       choice: const {},
       now: monday,
@@ -220,12 +230,13 @@ void main() {
 
   test('unbekannte Art gilt als Vertretung, nie als Ausfall', () {
     final c = classifySubstitution(
+      t: de,
       _sub('x', '1', art: 'Sonderregelung', hinweis: 'Aula'),
     );
     expect(c.kind, ChangeKind.substitution);
     expect(c.detail, 'Aula');
     expect(
-      classifySubstitution(_sub('x', '1', art: '<b>Entfall</b>')).kind,
+      classifySubstitution(_sub('x', '1', art: '<b>Entfall</b>'), t: de).kind,
       ChangeKind.cancelled,
       reason: 'HTML aus dem Portal',
     );
@@ -376,11 +387,16 @@ void main() {
         );
         expect(all.where((i) => i.kind == WeekKind.meal), hasLength(2));
         expect(
-          mealHintFor(events, now, className: '06 XY'),
+          mealHintFor(events, now, t: de, className: '06 XY'),
           'Heute: Kein Essen für alle Jg.!',
         );
         expect(
-          mealHintFor(events, DateTime(2026, 10, 19, 15), className: '06 XY'),
+          mealHintFor(
+            events,
+            DateTime(2026, 10, 19, 15),
+            t: de,
+            className: '06 XY',
+          ),
           'Morgen: Essen nur für 5, 6 und 7 Jg.',
         );
         expect(forGrade('Essen nur für 5, 6 und 7 Jg.', 8), isFalse);

@@ -1,8 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:lanis/fork/notify/notices.dart';
 import 'package:lanis/fork/ui/plan/plan_model.dart';
 import 'package:lanis/fork/ui/today/today_model.dart';
 import 'package:liblanis/liblanis.dart';
+
+final de = forkL10nFor('de');
 
 /// Erfundener Plan: Mo und Di je 1.–2. Block Mathe/Deutsch.
 KidPlan _plan() {
@@ -75,6 +78,7 @@ void main() {
     Set<String> sent = const {},
     List<CalendarEvent> ev = const [],
   }) => buildNotices(
+    t: de,
     plan: plan,
     choice: const {},
     substitutions: subs,
@@ -136,6 +140,7 @@ void main() {
 
   test('Freitagabend nichts für Samstag, Sonntagabend für Montag', () {
     final fri = buildNotices(
+      t: de,
       plan: plan,
       choice: const {},
       substitutions: [
@@ -146,6 +151,7 @@ void main() {
     );
     expect(fri, isEmpty);
     final sun = buildNotices(
+      t: de,
       plan: plan,
       choice: const {},
       substitutions: [
@@ -184,6 +190,7 @@ void main() {
       days: p.days,
     );
     final n = buildNotices(
+      t: de,
       plan: anon,
       choice: const {},
       substitutions: subs,

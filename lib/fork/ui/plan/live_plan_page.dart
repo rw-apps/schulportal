@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../live/live_data.dart';
 import '../today/today_from_lanis.dart'
     show planWithSubstitutions, weekItemsFromCalendar;
@@ -25,6 +26,7 @@ class LiveCalendarPage extends StatelessWidget {
           plan: plan,
           days: s.substitutions.content?.days ?? const [],
           week: schoolWeek(now),
+          t: context.t,
         );
         final events = s.offers('kalender.php')
             ? weekItemsFromCalendar(

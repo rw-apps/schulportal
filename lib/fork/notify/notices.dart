@@ -1,5 +1,6 @@
 import 'package:liblanis/liblanis.dart';
 
+import '../l10n/l10n.dart';
 import '../ui/plan/plan_model.dart';
 import '../ui/today/today_from_lanis.dart';
 import '../ui/today/today_model.dart';
@@ -47,11 +48,12 @@ bool isBigEvent(WeekItem w) =>
           caseSensitive: false,
         ).hasMatch(w.title));
 
-String _changeLine(ChangeItem c) {
+String _changeLine(ForkL10n t, ChangeItem c) {
   final what = switch (c.kind) {
-    ChangeKind.cancelled => 'fällt aus',
-    ChangeKind.roomChange => 'Raumwechsel ${c.detail ?? ''}'.trim(),
-    ChangeKind.substitution => 'Vertretung ${c.detail ?? ''}'.trim(),
+    ChangeKind.cancelled => t.lessonCancelled,
+    ChangeKind.roomChange => '${t.changeRoom} ${c.detail ?? ''}'.trim(),
+    ChangeKind.substitution =>
+      '${t.changeSubstitution} ${c.detail ?? ''}'.trim(),
   };
   return '${c.slot} ${c.subject} – $what';
 }
@@ -62,9 +64,20 @@ String _changeKey(ChangeItem c) =>
 String _eventKey(WeekItem w) =>
     'e|${w.day.year}-${w.day.month}-${w.day.day}|${w.title}';
 
-/// „Heute bei Lena“; ohne Namen (Schülerkonto) „Heute in der Schule“.
-String _title(String when, String name) =>
-    name.trim().isEmpty ? '$when in der Schule' : '$when bei $name';
+/// „Heute bei Lena“; ohne Namen beim Schülerkonto „Heute in der Schule“,
+/// beim Elternkonto (Kinder nicht geladen) „Heute bei deinem Kind“.
+String _title(
+  ForkL10n t, {
+  required bool today,
+  required String name,
+  required bool parent,
+}) {
+  if (name.trim().isNotEmpty) {
+    return today ? t.noticeTodayFor(name) : t.noticeTomorrowFor(name);
+  }
+  if (parent) return today ? t.noticeTodayChild : t.noticeTomorrowChild;
+  return today ? t.noticeTodaySchool : t.noticeTomorrowSchool;
+}
 
 bool _sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
@@ -79,12 +92,17 @@ bool _sameDay(DateTime a, DateTime b) =>
 ///
 /// [sent]: schon gemeldete Schlüssel. Ohne neuen Eintrag keine Meldung;
 /// kommt einer hinzu, ersetzt eine vollständige Meldung die vorige.
+/// Grenze: Die Schlüssel enthalten den Angabentext (z. B. „R101 statt
+/// R106“); nach einem Sprachwechsel kann eine offene Änderung daher einmal
+/// erneut kommen.
 List<Notice> buildNotices({
   required KidPlan plan,
   required GroupChoice choice,
   required List<SubstitutionDay> substitutions,
   required List<CalendarEvent> events,
   required DateTime now,
+  required ForkL10n t,
+  bool parent = false,
   String className = '',
   Set<String> sent = const {},
   String Function(String code)? subjectName,
@@ -95,6 +113,7 @@ List<Notice> buildNotices({
     choice: choice,
     days: substitutions,
     now: now,
+    t: t,
     subjectName: subjectName,
   );
   final out = <Notice>[];
@@ -113,8 +132,8 @@ List<Notice> buildNotices({
     out.add(
       Notice(
         id: 1,
-        title: _title('Heute', plan.firstName),
-        lines: [for (final c in today) _changeLine(c)],
+        title: _title(t, today: true, name: plan.firstName, parent: parent),
+        lines: [for (final c in today) _changeLine(t, c)],
         keys: [for (final c in today) _changeKey(c)],
       ),
     );
@@ -143,9 +162,9 @@ List<Notice> buildNotices({
       out.add(
         Notice(
           id: 2,
-          title: _title('Morgen', plan.firstName),
+          title: _title(t, today: false, name: plan.firstName, parent: parent),
           lines: [
-            for (final c in changes) _changeLine(c),
+            for (final c in changes) _changeLine(t, c),
             for (final w in big) [w.title, ?w.time].join(' · '),
           ],
           keys: [

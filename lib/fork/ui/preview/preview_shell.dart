@@ -5,6 +5,7 @@ import 'package:lanis/applets/external_definitions.dart';
 import 'package:lanis/fork/start.dart';
 import 'package:lanis/utils/deep_link.dart';
 
+import '../../l10n/l10n.dart';
 import '../../school_links.dart';
 import '../courses/courses_page.dart';
 import '../courses/live_courses_page.dart';
@@ -85,12 +86,12 @@ class _PreviewShellState extends State<PreviewShell> {
 
   void _select(ShellTab t) => setState(() => _tab = t);
 
-  static const _dest = [
-    (Icons.home_outlined, Icons.home, 'Heute'),
-    (Icons.calendar_month_outlined, Icons.calendar_month, 'Kalender'),
-    (Icons.menu_book_outlined, Icons.menu_book, 'Unterricht'),
-    (Icons.chat_bubble_outline, Icons.chat_bubble, 'Nachrichten'),
-    (Icons.more_horiz, Icons.more_horiz, 'Mehr'),
+  static List<(IconData, IconData, String)> _dest(ForkL10n t) => [
+    (Icons.home_outlined, Icons.home, t.navToday),
+    (Icons.calendar_month_outlined, Icons.calendar_month, t.navCalendar),
+    (Icons.menu_book_outlined, Icons.menu_book, t.navCourses),
+    (Icons.chat_bubble_outline, Icons.chat_bubble, t.navMessages),
+    (Icons.more_horiz, Icons.more_horiz, t.navMore),
   ];
 
   void _saveMensa(LiveSnapshot s, String raw) {
@@ -99,30 +100,27 @@ class _PreviewShellState extends State<PreviewShell> {
       s.setMensaUrl(raw);
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Das sieht nicht nach einer Web-Adresse aus.'),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.t.invalidUrl)));
   }
 
   List<MoreEntry> _liveEntries(BuildContext context, LiveSnapshot? s) {
     if (s == null) return const [];
     final mensa = s.mensaUrl;
+    final t = context.t;
     return [
       if (s.offers('abwesenheitsmeldung.php'))
         MoreEntry(
           icon: Icons.thermostat,
-          label: 'Krank melden',
-          detail: 'Vorerst nur beim Portal prüfen',
+          label: t.reportSick,
+          detail: t.reportSickDetail,
           onTap: () => openAbsence(context),
         ),
       MoreEntry(
         icon: Icons.restaurant_menu,
-        label: 'Essen bestellen',
-        detail: mensa == null
-            ? 'Bestellseite der Mensa einmal eintragen'
-            : Uri.parse(mensa).host,
+        label: t.orderMeal,
+        detail: mensa == null ? t.orderMealSetup : Uri.parse(mensa).host,
         onTap: () async {
           if (mensa != null) {
             await openMensa(context, mensa);
@@ -135,7 +133,7 @@ class _PreviewShellState extends State<PreviewShell> {
       if (mensa != null)
         MoreEntry(
           icon: Icons.edit_outlined,
-          label: 'Mensa-Adresse ändern',
+          label: t.mensaChange,
           onTap: () async {
             final url = await askMensaUrl(context, mensa);
             if (url != null) _saveMensa(s, url);
@@ -144,18 +142,18 @@ class _PreviewShellState extends State<PreviewShell> {
       if (offersMoodle(s.session.travelMenu))
         MoreEntry(
           icon: Icons.school_outlined,
-          label: 'Lernplattform (Moodle)',
+          label: t.learningPlatform,
           onTap: () => _goOld(SettingsDeepLinks.moodle),
         ),
       MoreEntry(
         icon: Icons.open_in_browser,
-        label: 'Schulportal im Browser',
+        label: t.portalInBrowser,
         onTap: () => openLanisDefinition.action?.call(context),
       ),
       MoreEntry(
         icon: Icons.settings_outlined,
-        label: 'Einstellungen',
-        detail: 'Konto, Benachrichtigungen, Darstellung, Datenschutz',
+        label: t.settings,
+        detail: t.settingsDetail,
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const ForkSettingsPage()),
         ),
@@ -219,7 +217,7 @@ class _PreviewShellState extends State<PreviewShell> {
       body: widget.liveData ? Builder(builder: _liveBody) : _demoBody(),
       bottomNavigationBar: FloatingNavBar(
         selected: _tab.index,
-        items: _dest,
+        items: _dest(context.t),
         onSelect: (i) => _select(ShellTab.values[i]),
       ),
     );

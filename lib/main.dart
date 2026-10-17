@@ -9,7 +9,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lanis/fork/l10n/l10n.dart' show ForkL10n;
 import 'package:lanis/fork/ui/font_step.dart';
+import 'package:lanis/fork/ui/language.dart';
 import 'package:lanis/applets/conversations/view/shared.dart';
 import 'package:lanis/background_service.dart';
 import 'package:lanis/bridge/lanis_bootstrap.dart';
@@ -170,6 +172,9 @@ class App extends ConsumerWidget {
           darkTheme: darkTheme,
           themeMode: mode,
           routerConfig: router,
+          // Fork: Sprache aus Einstellungen → Darstellung (fork/ui/language.dart);
+          // null = wie das Handy.
+          locale: localeFor(ref.watch(languageProvider)),
           // Fork: Schriftgröße für alle Seiten (fork/ui/font_step.dart).
           builder: (context, child) => MediaQuery(
             data: scaledFor(
@@ -180,12 +185,16 @@ class App extends ConsumerWidget {
           ),
           localizationsDelegates: const [
             AppLocalizations.delegate,
+            ForkL10n.delegate,
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
             FlutterQuillLocalizations.delegate,
           ],
-          supportedLocales: AppLocalizations.delegate.supportedLocales,
+          // Fork: feste Liste statt der Lanis-Sprachen, damit Oberfläche und
+          // Lanis-Seiten dieselben drei Sprachen haben; Englisch zuerst als
+          // Ausweichsprache (fork/l10n/l10n.dart, fallbackLanguage).
+          supportedLocales: appLocales,
         );
       },
     );

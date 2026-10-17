@@ -1,0 +1,9 @@
+# Texte der neuen Oberfläche (lib/fork). Getrennt von den Lanis-Texten
+# (lib/l10n, intl_utils), damit Code und Sprachdaten auseinanderliegen und
+# Lanis-Dateien unberührt bleiben. Vorlage ist Deutsch.
+arb-dir: lib/fork/l10n
+template-arb-file: fork_de.arb
+output-localization-file: fork_l10n.dart
+output-class: ForkL10n
+output-dir: lib/fork/l10n/gen
+nullable-getter: false

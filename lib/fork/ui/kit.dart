@@ -28,12 +28,12 @@ const kitFont = 'Manrope';
 /// Rasterzeilen) wachsen nicht mit; dort verkleinern FittedBox bzw. das
 /// Raster scrollt ab der Mindesthöhe.
 enum KitFontStep {
-  normal('Normal', 1.12),
-  large('Groß', 1.25),
-  xlarge('Sehr groß', 1.4);
+  normal(1.12),
+  large(1.25),
+  xlarge(1.4);
 
-  const KitFontStep(this.label, this.factor);
-  final String label;
+  // Beschriftung in den Sprachdateien (fontNormal/fontLarge/fontXLarge).
+  const KitFontStep(this.factor);
   final double factor;
 
   static KitFontStep parse(String? name) => KitFontStep.values.firstWhere(

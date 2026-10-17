@@ -1,5 +1,6 @@
 import 'package:liblanis/liblanis.dart';
 
+import '../../l10n/l10n.dart';
 import '../plan/plan_model.dart';
 import 'today_model.dart';
 
@@ -13,16 +14,22 @@ import 'today_model.dart';
 /// Abschnitte eines Wochentags (0 = Montag) als [DayLesson]s. Gruppen ohne
 /// Wahl erscheinen mit dem Hinweis „Gruppe im Plan wählen“, statt still zu
 /// fehlen – sonst sähe ein Tag mit Ästhetik kürzer aus, als er ist.
-List<DayLesson> dayLessonsFor(KidPlan plan, int weekday, GroupChoice choice) {
+List<DayLesson> dayLessonsFor(
+  KidPlan plan,
+  int weekday,
+  GroupChoice choice, {
+  required ForkL10n t,
+}) {
   if (weekday < 0 || weekday > 4 || weekday >= plan.days.length) {
     return const [];
   }
   return [
-    for (final b in dayBlocks(plan, weekday, choice)) ?_lessonOfBlock(plan, b),
+    for (final b in dayBlocks(plan, weekday, choice))
+      ?_lessonOfBlock(t, plan, b),
   ];
 }
 
-DayLesson? _lessonOfBlock(KidPlan plan, DayBlock b) {
+DayLesson? _lessonOfBlock(ForkL10n t, KidPlan plan, DayBlock b) {
   final start = plan.slots[b.firstSlot].start;
   final end = plan.slots[b.lastSlot].end;
   final slot = blockLabel(plan, b);
@@ -41,24 +48,27 @@ DayLesson? _lessonOfBlock(KidPlan plan, DayBlock b) {
       subject: groupShortLabel(plan, open.short),
       start: start,
       end: end,
-      teacher: 'Gruppe im Plan wählen',
+      teacher: t.chooseGroupInPlan,
     ),
   };
 }
 
 /// „3 Blöcke heute“ / „6 Stunden heute“ – gezählt wie die Schule (Slots),
 /// vor dem Zusammenfassen der Doppelstunden.
-String? periodsLabelFor(KidPlan plan, int weekday, GroupChoice choice) {
+String? periodsLabelFor(
+  KidPlan plan,
+  int weekday,
+  GroupChoice choice, {
+  required ForkL10n t,
+}) {
   if (weekday < 0 || weekday > 4 || weekday >= plan.days.length) return null;
   final n = dayBlocks(plan, weekday, choice)
       .where((b) => b.content is! ResolvedNone)
       .fold<int>(0, (sum, b) => sum + b.span);
   if (n == 0) return null;
+  // „Block“ ist das Wort der Schule in der Zeilenbeschriftung (Portaldaten).
   final blocks = plan.slots.any((s) => s.label.contains('Block'));
-  final word = blocks
-      ? (n == 1 ? 'Block' : 'Blöcke')
-      : (n == 1 ? 'Stunde' : 'Stunden');
-  return '$n $word heute';
+  return blocks ? t.blocksToday(n) : t.periodsToday(n);
 }
 
 // ---- Vertretungsplan --------------------------------------------------------
@@ -94,6 +104,7 @@ Set<int> hoursOf(String stunde) {
 /// gelbe Zeile zu viel als ein Kind, das zu Hause bleibt.
 ({ChangeKind kind, String? detail}) classifySubstitution(
   Substitution s, {
+  required ForkL10n t,
   String? lessonRoom,
   List<String> lessonTeachers = const [],
   String Function(String kuerzel)? nameOf,
@@ -120,7 +131,10 @@ Set<int> hoursOf(String stunde) {
     if (absent != null &&
         lessonTeachers.contains(absent) &&
         others.isNotEmpty) {
-      return (kind: ChangeKind.substitution, detail: '${name(absent)} fehlt');
+      return (
+        kind: ChangeKind.substitution,
+        detail: t.teacherAbsent(name(absent)),
+      );
     }
     return (kind: ChangeKind.cancelled, detail: hint);
   }
@@ -133,7 +147,7 @@ Set<int> hoursOf(String stunde) {
       detail: room == null
           ? hint
           : (roomBefore != null && roomBefore != room
-                ? '$room statt $roomBefore'
+                ? t.roomInsteadOf(room, roomBefore)
                 : room),
     );
   }
@@ -169,6 +183,7 @@ KidPlan planWithSubstitutions({
   required KidPlan plan,
   required List<SubstitutionDay> days,
   required List<DateTime> week,
+  required ForkL10n t,
 }) {
   if (days.isEmpty) return plan;
   final out = [
@@ -194,6 +209,7 @@ KidPlan planWithSubstitutions({
           if (!_concerns(s, o)) continue;
           final c = classifySubstitution(
             s,
+            t: t,
             lessonRoom: o.room,
             lessonTeachers: KidPlan.kuerzelOf(o.teacher),
             nameOf: nameOf,
@@ -239,6 +255,7 @@ KidPlan planWithSubstitutions({
   required GroupChoice choice,
   required List<SubstitutionDay> days,
   required DateTime now,
+  required ForkL10n t,
   String Function(String code)? subjectName,
 }) {
   final todayWd = now.weekday - 1;
@@ -246,7 +263,7 @@ KidPlan planWithSubstitutions({
   final todayBlocks = todayWd <= 4
       ? dayBlocks(plan, todayWd, choice)
       : <DayBlock>[];
-  final today = dayLessonsFor(plan, todayWd, choice);
+  final today = dayLessonsFor(plan, todayWd, choice, t: t);
   // Abschnitt der Tagesliste je Block (ResolvedNone hat keinen Eintrag).
   final todayIndex = <int, int>{};
   var li = 0;
@@ -288,6 +305,7 @@ KidPlan planWithSubstitutions({
       if (!_concerns(s, lesson)) continue;
       final c = classifySubstitution(
         s,
+        t: t,
         lessonRoom: lesson?.room,
         lessonTeachers: KidPlan.kuerzelOf(lesson?.teacher),
         nameOf: nameOf,
@@ -296,7 +314,7 @@ KidPlan planWithSubstitutions({
       final subject =
           lesson?.subject ??
           subjects[code.toUpperCase()] ??
-          (code.isEmpty ? 'Unterricht' : (subjectName?.call(code) ?? code));
+          (code.isEmpty ? t.lessonFallback : (subjectName?.call(code) ?? code));
       final slot = block != null
           ? blockLabel(plan, block)
           : (slotIdx.isNotEmpty
@@ -345,6 +363,7 @@ ChildToday childTodayFromLanis({
   required List<SubstitutionDay> substitutions,
   required DateTime now,
   required String school,
+  required ForkL10n t,
   String className = '',
   bool canReportAbsence = false,
   String Function(String code)? subjectName,
@@ -358,6 +377,7 @@ ChildToday childTodayFromLanis({
     choice: choice,
     days: substitutions,
     now: now,
+    t: t,
     subjectName: subjectName,
   );
   return ChildToday(
@@ -366,7 +386,7 @@ ChildToday childTodayFromLanis({
     className: className,
     colorIndex: plan.colorIndex,
     lessons: r.today,
-    periodsLabel: periodsLabelFor(plan, now.weekday - 1, choice),
+    periodsLabel: periodsLabelFor(plan, now.weekday - 1, choice, t: t),
     changes: r.changes,
     canReportAbsence: canReportAbsence,
     mealHint: mealHint,
@@ -498,6 +518,7 @@ String? _blank(String? s) {
 String? mealHintFor(
   List<CalendarEvent> events,
   DateTime now, {
+  required ForkL10n t,
   String className = '',
 }) {
   final afternoon = now.hour >= 14;
@@ -514,7 +535,8 @@ String? mealHintFor(
     notes.add(title);
   }
   if (notes.isEmpty) return null;
-  return '${afternoon ? 'Morgen' : 'Heute'}: ${notes.join(' · ')}';
+  final text = notes.join(' · ');
+  return afternoon ? t.mealTomorrow(text) : t.mealToday(text);
 }
 
 /// Gilt der Titel für [grade]? Erkennt Bereiche („5-7 Klassen“, „Jg. 8–10“)

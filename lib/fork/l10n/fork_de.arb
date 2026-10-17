@@ -1,0 +1,396 @@
+{
+  "@@locale": "de",
+  "dateLong": "EEEE, d. MMMM",
+  "dateShort": "ccc d.M.",
+  "greetingMorning": "Guten Morgen",
+  "greetingDay": "Guten Tag",
+  "greetingEvening": "Guten Abend",
+  "dayToday": "Heute",
+  "dayTomorrow": "Morgen",
+  "demoNote": "Vorschau mit erfundenen Beispieldaten",
+  "importantTitle": "Wichtig heute und morgen",
+  "lessonCancelled": "fällt aus",
+  "changeRoom": "Raumwechsel",
+  "changeSubstitution": "Vertretung",
+  "homeworkCount": "{count, plural, =1{1 Hausaufgabe} other{{count} Hausaufgaben}}",
+  "@homeworkCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "unreadCount": "{count, plural, =1{1 Nachricht} other{{count} Nachrichten}}",
+  "@unreadCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "orderMeal": "Essen bestellen",
+  "reportSick": "Krank melden",
+  "nowRunning": "Jetzt · {slot} · noch {minutes} Min.",
+  "@nowRunning": {
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "nowFirst": "Erste Stunde · {slot} · um {time}",
+  "@nowFirst": {
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "nowNext": "Gleich · {slot} · um {time}",
+  "@nowNext": {
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "schoolOverLabel": "Schulschluss",
+  "schoolOverTitle": "Unterricht vorbei",
+  "lastLessonEnded": "Letzte Stunde endete um {time}",
+  "@lastLessonEnded": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "noLessons": "Kein Unterricht",
+  "barThen": "Danach {time} {subject}",
+  "@barThen": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "barUntil": "bis {time}",
+  "@barUntil": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "pauseUntil": "Pause bis {time}",
+  "@pauseUntil": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "lessonRunning": "läuft",
+  "dayCollapse": "Tag zuklappen",
+  "dayExpand": "Ganzen Tag zeigen",
+  "upcoming": "Demnächst",
+  "allEvents": "Alle Termine",
+  "forEveryone": "Alle",
+  "periodsToday": "{count, plural, =1{1 Stunde heute} other{{count} Stunden heute}}",
+  "@periodsToday": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "blocksToday": "{count, plural, =1{1 Block heute} other{{count} Blöcke heute}}",
+  "@blocksToday": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chooseGroupInPlan": "Gruppe im Plan wählen",
+  "teacherAbsent": "{name} fehlt",
+  "@teacherAbsent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "roomInsteadOf": "{room} statt {old}",
+  "@roomInsteadOf": {
+    "placeholders": {
+      "room": {
+        "type": "String"
+      },
+      "old": {
+        "type": "String"
+      }
+    }
+  },
+  "lessonFallback": "Unterricht",
+  "mealToday": "Heute: {notes}",
+  "@mealToday": {
+    "placeholders": {
+      "notes": {
+        "type": "String"
+      }
+    }
+  },
+  "mealTomorrow": "Morgen: {notes}",
+  "@mealTomorrow": {
+    "placeholders": {
+      "notes": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeTodayFor": "Heute bei {name}",
+  "@noticeTodayFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeTomorrowFor": "Morgen bei {name}",
+  "@noticeTomorrowFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeTodaySchool": "Heute in der Schule",
+  "noticeTomorrowSchool": "Morgen in der Schule",
+  "noticeTodayChild": "Heute bei deinem Kind",
+  "noticeTomorrowChild": "Morgen bei deinem Kind",
+  "navToday": "Heute",
+  "navCalendar": "Kalender",
+  "navCourses": "Unterricht",
+  "navMessages": "Nachrichten",
+  "navMore": "Mehr",
+  "reportSickDetail": "Vorerst nur beim Portal prüfen",
+  "orderMealSetup": "Bestellseite der Mensa einmal eintragen",
+  "mensaChange": "Mensa-Adresse ändern",
+  "learningPlatform": "Lernplattform (Moodle)",
+  "portalInBrowser": "Schulportal im Browser",
+  "settings": "Einstellungen",
+  "settingsDetail": "Konto, Benachrichtigungen, Darstellung, Datenschutz",
+  "invalidUrl": "Das sieht nicht nach einer Web-Adresse aus.",
+  "mensaDialogTitle": "Bestellseite der Mensa",
+  "mensaDialogText": "Adresse der Seite, auf der ihr das Essen bestellt. Die App öffnet sie im Browser; die Anmeldung bleibt dort.",
+  "mensaDialogHint": "z. B. bestellung.example.de",
+  "delete": "Löschen",
+  "cancel": "Abbrechen",
+  "save": "Speichern",
+  "eventsNone": "Keine Termine in den nächsten Wochen.",
+  "kindExam": "Arbeit",
+  "kindFree": "Schulfrei",
+  "kindDeadline": "Frist",
+  "kindMeal": "Essen",
+  "allDay": "ganztags",
+  "noTimetable": "Die Schule bietet für dieses Konto keinen Stundenplan an.",
+  "offlineNothingSaved": "Keine Verbindung und noch nichts gespeichert.",
+  "timetableFailed": "Der Stundenplan ließ sich nicht laden.",
+  "retry": "Erneut versuchen",
+  "viewDay": "Tag",
+  "viewWeek": "Woche",
+  "viewEvents": "Termine",
+  "chooseGroupLabel": "Gruppe wählen:",
+  "noLessonsThisDay": "An diesem Tag kein Unterricht.",
+  "freePeriod": "Freistunde",
+  "subjectGroups": "{subject} · {count} Gruppen",
+  "@subjectGroups": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notChosenYet": "{slot} · noch nicht gewählt",
+  "@notChosenYet": {
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      }
+    }
+  },
+  "choose": "Wählen",
+  "cancelledCap": "Fällt aus",
+  "otherGroup": "Andere Gruppe",
+  "cellChoice": "Wahl",
+  "cellGroups": "{count} Gruppen",
+  "@cellGroups": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cellSubjects": "{count} Fächer",
+  "@cellSubjects": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cellChoose": "wählen",
+  "groupSheetTitle": "{subject} – Gruppe wählen",
+  "@groupSheetTitle": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "whichSubject": "Welches Fach?",
+  "groupSheetSame": "Gilt für alle {subject}-Stunden von {name}. Die anderen Gruppen werden ausgeblendet.",
+  "@groupSheetSame": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupSheetParallel": "Parallel laufen {subject}. Wähle, was {name} hat; die anderen werden ausgeblendet.",
+  "@groupSheetParallel": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupOf": "Gruppe {teacher}",
+  "@groupOf": {
+    "placeholders": {
+      "teacher": {
+        "type": "String"
+      }
+    }
+  },
+  "roomValue": "Raum {room}",
+  "@roomValue": {
+    "placeholders": {
+      "room": {
+        "type": "String"
+      }
+    }
+  },
+  "detectedViaCourse": "Erkannt über den Kurs in „Mein Unterricht“",
+  "showAllAgain": "Wieder alle zeigen",
+  "nameUnknown": "Name unbekannt",
+  "teacherCode": "Kürzel {code}",
+  "@teacherCode": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "noTeacherGiven": "Keine Lehrkraft angegeben.",
+  "tapToNameTeacher": "Antippen, um einen Namen einzutragen. Er wird nur auf diesem Gerät für dieses Konto gespeichert.",
+  "nameFor": "Name für {code}",
+  "@nameFor": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "teacherNameHint": "z. B. Frau Muster",
+  "cacheCleared": "Zwischenspeicher geleert",
+  "logoutQuestion": "Abmelden?",
+  "logoutText": "Das Konto wird von diesem Gerät entfernt, auch gespeicherte Gruppenwahl und Lehrernamen. Zum Wiederkommen meldest du dich neu an.",
+  "logout": "Abmelden",
+  "subscribeEvents": "Termine abonnieren",
+  "subscribeFailed": "Die Abo-Adresse ließ sich nicht laden.",
+  "subscribeText": "Mit dieser Adresse übernimmt dein Kalender (z. B. Google Kalender: „Weitere Kalender“ → „Per URL“) die Schultermine und hält sie aktuell.",
+  "copyAddress": "Adresse kopieren",
+  "close": "Schließen",
+  "parentAccount": "Elternkonto",
+  "studentAccount": "Schülerkonto",
+  "teacherAccount": "Lehrkraft",
+  "back": "Zurück",
+  "sectionAccount": "Konto",
+  "userData": "Benutzerdaten",
+  "userDataDetail": "Was das Portal über dieses Konto führt",
+  "switchAccount": "Konto wechseln oder hinzufügen",
+  "logoutDetail": "Entfernt das Konto von diesem Gerät",
+  "sectionNotifications": "Benachrichtigungen",
+  "allowNotifications": "Benachrichtigungen erlauben",
+  "notificationsBlocked": "Das Handy blockiert sie gerade für diese App",
+  "forThisAccount": "Für dieses Konto",
+  "notifySubstitutions": "Ausfall, Vertretung, große Termine",
+  "notifySubstitutionsDetail": "Heute sofort, für morgen ab 19 Uhr",
+  "notifyMessages": "Neue Nachrichten",
+  "timeWindow": "Zeitfenster",
+  "timeWindowDetail": "Außerhalb ist Ruhe",
+  "sectionAppearance": "Darstellung",
+  "likePhone": "Wie das Handy",
+  "themeLight": "Hell",
+  "themeDark": "Dunkel",
+  "fontSize": "Schriftgröße",
+  "fontNormal": "Normal",
+  "fontLarge": "Groß",
+  "fontXLarge": "Sehr groß",
+  "language": "Sprache",
+  "languageNote": "Inhalte der Schule wie Fächer, Termine und Nachrichten bleiben so, wie die Schule sie schreibt.",
+  "sectionData": "Daten",
+  "subscribeEventsDetail": "Schultermine im eigenen Kalender",
+  "clearCache": "Zwischenspeicher leeren",
+  "clearCacheDetail": "Geladene Dateien aus Kursen und Nachrichten",
+  "sectionAbout": "Über die App",
+  "versionValue": "Version {version}",
+  "@versionValue": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "unofficial": "inoffiziell, nicht vom Land Hessen",
+  "whatsNew": "Neu in dieser Version",
+  "privacy": "Datenschutz",
+  "privacyDetail": "Kein eigener Server – alles bleibt auf dem Handy",
+  "sourceLicense": "Quellcode und Lizenz",
+  "sourceLicenseDetail": "Freie Software (GPL-3.0), Grundlage {upstream}",
+  "@sourceLicenseDetail": {
+    "placeholders": {
+      "upstream": {
+        "type": "String"
+      }
+    }
+  },
+  "libraries": "Verwendete Bibliotheken",
+  "sectionDebug": "Fehlersuche",
+  "debugToggle": "Für Rückfragen bei Problemen",
+  "debugExport": "Debug-Export",
+  "debugExportDetail": "Protokoll zum Weitergeben, Passwörter geschwärzt",
+  "userDataNote": "Was das Schulportal über dieses Konto führt. Ändern lässt es sich nur im Portal selbst."
+}

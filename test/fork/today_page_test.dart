@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/ui/preview/demo_family.dart';
 import 'package:lanis/fork/ui/preview/preview_shell.dart';
 import 'package:lanis/fork/ui/today/today_model.dart';
 import 'package:lanis/fork/ui/today/today_page.dart';
+
+final de = forkL10nFor('de');
 
 /// Pixel 9a: 1080 × 2424 px bei 2.625 → ca. 411 × 923 dp.
 Future<void> _pixel(WidgetTester t) async {
@@ -14,6 +17,10 @@ Future<void> _pixel(WidgetTester t) async {
 }
 
 Widget _app({required Brightness b, double scale = 1.0}) => MaterialApp(
+  localizationsDelegates: ForkL10n.localizationsDelegates,
+  supportedLocales: ForkL10n.supportedLocales,
+  locale: const Locale('de'),
+
   theme: ThemeData(
     colorScheme: ColorScheme.fromSeed(
       seedColor: Colors.deepPurple,
@@ -72,11 +79,11 @@ void main() {
 
   test('Datumstexte und Schulwoche', () {
     final now = DateTime(2026, 10, 20, 10, 50);
-    expect(relativeDay(DateTime(2026, 10, 20), now), 'Heute');
-    expect(relativeDay(DateTime(2026, 10, 21), now), 'Morgen');
-    expect(relativeDay(DateTime(2026, 10, 22), now), 'Do 22.10.');
-    expect(dateCaps(now), 'DIENSTAG, 20. OKTOBER');
-    expect(greetingFor(now), 'Guten Morgen');
+    expect(relativeDay(de, DateTime(2026, 10, 20), now), 'Heute');
+    expect(relativeDay(de, DateTime(2026, 10, 21), now), 'Morgen');
+    expect(relativeDay(de, DateTime(2026, 10, 22), now), 'Do 22.10.');
+    expect(dateCaps(de, now), 'DIENSTAG, 20. OKTOBER');
+    expect(greetingFor(de, now), 'Guten Morgen');
     expect(schoolWeek(now).first, DateTime(2026, 10, 19));
     // Samstag: schon die nächste Woche
     expect(schoolWeek(DateTime(2026, 10, 24)).first, DateTime(2026, 10, 26));

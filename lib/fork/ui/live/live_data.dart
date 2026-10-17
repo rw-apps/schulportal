@@ -7,6 +7,7 @@ import 'package:liblanis/liblanis.dart';
 import 'package:lanis/utils/applet_settings.dart';
 
 import '../../lessons_parent.dart';
+import '../../l10n/l10n.dart';
 import '../kit.dart';
 import 'serial_loader.dart';
 import '../../school_links.dart' show normalizeMensaUrl;
@@ -447,25 +448,21 @@ class LiveGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
+    final t = context.t;
     final s = LiveData.of(context);
     if (s == null) return const Center(child: CircularProgressIndicator());
     if (!needsTimetable) return builder(context, s);
     if (!s.offers('stundenplan.php')) {
-      return LiveMessage(
-        text: 'Die Schule bietet für dieses Konto keinen Stundenplan an.',
-        style: k.meta,
-      );
+      return LiveMessage(text: t.noTimetable, style: k.meta);
     }
     if (s.timetable.content == null) {
       if (s.timetable.failed) {
         return LiveMessage(
-          text: s.timetable.offline
-              ? 'Keine Verbindung und noch nichts gespeichert.'
-              : 'Der Stundenplan ließ sich nicht laden.',
+          text: s.timetable.offline ? t.offlineNothingSaved : t.timetableFailed,
           style: k.meta,
           action: TextButton(
             onPressed: s.refresh,
-            child: Text('Erneut versuchen', style: k.link),
+            child: Text(t.retry, style: k.link),
           ),
         );
       }

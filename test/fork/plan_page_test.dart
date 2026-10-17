@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/ui/plan/plan_model.dart';
 import 'package:lanis/fork/ui/kit.dart';
@@ -15,6 +16,10 @@ Future<void> _pixel(WidgetTester t) async {
 
 Widget _app({Brightness b = Brightness.light, double scale = 1.0}) =>
     MaterialApp(
+      localizationsDelegates: ForkL10n.localizationsDelegates,
+      supportedLocales: ForkL10n.supportedLocales,
+      locale: const Locale('de'),
+
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.deepPurple,
@@ -152,7 +157,10 @@ void main() {
         await t.tap(find.text('Termine'));
         await t.pumpAndSettle();
         expect(t.takeException(), isNull);
-        expect(find.textContaining(RegExp(r'^(HEUTE · |MORGEN · )?[A-Z]+, \d+\. ')), findsWidgets);
+        expect(
+          find.textContaining(RegExp(r'^(HEUTE · |MORGEN · )?[A-Z]+, \d+\. ')),
+          findsWidgets,
+        );
       });
     }
   }

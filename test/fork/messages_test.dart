@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/ui/kit.dart';
 import 'package:lanis/fork/ui/messages/compose_model.dart';
@@ -84,6 +85,10 @@ void main() {
     addTearDown(t.view.reset);
     await t.pumpWidget(
       MaterialApp(
+        localizationsDelegates: ForkL10n.localizationsDelegates,
+        supportedLocales: ForkL10n.supportedLocales,
+        locale: const Locale('de'),
+
         builder: (c, child) => MediaQuery(
           data: MediaQuery.of(c).copyWith(textScaler: TextScaler.linear(scale)),
           child: child!,

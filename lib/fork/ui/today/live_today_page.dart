@@ -6,6 +6,7 @@ import 'package:lanis/fork/absence/absence_view.dart';
 import 'package:lanis/utils/safe_launch.dart';
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 
+import '../../l10n/l10n.dart';
 import '../live/live_data.dart';
 import '../plan/plan_from_lanis.dart' show subjectFullName;
 import '../plan/plan_model.dart';
@@ -82,10 +83,16 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
           substitutions: s.substitutions.content?.days ?? const [],
           now: now,
           school: shortSchoolName(s.schoolName),
+          t: context.t,
           className: className,
           canReportAbsence: s.offers('abwesenheitsmeldung.php'),
           subjectName: (code) => subjectFullName(code, courses),
-          mealHint: mealHintFor(events, now, className: className),
+          mealHint: mealHintFor(
+            events,
+            now,
+            t: context.t,
+            className: className,
+          ),
           mensaUrl: mensa,
           openHomework: liveOpenHomework(s),
           unreadMessages: liveUnreadMessages(s),

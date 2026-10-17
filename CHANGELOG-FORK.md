@@ -1,5 +1,10 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9333**
+
+- **Sprachen Deutsch, Englisch und Türkisch:** Neue Wahl unter Einstellungen → Darstellung → Sprache (wie das Handy, Deutsch, English, Türkçe). Übersetzt sind in diesem Schritt Heute, Kalender (Tag, Woche, Termine), Mehr, Einstellungen, die Benachrichtigungen und alle übernommenen Lanis-Seiten; Unterricht, Nachrichten und Krankmeldung folgen. Datum und Wochentage stehen in der gewählten Sprache. Inhalte der Schule (Fächer, Termine, Nachrichten) bleiben, wie die Schule sie schreibt.
+- Die Texte stehen in eigenen Sprachdateien, getrennt vom Code. Ein Handy in einer anderen Sprache bekommt Englisch.
+
 **4.1.0+9332**
 
 - **Neues Repository mit bereinigter Projektgeschichte:** Ältere Stände mit Schul- und Personendaten sind nicht mehr öffentlich. Keine Änderung an der App; die Version zeigt, dass Updates über Obtainium mit demselben Schlüssel weiterlaufen.

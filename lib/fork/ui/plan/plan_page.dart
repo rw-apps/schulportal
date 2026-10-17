@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../calendar/event_list.dart';
 import '../kit.dart';
 import '../today/today_model.dart' show ChangeKind, WeekItem, minutesOf;
-import '../today/today_page.dart' show schoolWeek, dayDiff;
+import '../today/today_page.dart' show schoolWeek, dayDiff, weekdayShort;
 import 'plan_model.dart';
-
-const _wd = ['Mo', 'Di', 'Mi', 'Do', 'Fr'];
 
 /// Tag und Woche zeigen Stunden, [events] die Termine der Schule.
 enum PlanView { day, week, events }
@@ -177,7 +176,11 @@ class _PlanPageState extends State<PlanPage> {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
-                child: Text('Kalender', style: k.pageTitle, maxLines: 1),
+                child: Text(
+                  context.t.navCalendar,
+                  style: k.pageTitle,
+                  maxLines: 1,
+                ),
               ),
             ),
             const SizedBox(width: Sp.m),
@@ -375,9 +378,9 @@ class _ViewToggle extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          seg(PlanView.day, 'Tag'),
-          seg(PlanView.week, 'Woche'),
-          if (withEvents) seg(PlanView.events, 'Termine'),
+          seg(PlanView.day, context.t.viewDay),
+          seg(PlanView.week, context.t.viewWeek),
+          if (withEvents) seg(PlanView.events, context.t.viewEvents),
         ],
       ),
     );
@@ -468,7 +471,7 @@ class _OpenGroupsHint extends StatelessWidget {
         children: [
           Icon(Icons.group_work_outlined, size: Sz.icon, color: k.p.muted),
           const SizedBox(width: Sp.xs + Sp.xxs),
-          Text('Gruppe wählen:', style: k.meta),
+          Text(context.t.chooseGroupLabel, style: k.meta),
           for (final s in shorts) ...[
             const SizedBox(width: Sp.s),
             Material(
@@ -530,7 +533,10 @@ class _DayPicker extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      Text(_wd[i], style: k.weekDay(i == selected)),
+                      Text(
+                        weekdayShort(context.t, week[i]),
+                        style: k.weekDay(i == selected),
+                      ),
                       Text('${week[i].day}', style: k.weekNum(i == selected)),
                       const SizedBox(height: Sp.xxs),
                       Container(
@@ -590,7 +596,7 @@ class DayPlan extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.all(Sp.xl),
         child: Text(
-          'An diesem Tag kein Unterricht.',
+          context.t.noLessonsThisDay,
           style: k.meta,
           textAlign: TextAlign.center,
         ),
@@ -612,7 +618,7 @@ class DayPlan extends StatelessWidget {
                 bottom: Sp.xs,
               ),
               child: Text(
-                'Pause bis ${plan.slots[b.firstSlot].start}',
+                context.t.pauseUntil(plan.slots[b.firstSlot].start),
                 style: k.rowPause,
               ),
             ),
@@ -682,16 +688,16 @@ class _DayRow extends StatelessWidget {
       case ResolvedNone():
         bg = k.p.bg;
         ink = sub = k.p.faint;
-        title = 'Freistunde';
+        title = context.t.freePeriod;
       case ResolvedOpen o:
         bg = k.p.inset;
         title = isSameSubjectChoice(o.options)
-            ? '${o.subject} · ${o.options.length} Gruppen'
+            ? context.t.subjectGroups(o.subject, o.options.length)
             : groupShortLabel(plan, o.short);
-        meta = '$label · noch nicht gewählt';
+        meta = context.t.notChosenYet(label);
         trailing = TextButton(
           onPressed: () => onOpenGroup(o.short),
-          child: Text('Wählen', style: k.link),
+          child: Text(context.t.choose, style: k.link),
         );
       case ResolvedLesson r:
         final x = r.lesson;
@@ -705,13 +711,13 @@ class _DayRow extends StatelessWidget {
           bg = k.p.cancel.bg;
           ink = sub = k.p.cancel.ink;
           strike = true;
-          second = 'Fällt aus';
+          second = context.t.cancelledCap;
         } else if (x.change != null) {
           bg = k.p.change.bg;
           ink = sub = k.p.change.ink;
           final what = x.change == ChangeKind.substitution
-              ? 'Vertretung'
-              : 'Raumwechsel';
+              ? context.t.changeSubstitution
+              : context.t.changeRoom;
           second = [what, ?x.changeDetail].join(': ');
         } else if (running) {
           bg = tone.tint;
@@ -722,7 +728,7 @@ class _DayRow extends StatelessWidget {
         }
         if (_isParallelSubject(plan, x.short)) {
           trailing = IconButton(
-            tooltip: 'Andere Gruppe',
+            tooltip: context.t.otherGroup,
             onPressed: () => onOpenGroup(x.short),
             icon: Icon(Icons.swap_horiz, size: Sz.icon, color: sub),
           );
@@ -788,7 +794,7 @@ class _DayRow extends StatelessWidget {
                                   // zusammen („Textil · 4 Gruppen1. Block“).
                                   if (block.content is! ResolvedOpen) ...[
                                     Text(
-                                      running ? 'läuft' : label,
+                                      running ? context.t.lessonRunning : label,
                                       style: k.planMeta(sub),
                                     ),
                                     const SizedBox(width: Sp.xs),
@@ -950,7 +956,7 @@ class WeekGrid extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
-                Text(_wd[d], style: k.gridHead(sel)),
+                Text(weekdayShort(context.t, week[d]), style: k.gridHead(sel)),
                 const SizedBox(width: Sp.xs),
                 Text('${week[d].day}.', style: k.gridHeadDate(sel)),
               ],
@@ -1169,12 +1175,15 @@ class _GridCell extends StatelessWidget {
         ink = k.p.change.ink;
         border = k.p.change.dot;
         final same = isSameSubjectChoice(o.options);
-        lines.add((same ? o.subject : 'Wahl', k.cellShort(ink)));
+        final t = context.t;
+        lines.add((same ? o.subject : t.cellChoice, k.cellShort(ink)));
         lines.add((
-          same ? '${o.options.length} Gruppen' : '${o.options.length} Fächer',
+          same
+              ? t.cellGroups(o.options.length)
+              : t.cellSubjects(o.options.length),
           k.cellRoom(ink),
         ));
-        lines.add(('wählen', k.cellTeacher(ink)));
+        lines.add((t.cellChoose, k.cellTeacher(ink)));
         onTap = () => onOpenGroup(o.short);
       case ResolvedLesson r:
         final x = r.lesson;
@@ -1193,7 +1202,7 @@ class _GridCell extends StatelessWidget {
         }
         lines.add((gridName(x), k.cellShort(ink)));
         if (x.change == ChangeKind.cancelled) {
-          lines.add(('fällt aus', k.cellRoom(ink)));
+          lines.add((context.t.lessonCancelled, k.cellRoom(ink)));
         } else {
           if (x.change == ChangeKind.roomChange && x.changeDetail != null) {
             lines.add((x.room ?? '', k.cellRoom(ink)));
@@ -1201,9 +1210,9 @@ class _GridCell extends StatelessWidget {
             lines.add((x.room!, k.cellRoom(ink)));
           }
           if (x.change == ChangeKind.substitution) {
-            lines.add(('Vertretung', k.cellTeacher(ink)));
+            lines.add((context.t.changeSubstitution, k.cellTeacher(ink)));
           } else if (x.change == ChangeKind.roomChange) {
-            lines.add(('Raumwechsel', k.cellTeacher(ink)));
+            lines.add((context.t.changeRoom, k.cellTeacher(ink)));
           } else if (x.teacher != null) {
             lines.add((plan.teacherCell(x.teacher)!, k.cellTeacher(ink)));
           }
@@ -1313,16 +1322,16 @@ class GroupSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              sameSubject ? '$label – Gruppe wählen' : 'Welches Fach?',
+              sameSubject
+                  ? context.t.groupSheetTitle(label)
+                  : context.t.whichSubject,
               style: k.sheetTitle,
             ),
             const SizedBox(height: Sp.xs),
             Text(
               sameSubject
-                  ? 'Gilt für alle $label-Stunden von ${plan.firstName}. '
-                        'Die anderen Gruppen werden ausgeblendet.'
-                  : 'Parallel laufen $label. Wähle, was ${plan.firstName} '
-                        'hat; die anderen werden ausgeblendet.',
+                  ? context.t.groupSheetSame(label, plan.firstName)
+                  : context.t.groupSheetParallel(label, plan.firstName),
               style: k.meta,
             ),
             const SizedBox(height: Sp.m),
@@ -1348,14 +1357,18 @@ class GroupSheet extends StatelessWidget {
                               children: [
                                 Text(
                                   sameSubject
-                                      ? 'Gruppe ${plan.teacherFull(g.teacher) ?? g.groupKey}'
+                                      ? context.t.groupOf(
+                                          plan.teacherFull(g.teacher) ??
+                                              g.groupKey,
+                                        )
                                       : g.subject,
                                   style: k.planSubject(k.p.ink),
                                 ),
                                 Text(
                                   sameSubject
                                       ? [
-                                          if (g.room != null) 'Raum ${g.room}',
+                                          if (g.room != null)
+                                            context.t.roomValue(g.room!),
                                         ].join()
                                       : [
                                           ?plan.teacherFull(g.teacher),
@@ -1367,8 +1380,7 @@ class GroupSheet extends StatelessWidget {
                                     autoChosen!.short == g.short &&
                                     autoChosen!.groupKey == g.groupKey)
                                   Text(
-                                    'Erkannt über den Kurs in „Mein '
-                                    'Unterricht“',
+                                    context.t.detectedViaCourse,
                                     style: k.planMeta(
                                       k.kid(plan.colorIndex).label,
                                     ),
@@ -1391,7 +1403,7 @@ class GroupSheet extends StatelessWidget {
             if (chosen != null)
               TextButton(
                 onPressed: () => onChoose(null),
-                child: Text('Wieder alle zeigen', style: k.link),
+                child: Text(context.t.showAllAgain, style: k.link),
               ),
           ],
         ),
@@ -1431,7 +1443,7 @@ class LessonSheet extends StatelessWidget {
             Text(
               [
                 time,
-                if (lesson.room != null) 'Raum ${lesson.room}',
+                if (lesson.room != null) context.t.roomValue(lesson.room!),
               ].join(' · '),
               style: k.meta,
             ),
@@ -1457,10 +1469,11 @@ class LessonSheet extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  plan.teacherNames[kz] ?? 'Name unbekannt',
+                                  plan.teacherNames[kz] ??
+                                      context.t.nameUnknown,
                                   style: k.planTeacher(k.p.ink),
                                 ),
-                                Text('Kürzel $kz', style: k.meta),
+                                Text(context.t.teacherCode(kz), style: k.meta),
                               ],
                             ),
                           ),
@@ -1477,13 +1490,8 @@ class LessonSheet extends StatelessWidget {
                   ),
                 ),
               ),
-            if (kuerzel.isEmpty)
-              Text('Keine Lehrkraft angegeben.', style: k.meta),
-            Text(
-              'Antippen, um einen Namen einzutragen. Er wird nur auf diesem '
-              'Gerät für dieses Konto gespeichert.',
-              style: k.meta,
-            ),
+            if (kuerzel.isEmpty) Text(context.t.noTeacherGiven, style: k.meta),
+            Text(context.t.tapToNameTeacher, style: k.meta),
           ],
         ),
       ),
@@ -1519,22 +1527,22 @@ class _TeacherNameDialogState extends State<TeacherNameDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Name für ${widget.kuerzel}'),
+      title: Text(context.t.nameFor(widget.kuerzel)),
       content: TextField(
         controller: _c,
         autofocus: true,
         textCapitalization: TextCapitalization.words,
-        decoration: const InputDecoration(hintText: 'z. B. Frau Muster'),
+        decoration: InputDecoration(hintText: context.t.teacherNameHint),
         onSubmitted: (v) => Navigator.pop(context, v.trim()),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Abbrechen'),
+          child: Text(context.t.cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(context, _c.text.trim()),
-          child: const Text('Speichern'),
+          child: Text(context.t.save),
         ),
       ],
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../kit.dart';
 
 /// Ein Eintrag unter „Mehr“: Dienste und Aktionen, die keinen eigenen
@@ -33,7 +34,7 @@ class MorePage extends StatelessWidget {
       child: ListView(
         padding: EdgeInsets.fromLTRB(Sp.page, Sp.xl, Sp.page, bottom + Sp.xl),
         children: [
-          Text('Mehr', style: k.pageTitle),
+          Text(context.t.navMore, style: k.pageTitle),
           const SizedBox(height: Sp.l),
           for (final e in entries)
             Padding(
@@ -89,20 +90,17 @@ class _EntryTile extends StatelessWidget {
 /// Eintrag löschen.
 Future<String?> askMensaUrl(BuildContext context, String? current) {
   final k = Kit.of(context);
+  final t = context.t;
   final c = TextEditingController(text: current ?? '');
   return showDialog<String>(
     context: context,
     builder: (context) => AlertDialog(
-      title: Text('Bestellseite der Mensa', style: k.sheetTitle),
+      title: Text(t.mensaDialogTitle, style: k.sheetTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Adresse der Seite, auf der ihr das Essen bestellt. Die App '
-            'öffnet sie im Browser; die Anmeldung bleibt dort.',
-            style: k.meta,
-          ),
+          Text(t.mensaDialogText, style: k.meta),
           const SizedBox(height: Sp.m),
           TextField(
             controller: c,
@@ -110,7 +108,7 @@ Future<String?> askMensaUrl(BuildContext context, String? current) {
             keyboardType: TextInputType.url,
             style: k.body,
             decoration: InputDecoration(
-              hintText: 'z. B. bestellung.example.de',
+              hintText: t.mensaDialogHint,
               hintStyle: k.meta,
             ),
           ),
@@ -120,15 +118,15 @@ Future<String?> askMensaUrl(BuildContext context, String? current) {
         if (current != null)
           TextButton(
             onPressed: () => Navigator.pop(context, ''),
-            child: Text('Löschen', style: k.link),
+            child: Text(t.delete, style: k.link),
           ),
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Abbrechen', style: k.link),
+          child: Text(t.cancel, style: k.link),
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, c.text),
-          child: Text('Speichern', style: k.link),
+          child: Text(t.save, style: k.link),
         ),
       ],
     ),

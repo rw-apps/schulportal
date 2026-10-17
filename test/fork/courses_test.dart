@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/ui/courses/courses_model.dart';
 import 'package:lanis/fork/ui/courses/courses_page.dart';
@@ -76,6 +77,10 @@ void main() {
       addTearDown(t.view.reset);
       await t.pumpWidget(
         MaterialApp(
+          localizationsDelegates: ForkL10n.localizationsDelegates,
+          supportedLocales: ForkL10n.supportedLocales,
+          locale: const Locale('de'),
+
           builder: (c, w) => MediaQuery(
             data: MediaQuery.of(
               c,

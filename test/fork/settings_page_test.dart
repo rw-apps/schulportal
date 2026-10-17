@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/ui/font_step.dart';
@@ -27,6 +28,10 @@ void main() {
             storageManagerProvider.overrideWithValue(null),
           ],
           child: MaterialApp(
+            localizationsDelegates: ForkL10n.localizationsDelegates,
+            supportedLocales: ForkL10n.supportedLocales,
+            locale: const Locale('de'),
+
             builder: (c, w) => MediaQuery(
               data: MediaQuery.of(
                 c,
@@ -74,7 +79,7 @@ void main() {
       // dem Eintrag (Rand der Liste), die Bedienung selbst ist dieselbe.
       await t.drag(find.byType(Scrollable).first, const Offset(0, 20000));
       await t.pumpAndSettle();
-      final large = find.text(KitFontStep.large.label);
+      final large = find.text('Groß');
       for (var i = 0; i < 40 && large.evaluate().isEmpty; i++) {
         await t.drag(find.byType(Scrollable).first, const Offset(0, -150));
         await t.pumpAndSettle();

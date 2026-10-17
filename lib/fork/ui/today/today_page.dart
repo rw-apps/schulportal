@@ -1,32 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../kit.dart';
 import 'today_model.dart';
-
-const _weekdaysLong = [
-  'Montag',
-  'Dienstag',
-  'Mittwoch',
-  'Donnerstag',
-  'Freitag',
-  'Samstag',
-  'Sonntag',
-];
-const _weekdaysShort = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-const _months = [
-  'Januar',
-  'Februar',
-  'März',
-  'April',
-  'Mai',
-  'Juni',
-  'Juli',
-  'August',
-  'September',
-  'Oktober',
-  'November',
-  'Dezember',
-];
 
 DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -39,23 +15,25 @@ int dayDiff(DateTime from, DateTime to) => DateTime.utc(
   to.day,
 ).difference(DateTime.utc(from.year, from.month, from.day)).inDays;
 
-/// „DIENSTAG, 20. OKTOBER“
-String dateCaps(DateTime d) =>
-    '${_weekdaysLong[d.weekday - 1]}, ${d.day}. ${_months[d.month - 1]}'
-        .toUpperCase();
+/// „DIENSTAG, 20. OKTOBER“ (Muster [ForkL10n.dateLong] der Sprache).
+String dateCaps(ForkL10n t, DateTime d) =>
+    upperFor(t, formatDate(t, t.dateLong, d));
 
 /// Begrüßung nach Tageszeit.
-String greetingFor(DateTime now) => now.hour < 11
-    ? 'Guten Morgen'
-    : (now.hour < 18 ? 'Guten Tag' : 'Guten Abend');
+String greetingFor(ForkL10n t, DateTime now) => now.hour < 11
+    ? t.greetingMorning
+    : (now.hour < 18 ? t.greetingDay : t.greetingEvening);
 
 /// „Heute“, „Morgen“ oder „Do 22.10.“ relativ zu [now].
-String relativeDay(DateTime day, DateTime now) {
+String relativeDay(ForkL10n t, DateTime day, DateTime now) {
   final diff = dayDiff(now, day);
-  if (diff == 0) return 'Heute';
-  if (diff == 1) return 'Morgen';
-  return '${_weekdaysShort[day.weekday - 1]} ${day.day}.${day.month}.';
+  if (diff == 0) return t.dayToday;
+  if (diff == 1) return t.dayTomorrow;
+  return formatDate(t, t.dateShort, day);
 }
+
+/// Kurzer Wochentag („Mo“) – Standalone-Form „ccc“, ohne Punkt.
+String weekdayShort(ForkL10n t, DateTime d) => formatDate(t, 'ccc', d);
 
 /// Kurzform der Stunde für die schmale Spalte der Tagesliste: „2. Block“ →
 /// „2.“, „1.–2. Block“ → „1.–2.“. Ursache: Mit echten Daten von Schule A brach
@@ -102,6 +80,7 @@ class TodayPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
+    final t = context.t;
     // Enthält bei Scaffold(extendBody: true) die Höhe der schwebenden Leiste.
     final bottom = MediaQuery.paddingOf(context).bottom;
 
@@ -121,9 +100,9 @@ class TodayPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(dateCaps(data.now), style: k.dateCaps),
+                  Text(dateCaps(t, data.now), style: k.dateCaps),
                   const SizedBox(height: Sp.xs),
-                  Text(greetingFor(data.now), style: k.greeting),
+                  Text(greetingFor(t, data.now), style: k.greeting),
                 ],
               ),
             ),
@@ -143,7 +122,7 @@ class TodayPage extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
             sliver: SliverToBoxAdapter(
               child: Text(
-                'Vorschau mit erfundenen Beispieldaten',
+                t.demoNote,
                 style: k.meta,
                 textAlign: TextAlign.center,
               ),
@@ -252,7 +231,7 @@ class _DayCell extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(_weekdaysShort[day.weekday - 1], style: k.weekDay(selected)),
+          Text(weekdayShort(context.t, day), style: k.weekDay(selected)),
           Text('${day.day}', style: k.weekNum(selected)),
           const SizedBox(height: Sp.xxs),
           SizedBox(
@@ -319,7 +298,10 @@ class ImportantBox extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('WICHTIG HEUTE UND MORGEN', style: k.boxTitle),
+          Text(
+            upperFor(context.t, context.t.importantTitle),
+            style: k.boxTitle,
+          ),
           for (final (kid, c) in items) ...[
             const SizedBox(height: Sp.s + Sp.xxs),
             _ImportantRow(kid: kid, item: c, now: data.now),
@@ -344,13 +326,15 @@ class _ImportantRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
+    final t = context.t;
     final tone = item.kind == ChangeKind.cancelled ? k.p.cancel : k.p.change;
     final what = switch (item.kind) {
-      ChangeKind.cancelled => 'fällt aus',
-      ChangeKind.roomChange => 'Raumwechsel ${item.detail ?? ''}'.trim(),
-      ChangeKind.substitution => 'Vertretung ${item.detail ?? ''}'.trim(),
+      ChangeKind.cancelled => t.lessonCancelled,
+      ChangeKind.roomChange => '${t.changeRoom} ${item.detail ?? ''}'.trim(),
+      ChangeKind.substitution =>
+        '${t.changeSubstitution} ${item.detail ?? ''}'.trim(),
     };
-    final when = relativeDay(item.day, now).toLowerCase();
+    final when = lowerFor(t, relativeDay(t, item.day, now));
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -492,9 +476,7 @@ class _KidCardState extends State<KidCard> {
       if (kid.openHomework > 0)
         _ActionButton(
           icon: Icons.menu_book_outlined,
-          label: kid.openHomework == 1
-              ? '1 Hausaufgabe'
-              : '${kid.openHomework} Hausaufgaben',
+          label: context.t.homeworkCount(kid.openHomework),
           onTap: widget.onOpenHomework == null
               ? null
               : () => widget.onOpenHomework!(kid),
@@ -502,9 +484,7 @@ class _KidCardState extends State<KidCard> {
       if (kid.unreadMessages > 0)
         _ActionButton(
           icon: Icons.mail_outline,
-          label: kid.unreadMessages == 1
-              ? '1 Nachricht'
-              : '${kid.unreadMessages} Nachrichten',
+          label: context.t.unreadCount(kid.unreadMessages),
           onTap: widget.onOpenMessages == null
               ? null
               : () => widget.onOpenMessages!(kid),
@@ -512,7 +492,7 @@ class _KidCardState extends State<KidCard> {
       if (kid.mensaUrl != null)
         _ActionButton(
           icon: Icons.restaurant_menu,
-          label: 'Essen bestellen',
+          label: context.t.orderMeal,
           onTap: widget.onOrderMeal == null
               ? null
               : () => widget.onOrderMeal!(kid),
@@ -520,7 +500,7 @@ class _KidCardState extends State<KidCard> {
       if (kid.canReportAbsence)
         _ActionButton(
           icon: Icons.thermostat,
-          label: 'Krank melden',
+          label: context.t.reportSick,
           strong: true,
           onTap: widget.onReportAbsence == null
               ? null
@@ -563,6 +543,7 @@ class _NowPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
+    final t = context.t;
     final l = kid.lessons;
     String label;
     String title;
@@ -573,35 +554,36 @@ class _NowPanel extends StatelessWidget {
       ?x.room,
       ?x.teacher,
       if (x.change == ChangeKind.substitution)
-        'Vertretung ${x.changeDetail ?? ''}'.trim(),
+        '${t.changeSubstitution} ${x.changeDetail ?? ''}'.trim(),
       if (x.change == ChangeKind.roomChange)
-        'Raumwechsel ${x.changeDetail ?? ''}'.trim(),
+        '${t.changeRoom} ${x.changeDetail ?? ''}'.trim(),
     ].join(' · ');
 
     switch (status.phase) {
       case DayPhase.running:
         final x = l[status.current!];
-        label =
-            'JETZT · ${x.slot.toUpperCase()} · NOCH '
-            '${status.minutesLeft} MIN.';
+        label = upperFor(t, t.nowRunning(x.slot, status.minutesLeft!));
         title = x.subject;
         meta = details(x);
       case DayPhase.before:
       case DayPhase.gap:
         final x = l[status.next!];
-        label =
-            '${status.phase == DayPhase.before ? 'ERSTE STUNDE' : 'GLEICH'}'
-            ' · ${x.slot.toUpperCase()} · UM ${x.start}';
+        label = upperFor(
+          t,
+          status.phase == DayPhase.before
+              ? t.nowFirst(x.slot, x.start)
+              : t.nowNext(x.slot, x.start),
+        );
         title = x.subject;
         meta = details(x);
       case DayPhase.over:
         final last = l.lastWhere((x) => !x.cancelled);
-        label = 'SCHULSCHLUSS';
-        title = 'Unterricht vorbei';
-        meta = 'Letzte Stunde endete um ${last.end}';
+        label = upperFor(t, t.schoolOverLabel);
+        title = t.schoolOverTitle;
+        meta = t.lastLessonEnded(last.end);
       case DayPhase.noLessons:
-        label = 'HEUTE';
-        title = 'Kein Unterricht';
+        label = upperFor(t, t.dayToday);
+        title = t.noLessons;
         meta = null;
     }
 
@@ -652,7 +634,8 @@ class _DayBar extends StatelessWidget {
     }
 
     final next = status.next == null ? null : l[status.next!];
-    final center = next == null ? '' : 'Danach ${next.start} ${next.subject}';
+    final t = context.t;
+    final center = next == null ? '' : t.barThen(next.start, next.subject);
     final lastEnd = l.lastWhere((x) => !x.cancelled, orElse: () => l.last).end;
 
     return Column(
@@ -698,7 +681,7 @@ class _DayBar extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            Text('bis $lastEnd', style: k.barLabel),
+            Text(t.barUntil(lastEnd), style: k.barLabel),
           ],
         ),
       ],
@@ -740,13 +723,13 @@ class _DayList extends StatelessWidget {
             child: Row(
               children: [
                 const SizedBox(width: Sz.slotColumn + Sp.s + Sp.xxs),
-                Text('Pause bis ${l[i].start}', style: k.rowPause),
+                Text(context.t.pauseUntil(l[i].start), style: k.rowPause),
               ],
             ),
           ),
         );
       }
-      rows.add(_row(k, l[i], i));
+      rows.add(_row(k, context.t, l[i], i));
     }
     return Container(
       margin: const EdgeInsets.only(bottom: Sp.s),
@@ -758,7 +741,7 @@ class _DayList extends StatelessWidget {
     );
   }
 
-  Widget _row(Kit k, DayLesson x, int i) {
+  Widget _row(Kit k, ForkL10n t, DayLesson x, int i) {
     final done = lessonDone(x, now) && status.current != i;
     final running = status.current == i;
     Color ink = k.p.ink;
@@ -775,13 +758,13 @@ class _DayList extends StatelessWidget {
     if (x.cancelled) {
       bg = k.p.cancel.bg;
       ink = sub = k.p.cancel.ink;
-      second = 'fällt aus';
+      second = t.lessonCancelled;
       strong = true;
     } else if (running) {
       bg = tone.tint;
       ink = tone.onTint;
       sub = tone.label;
-      right = 'läuft';
+      right = t.lessonRunning;
       strong = true;
     } else if (done) {
       ink = sub = k.p.faint;
@@ -789,8 +772,8 @@ class _DayList extends StatelessWidget {
       bg = k.p.change.bg;
       ink = sub = k.p.change.ink;
       final what = x.change == ChangeKind.substitution
-          ? 'Vertretung'
-          : 'Raumwechsel';
+          ? t.changeSubstitution
+          : t.changeRoom;
       second = [what, ?x.changeDetail].join(': ');
       strong = true;
     }
@@ -878,7 +861,7 @@ class _ToggleButton extends StatelessWidget {
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    expanded ? 'Tag zuklappen' : 'Ganzen Tag zeigen',
+                    expanded ? context.t.dayCollapse : context.t.dayExpand,
                     style: k.button(k.p.muted),
                   ),
                 ),
@@ -966,11 +949,11 @@ class UpcomingTiles extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Expanded(child: Text('Demnächst', style: k.section)),
+              Expanded(child: Text(context.t.upcoming, style: k.section)),
               if (onOpenAll != null)
                 TextButton(
                   onPressed: onOpenAll,
-                  child: Text('Alle Termine', style: k.link),
+                  child: Text(context.t.allEvents, style: k.link),
                 ),
             ],
           ),
@@ -1008,10 +991,11 @@ class _Tile extends StatelessWidget {
     final ci = item.childIndex;
     final kid = ci == null ? null : data.kids[ci];
     final color = kid == null ? k.p.muted : k.kid(kid.colorIndex).accent;
-    final caption = [
-      relativeDay(item.day, data.now),
-      ?item.time,
-    ].join(' · ').toUpperCase();
+    final t = context.t;
+    final caption = upperFor(
+      t,
+      [relativeDay(t, item.day, data.now), ?item.time].join(' · '),
+    );
     return Container(
       width: Sz.tileWidth,
       padding: const EdgeInsets.all(Sp.ml),
@@ -1032,7 +1016,7 @@ class _Tile extends StatelessWidget {
               const SizedBox(width: Sp.xs + Sp.xxs),
               Flexible(
                 child: Text(
-                  kid?.firstName ?? 'Alle',
+                  kid?.firstName ?? t.forEveryone,
                   style: k.tileKid(color),
                   overflow: TextOverflow.ellipsis,
                 ),

@@ -15,7 +15,9 @@ import 'package:lanis/utils/theme_settings.dart';
 import 'package:lanis/view/settings/subsettings/cache.dart' show CacheSettings;
 import 'package:lanis/view/settings/subsettings/debug_export.dart';
 
+import '../../l10n/l10n.dart';
 import '../font_step.dart';
+import '../language.dart';
 import '../kit.dart';
 import '../today/today_from_lanis.dart' show shortSchoolName;
 
@@ -73,7 +75,7 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
     if (mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Zwischenspeicher geleert')));
+      ).showSnackBar(SnackBar(content: Text(context.t.cacheCleared)));
     }
   }
 
@@ -81,24 +83,20 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
 
   Future<void> _logout(ClearTextAccount account) async {
     final k = Kit.of(context);
+    final t = context.t;
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Abmelden?', style: k.sheetTitle),
-        content: Text(
-          'Das Konto wird von diesem Gerät entfernt, auch gespeicherte '
-          'Gruppenwahl und Lehrernamen. Zum Wiederkommen meldest du dich '
-          'neu an.',
-          style: k.body,
-        ),
+        title: Text(t.logoutQuestion, style: k.sheetTitle),
+        content: Text(t.logoutText, style: k.body),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Abbrechen', style: k.link),
+            child: Text(t.cancel, style: k.link),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Abmelden', style: k.link),
+            child: Text(t.logout, style: k.link),
           ),
         ],
       ),
@@ -140,12 +138,12 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
     String key,
     List<int> cur,
   ) async {
-    final t = await showTimePicker(
+    final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: cur[0], minute: cur[1]),
     );
-    if (t == null) return;
-    shared.setJsonList(key, [t.hour, t.minute]);
+    if (picked == null) return;
+    shared.setJsonList(key, [picked.hour, picked.minute]);
     setState(() {});
   }
 
@@ -153,19 +151,17 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
 
   Future<void> _calendarLink() async {
     final k = Kit.of(context);
+    final t = context.t;
     final parser = ref.read(calendarParserProvider);
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Termine abonnieren', style: k.sheetTitle),
+        title: Text(t.subscribeEvents, style: k.sheetTitle),
         content: FutureBuilder(
           future: parser.getExports(),
           builder: (context, snap) {
             if (snap.hasError) {
-              return Text(
-                'Die Abo-Adresse ließ sich nicht laden.',
-                style: k.body,
-              );
+              return Text(t.subscribeFailed, style: k.body);
             }
             final link = snap.data?.subscriptionLink;
             if (link == null) {
@@ -178,12 +174,7 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Mit dieser Adresse übernimmt dein Kalender (z. B. Google '
-                  'Kalender: „Weitere Kalender“ → „Per URL“) die Schultermine '
-                  'und hält sie aktuell.',
-                  style: k.meta,
-                ),
+                Text(t.subscribeText, style: k.meta),
                 const SizedBox(height: Sp.m),
                 SelectableText(link, style: k.body),
                 const SizedBox(height: Sp.m),
@@ -193,7 +184,7 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
                     if (context.mounted) Navigator.pop(context);
                   },
                   icon: const Icon(Icons.copy),
-                  label: Text('Adresse kopieren', style: k.link),
+                  label: Text(t.copyAddress, style: k.link),
                 ),
               ],
             );
@@ -202,7 +193,7 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Schließen', style: k.link),
+            child: Text(t.close, style: k.link),
           ),
         ],
       ),
@@ -212,6 +203,7 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
+    final t = context.t;
     final bottom = MediaQuery.paddingOf(context).bottom;
     final session = ref.watch(sessionProvider).asData?.value;
     final account = ref.watch(activeAccountProvider);
@@ -220,15 +212,16 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
     final supported = ref.watch(supportedAppletPhpUrlsProvider);
     final theme = ref.watch(themeSettingsProvider)['theme'] as String;
     final font = ref.watch(fontStepProvider);
+    final language = ref.watch(languageProvider);
 
     final name = [
       session?.userData['vorname'],
       session?.userData['nachname'],
     ].nonNulls.where((s) => s.isNotEmpty).join(' ');
     final type = switch (account?.accountType ?? session?.accountTypeOrNull) {
-      AccountType.parent => 'Elternkonto',
-      AccountType.student => 'Schülerkonto',
-      AccountType.teacher => 'Lehrkraft',
+      AccountType.parent => t.parentAccount,
+      AccountType.student => t.studentAccount,
+      AccountType.teacher => t.teacherAccount,
       _ => null,
     };
     final allow = accountSettings?.getBool('notifications-allow') ?? true;
@@ -241,7 +234,7 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
       for (final v in shared.getJsonList('notifications-end-time') ?? [21, 0])
         v as int,
     ];
-    String hm(List<int> t) => '${t[0]}:${t[1].toString().padLeft(2, '0')}';
+    String hm(List<int> v) => '${v[0]}:${v[1].toString().padLeft(2, '0')}';
     bool area(String php) =>
         accountSettings?.getBool('notification-$php') ?? true;
     void setArea(String php, bool v) {
@@ -261,20 +254,20 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
                 IconButton(
                   onPressed: () => Navigator.of(context).maybePop(),
                   icon: Icon(Icons.arrow_back, color: k.p.ink),
-                  tooltip: 'Zurück',
+                  tooltip: t.back,
                 ),
                 const SizedBox(width: Sp.xs),
                 Expanded(
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
-                    child: Text('Einstellungen', style: k.pageTitle),
+                    child: Text(t.settings, style: k.pageTitle),
                   ),
                 ),
               ],
             ),
 
-            _Section('Konto', [
+            _Section(t.sectionAccount, [
               if (account != null)
                 _Item(
                   icon: Icons.person_outline,
@@ -287,35 +280,35 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
               if (session != null && session.userData.isNotEmpty)
                 _Item(
                   icon: Icons.badge_outlined,
-                  label: 'Benutzerdaten',
-                  detail: 'Was das Portal über dieses Konto führt',
+                  label: t.userData,
+                  detail: t.userDataDetail,
                   onTap: () => _openUserData(session),
                 ),
               _Item(
                 icon: Icons.switch_account_outlined,
-                label: 'Konto wechseln oder hinzufügen',
+                label: t.switchAccount,
                 onTap: () => GoRouter.of(context).push('/accounts'),
               ),
               if (account != null)
                 _Item(
                   icon: Icons.logout,
-                  label: 'Abmelden',
-                  detail: 'Entfernt das Konto von diesem Gerät',
+                  label: t.logout,
+                  detail: t.logoutDetail,
                   onTap: () => _logout(account),
                 ),
             ]),
 
-            _Section('Benachrichtigungen', [
+            _Section(t.sectionNotifications, [
               if (!granted)
                 _Item(
                   icon: Icons.notifications_off_outlined,
-                  label: 'Benachrichtigungen erlauben',
-                  detail: 'Das Handy blockiert sie gerade für diese App',
+                  label: t.allowNotifications,
+                  detail: t.notificationsBlocked,
                   onTap: _askPermission,
                 ),
               _Switch(
-                label: 'Benachrichtigungen',
-                detail: 'Für dieses Konto',
+                label: t.sectionNotifications,
+                detail: t.forThisAccount,
                 value: allow && granted,
                 onChanged: granted
                     ? (v) {
@@ -326,8 +319,8 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
               ),
               if (supported.contains('vertretungsplan.php'))
                 _Switch(
-                  label: 'Ausfall, Vertretung, große Termine',
-                  detail: 'Heute sofort, für morgen ab 19 Uhr',
+                  label: t.notifySubstitutions,
+                  detail: t.notifySubstitutionsDetail,
                   value: area('vertretungsplan.php'),
                   onChanged: allow && granted
                       ? (v) => setArea('vertretungsplan.php', v)
@@ -335,7 +328,7 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
                 ),
               if (supported.contains('nachrichten.php'))
                 _Switch(
-                  label: 'Neue Nachrichten',
+                  label: t.notifyMessages,
                   value: area('nachrichten.php'),
                   onChanged: allow && granted
                       ? (v) => setArea('nachrichten.php', v)
@@ -343,8 +336,8 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
                 ),
               _Item(
                 icon: Icons.schedule,
-                label: 'Zeitfenster',
-                detail: 'Außerhalb ist Ruhe',
+                label: t.timeWindow,
+                detail: t.timeWindowDetail,
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -364,11 +357,11 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
               ),
             ]),
 
-            _Section('Darstellung', [
-              for (final (v, l) in const [
-                ('system', 'Wie das Handy'),
-                ('light', 'Hell'),
-                ('dark', 'Dunkel'),
+            _Section(t.sectionAppearance, [
+              for (final (v, l) in [
+                ('system', t.likePhone),
+                ('light', t.themeLight),
+                ('dark', t.themeDark),
               ])
                 _Choice(
                   label: l,
@@ -381,63 +374,90 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
               const SizedBox(height: Sp.s),
               Padding(
                 padding: const EdgeInsets.only(left: Sp.xs, bottom: Sp.xs),
-                child: Text('Schriftgröße', style: k.planMeta(k.p.muted)),
+                child: Text(t.fontSize, style: k.planMeta(k.p.muted)),
               ),
               for (final step in KitFontStep.values)
                 _Choice(
-                  label: step.label,
+                  label: switch (step) {
+                    KitFontStep.normal => t.fontNormal,
+                    KitFontStep.large => t.fontLarge,
+                    KitFontStep.xlarge => t.fontXLarge,
+                  },
                   selected: step == font,
                   onTap: () => ref.read(fontStepProvider.notifier).set(step),
                 ),
+              const SizedBox(height: Sp.s),
+              Padding(
+                padding: const EdgeInsets.only(left: Sp.xs, bottom: Sp.xs),
+                child: Text(t.language, style: k.planMeta(k.p.muted)),
+              ),
+              // Sprachnamen stehen in ihrer eigenen Sprache (so findet man
+              // die eigene auch in einer fremden Oberfläche); nur „Wie das
+              // Handy“ wird übersetzt.
+              for (final (v, l) in [
+                (languageSystem, t.likePhone),
+                ('de', 'Deutsch'),
+                ('en', 'English'),
+                ('tr', 'Türkçe'),
+              ])
+                _Choice(
+                  label: l,
+                  selected: language == v,
+                  onTap: () => ref.read(languageProvider.notifier).set(v),
+                ),
+              Padding(
+                padding: const EdgeInsets.only(left: Sp.xs, top: Sp.xs),
+                child: Text(t.languageNote, style: k.planMeta(k.p.muted)),
+              ),
             ]),
 
-            _Section('Daten', [
+            _Section(t.sectionData, [
               if (supported.contains('kalender.php'))
                 _Item(
                   icon: Icons.event_available_outlined,
-                  label: 'Termine abonnieren',
-                  detail: 'Schultermine im eigenen Kalender',
+                  label: t.subscribeEvents,
+                  detail: t.subscribeEventsDetail,
                   onTap: _calendarLink,
                 ),
               _Item(
                 icon: Icons.cleaning_services_outlined,
-                label: 'Zwischenspeicher leeren',
+                label: t.clearCache,
                 detail: _cacheBytes == null
-                    ? 'Geladene Dateien aus Kursen und Nachrichten'
+                    ? t.clearCacheDetail
                     : '${(_cacheBytes! / (1024 * 1024)).toStringAsFixed(1)} MB',
                 onTap: _clearCache,
               ),
             ]),
 
-            _Section('Über die App', [
+            _Section(t.sectionAbout, [
               _Item(
                 icon: Icons.info_outline,
                 label: forkAppName,
                 detail: [
-                  if (_version != null) 'Version $_version',
-                  'inoffiziell, nicht vom Land Hessen',
+                  if (_version != null) t.versionValue(_version!),
+                  t.unofficial,
                 ].join(' · '),
               ),
               _Item(
                 icon: Icons.new_releases_outlined,
-                label: 'Neu in dieser Version',
+                label: t.whatsNew,
                 onTap: () => _open(forkLatestReleaseUrl),
               ),
               _Item(
                 icon: Icons.privacy_tip_outlined,
-                label: 'Datenschutz',
-                detail: 'Kein eigener Server – alles bleibt auf dem Handy',
+                label: t.privacy,
+                detail: t.privacyDetail,
                 onTap: () => _open(forkPrivacyPolicyUrl),
               ),
               _Item(
                 icon: Icons.code,
-                label: 'Quellcode und Lizenz',
-                detail: 'Freie Software (GPL-3.0), Grundlage $upstreamName',
+                label: t.sourceLicense,
+                detail: t.sourceLicenseDetail(upstreamName),
                 onTap: () => _open(forkRepoUrl),
               ),
               _Item(
                 icon: Icons.article_outlined,
-                label: 'Verwendete Bibliotheken',
+                label: t.libraries,
                 onTap: () => showLicensePage(
                   context: context,
                   applicationName: forkAppName,
@@ -446,17 +466,17 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
               ),
             ]),
 
-            _Section('Fehlersuche', [
+            _Section(t.sectionDebug, [
               _Item(
                 icon: _debugOpen ? Icons.expand_less : Icons.expand_more,
-                label: 'Für Rückfragen bei Problemen',
+                label: t.debugToggle,
                 onTap: () => setState(() => _debugOpen = !_debugOpen),
               ),
               if (_debugOpen)
                 _Item(
                   icon: Icons.bug_report_outlined,
-                  label: 'Debug-Export',
-                  detail: 'Protokoll zum Weitergeben, Passwörter geschwärzt',
+                  label: t.debugExport,
+                  detail: t.debugExportDetail,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => const DebugExport(),
@@ -654,24 +674,20 @@ class _UserDataPage extends StatelessWidget {
                 IconButton(
                   onPressed: () => Navigator.of(context).maybePop(),
                   icon: Icon(Icons.arrow_back, color: k.p.ink),
-                  tooltip: 'Zurück',
+                  tooltip: context.t.back,
                 ),
                 const SizedBox(width: Sp.xs),
                 Expanded(
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
-                    child: Text('Benutzerdaten', style: k.pageTitle),
+                    child: Text(context.t.userData, style: k.pageTitle),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: Sp.s),
-            Text(
-              'Was das Schulportal über dieses Konto führt. Ändern lässt es '
-              'sich nur im Portal selbst.',
-              style: k.meta,
-            ),
+            Text(context.t.userDataNote, style: k.meta),
             const SizedBox(height: Sp.l),
             for (final e in data.entries)
               Padding(

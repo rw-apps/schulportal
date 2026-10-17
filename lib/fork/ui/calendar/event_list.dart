@@ -1,49 +1,26 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../kit.dart';
 import '../today/today_model.dart';
 import '../today/today_page.dart' show dayDiff;
 
-const _weekdays = [
-  'Montag',
-  'Dienstag',
-  'Mittwoch',
-  'Donnerstag',
-  'Freitag',
-  'Samstag',
-  'Sonntag',
-];
-const _wdShort = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-const _months = [
-  'Januar',
-  'Februar',
-  'März',
-  'April',
-  'Mai',
-  'Juni',
-  'Juli',
-  'August',
-  'September',
-  'Oktober',
-  'November',
-  'Dezember',
-];
-
 /// „HEUTE · MONTAG, 19. OKTOBER“ bzw. „DONNERSTAG, 22. OKTOBER“.
-String eventDayHeader(DateTime day, DateTime now) {
-  final date =
-      '${_weekdays[day.weekday - 1]}, ${day.day}. ${_months[day.month - 1]}';
+String eventDayHeader(ForkL10n t, DateTime day, DateTime now) {
+  final date = formatDate(t, t.dateLong, day);
   final diff = dayDiff(now, day);
-  final rel = diff == 0 ? 'Heute · ' : (diff == 1 ? 'Morgen · ' : '');
-  return '$rel$date'.toUpperCase();
+  final rel = diff == 0
+      ? '${t.dayToday} · '
+      : (diff == 1 ? '${t.dayTomorrow} · ' : '');
+  return upperFor(t, '$rel$date');
 }
 
 /// Art als kurzes Wort für die Metazeile; normale Termine ohne Wort.
-String? eventKindLabel(WeekKind k) => switch (k) {
-  WeekKind.exam => 'Arbeit',
-  WeekKind.free => 'Schulfrei',
-  WeekKind.deadline => 'Frist',
-  WeekKind.meal => 'Essen',
+String? eventKindLabel(ForkL10n t, WeekKind k) => switch (k) {
+  WeekKind.exam => t.kindExam,
+  WeekKind.free => t.kindFree,
+  WeekKind.deadline => t.kindDeadline,
+  WeekKind.meal => t.kindMeal,
   WeekKind.event => null,
 };
 
@@ -71,7 +48,7 @@ class EventList extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: Sp.xl),
         child: Text(
-          'Keine Termine in den nächsten Wochen.',
+          context.t.eventsNone,
           style: k.meta,
           textAlign: TextAlign.center,
         ),
@@ -88,7 +65,10 @@ class EventList extends StatelessWidget {
               bottom: Sp.s,
               left: Sp.xs,
             ),
-            child: Text(eventDayHeader(it.day, now), style: k.dateCaps),
+            child: Text(
+              eventDayHeader(context.t, it.day, now),
+              style: k.dateCaps,
+            ),
           ),
         );
         last = it.day;
@@ -127,11 +107,11 @@ class _EventRow extends StatelessWidget {
       WeekKind.meal => k.p.faint,
       WeekKind.deadline || WeekKind.event => k.kid(kidColor).accent,
     };
+    final t = context.t;
     final until = item.until;
     final meta = [
-      ?eventKindLabel(item.kind),
-      if (until != null)
-        'bis ${_wdShort[until.weekday - 1]} ${until.day}.${until.month}.',
+      ?eventKindLabel(t, item.kind),
+      if (until != null) t.barUntil(formatDate(t, t.dateShort, until)),
       ?item.place,
     ].join(' · ');
     return Container(
@@ -150,7 +130,7 @@ class _EventRow extends StatelessWidget {
               child: SizedBox(
                 width: Sz.slotColumn,
                 child: Text(
-                  item.time ?? 'ganztags',
+                  item.time ?? t.allDay,
                   style: item.time == null ? k.timeEnd : k.timeStart,
                 ),
               ),
