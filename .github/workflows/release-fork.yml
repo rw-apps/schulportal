@@ -86,7 +86,6 @@ jobs:
         if: steps.ver.outputs.neu == 'true'
         run: |
           flutter pub get
-          dart run build_runner build --delete-conflicting-outputs
           dart run intl_utils:generate
           flutter analyze --no-fatal-infos
           flutter test

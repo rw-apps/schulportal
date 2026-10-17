@@ -1,116 +1,42 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:liblanis/liblanis.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 
-/// GlitchTip (Sentry-compatible) endpoint for error events only.
-// Fork: leer. Ursache: Die DSN zeigte auf den GlitchTip-Server der
-// Original-Entwickler; Berichte dieses Forks gehören nicht dorthin.
-// Leere DSN = Sentry-SDK sendet nichts (SentryFlutter.init deaktiviert sich).
-const glitchtipDsn = '';
+/// Fehlerberichte – im Fork abgeschaltet und ohne Sentry-SDK.
+///
+/// Ursache (17.10.26): Die DSN zeigte auf den Server der Original-
+/// Entwickler; der Fork hat keinen eigenen und sendet nichts („Kein eigener
+/// Server – alles bleibt auf dem Handy“, Einstellungen → Datenschutz). Das
+/// SDK (sentry_flutter) brachte trotzdem ~0,3 MB Native-Bibliothek je
+/// Prozessorart und Java-Klassen in die APK. Die Funktionen bleiben als
+/// leere Hülle, damit die geerbten Aufrufer (main.dart, auth.dart,
+/// lanis_bootstrap.dart) unverändert bleiben.
 
-/// [shared_settings] key for device-wide GlitchTip opt-in (default off).
+/// [shared_settings]-Schlüssel des früheren Opt-ins (bleibt immer false).
 const glitchTipEnabledKey = 'glitchtip-enabled';
 
-/// Runtime gate for outbound error events. Default off until synced from settings.
-bool glitchTipReportingEnabled = false;
-
-bool isGlitchTipEnabled(TypedSettings shared) {
-  // Fork: immer aus — ohne Server gibt es nichts einzuschalten. Ein früher
-  // gespeichertes true (z. B. aus importierten Einstellungen) wirkt nicht.
-  return false;
-}
+bool isGlitchTipEnabled(TypedSettings shared) => false;
 
 void setGlitchTipEnabled(TypedSettings shared, bool enabled) {
   shared.setBool(glitchTipEnabledKey, false);
-  setGlitchTipReportingEnabled(false);
 }
 
-void setGlitchTipReportingEnabled(bool enabled) {
-  glitchTipReportingEnabled = enabled;
-}
-
-/// Capture an exception only when the user has opted into GlitchTip.
+/// Nichts wird gesendet.
 Future<void> captureGlitchTipException(
   Object throwable, {
   StackTrace? stackTrace,
-}) async {
-  if (!glitchTipReportingEnabled) return;
-  await Sentry.captureException(throwable, stackTrace: stackTrace);
-}
+}) async {}
 
-/// Report an unexpected applet fetch error from liblanis (opt-in gated).
+/// Nichts wird gesendet.
 Future<void> captureUnexpectedAppletError(
   Object throwable,
   StackTrace stackTrace, {
   required String appletPhpUrl,
-}) async {
-  if (!glitchTipReportingEnabled) return;
-  await Sentry.addBreadcrumb(
-    Breadcrumb(
-      category: 'applet',
-      message: 'Unexpected fetch error',
-      data: {'appletPhpUrl': appletPhpUrl},
-      level: SentryLevel.error,
-    ),
-  );
-  await Sentry.captureException(throwable, stackTrace: stackTrace);
+}) async {}
+
+/// Startet die App direkt (früher unter Sentrys Fehlerbehandlung).
+Future<void> initGlitchTip(FutureOr<void> Function() appRunner) async {
+  await appRunner();
 }
 
-/// Configure [SentryFlutter] for our self-hosted GlitchTip instance.
-///
-/// Error reporting only — no session envelopes, traces, metrics, profiles,
-/// logs, or session replay. [sendDefaultPii] stays off to avoid IP, device
-/// name, and UI text labels on events. Outbound events are dropped until
-/// [glitchTipReportingEnabled] is true.
-void configureGlitchTip(SentryFlutterOptions options) {
-  options.dsn = glitchtipDsn;
-  options.sendDefaultPii = false;
-  options.environment = kReleaseMode
-      ? 'release'
-      : kProfileMode
-      ? 'profile'
-      : 'debug';
-
-  // Error events only.
-  options.enableAutoSessionTracking = false;
-  options.tracesSampleRate = 0;
-  options.enableAutoPerformanceTracing = false;
-  options.enableUserInteractionTracing = false;
-  options.enableFramesTracking = false;
-  options.enableLogs = false;
-  options.replay.sessionSampleRate = 0;
-  options.replay.onErrorSampleRate = 0;
-
-  options.beforeSend = (event, hint) {
-    if (!glitchTipReportingEnabled) return null;
-    return event;
-  };
-}
-
-/// Initialize GlitchTip and run [appRunner] under Sentry's error handlers.
-Future<void> initGlitchTip(FutureOr<void> Function() appRunner) {
-  return SentryFlutter.init(
-    configureGlitchTip,
-    appRunner: appRunner,
-  );
-}
-
-/// Load the shared opt-in flag from the configured Lanis database.
-void syncGlitchTipReportingFromConfig() {
-  final config = LanisClient.config;
-  if (config == null) {
-    setGlitchTipReportingEnabled(false);
-    return;
-  }
-  final db = LanisDatabase.open(
-    path: config.databasePath,
-    secretStore: config.secretStore,
-  );
-  try {
-    setGlitchTipReportingEnabled(isGlitchTipEnabled(TypedSettings.shared(db)));
-  } finally {
-    db.dispose();
-  }
-}
+void syncGlitchTipReportingFromConfig() {}

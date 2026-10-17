@@ -25,7 +25,6 @@ import 'package:lanis/utils/mono_text_viewer.dart';
 import 'package:lanis/utils/phoenix.dart';
 import 'package:lanis/utils/theme_settings.dart';
 import 'package:lanis/view/startup_error_view.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:lanis/fork_identity.dart';
 
 Future<void> main() async {
@@ -69,7 +68,7 @@ Future<void> _startApp() async {
     runApp(
       ProviderScope(
         overrides: overrides,
-        child: Phoenix(child: SentryWidget(child: const App())),
+        child: Phoenix(child: const App()),
       ),
     );
   } catch (e, st) {

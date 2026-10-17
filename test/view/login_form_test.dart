@@ -12,7 +12,6 @@ import '../helpers/test_app.dart';
 void main() {
   tearDown(() {
     LanisClient.reset();
-    setGlitchTipReportingEnabled(false);
   });
 
   setUp(() {

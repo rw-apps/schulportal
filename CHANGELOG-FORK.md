@@ -1,5 +1,10 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9337** – Aufräumen, Teil 1
+
+- Fehlerbericht-Anbindung (Sentry) ausgebaut – sie war ohne Server ohnehin stumm; die APK wird etwas kleiner.
+- Entfernt: iOS-Projekt, F-Droid-Metadaten der Original-App (6,7 MB im Repository), alte Bau-Skripte, unbenutzte Bilder und vier Dateien ohne Verwendung. Keine Änderung an der Bedienung.
+
 **4.1.0+9336** – Sicherheitsprüfung
 
 - **Benachrichtigungen vertraulich:** Auf dem gesperrten Handy zeigt Android nur „Schulportal“ ohne Inhalt, wenn unter Sperrbildschirm „sensible Inhalte ausblenden“ gewählt ist.

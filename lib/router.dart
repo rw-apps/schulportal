@@ -13,7 +13,6 @@ import 'package:lanis/utils/deep_link.dart';
 import 'package:lanis/utils/responsive.dart';
 import 'package:lanis/view/account_switcher/account_switcher.dart';
 import 'package:lanis/utils/privacy_policy.dart';
-import 'package:lanis/utils/glitchtip_navigation.dart';
 import 'package:lanis/view/login/auth.dart';
 import 'package:lanis/view/login/screen.dart';
 import 'package:lanis/view/moodle.dart';
@@ -129,8 +128,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   final shellBranches = <StatefulShellBranch>[
     for (final def in AppDefinitions.homeApplets)
       StatefulShellBranch(
-        // Separate observer instance per navigator (Sentry forbids sharing one).
-        observers: [glitchTipNavigatorObserver()],
         initialLocation: def.homePath(
           def.deepLinkScope == DeepLinkScope.common
               ? null
@@ -141,7 +138,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
     for (final def in AppDefinitions.navigationApplets)
       StatefulShellBranch(
-        observers: [glitchTipNavigatorObserver()],
         initialLocation: def.homePath(
           def.deepLinkScope == DeepLinkScope.common
               ? null
@@ -151,7 +147,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         routes: def.buildRoutes(routeCtx),
       ),
     StatefulShellBranch(
-      observers: [glitchTipNavigatorObserver()],
       initialLocation: SettingsDeepLinks.home,
       routes: buildSettingsRoutes(),
     ),
@@ -161,8 +156,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     navigatorKey: rootNavigatorKey,
     initialLocation: '/startup',
     refreshListenable: listenable,
-    // Breadcrumbs for error context only (traces are disabled in GlitchTip config).
-    observers: [glitchTipNavigatorObserver()],
     redirect: (context, state) {
       // Normalize lanis://host/path → /host/path for go_router matching.
       if (state.uri.scheme == 'lanis') {
@@ -256,8 +249,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 
-  final detachRouteTracking = attachGlitchTipRouteTracking(router);
-  ref.onDispose(detachRouteTracking);
   return router;
 });
 

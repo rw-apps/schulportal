@@ -71,8 +71,12 @@ void main() {
         .hasMatch(s), isTrue);
   });
 
-  test('GlitchTip-DSN ist leer', () {
-    final s = File('lib/utils/glitchtip.dart').readAsStringSync();
-    expect(s.contains("const glitchtipDsn = '';"), isTrue);
+  // Seit 4.1.0+9337 ohne Sentry-SDK: Es darf gar nicht mehr eingebunden sein.
+  test('kein Fehlerbericht-SDK', () {
+    expect(File('pubspec.yaml').readAsStringSync(), isNot(contains('sentry')));
+    expect(
+      File('lib/utils/glitchtip.dart').readAsStringSync(),
+      isNot(contains('package:sentry')),
+    );
   });
 }
