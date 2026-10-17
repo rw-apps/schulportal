@@ -319,5 +319,11 @@
   "errorsDeleted": "Liste silindi",
   "debugUnlocked": "Hata ayıklama dışa aktarımı açıldı (Sorun giderme altında)",
   "debugExportWarning": "Ad ve notlar içeren gerçek portal sayfalarını içerir – yalnızca uygulamayı yöneten kişiye verin.",
-  "mensaSuggested": "Okulun uygulama listesinden öneri – lütfen kontrol edin."
+  "mensaSuggested": "Okulun uygulama listesinden öneri – lütfen kontrol edin.",
+  "accountAdded": "Hesap kuruldu",
+  "accountsSoFar": "Şimdiye kadar kurulan:",
+  "addAnotherText": "Başka bir çocuk farklı bir okula mı gidiyor? O zaman onun girişini şimdi kurun. Aynı okuldaki kardeşler veli hesabında zaten görünür.",
+  "addAnotherAccount": "Başka hesap ekle",
+  "done": "Tamam",
+  "anotherAccountTitle": "Başka hesap"
 }

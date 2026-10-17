@@ -97,9 +97,10 @@ class _PlanPageState extends State<PlanPage> {
   Future<void> _openGroupSheet(String short) async {
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       showDragHandle: true,
       backgroundColor: Kit.of(context).p.card,
-      builder: (_) => GroupSheet(
+      builder: (sheet) => GroupSheet(
         plan: _plan,
         short: short,
         chosen: chosenOption(_plan, _choice, short),
@@ -118,7 +119,9 @@ class _PlanPageState extends State<PlanPage> {
             _choices[_kid] = next;
           });
           widget.onChoicesChanged?.call(_choices);
-          Navigator.of(context).pop();
+          // Kontext des Blatts: Es liegt im App-Navigator, die Seite im
+          // Navigator ihres Reiters – pop über die Seite schlösse den Reiter.
+          Navigator.of(sheet).pop();
         },
       ),
     );
@@ -143,6 +146,7 @@ class _PlanPageState extends State<PlanPage> {
   Future<void> _openLesson(PlanLesson lesson, String time) async {
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       showDragHandle: true,
       backgroundColor: Kit.of(context).p.card,
       builder: (_) => StatefulBuilder(

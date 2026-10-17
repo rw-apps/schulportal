@@ -1,5 +1,11 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9344** – Leiste auf allen Lese-Seiten, mehrere Konten beim Einrichten
+
+- **Leiste unten bleibt sichtbar** auf Kursseite, Unterhaltung, Statistik und Einstellungen. Jeder Bereich merkt sich, wo man war; erneutes Antippen des Bereichs führt an seinen Anfang. „Zurück“ geht erst im Bereich zurück, dann nach „Heute“.
+- **Ohne Leiste** öffnen die Seiten zum Eingeben: Neue Nachricht, Krankmeldung, Abgabe und Mensa-Bestellseite – dort steht „Schließen“ oben, und kein angefangener Text bleibt versehentlich liegen.
+- **Erste Anmeldung mit mehreren Schulen:** Nach dem ersten Konto fragt die App, ob ein weiteres Kind an einer anderen Schule eingerichtet werden soll, und zeigt die bisher eingerichteten Zugänge.
+
 **4.1.0+9343** – Fehlersuche und Aufräumen
 
 - **Probleme erkennen ohne Inhalte:** Die App merkt sich Abstürze und Lesefehler nur auf dem Handy, ohne Namen, Noten oder Nachrichten. Unter Einstellungen → Fehlersuche steht dann „1 Problem erkannt“; der Bericht ist vor dem Senden vollständig sichtbar und lässt sich teilen (Messenger, Mail) oder auf GitHub melden. Automatisch gesendet wird nichts.

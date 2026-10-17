@@ -12,6 +12,7 @@ import '../plan/plan_model.dart';
 import 'today_from_lanis.dart';
 import 'today_model.dart';
 import 'today_page.dart';
+import '../nav.dart';
 
 /// Bestellseite des Kindes in der App öffnen (MensaPage). Ohne Adresse
 /// geschieht nichts – die Oberfläche bietet dann „eintragen“ an.
@@ -23,18 +24,15 @@ Future<void> openMensa(
 }) async {
   final url = s.mensa.of(kid);
   if (url == null) return;
-  await Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) =>
-          MensaPage(url: url, owner: s.mensaOwner(kid), childName: name),
-    ),
+  await pushFullScreen<void>(
+    context,
+    (_) => MensaPage(url: url, owner: s.mensaOwner(kid), childName: name),
   );
 }
 
 /// Krankmeldung über der neuen Oberfläche öffnen.
-Future<void> openAbsence(BuildContext context) => Navigator.of(
-  context,
-).push(MaterialPageRoute<void>(builder: (_) => const AbsencePage()));
+Future<void> openAbsence(BuildContext context) =>
+    pushFullScreen<void>(context, (_) => const AbsencePage());
 
 /// „Heute“ mit echten Daten des angemeldeten Kontos (LiveDataScope).
 ///

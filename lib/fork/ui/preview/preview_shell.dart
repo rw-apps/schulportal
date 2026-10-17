@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemNavigator;
 import 'package:go_router/go_router.dart';
 
 import 'package:lanis/applets/external_definitions.dart';
@@ -7,6 +8,7 @@ import 'package:lanis/utils/deep_link.dart';
 
 import '../../l10n/l10n.dart';
 import '../../school_links.dart';
+import '../courses/course_detail_page.dart';
 import '../courses/courses_page.dart';
 import '../courses/live_courses_page.dart';
 import '../kit.dart';
@@ -56,6 +58,18 @@ class PreviewShell extends StatefulWidget {
 class _PreviewShellState extends State<PreviewShell> {
   ShellTab _tab = ShellTab.today;
 
+  /// Ein Navigator je Reiter (Entscheidung 17.10.26: Leiste auch auf
+  /// Unterseiten). Ursache: Mit einem gemeinsamen Navigator lag jede
+  /// Unterseite über der Leiste. Jetzt öffnen Lese-Seiten im Reiter, der sich
+  /// seinen Verlauf merkt; Eingabe-Seiten gehen über die ganze App
+  /// (nav.dart, pushFullScreen). Grenze: Ein Reiter wird erst beim ersten
+  /// Besuch gebaut ([_visited]), damit der Start nicht alle Bereiche lädt.
+  final _navKeys = {
+    for (final t in ShellTab.values) t: GlobalKey<NavigatorState>(),
+  };
+  final _visited = <ShellTab>{ShellTab.today};
+  int _revision = 0;
+
   /// Nur Tests/Beispieldaten: eigene Schriftstufe. Mit echten Daten setzt
   /// sie die App für alle Seiten (fork/ui/font_step.dart).
   final KitFontStep _font = KitFontStep.normal;
@@ -85,7 +99,47 @@ class _PreviewShellState extends State<PreviewShell> {
     router?.go(path);
   }
 
-  void _select(ShellTab t) => setState(() => _tab = t);
+  /// Reiter wählen; erneutes Antippen des aktiven führt an seinen Anfang.
+  void _select(ShellTab t) {
+    if (t == _tab) {
+      _navKeys[t]!.currentState?.popUntil((r) => r.isFirst);
+      return;
+    }
+    setState(() {
+      _tab = t;
+      _visited.add(t);
+    });
+  }
+
+  /// Android-Zurück: erst im Reiter zurück, dann nach „Heute“, dann aus der
+  /// App. Ursache: Als Startseite gibt es darunter nichts; ein Zurück aus
+  /// „Kalender“ hätte die App sonst sofort geschlossen.
+  void _back() {
+    final nav = _navKeys[_tab]!.currentState;
+    if (nav != null && nav.canPop()) {
+      nav.maybePop();
+    } else if (_tab != ShellTab.today) {
+      _select(ShellTab.today);
+    } else if (widget.asRoot) {
+      SystemNavigator.pop();
+    } else {
+      Navigator.of(context).maybePop();
+    }
+  }
+
+  Widget _tabNavigator(ShellTab t) => _TabNavigator(
+    navKey: _navKeys[t]!,
+    // Builder mit Abhängigkeit von _ShellRevision: Die Startseite des
+    // Reiters wird bei jedem Neuaufbau der Leiste neu gebaut. Ursache: Eine
+    // Route baut ihren Inhalt sonst nur einmal – „Mehr“ und die Beispiel-
+    // daten hingen dann am ersten Stand.
+    root: Builder(
+      builder: (c) {
+        _ShellRevision.watch(c);
+        return widget.liveData ? _liveBody(c, t) : _demoBody(t);
+      },
+    ),
+  );
 
   static List<NavDest> _dest(ForkL10n t, [NavBadges b = const NavBadges()]) => [
     NavDest(Icons.home_outlined, Icons.home, t.navToday, alert: b.todayAlert),
@@ -137,6 +191,7 @@ class _PreviewShellState extends State<PreviewShell> {
     final k = Kit.of(context);
     return showModalBottomSheet<(String, String?)>(
       context: context,
+      useRootNavigator: true,
       showDragHandle: true,
       backgroundColor: k.p.card,
       builder: (context) => SafeArea(
@@ -234,9 +289,9 @@ class _PreviewShellState extends State<PreviewShell> {
     ];
   }
 
-  Widget _liveBody(BuildContext context) {
+  Widget _liveBody(BuildContext context, ShellTab tab) {
     final s = LiveData.of(context);
-    return switch (_tab) {
+    return switch (tab) {
       ShellTab.today => LiveTodayPage(
         onOpenCalendar: () => _select(ShellTab.calendar),
         onOpenHomework: () => _select(ShellTab.courses),
@@ -249,7 +304,7 @@ class _PreviewShellState extends State<PreviewShell> {
     };
   }
 
-  Widget _demoBody() => switch (_tab) {
+  Widget _demoBody(ShellTab tab) => switch (tab) {
     ShellTab.today => TodayPage(
       data: _data,
       onReportAbsence: (c) => _notYet('Krankmeldung für ${c.firstName}'),
@@ -266,7 +321,26 @@ class _PreviewShellState extends State<PreviewShell> {
       },
       events: _data.week,
     ),
-    ShellTab.courses => CoursesPage(items: demoCourses(), firstName: 'Lena'),
+    ShellTab.courses => Builder(
+      builder: (c) => CoursesPage(
+        items: demoCourses(),
+        firstName: 'Lena',
+        onOpen: (i) => Navigator.of(c).push(
+          MaterialPageRoute<void>(
+            builder: (_) => CourseDetailPage(
+              course: CourseContext(
+                title: i.title,
+                fullName: i.fullName,
+                teachers: [for (final n in i.teachers) ('', n)],
+                colorSlot: i.colorSlot ?? 0,
+              ),
+              load: ({required bool firstHalf}) async => demoDetailedLesson(i),
+              onWrite: (_) {},
+            ),
+          ),
+        ),
+      ),
+    ),
     ShellTab.messages => MessagesPage(
       items: demoMessages(),
       onCompose: () => _notYet('Neue Nachricht'),
@@ -287,7 +361,16 @@ class _PreviewShellState extends State<PreviewShell> {
       // darunter weiter, schnitt die Pille beim Scrollen Stunden an
       // (Rückmeldung 16.10.26 zur Tagesansicht).
       extendBody: false,
-      body: widget.liveData ? Builder(builder: _liveBody) : _demoBody(),
+      body: _ShellRevision(
+        revision: ++_revision,
+        child: IndexedStack(
+          index: _tab.index,
+          children: [
+            for (final t in ShellTab.values)
+              _visited.contains(t) ? _tabNavigator(t) : const SizedBox.shrink(),
+          ],
+        ),
+      ),
       // Builder: liegt unter LiveDataScope (siehe unten), damit die Marken
       // die geladenen Daten lesen können.
       bottomNavigationBar: Builder(
@@ -311,13 +394,10 @@ class _PreviewShellState extends State<PreviewShell> {
         data: theme.copyWith(
           textTheme: theme.textTheme.apply(fontFamily: kitFont),
         ),
-        // „Zurück“ führt erst nach „Heute“, dann aus der App. Ursache: Als
-        // Startseite gibt es darunter nichts; ein Zurück aus „Kalender“
-        // hätte die App sonst sofort geschlossen.
         child: PopScope(
-          canPop: _tab == ShellTab.today,
+          canPop: false,
           onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) _select(ShellTab.today);
+            if (!didPop) _back();
           },
           child: widget.liveData ? LiveDataScope(child: scaffold) : scaffold,
         ),
@@ -542,4 +622,52 @@ class _Badge extends StatelessWidget {
       child: Text(text, style: k.cellTeacher(k.p.onStrong)),
     );
   }
+}
+
+/// Navigator eines Reiters mit seiner Startseite.
+class _TabNavigator extends StatefulWidget {
+  const _TabNavigator({required this.navKey, required this.root});
+
+  final GlobalKey<NavigatorState> navKey;
+  final Widget root;
+
+  @override
+  State<_TabNavigator> createState() => _TabNavigatorState();
+}
+
+class _TabNavigatorState extends State<_TabNavigator> {
+  // Eigener HeroController: Den der App darf nur ein Navigator benutzen
+  // (sonst Assertion „can not be shared by multiple Navigators“).
+  final _hero = MaterialApp.createMaterialHeroController();
+
+  @override
+  void dispose() {
+    _hero.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => HeroControllerScope(
+    controller: _hero,
+    child: Navigator(
+      key: widget.navKey,
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => widget.root,
+      ),
+    ),
+  );
+}
+
+/// Meldet jeden Neuaufbau der Leiste an die Startseiten der Reiter.
+class _ShellRevision extends InheritedWidget {
+  const _ShellRevision({required this.revision, required super.child});
+
+  final int revision;
+
+  static void watch(BuildContext c) =>
+      c.dependOnInheritedWidgetOfExactType<_ShellRevision>();
+
+  @override
+  bool updateShouldNotify(_ShellRevision old) => old.revision != revision;
 }

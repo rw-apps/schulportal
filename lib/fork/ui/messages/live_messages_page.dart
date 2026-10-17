@@ -72,7 +72,8 @@ class LiveMessagesPage extends ConsumerWidget {
             );
             await reload();
           },
-          onCompose: () => Navigator.of(context).push(
+          // Eingabe-Seite über der ganzen App (nav.dart, pushFullScreen).
+          onCompose: () => Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute<bool>(
               builder: (_) => ComposePage(
                 candidates: candidatesFrom(s.lessons.content ?? const []),

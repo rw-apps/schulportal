@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/generated/l10n.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:lanis/fork/start.dart';
 import 'package:lanis/features/auth/auth_controller.dart';
 import 'package:lanis/utils/logger.dart';
@@ -31,6 +32,17 @@ class LoginFormState extends ConsumerState<LoginForm> {
   bool dseAgree = false;
   bool errorReportingAgree = false;
   String selectedSchoolName = "";
+
+  /// Bei der Ersteinrichtung bereits angelegte Konten (Anzeige „Schule ·
+  /// Benutzer“). Ursache (Wunsch 17.10.26): Familien mit Kindern an
+  /// verschiedenen Schulen sollen alle Zugänge gleich nacheinander eingeben,
+  /// statt später über Einstellungen → Konten. Grenze: Nur bei der ersten
+  /// Anmeldung; „Konto hinzufügen“ aus dem Kontowechsel endet wie bisher nach
+  /// einem Konto.
+  final _added = <String>[];
+
+  /// Neu erzeugt den Schulwähler je Runde (ValueKey), damit er leer beginnt.
+  int _round = 0;
 
   @override
   void initState() {
@@ -60,6 +72,7 @@ class LoginFormState extends ConsumerState<LoginForm> {
     try {
       final schoolId = int.parse(schoolID);
       final accounts = await ref.read(accountsProvider.future);
+      final firstSetup = accounts.isEmpty || _added.isNotEmpty;
       if (accounts.any(
         (a) => a.schoolID == schoolId && a.username == username,
       )) {
@@ -97,6 +110,25 @@ class LoginFormState extends ConsumerState<LoginForm> {
       if (!mounted) return;
       Navigator.pop(context); // pop dialog
       if (ok) {
+        if (!firstSetup) {
+          context.go(firstSupportedHomePath(ref));
+          return;
+        }
+        _added.add(
+          '${selectedSchoolName.isEmpty ? schoolID : selectedSchoolName} · $username',
+        );
+        final more = await _askForAnother();
+        if (!mounted) return;
+        if (more == true) {
+          setState(() {
+            _round++;
+            schoolIDController.clear();
+            usernameController.clear();
+            passwordController.clear();
+            selectedSchoolName = '';
+          });
+          return;
+        }
         context.go(firstSupportedHomePath(ref));
         return;
       }
@@ -149,6 +181,47 @@ class LoginFormState extends ConsumerState<LoginForm> {
     }
   }
 
+  Future<bool?> _askForAnother() {
+    final t = context.t;
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text(t.accountAdded),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(t.accountsSoFar),
+            for (final a in _added)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(a)),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 12),
+            Text(t.addAnotherText),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(t.addAnotherAccount),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(t.done),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     schoolIDController.dispose();
@@ -195,14 +268,19 @@ class LoginFormState extends ConsumerState<LoginForm> {
                               children: [
                                 const Icon(Icons.person, size: 70),
                                 Text(
-                                  AppLocalizations.of(context).logIn,
+                                  _added.isEmpty
+                                      ? AppLocalizations.of(context).logIn
+                                      : context.t.anotherAccountTitle,
                                   style: const TextStyle(fontSize: 35),
                                 ),
+                                for (final a in _added)
+                                  Text('✓ $a', textAlign: TextAlign.center),
                               ],
                             ),
                           ),
                           const SizedBox(height: padding * 5),
                           SchoolSelector(
+                            key: ValueKey(_round),
                             controller: schoolIDController,
                             outContext: context,
                             onSchoolSelected: (name) {

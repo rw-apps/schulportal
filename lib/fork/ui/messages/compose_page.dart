@@ -153,6 +153,7 @@ class _ComposePageState extends State<ComposePage> {
     final k = Kit.of(context);
     return showModalBottomSheet<ReceiverEntry>(
       context: context,
+      useRootNavigator: true,
       showDragHandle: true,
       backgroundColor: k.p.card,
       builder: (context) => SafeArea(

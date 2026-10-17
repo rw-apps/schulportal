@@ -131,7 +131,8 @@ class LiveCoursesPage extends ConsumerWidget {
         force: true,
       ),
       onWrite: s.offers('nachrichten.php')
-          ? (kz) => Navigator.of(context).push(
+          // Eingabe-Seiten über der ganzen App (nav.dart, pushFullScreen).
+          ? (kz) => Navigator.of(context, rootNavigator: true).push(
               MaterialPageRoute<bool>(
                 builder: (_) => ComposePage(
                   candidates: candidatesFrom(s.lessons.content ?? const []),
@@ -152,7 +153,7 @@ class LiveCoursesPage extends ConsumerWidget {
       onOpenUpload: student
           ? (u) {
               if (!isLessonsUploadUrl(u.url.toString())) return;
-              Navigator.of(context).push(
+              Navigator.of(context, rootNavigator: true).push(
                 MaterialPageRoute<void>(
                   builder: (_) => UploadScreen(
                     url: u.url.toString(),

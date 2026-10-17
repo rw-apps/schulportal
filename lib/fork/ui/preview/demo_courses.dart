@@ -1,3 +1,5 @@
+import 'package:liblanis/liblanis.dart';
+
 import '../messages/messages_page.dart';
 import '../courses/courses_model.dart';
 
@@ -49,3 +51,22 @@ List<MessageItem> demoMessages() => const [
     date: '14.10.2026 17:40',
   ),
 ];
+
+/// Erfundene Kursmappe zur Kursliste (Beispieldaten der Vorschau).
+DetailedLesson demoDetailedLesson(CourseItem c) => DetailedLesson(
+  courseID: c.id,
+  name: c.fullName,
+  teachers: [for (final t in c.teachers) LessonTeacher(teacher: t)],
+  history: [
+    CurrentEntry(
+      entryID: '${c.id}-1',
+      topicTitle: c.topic,
+      topicDate: c.date,
+      files: const [],
+      uploads: const [],
+    ),
+  ],
+  marks: const [],
+  exams: const [],
+  attendances: const {},
+);
