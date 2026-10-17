@@ -1,5 +1,11 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9347** – Wochen blättern, Raster ohne abgeschnittene Zeilen
+
+- **Kalender: Wochen wechseln.** Über den Tagen steht die Woche („19.10.–23.10. · KW 43“) mit Pfeilen; Wischen nach links/rechts blättert ebenfalls. Antippen der Woche öffnet einen Kalender, um auch Monate weiter zu springen; „Diese Woche“ führt zurück. Vertretungen erscheinen, soweit das Portal sie für jene Tage schon zeigt.
+- **Wochenraster:** Kurze Stunden zeigen nur noch ganze Zeilen (Fach und Raum) statt einer halb abgeschnittenen Lehrkraft.
+- Die Kinder behalten ihre Reihenfolge und Farbe, auch nach einem Kontowechsel.
+
 **4.1.0+9346** – Stundenplan ohne Uhrzeiten
 
 - **Schulen ohne Uhrzeiten im Stundenplan:** Der Plan blieb leer, und alle Kurse landeten unter „Weitere Angebote“. Jetzt baut die App den Plan aus den Stundennummern: Kalender, Heute und Unterricht zeigen die Stunden mit „1. Stunde“ usw. statt Uhrzeiten. „Heute“ nennt dann die erste Stunde des Tages; was gerade läuft, kann die App ohne Uhrzeiten nicht wissen.

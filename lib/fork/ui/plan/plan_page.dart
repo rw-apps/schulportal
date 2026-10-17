@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
+import '../../mensa.dart' show isoWeek;
 import '../calendar/event_list.dart';
 import '../kid_chips.dart';
 import '../kit.dart';
@@ -27,9 +28,14 @@ class PlanPage extends StatefulWidget {
     this.onNamesChanged,
     this.events,
     this.onRefresh,
+    this.plansForWeek,
   });
 
   final List<KidPlan> plans;
+
+  /// Pläne für eine andere Woche (Vertretungen jener Tage); null = immer
+  /// [plans]. Gleiche Reihenfolge und Länge wie [plans].
+  final List<KidPlan> Function(List<DateTime> week)? plansForWeek;
   final DateTime now;
 
   /// Termine der Schule für die Ansicht „Termine“; null = Ansicht fehlt
@@ -69,7 +75,46 @@ class _PlanPageState extends State<PlanPage> {
     for (final e in widget.initialNames.entries) e.key: {...e.value},
   };
 
-  List<DateTime> get _week => schoolWeek(widget.now);
+  /// Wochen vor (+) bzw. zurück (−) ab der Schulwoche von [PlanPage.now].
+  /// Ursache (Rückmeldung 17.10.26): Vorher war nur die laufende bzw.
+  /// kommende Woche erreichbar. Grenze: Der Stundenplan gilt für jede Woche
+  /// gleich (Portal: „gültig ab …“); Ferien und künftige Planwechsel kennt
+  /// die App nicht, Vertretungen nur, soweit das Portal sie schon zeigt.
+  int _weekOffset = 0;
+
+  List<DateTime> get _week =>
+      schoolWeek(widget.now.add(Duration(days: 7 * _weekOffset)));
+
+  List<KidPlan> get _plans => _weekOffset == 0
+      ? widget.plans
+      : (widget.plansForWeek?.call(_week) ?? widget.plans);
+
+  void _shiftWeek(int by) => setState(() {
+    _weekOffset += by;
+    _day = _weekOffset == 0 ? (_todayIndex ?? 0) : 0;
+  });
+
+  Future<void> _pickWeek() async {
+    final first = DateTime(widget.now.year - 1, widget.now.month);
+    final last = DateTime(widget.now.year + 1, widget.now.month, 28);
+    final initial = _week[_day];
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial.isBefore(first)
+          ? first
+          : (initial.isAfter(last) ? last : initial),
+      firstDate: first,
+      lastDate: last,
+      helpText: context.t.pickWeek,
+    );
+    if (picked == null || !mounted) return;
+    final base = schoolWeek(widget.now).first;
+    final target = schoolWeek(picked).first;
+    setState(() {
+      _weekOffset = (dayDiff(base, target) / 7).round();
+      _day = picked.weekday <= 5 ? picked.weekday - 1 : 0;
+    });
+  }
 
   /// Index des heutigen Tages in [_week], sonst null (Wochenende).
   int? get _todayIndex {
@@ -85,8 +130,7 @@ class _PlanPageState extends State<PlanPage> {
     _day = _todayIndex ?? 0;
   }
 
-  KidPlan get _plan =>
-      widget.plans[_kid].withTeacherNames(_names[_kid] ?? const {});
+  KidPlan get _plan => _plans[_kid].withTeacherNames(_names[_kid] ?? const {});
 
   /// Eigene Wahl (gespeichert); '' = bewusst alle zeigen.
   GroupChoice get _userChoice => _choices.putIfAbsent(_kid, () => {});
@@ -220,6 +264,21 @@ class _PlanPageState extends State<PlanPage> {
           onSelect: (i) => setState(() => _kid = i),
         ),
       ),
+      if (_view != PlanView.events)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Sp.s, Sp.s, Sp.s, 0),
+          child: _WeekNav(
+            week: _week,
+            current: _weekOffset == 0,
+            onPrev: () => _shiftWeek(-1),
+            onNext: () => _shiftWeek(1),
+            onPick: _pickWeek,
+            onToday: () => setState(() {
+              _weekOffset = 0;
+              _day = _todayIndex ?? 0;
+            }),
+          ),
+        ),
       if (open.isNotEmpty)
         Padding(
           padding: const EdgeInsets.fromLTRB(Sp.page, Sp.s, Sp.page, 0),
@@ -244,17 +303,21 @@ class _PlanPageState extends State<PlanPage> {
             Expanded(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(Sp.s, Sp.ml, Sp.s, bottom + Sp.s),
-                child: WeekGrid(
-                  plan: _plan,
-                  week: _week,
-                  today: _todayIndex,
-                  now: widget.now,
-                  choice: _choice,
-                  onOpenGroup: _openGroupSheet,
-                  onOpenDay: (d) => setState(() {
-                    _day = d;
-                    _view = PlanView.day;
-                  }),
+                child: _Swipe(
+                  onPrev: () => _shiftWeek(-1),
+                  onNext: () => _shiftWeek(1),
+                  child: WeekGrid(
+                    plan: _plan,
+                    week: _week,
+                    today: _todayIndex,
+                    now: widget.now,
+                    choice: _choice,
+                    onOpenGroup: _openGroupSheet,
+                    onOpenDay: (d) => setState(() {
+                      _day = d;
+                      _view = PlanView.day;
+                    }),
+                  ),
                 ),
               ),
             ),
@@ -309,11 +372,15 @@ class _PlanPageState extends State<PlanPage> {
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
           sliver: SliverToBoxAdapter(
-            child: _DayPicker(
-              week: _week,
-              selected: _day,
-              today: _todayIndex,
-              onSelect: (i) => setState(() => _day = i),
+            child: _Swipe(
+              onPrev: () => _shiftWeek(-1),
+              onNext: () => _shiftWeek(1),
+              child: _DayPicker(
+                week: _week,
+                selected: _day,
+                today: _todayIndex,
+                onSelect: (i) => setState(() => _day = i),
+              ),
             ),
           ),
         ),
@@ -340,6 +407,95 @@ class _PlanPageState extends State<PlanPage> {
 }
 
 // ---- Kopf ---------------------------------------------------------------
+
+/// Wischen nach links/rechts blättert die Woche (Raster und Tagesauswahl).
+class _Swipe extends StatelessWidget {
+  const _Swipe({
+    required this.child,
+    required this.onPrev,
+    required this.onNext,
+  });
+
+  final Widget child;
+  final VoidCallback onPrev;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.translucent,
+    onHorizontalDragEnd: (d) {
+      final v = d.primaryVelocity ?? 0;
+      if (v > 300) onPrev();
+      if (v < -300) onNext();
+    },
+    child: child,
+  );
+}
+
+/// „‹  19.10.–23.10. · KW 43  ›“ – Woche blättern; Antippen der Mitte wählt
+/// ein Datum (auch Monate weiter), „Diese Woche“ führt zurück.
+class _WeekNav extends StatelessWidget {
+  const _WeekNav({
+    required this.week,
+    required this.current,
+    required this.onPrev,
+    required this.onNext,
+    required this.onPick,
+    required this.onToday,
+  });
+
+  final List<DateTime> week;
+  final bool current;
+  final VoidCallback onPrev;
+  final VoidCallback onNext;
+  final VoidCallback onPick;
+  final VoidCallback onToday;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final t = context.t;
+    final range =
+        '${formatDate(t, t.dateDayMonth, week.first)}–'
+        '${formatDate(t, t.dateDayMonth, week.last)}';
+    return Row(
+      children: [
+        IconButton(
+          tooltip: t.prevWeek,
+          onPressed: onPrev,
+          icon: Icon(Icons.chevron_left, color: k.p.ink),
+        ),
+        Expanded(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(Rad.pill),
+            onTap: onPick,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: Sp.s),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  t.weekLabel(range, isoWeek(week.first).week),
+                  style: k.planSubject(k.p.ink),
+                  maxLines: 1,
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (!current)
+          TextButton(
+            onPressed: onToday,
+            child: Text(t.thisWeek, style: k.link),
+          ),
+        IconButton(
+          tooltip: t.nextWeek,
+          onPressed: onNext,
+          icon: Icon(Icons.chevron_right, color: k.p.ink),
+        ),
+      ],
+    );
+  }
+}
 
 class _ViewToggle extends StatelessWidget {
   const _ViewToggle({
@@ -1203,35 +1359,57 @@ class _GridCell extends StatelessWidget {
             Sp.xs,
             Sp.xs,
           ),
-          // Zeilen nur, soweit Platz ist: Was nicht passt, wird
-          // abgeschnitten statt überzulaufen (kurze Einzelstunden zeigen so
-          // Fach + Raum, Doppelstunden zusätzlich die Lehrkraft).
-          child: SingleChildScrollView(
-            physics: const NeverScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Zu breite Zeilen werden verkleinert statt mit „…“
-                // gekürzt (erster Wurf: „Deuts…“, „Biolog…“ bei Schrift
-                // ×1,15 und ~60 dp Zellbreite).
-                for (final (i, (text, style)) in lines.indexed)
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      text,
-                      maxLines: 1,
-                      softWrap: false,
-                      style: i == 0 && strike
-                          ? style.copyWith(
-                              decoration: TextDecoration.lineThrough,
-                              decorationColor: ink,
-                            )
-                          : style,
-                    ),
-                  ),
-              ],
-            ),
+          // Nur ganze Zeilen, soweit Platz ist (kurze Einzelstunden: Fach +
+          // Raum, Doppelstunden zusätzlich die Lehrkraft). Ursache
+          // (Bildschirmfoto 17.10.26, 10 Stunden je Tag): Vorher wurde die
+          // letzte Zeile mitten durchgeschnitten („Jäger“ halb sichtbar).
+          // Die erste Zeile (Fach) bleibt immer.
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final scaler = MediaQuery.textScalerOf(context);
+              var used = 0.0;
+              var fit = 0;
+              for (final (_, style) in lines) {
+                final h = (TextPainter(
+                  text: TextSpan(text: 'Ag', style: style),
+                  textDirection: TextDirection.ltr,
+                  textScaler: scaler,
+                  maxLines: 1,
+                )..layout()).height;
+                if (fit > 0 && used + h > box.maxHeight) break;
+                used += h;
+                fit++;
+              }
+              // Scroll-Hülle nur als Überlaufschutz (erste Zeile höher als
+              // die Zelle, z. B. Schrift „Groß“): nie sichtbar scrollbar.
+              return SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Zu breite Zeilen werden verkleinert statt mit „…“
+                    // gekürzt (erster Wurf: „Deuts…“, „Biolog…“ bei Schrift
+                    // ×1,15 und ~60 dp Zellbreite).
+                    for (final (i, (text, style)) in lines.take(fit).indexed)
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          text,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: i == 0 && strike
+                              ? style.copyWith(
+                                  decoration: TextDecoration.lineThrough,
+                                  decorationColor: ink,
+                                )
+                              : style,
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
       ),

@@ -223,9 +223,13 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
 
     final main = LiveData.of(context);
     final members = <FamilyMember>[];
-    for (final (i, a) in accounts.indexed) {
-      // Farbe nach Platz in der Kontoliste, nicht nach Ladereihenfolge –
-      // sonst wechselte ein Kind die Farbe, sobald das andere geladen ist.
+    // Reihenfolge und Farbe nach Anlage des Kontos (localId), nicht nach
+    // der Kontoliste: Die sortiert nach letzter Anmeldung (liblanis
+    // listAccounts) – nach dem Wechseln tauschten die Kinder Platz und Farbe
+    // (Bildschirmfoto 17.10.26). Auch nicht nach Ladereihenfolge.
+    final ordered = [...accounts]
+      ..sort((a, b) => a.localId.compareTo(b.localId));
+    for (final (i, a) in ordered.indexed) {
       final color = i;
       if (a.localId == activeId) {
         if (main != null) {

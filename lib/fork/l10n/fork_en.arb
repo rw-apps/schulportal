@@ -327,5 +327,10 @@
   "done": "Done",
   "anotherAccountTitle": "Another account",
   "todayFromSlot": "Today · from {slot}",
-  "noTimesHint": "The school shows no times in the timetable – so lesson numbers instead of times."
+  "noTimesHint": "The school shows no times in the timetable – so lesson numbers instead of times.",
+  "weekLabel": "{range} · week {week}",
+  "prevWeek": "Previous week",
+  "nextWeek": "Next week",
+  "pickWeek": "Choose week",
+  "thisWeek": "This week"
 }

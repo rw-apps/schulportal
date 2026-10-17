@@ -874,5 +874,20 @@
       }
     }
   },
-  "noTimesHint": "Die Schule zeigt im Stundenplan keine Uhrzeiten – daher Stundennummern statt Zeiten."
+  "noTimesHint": "Die Schule zeigt im Stundenplan keine Uhrzeiten – daher Stundennummern statt Zeiten.",
+  "weekLabel": "{range} · KW {week}",
+  "@weekLabel": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      },
+      "week": {
+        "type": "int"
+      }
+    }
+  },
+  "prevWeek": "Vorherige Woche",
+  "nextWeek": "Nächste Woche",
+  "pickWeek": "Woche wählen",
+  "thisWeek": "Diese Woche"
 }

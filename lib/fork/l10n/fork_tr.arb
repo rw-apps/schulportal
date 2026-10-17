@@ -327,5 +327,10 @@
   "done": "Tamam",
   "anotherAccountTitle": "Başka hesap",
   "todayFromSlot": "Bugün · {slot} itibarıyla",
-  "noTimesHint": "Okul ders programında saat göstermiyor – bu yüzden saat yerine ders numaraları."
+  "noTimesHint": "Okul ders programında saat göstermiyor – bu yüzden saat yerine ders numaraları.",
+  "weekLabel": "{range} · {week}. hafta",
+  "prevWeek": "Önceki hafta",
+  "nextWeek": "Sonraki hafta",
+  "pickWeek": "Hafta seç",
+  "thisWeek": "Bu hafta"
 }

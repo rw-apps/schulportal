@@ -72,6 +72,16 @@ class LiveCalendarPage extends StatelessWidget {
             'plan-${[for (final (m, _) in shown) m.snapshot.session.account.localId].join('-')}',
           ),
           plans: plans,
+          // Andere Wochen: derselbe Plan mit den Vertretungen jener Tage.
+          plansForWeek: (w) => [
+            for (final (m, live) in shown)
+              planWithSubstitutions(
+                plan: live.plan,
+                days: m.snapshot.substitutions.content?.days ?? const [],
+                week: w,
+                t: context.t,
+              ),
+          ],
           now: now,
           initialChoices: {
             for (final (i, (m, _)) in shown.indexed) i: m.snapshot.userChoice,
