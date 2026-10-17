@@ -1,5 +1,9 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9332**
+
+- **Neues Repository mit bereinigter Projektgeschichte:** Ältere Stände mit Schul- und Personendaten sind nicht mehr öffentlich. Keine Änderung an der App; die Version zeigt, dass Updates über Obtainium mit demselben Schlüssel weiterlaufen.
+
 **4.1.0+9331**
 
 - **Einstellungen neu** im Stil der App, nur noch das Nötige: Konto (Benutzerdaten, wechseln/hinzufügen, abmelden), Benachrichtigungen (an/aus, Vertretungen, Nachrichten, Zeitfenster), Darstellung (hell/dunkel/wie das Handy, Schriftgröße), Daten (Termine abonnieren, Zwischenspeicher), Über die App (Version, Neuerungen, Datenschutz, Quellcode und Lizenz), Fehlersuche (Debug-Export, eingeklappt). Entfallen: Sprache, Farbschemata, Moodle, Stundenplan-Anpassung, Lanis-Mitwirkende.
