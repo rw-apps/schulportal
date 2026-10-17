@@ -103,19 +103,3 @@ List<ReceiverEntry> matchReceivers(
   ];
   return narrowed.isEmpty ? teachers : narrowed;
 }
-
-/// Vorlagen für Betreff und Textanfang.
-const messageTemplates = <(String subject, String text)>[
-  (
-    'Frage zur Hausaufgabe',
-    'Guten Tag,\n\nwir haben eine Frage zur Hausaufgabe: ',
-  ),
-  (
-    'Bitte um Rückruf',
-    'Guten Tag,\n\nkönnten Sie uns bitte zurückrufen? Wir sind erreichbar unter ',
-  ),
-  (
-    'Termin vereinbaren',
-    'Guten Tag,\n\nwir würden gern einen Gesprächstermin vereinbaren. ',
-  ),
-];

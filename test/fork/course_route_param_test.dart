@@ -25,10 +25,15 @@ void main() {
       ],
     );
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
-    router.push('/parent/lessons/course/501&p=100?title=${Uri.encodeComponent('Mathe 6a')}');
+    router.push(
+      '/parent/lessons/course/501&p=100?title=${Uri.encodeComponent('Mathe 6a')}',
+    );
     await tester.pumpAndSettle();
     expect(id, '501&p=100');
     expect(title, 'Mathe 6a');
-    expect('meinunterricht.php?a=sus_view&id=$id', 'meinunterricht.php?a=sus_view&id=501&p=100');
+    expect(
+      'meinunterricht.php?a=sus_view&id=$id',
+      'meinunterricht.php?a=sus_view&id=501&p=100',
+    );
   });
 }

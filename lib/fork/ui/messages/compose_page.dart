@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
 
+import '../../data/message_templates.dart';
+import '../../l10n/l10n.dart';
 import '../kit.dart';
 import 'compose_model.dart';
 
@@ -158,7 +160,7 @@ class _ComposePageState extends State<ComposePage> {
           shrinkWrap: true,
           padding: const EdgeInsets.fromLTRB(Sp.xl, 0, Sp.xl, Sp.l),
           children: [
-            Text('Welche Person ist $who?', style: k.sheetTitle),
+            Text(context.t.whichPerson(who), style: k.sheetTitle),
             const SizedBox(height: Sp.m),
             for (final h in hits)
               ListTile(
@@ -188,33 +190,30 @@ class _ComposePageState extends State<ComposePage> {
     });
   }
 
-  void _template((String, String) t) {
+  void _template(MessageTemplate m) {
     setState(() {
-      if (_subject.text.trim().isEmpty) _subject.text = t.$1;
-      if (_text.text.trim().isEmpty) _text.text = t.$2;
+      if (_subject.text.trim().isEmpty) _subject.text = m.subject;
+      if (_text.text.trim().isEmpty) _text.text = m.text;
     });
   }
 
   Future<void> _send() async {
     final k = Kit.of(context);
+    final t = context.t;
     final names = _chosen.values.join(', ');
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Nachricht senden?', style: k.sheetTitle),
-        content: Text(
-          'An $names. Die Nachricht geht sofort über das Schulportal an die '
-          'Schule.',
-          style: k.body,
-        ),
+        title: Text(t.sendQuestion, style: k.sheetTitle),
+        content: Text(t.sendConfirmText(names), style: k.body),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Abbrechen', style: k.link),
+            child: Text(t.cancel, style: k.link),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Senden', style: k.link),
+            child: Text(t.send, style: k.link),
           ),
         ],
       ),
@@ -236,19 +235,22 @@ class _ComposePageState extends State<ComposePage> {
     if (sent) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Gesendet an $names')));
+      ).showSnackBar(SnackBar(content: Text(t.sentTo(names))));
       Navigator.of(context).pop(true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Das Portal hat die Nachricht nicht angenommen. Bitte später '
-            'erneut versuchen.',
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t.sendFailed)));
     }
   }
+
+  /// Beschriftung der Vorlage in der App-Sprache (Inhalt bleibt deutsch).
+  String _templateLabel(ForkL10n t, MessageTemplate m) => switch (m.id) {
+    'homeworkQuestion' => t.tplHomeworkQuestion,
+    'callback' => t.tplCallback,
+    'appointment' => t.tplAppointment,
+    _ => m.subject,
+  };
 
   InputDecoration _field(Kit k, String hint) => InputDecoration(
     hintText: hint,
@@ -270,6 +272,8 @@ class _ComposePageState extends State<ComposePage> {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
+    final t = context.t;
+    final german = Localizations.localeOf(context).languageCode == 'de';
     final bottom = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
       backgroundColor: k.p.bg,
@@ -283,26 +287,23 @@ class _ComposePageState extends State<ComposePage> {
                 IconButton(
                   onPressed: () => Navigator.of(context).maybePop(),
                   icon: Icon(Icons.close, color: k.p.ink),
-                  tooltip: 'Abbrechen',
+                  tooltip: t.cancel,
                 ),
                 const SizedBox(width: Sp.xs),
                 Expanded(
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
-                    child: Text('Neue Nachricht', style: k.pageTitle),
+                    child: Text(t.newMessage, style: k.pageTitle),
                   ),
                 ),
               ],
             ),
-            _step(k, '1', 'An wen?'),
+            _step(k, '1', t.stepToWhom),
             if (widget.candidates.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(left: Sp.xs, bottom: Sp.s),
-                child: Text(
-                  'Keine Lehrkräfte aus dem Unterricht bekannt – bitte suchen.',
-                  style: k.meta,
-                ),
+                child: Text(t.noKnownTeachers, style: k.meta),
               ),
             for (final c in widget.candidates)
               Padding(
@@ -320,7 +321,7 @@ class _ComposePageState extends State<ComposePage> {
               style: k.body,
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => _runSearch(),
-              decoration: _field(k, 'Andere Person suchen (Name)').copyWith(
+              decoration: _field(k, t.searchOtherPerson).copyWith(
                 suffixIcon: IconButton(
                   icon: _searching
                       ? const SizedBox.square(
@@ -344,32 +345,40 @@ class _ComposePageState extends State<ComposePage> {
                 }),
                 title: Text(r.name, style: k.planSubject(k.p.ink)),
                 subtitle: r.isTeacher
-                    ? Text('Lehrkraft', style: k.planMeta(k.p.muted))
+                    ? Text(t.teacher, style: k.planMeta(k.p.muted))
                     : null,
               ),
-            _step(k, '2', 'Worum geht es?'),
+            _step(k, '2', t.stepTopic),
             Wrap(
               spacing: Sp.s,
               runSpacing: Sp.s,
               children: [
-                for (final t in messageTemplates)
+                for (final m in messageTemplates)
                   ActionChip(
-                    label: Text(t.$1, style: k.chipLabel(false, k.p.onStrong)),
+                    label: Text(
+                      _templateLabel(t, m),
+                      style: k.chipLabel(false, k.p.onStrong),
+                    ),
                     backgroundColor: k.p.card,
                     side: BorderSide.none,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(Rad.pill),
                     ),
-                    onPressed: () => _template(t),
+                    onPressed: () => _template(m),
                   ),
               ],
             ),
+            if (!german)
+              Padding(
+                padding: const EdgeInsets.only(top: Sp.s, left: Sp.xs),
+                child: Text(t.templatesNote, style: k.meta),
+              ),
             const SizedBox(height: Sp.m),
             TextField(
               controller: _subject,
               style: k.body,
               onChanged: (_) => setState(() {}),
-              decoration: _field(k, 'Betreff'),
+              decoration: _field(k, t.subject),
             ),
             const SizedBox(height: Sp.s),
             TextField(
@@ -378,9 +387,9 @@ class _ComposePageState extends State<ComposePage> {
               minLines: 6,
               maxLines: null,
               onChanged: (_) => setState(() {}),
-              decoration: _field(k, 'Nachricht'),
+              decoration: _field(k, t.message),
             ),
-            _step(k, '3', 'Senden'),
+            _step(k, '3', t.send),
             Material(
               color: _ready ? k.p.strong : k.p.inset,
               borderRadius: BorderRadius.circular(Rad.button),
@@ -394,8 +403,10 @@ class _ComposePageState extends State<ComposePage> {
                         ? const CircularProgressIndicator()
                         : Text(
                             _chosen.isEmpty
-                                ? 'Erst Empfänger wählen'
-                                : 'Senden an ${_chosen.length == 1 ? _chosen.values.single : '${_chosen.length} Personen'}',
+                                ? t.chooseRecipientFirst
+                                : _chosen.length == 1
+                                ? t.sendToOne(_chosen.values.single)
+                                : t.sendToMany(_chosen.length),
                             style: k.button(_ready ? k.p.onStrong : k.p.muted),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -428,7 +439,7 @@ class _CandidateTile extends StatelessWidget {
     final k = Kit.of(context);
     final tone = k.kid(0);
     final sub = state == _State.notFound
-        ? 'Über das Portal nicht erreichbar'
+        ? context.t.notReachable
         : candidate.subjects.join(', ');
     return Material(
       color: selected ? tone.tint : k.p.card,

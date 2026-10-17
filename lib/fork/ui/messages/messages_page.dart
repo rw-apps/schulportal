@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../kit.dart';
 
 /// Eine Unterhaltung für die Liste (Auszug aus OverviewEntry).
@@ -43,6 +44,7 @@ class MessagesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
+    final t = context.t;
     final bottom = MediaQuery.paddingOf(context).bottom;
     final unread = items.where((i) => i.unread).length;
     final view = CustomScrollView(
@@ -61,11 +63,9 @@ class MessagesPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Nachrichten', style: k.pageTitle),
+                  Text(t.navMessages, style: k.pageTitle),
                   Text(
-                    unread == 0
-                        ? 'Alles gelesen'
-                        : (unread == 1 ? '1 ungelesen' : '$unread ungelesen'),
+                    unread == 0 ? t.allRead : t.unreadShort(unread),
                     style: k.meta,
                   ),
                 ],
@@ -96,7 +96,7 @@ class MessagesPage extends StatelessWidget {
                         const SizedBox(width: Sp.s),
                         Flexible(
                           child: Text(
-                            'Neue Nachricht',
+                            t.newMessage,
                             style: k.button(k.p.onStrong),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -115,7 +115,7 @@ class MessagesPage extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.only(left: Sp.xs),
                     child: Text(
-                      loading ? 'Wird geladen …' : 'Keine Nachrichten.',
+                      loading ? t.loading : t.noMessages,
                       style: k.meta,
                     ),
                   ),
@@ -171,7 +171,7 @@ class _Row extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.subject.isEmpty ? '(ohne Betreff)' : item.subject,
+                      item.subject.isEmpty ? context.t.noSubject : item.subject,
                       style: item.unread
                           ? k.planSubject(tone.onTint)
                           : k.rowSubject(k.p.ink),

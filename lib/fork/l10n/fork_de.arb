@@ -674,5 +674,137 @@
   },
   "offlineHint": "Ohne Verbindung zeigt die App den zuletzt geladenen Stundenplan und Vertretungsplan. Nachrichten, Unterricht und Termine brauchen eine Verbindung.",
   "yourChild": "Dein Kind",
-  "fromCourseFolder": "laut Kursmappe"
+  "fromCourseFolder": "laut Kursmappe",
+  "tplHomeworkQuestion": "Frage zur Hausaufgabe",
+  "tplCallback": "Bitte um Rückruf",
+  "tplAppointment": "Termin vereinbaren",
+  "dateShortYear": "ccc d.M.yyyy",
+  "dateFull": "dd.MM.yyyy",
+  "absenceTitle": "Krankmeldung",
+  "reload": "Neu laden",
+  "absenceFirstDay": "Erster Tag",
+  "absenceLastDay": "Letzter Tag",
+  "absenceBlockRange": "{from}, {block} bis {until}",
+  "@absenceBlockRange": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "block": {
+        "type": "String"
+      },
+      "until": {
+        "type": "String"
+      }
+    }
+  },
+  "absenceBlockOne": "{day}, {block}",
+  "@absenceBlockOne": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "block": {
+        "type": "String"
+      }
+    }
+  },
+  "absenceWholeDay": "{day}, ganzer Tag",
+  "@absenceWholeDay": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "absenceDayRange": "{from} bis {to}",
+  "@absenceDayRange": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "and": "und",
+  "absenceKindLate": "verspätet",
+  "absenceKindAbsent": "abwesend",
+  "absenceNoChild": "Kein Kind gewählt",
+  "absenceCheckPassed": "Prüfung bestanden",
+  "absenceRejected": "Das Portal lehnt ab",
+  "absenceWouldAccept": "Das Portal würde diese Meldung annehmen.",
+  "absenceNothingSent": "Gesendet wurde nichts – die Schule sieht davon nichts.",
+  "absenceCheckImpossible": "Prüfung nicht möglich",
+  "absenceNoConnection": "Keine Verbindung zum Portal oder unerwartete Antwort.",
+  "absenceFieldsTitle": "Das würde ans Portal gehen",
+  "copy": "Kopieren",
+  "absenceRules": "Das Portal nimmt Meldungen {rules} an.",
+  "@absenceRules": {
+    "placeholders": {
+      "rules": {
+        "type": "String"
+      }
+    }
+  },
+  "absenceNoneAllowed": "Die Schule erlaubt derzeit für kein Kind eine Meldung über das Portal.",
+  "absenceKind": "Art",
+  "absenceAbsent": "Abwesend",
+  "absenceLate": "Verspätet",
+  "absenceChild": "Kind",
+  "absenceDay": "Tag",
+  "absenceOn": "Am",
+  "absenceLessons": "Unterricht",
+  "absenceFromBlock": "Von Block",
+  "absenceToBlock": "Bis Block (einschließlich)",
+  "absencePeriod": "Zeitraum",
+  "absenceFrom": "Von",
+  "absenceTo": "Bis",
+  "absenceComment": "Kommentar (freiwillig)",
+  "absenceNoHealthData": "Bitte keine Gesundheitsdaten eingeben.",
+  "absenceSummary": "Zusammenfassung",
+  "absenceSendLater": "Absenden (folgt nach gemeinsamem Test)",
+  "absenceCheck": "Beim Portal prüfen (sendet nichts)",
+  "absencePreview": "Vorschau der Portal-Felder",
+  "absenceEntries": "Aktuelle und zukünftige Meldungen",
+  "absenceErrChild": "Bitte ein Kind auswählen.",
+  "absenceErrNotAllowed": "Für dieses Kind erlaubt die Schule keine Meldung.",
+  "absenceErrKind": "Unbekannte Art der Meldung.",
+  "absenceErrDayRange": "Tag nur {first} bis {last}.",
+  "@absenceErrDayRange": {
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      }
+    }
+  },
+  "absenceErrStartRange": "Beginn nur {first} bis {last}.",
+  "@absenceErrStartRange": {
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      }
+    }
+  },
+  "absenceErrEndRange": "Ende nur {first} bis {last}.",
+  "@absenceErrEndRange": {
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      }
+    }
+  },
+  "absenceErrBlocks": "Bitte Block von und bis wählen.",
+  "absenceErrBlockOrder": "Der letzte Block liegt vor dem ersten.",
+  "absenceErrOrder": "Das Ende liegt vor dem Beginn."
 }

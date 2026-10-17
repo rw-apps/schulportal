@@ -3,6 +3,7 @@ import 'package:liblanis/liblanis.dart';
 import '../../l10n/l10n.dart';
 import '../plan/plan_model.dart';
 import 'today_model.dart';
+import '../../data/portal_rules.dart';
 
 /// Übersetzt Stundenplan, Vertretungsplan und Kalender eines Kontos in die
 /// Datenform von „Heute“ ([ChildToday], [WeekItem]).
@@ -118,11 +119,9 @@ Set<int> hoursOf(String stunde) {
   final sub = _plain(s.Vertreterkuerzel);
   final subText = _plain(s.vertreter);
 
-  final cancelWords = RegExp(r'entfall|ausfall|fällt aus|entfällt|frei');
   final cancelled =
-      cancelWords.hasMatch(art) ||
-      (hint != null &&
-          RegExp(r'entfällt|fällt aus').hasMatch(hint.toLowerCase()));
+      PortalRules.cancelKind.hasMatch(art) ||
+      (hint != null && PortalRules.cancelHint.hasMatch(hint.toLowerCase()));
   if (cancelled) {
     // Doppelbesetzung: Fehlt nur eine von zwei Lehrkräften, findet die
     // Stunde statt (Schule A: D, M, E zu zweit). Ohne diese Grenze zeigte „Heute“
@@ -426,10 +425,7 @@ String classFromCourses(List<String> courseNames) {
 /// verdrängten sie die echten Termine; sie erscheinen stattdessen als
 /// Hinweis am Tag neben „Essen bestellen“ ([mealHintFor]). Grenze: Nur das
 /// Wort „Essen“/„Mittagessen“/„Mensa“ als ganzes Wort („Interessen“ nicht).
-bool isMealNote(String title) => RegExp(
-  r'\b(mittag)?essen\b|\bmensa\b',
-  caseSensitive: false,
-).hasMatch(title);
+bool isMealNote(String title) => PortalRules.meal.hasMatch(title);
 
 /// Termine ab jetzt für die nächsten [days] Tage.
 ///
@@ -457,7 +453,7 @@ List<WeekItem> weekItemsFromCalendar(
   for (final e in events) {
     if (e.endTime.isBefore(now) || !e.startTime.isBefore(horizon)) continue;
     final cat = (e.category?.name ?? '').toLowerCase();
-    if (cat.contains('pausenaufsicht') || cat.contains('schulwoche')) continue;
+    if (PortalRules.skipCategories.any(cat.contains)) continue;
     final title = e.title.trim();
     if (title.isEmpty) continue;
     if (grade != null && !forGrade(title, grade)) continue;
@@ -466,16 +462,13 @@ List<WeekItem> weekItemsFromCalendar(
     final lower = title.toLowerCase();
     final kind = meal
         ? WeekKind.meal
-        : cat.contains('arbeit') ||
-              RegExp(
-                r'lernkontrolle|klassenarbeit|klausur|\btest\b',
-              ).hasMatch(lower)
+        : PortalRules.examCategories.any(cat.contains) ||
+              PortalRules.examTitle.hasMatch(lower)
         ? WeekKind.exam
-        : (cat.contains('ferien') ||
-                  cat.contains('frei') ||
-                  RegExp(r'ferien|unterrichtsfrei').hasMatch(lower)
+        : (PortalRules.freeCategories.any(cat.contains) ||
+                  PortalRules.freeTitle.hasMatch(lower)
               ? WeekKind.free
-              : (lower.contains('abgabe')
+              : (lower.contains(PortalRules.deadlineWord)
                     ? WeekKind.deadline
                     : WeekKind.event));
     final start = e.startTime;
@@ -543,23 +536,14 @@ String? mealHintFor(
 /// und Aufzählungen („nur für 5, 6 und 7 Jg.“). Ohne Angabe: für alle.
 bool forGrade(String title, int grade) {
   final range =
-      RegExp(
-        r'(\d{1,2})\s*[-–]\s*(\d{1,2})\s*\.?\s*(?:klass|jg|jahrg)',
-        caseSensitive: false,
-      ).firstMatch(title) ??
-      RegExp(
-        r'(?:klassen?|jg\.?|jahrgang|jahrgänge)\s*(\d{1,2})\s*[-–]\s*(\d{1,2})',
-        caseSensitive: false,
-      ).firstMatch(title);
+      PortalRules.gradeRangeBefore.firstMatch(title) ??
+      PortalRules.gradeRangeAfter.firstMatch(title);
   if (range != null) {
     final a = int.parse(range[1]!);
     final b = int.parse(range[2]!);
     return grade >= a && grade <= b;
   }
-  final list = RegExp(
-    r'((?:\d{1,2}\s*(?:,|und|u\.|/)\s*)+\d{1,2})\.?\s*(?:klass|jg|jahrg)',
-    caseSensitive: false,
-  ).firstMatch(title);
+  final list = PortalRules.gradeList.firstMatch(title);
   if (list != null) {
     final grades = RegExp(
       r'\d{1,2}',

@@ -1,6 +1,7 @@
 import 'package:liblanis/liblanis.dart';
 
 import 'plan_model.dart';
+import '../../data/portal_rules.dart';
 
 /// Übersetzt den Lanis-Stundenplan (TimetableStudentParser) in [KidPlan].
 ///
@@ -204,7 +205,7 @@ String? _blankToNull(String? s) {
 String subjectFullName(String code, List<String> courseNames) {
   final up = code.toUpperCase().trim();
   final base = up.replaceAll(RegExp(r'\d+$'), ''); // SP5 → SP
-  final known = _knownSubjects[up] ?? _knownSubjects[base];
+  final known = SubjectNames.known[up] ?? SubjectNames.known[base];
   if (known != null) return known;
 
   for (final c in courseNames) {
@@ -239,48 +240,6 @@ String? _courseBaseName(String course) {
   }
   return words.isEmpty ? null : words.join(' ');
 }
-
-/// Nur eindeutige Kürzel. Doppeldeutige (TXT, WPU …) bewusst nicht.
-const _knownSubjects = <String, String>{
-  'D': 'Deutsch',
-  'DE': 'Deutsch',
-  'E': 'Englisch',
-  'EN': 'Englisch',
-  'M': 'Mathematik',
-  'MA': 'Mathematik',
-  'NAWI': 'Naturwissenschaften',
-  'NW': 'Naturwissenschaften',
-  'GL': 'Gesellschaftslehre',
-  'SP': 'Sport',
-  'SPO': 'Sport',
-  'KU': 'Kunst',
-  'MU': 'Musik',
-  'BIO': 'Biologie',
-  'BI': 'Biologie',
-  'CH': 'Chemie',
-  'PH': 'Physik',
-  'EK': 'Erdkunde',
-  'G': 'Geschichte',
-  'GE': 'Geschichte',
-  'POWI': 'Politik und Wirtschaft',
-  'F': 'Französisch',
-  'FR': 'Französisch',
-  'SPA': 'Spanisch',
-  'L': 'Latein',
-  'LA': 'Latein',
-  'INF': 'Informatik',
-  'IF': 'Informatik',
-  'ETH': 'Ethik',
-  'ET': 'Ethik',
-  'REV': 'Ev. Religion',
-  'ER': 'Ev. Religion',
-  'RKA': 'Kath. Religion',
-  'KR': 'Kath. Religion',
-  'AL': 'Arbeitslehre',
-  'DS': 'Darstellendes Spiel',
-  'KL': 'Klassenstunde',
-  'ÄSTH': 'Ästhetik',
-};
 
 /// Doppelbesetzung zu EINER Stunde zusammenfassen.
 ///

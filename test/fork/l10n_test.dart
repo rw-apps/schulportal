@@ -10,8 +10,9 @@ Map<String, dynamic> _arb(String l) =>
     jsonDecode(File('lib/fork/l10n/fork_$l.arb').readAsStringSync())
         as Map<String, dynamic>;
 
-Set<String> _placeholders(String s) =>
-    RegExp(r'(?<![\w=])\{(\w+)(?=[},])').allMatches(s).map((m) => m[1]!).toSet();
+Set<String> _placeholders(String s) => RegExp(
+  r'(?<![\w=])\{(\w+)(?=[},])',
+).allMatches(s).map((m) => m[1]!).toSet();
 
 void main() {
   test('alle Sprachen haben dieselben Schlüssel und Platzhalter', () {

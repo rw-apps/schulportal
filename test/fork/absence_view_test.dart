@@ -36,10 +36,10 @@ Future<void> _tall(WidgetTester t) async {
   addTearDown(t.view.reset);
 }
 
-Widget _app(AbsenceForm f) => MaterialApp(
+Widget _app(AbsenceForm f, {String lang = 'de'}) => MaterialApp(
   localizationsDelegates: ForkL10n.localizationsDelegates,
   supportedLocales: ForkL10n.supportedLocales,
-  locale: const Locale('de'),
+  locale: Locale(lang),
   home: Scaffold(body: AbsenceFormView(form: f)),
 );
 
@@ -50,7 +50,7 @@ void main() {
     await _tall(t);
     await t.pumpWidget(_app(_form()));
     expect(find.textContaining('Anna – abwesend'), findsOneWidget);
-    expect(find.textContaining('Fr, 16.10., ganzer Tag'), findsOneWidget);
+    expect(find.textContaining('Fr 16.10., ganzer Tag'), findsOneWidget);
     expect(
       find.text('Von Block'),
       findsNothing,
@@ -182,4 +182,17 @@ void main() {
     );
     expect(send.onPressed, isNull, reason: 'Senden bleibt gesperrt');
   });
+
+  for (final lang in ['en', 'tr']) {
+    testWidgets('Krankmeldung $lang übersetzt, ohne Überlauf', (t) async {
+      await _tall(t);
+      await t.pumpWidget(_app(_form(), lang: lang));
+      await t.pumpAndSettle();
+      expect(t.takeException(), isNull);
+      final l = forkL10nFor(lang);
+      expect(find.text(l.absenceSummary), findsOneWidget);
+      expect(find.textContaining(l.absenceKindAbsent), findsWidgets);
+      expect(find.text('Zusammenfassung'), findsNothing);
+    });
+  }
 }

@@ -1,5 +1,7 @@
 import 'package:html/dom.dart';
 
+import '../l10n/l10n.dart';
+
 /// Ein Kind, für das das Elternkonto eine Abwesenheit melden kann.
 class AbsencePupil {
   const AbsencePupil({
@@ -175,40 +177,44 @@ class AbsenceDraft {
 
 /// Fehler, die die Maske vor dem Absenden anzeigt. Leer heißt: zulässig.
 /// Das Portal prüft danach noch einmal selbst (Anfrage mit `check=1`).
-List<String> validateAbsenceDraft(AbsenceForm form, AbsenceDraft d) {
+List<String> validateAbsenceDraft(
+  AbsenceForm form,
+  AbsenceDraft d,
+  ForkL10n t,
+) {
+  String day(DateTime x) => formatDate(t, t.dateFull, x);
   final errors = <String>[];
   final allowed = {for (final p in form.allowedPupils) p.id};
-  if (d.pupilIds.isEmpty) errors.add('Bitte ein Kind auswählen.');
+  if (d.pupilIds.isEmpty) errors.add(t.absenceErrChild);
   if (d.pupilIds.any((id) => !allowed.contains(id))) {
-    errors.add('Für dieses Kind erlaubt die Schule keine Meldung.');
+    errors.add(t.absenceErrNotAllowed);
   }
   if (!form.kinds.any((k) => k.value == d.kind)) {
-    errors.add('Unbekannte Art der Meldung.');
+    errors.add(t.absenceErrKind);
   }
   final fr = form.fromRange;
   final tr = form.toRange;
   if (fr != null && !fr.contains(d.from)) {
     errors.add(
-      '${d.isLate ? 'Tag' : 'Beginn'} nur ${formatGermanDate(fr.first)} bis '
-      '${formatGermanDate(fr.last)}.',
+      d.isLate
+          ? t.absenceErrDayRange(day(fr.first), day(fr.last))
+          : t.absenceErrStartRange(day(fr.first), day(fr.last)),
     );
   }
   if (d.isLate) {
     final bf = form.blocks.indexWhere((b) => b.value == d.blockFrom);
     final bt = form.blocks.indexWhere((b) => b.value == d.blockTo);
     if (bf < 0 || bt < 0) {
-      errors.add('Bitte Block von und bis wählen.');
+      errors.add(t.absenceErrBlocks);
     } else if (bt < bf) {
-      errors.add('Der letzte Block liegt vor dem ersten.');
+      errors.add(t.absenceErrBlockOrder);
     }
   } else {
     if (tr != null && !tr.contains(d.to)) {
-      errors.add(
-        'Ende nur ${formatGermanDate(tr.first)} bis ${formatGermanDate(tr.last)}.',
-      );
+      errors.add(t.absenceErrEndRange(day(tr.first), day(tr.last)));
     }
     if (_day(d.to).isBefore(_day(d.from))) {
-      errors.add('Das Ende liegt vor dem Beginn.');
+      errors.add(t.absenceErrOrder);
     }
   }
   return errors;

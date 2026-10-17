@@ -5,7 +5,8 @@ import 'package:lanis/fork/lessons_parent.dart';
 /// Nachbildung der Eltern-Seite von meinunterricht.php: Aufbau wie im Export
 /// von Schule A (16.10.26), alle Namen, IDs und Texte erfunden.
 /// Zwei Kinder, damit die Trennung je `pupilbox` geprüft ist.
-String _box(String id, String name, String kurs, String kursId) => '''
+String _box(String id, String name, String kurs, String kursId) =>
+    '''
 <div class="pupilbox">
   <h2 data-pupil="$id">$name</h2>
   <ul class="nav nav-tabs">
@@ -77,11 +78,19 @@ void main() {
 
   test('flatten: bei mehreren Kindern Vorname vor dem Kurs', () {
     final all = flattenChildLessons(parseParentLessons(doc));
-    expect(all.map((l) => l.name), containsAll(['Anna: Mathematik 6a', 'Ben: Englisch 8b']));
+    expect(
+      all.map((l) => l.name),
+      containsAll(['Anna: Mathematik 6a', 'Ben: Englisch 8b']),
+    );
   });
 
   test('flatten: ein Kind ohne Vorsilbe', () {
-    final one = parse('<html><body>${_box('100', 'Beispiel, Anna', 'Mathematik 6a', '501')}</body></html>');
-    expect(flattenChildLessons(parseParentLessons(one)).single.name, 'Mathematik 6a');
+    final one = parse(
+      '<html><body>${_box('100', 'Beispiel, Anna', 'Mathematik 6a', '501')}</body></html>',
+    );
+    expect(
+      flattenChildLessons(parseParentLessons(one)).single.name,
+      'Mathematik 6a',
+    );
   });
 }

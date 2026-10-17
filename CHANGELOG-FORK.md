@@ -1,5 +1,11 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9341** – Mehrsprachigkeit, Teil 2
+
+- **Nachrichten, Neue Nachricht und Krankmeldung** erscheinen jetzt auch auf Englisch und Türkisch, samt Prüfhinweisen der Krankmeldung.
+- Vorlagen für Nachrichten bleiben deutsch, weil die Schule Deutsch liest; in Englisch und Türkisch steht ein Hinweis dazu, die Auswahl selbst ist übersetzt.
+- Datumsangaben der Krankmeldung folgen der gewählten Sprache. Was an das Portal geht, bleibt unverändert.
+
 **4.1.0+9340**
 
 - **Kursseite, Leistungskontrollen:** Jede Kontrolle steht als eigene Zeile mit Datum vorn, doppelte Einträge entfallen. Vorher brach die Überschrift Buchstabe für Buchstabe um.

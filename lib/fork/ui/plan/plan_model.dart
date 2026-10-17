@@ -1,4 +1,5 @@
 import '../today/today_model.dart' show ChangeKind;
+import '../../data/portal_rules.dart';
 
 /// Datenform des Stundenplans je Kind.
 ///
@@ -388,22 +389,8 @@ bool isSameSubjectChoice(List<PlanLesson> options) =>
 /// der Fachname bis 8 Zeichen („Englisch“), sonst das Kürzel.
 /// Ursache: Reine Kürzel („M“, „Ek“) waren im ersten Raster schwer lesbar.
 String gridName(PlanLesson l) {
-  const short = {
-    'Mathematik': 'Mathe',
-    'Gesellschaftslehre': 'GL',
-    'Naturwissenschaften': 'NaWi',
-    'Geschichte': 'Gesch.',
-    'Biologie': 'Bio',
-    'Erdkunde': 'Erdk.',
-    'Ev. Religion': 'ev. Reli',
-    'Kath. Religion': 'kath. Reli',
-    'Informatik': 'Info',
-    'Französisch': 'Franz.',
-    'Spanisch': 'Span.',
-    'Darstellendes Spiel': 'DS',
-    'Politik und Wirtschaft': 'PoWi',
-  };
-  return short[l.subject] ?? (l.subject.length <= 8 ? l.subject : l.short);
+  return SubjectNames.gridShort[l.subject] ??
+      (l.subject.length <= 8 ? l.subject : l.short);
 }
 
 /// Farbplatz je Fach eines Kindes: in der Reihenfolge des ersten Auftretens

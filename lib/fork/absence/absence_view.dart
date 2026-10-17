@@ -6,12 +6,11 @@ import 'package:liblanis/liblanis.dart';
 import 'package:lanis/utils/responsive.dart';
 import 'package:lanis/widgets/combined_applet_builder.dart';
 
+import '../l10n/l10n.dart';
 import 'absence_form.dart';
 import 'absence_parser.dart';
 
-const _weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-String _shortDate(DateTime d) =>
-    '${_weekdays[d.weekday - 1]}, ${d.day}.${d.month}.';
+String _shortDate(ForkL10n t, DateTime d) => formatDate(t, t.dateShort, d);
 
 /// Seite „Krankmeldung“ für Elternkonten.
 class AbsencePage extends ConsumerWidget {
@@ -40,11 +39,11 @@ class AbsencePage extends ConsumerWidget {
       builder: (context, form, _, _, _, refresh) => Scaffold(
         appBar: AppBar(
           leading: leading(),
-          title: const Text('Krankmeldung'),
+          title: Text(context.t.absenceTitle),
           actions: [
             if (refresh != null)
               IconButton(
-                tooltip: 'Neu laden',
+                tooltip: context.t.reload,
                 icon: const Icon(Icons.refresh),
                 onPressed: refresh,
               ),
@@ -170,7 +169,7 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
           : (current.isAfter(last) ? last : current),
       firstDate: first,
       lastDate: last,
-      helpText: isFrom ? 'Erster Tag' : 'Letzter Tag',
+      helpText: isFrom ? context.t.absenceFirstDay : context.t.absenceLastDay,
     );
     if (picked == null || !mounted) return;
     setState(() {
@@ -187,11 +186,11 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
       ? '${b.label}  ${b.start}–${b.end}'
       : b.label;
 
-  String _summary() {
+  String _summary(ForkL10n t) {
     final names = f.pupils
         .where((p) => _pupils.contains(p.id))
         .map((p) => p.firstName)
-        .join(' und ');
+        .join(' ${t.and} ');
     AbsenceBlock? block(String v) =>
         f.blocks.where((b) => b.value == v).firstOrNull;
     final String when;
@@ -199,35 +198,31 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
       final bf = block(_blockFrom)?.label ?? '?';
       final bt = block(_blockTo)?.label ?? '?';
       when = bf == bt
-          ? '${_shortDate(_from)}, $bf'
-          : '${_shortDate(_from)}, $bf bis $bt';
+          ? t.absenceBlockOne(_shortDate(t, _from), bf)
+          : t.absenceBlockRange(_shortDate(t, _from), bf, bt);
     } else {
       when = DateUtils.isSameDay(_from, _to)
-          ? '${_shortDate(_from)}, ganzer Tag'
-          : '${_shortDate(_from)} bis ${_shortDate(_to)}';
+          ? t.absenceWholeDay(_shortDate(t, _from))
+          : t.absenceDayRange(_shortDate(t, _from), _shortDate(t, _to));
     }
-    final kind = _isLate ? 'verspätet' : 'abwesend';
-    return '${names.isEmpty ? 'Kein Kind gewählt' : names} – $kind\n$when';
+    final kind = _isLate ? t.absenceKindLate : t.absenceKindAbsent;
+    return '${names.isEmpty ? t.absenceNoChild : names} – $kind\n$when';
   }
 
   Future<void> _check() async {
     final onCheck = widget.onCheck;
     if (onCheck == null) return;
+    final t = context.t;
     setState(() => _busy = true);
     String title;
     List<String> lines;
     try {
       final r = await onCheck(_draft.toFields(f));
-      title = r.ok ? 'Prüfung bestanden' : 'Das Portal lehnt ab';
-      lines = r.ok
-          ? [
-              'Das Portal würde diese Meldung annehmen.',
-              'Gesendet wurde nichts – die Schule sieht davon nichts.',
-            ]
-          : r.errors;
+      title = r.ok ? t.absenceCheckPassed : t.absenceRejected;
+      lines = r.ok ? [t.absenceWouldAccept, t.absenceNothingSent] : r.errors;
     } catch (_) {
-      title = 'Prüfung nicht möglich';
-      lines = ['Keine Verbindung zum Portal oder unerwartete Antwort.'];
+      title = t.absenceCheckImpossible;
+      lines = [t.absenceNoConnection];
     }
     if (!mounted) return;
     setState(() => _busy = false);
@@ -251,7 +246,7 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Das würde ans Portal gehen'),
+        title: Text(context.t.absenceFieldsTitle),
         content: SingleChildScrollView(
           child: SelectableText(
             fields.entries.map((e) => '${e.key} = ${e.value}').join('\n'),
@@ -270,11 +265,11 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
               );
               Navigator.pop(context);
             },
-            child: const Text('Kopieren'),
+            child: Text(context.t.copy),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Schließen'),
+            child: Text(context.t.close),
           ),
         ],
       ),
@@ -284,7 +279,8 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final errors = validateAbsenceDraft(f, _draft);
+    final t = context.t;
+    final errors = validateAbsenceDraft(f, _draft, t);
     final allowed = f.allowedPupils;
 
     Widget section(String title, Widget child) => Padding(
@@ -328,7 +324,7 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Das Portal nimmt Meldungen ${f.rules.join(' und ')} an.',
+                      t.absenceRules(f.rules.join(' ${t.and} ')),
                       style: TextStyle(
                         color: theme.colorScheme.onSecondaryContainer,
                       ),
@@ -339,23 +335,21 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
             ),
           ),
         if (allowed.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(top: 24),
-            child: Text(
-              'Die Schule erlaubt derzeit für kein Kind eine Meldung über das Portal.',
-            ),
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Text(t.absenceNoneAllowed),
           )
         else ...[
           if (f.kinds.length > 1)
             section(
-              'Art',
+              t.absenceKind,
               SegmentedButton<String>(
                 segments: [
                   for (final k in f.kinds)
                     ButtonSegment(
                       value: k.value,
                       label: Text(
-                        k.value == 'krank' ? 'Abwesend' : 'Verspätet',
+                        k.value == 'krank' ? t.absenceAbsent : t.absenceLate,
                       ),
                       icon: Icon(
                         k.value == 'krank'
@@ -369,7 +363,7 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
               ),
             ),
           section(
-            'Kind',
+            t.absenceChild,
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -391,23 +385,23 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
           // Blöcke; verspätet = ein Tag („Am“) mit Block von–bis.
           if (_isLate) ...[
             section(
-              'Tag',
+              t.absenceDay,
               _DateTile(
-                label: 'Am',
+                label: t.absenceOn,
                 date: _from,
                 onTap: () => _pickDate(isFrom: true),
               ),
             ),
             section(
-              'Unterricht',
+              t.absenceLessons,
               Column(
                 children: [
                   DropdownButtonFormField<String>(
                     initialValue: _blockFrom,
                     isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Von Block',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: t.absenceFromBlock,
+                      border: const OutlineInputBorder(),
                     ),
                     items: [
                       for (final b in f.blocks)
@@ -422,9 +416,9 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
                   DropdownButtonFormField<String>(
                     initialValue: _blockTo,
                     isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Bis Block (einschließlich)',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: t.absenceToBlock,
+                      border: const OutlineInputBorder(),
                     ),
                     items: [
                       for (final b in f.blocks)
@@ -440,17 +434,17 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
             ),
           ] else
             section(
-              'Zeitraum',
+              t.absencePeriod,
               Column(
                 children: [
                   _DateTile(
-                    label: 'Von',
+                    label: t.absenceFrom,
                     date: _from,
                     onTap: () => _pickDate(isFrom: true),
                   ),
                   const SizedBox(height: 8),
                   _DateTile(
-                    label: 'Bis',
+                    label: t.absenceTo,
                     date: _to,
                     onTap: () => _pickDate(isFrom: false),
                   ),
@@ -458,7 +452,7 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
               ),
             ),
           section(
-            'Kommentar (freiwillig)',
+            t.absenceComment,
             TextField(
               controller: _comment,
               maxLength: 200,
@@ -467,9 +461,7 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
               // vor der das Portal warnt.
               decoration: InputDecoration(
                 border: const OutlineInputBorder(),
-                helperText:
-                    f.commentWarning ??
-                    'Bitte keine Gesundheitsdaten eingeben.',
+                helperText: f.commentWarning ?? t.absenceNoHealthData,
                 helperMaxLines: 2,
               ),
               onChanged: (_) => setState(() {}),
@@ -483,9 +475,9 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Zusammenfassung', style: theme.textTheme.labelLarge),
+                  Text(t.absenceSummary, style: theme.textTheme.labelLarge),
                   const SizedBox(height: 4),
-                  Text(_summary(), style: theme.textTheme.bodyLarge),
+                  Text(_summary(t), style: theme.textTheme.bodyLarge),
                   for (final e in errors)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
@@ -500,10 +492,7 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
           ),
           const SizedBox(height: 16),
           // Absenden kommt erst nach dem gemeinsamen Test, siehe AbsenceDraft.
-          const FilledButton(
-            onPressed: null,
-            child: Text('Absenden (folgt nach gemeinsamem Test)'),
-          ),
+          FilledButton(onPressed: null, child: Text(t.absenceSendLater)),
           const SizedBox(height: 8),
           if (_busy)
             const Padding(
@@ -514,15 +503,15 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
             onPressed: errors.isEmpty && !_busy && widget.onCheck != null
                 ? _check
                 : null,
-            child: const Text('Beim Portal prüfen (sendet nichts)'),
+            child: Text(t.absenceCheck),
           ),
           TextButton(
             onPressed: errors.isEmpty ? _showFields : null,
-            child: const Text('Vorschau der Portal-Felder'),
+            child: Text(t.absencePreview),
           ),
           if (f.entries.isNotEmpty)
             section(
-              'Aktuelle und zukünftige Meldungen',
+              t.absenceEntries,
               Column(
                 children: [
                   for (final e in f.entries)
@@ -574,7 +563,7 @@ class _DateTile extends StatelessWidget {
           suffixIcon: const Icon(Icons.calendar_today_outlined),
         ),
         child: Text(
-          '${_shortDate(date)}${date.year}',
+          formatDate(context.t, context.t.dateShortYear, date),
           style: Theme.of(context).textTheme.bodyLarge,
         ),
       ),

@@ -5,6 +5,7 @@ import 'package:liblanis/liblanis.dart';
 import 'package:lanis/applets/conversations/chat_pages.dart'
     show ConversationChatPage;
 
+import '../../l10n/l10n.dart';
 import '../kit.dart';
 import '../live/live_data.dart';
 import 'compose_model.dart';
@@ -23,24 +24,22 @@ class LiveMessagesPage extends ConsumerWidget {
       needsTimetable: false,
       builder: (context, s) {
         final k = Kit.of(context);
+        final t = context.t;
         if (!s.offers('nachrichten.php')) {
           return SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(Sp.xl),
-              child: Text(
-                'Die Schule bietet für dieses Konto keine Nachrichten an.',
-                style: k.meta,
-              ),
+              child: Text(t.noMessagesOffered, style: k.meta),
             ),
           );
         }
         if (s.conversations.failed) {
           return LiveMessage(
-            text: 'Die Nachrichten ließen sich nicht laden.',
+            text: t.messagesFailed,
             style: k.meta,
             action: TextButton(
               onPressed: s.refresh,
-              child: Text('Erneut versuchen', style: k.link),
+              child: Text(t.retry, style: k.link),
             ),
           );
         }

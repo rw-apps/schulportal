@@ -4,6 +4,7 @@ import '../l10n/l10n.dart';
 import '../ui/plan/plan_model.dart';
 import '../ui/today/today_from_lanis.dart';
 import '../ui/today/today_model.dart';
+import '../data/portal_rules.dart';
 
 /// Eine Benachrichtigung mit den Einträgen, die sie meldet ([keys]).
 class Notice {
@@ -44,12 +45,7 @@ bool isBigEvent(WeekItem w) =>
     w.kind == WeekKind.exam ||
     w.kind == WeekKind.free ||
     w.kind == WeekKind.deadline ||
-    (w.kind == WeekKind.event &&
-        RegExp(
-          r'eltern|sprechtag|ausflug|wandertag|klassenfahrt|fest\b|feier|'
-          r'zeugnis|projekttag|sportfest|unterrichtsfrei|schulfrei',
-          caseSensitive: false,
-        ).hasMatch(w.title));
+    (w.kind == WeekKind.event && PortalRules.bigEvent.hasMatch(w.title));
 
 String _changeLine(ForkL10n t, ChangeItem c) {
   final what = switch (c.kind) {
