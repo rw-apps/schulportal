@@ -4,7 +4,6 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
 import 'package:lanis/generated/l10n.dart';
 
-
 class FullScreenConversationsMessageInput extends StatefulWidget {
   final ChatCreationData? creationData;
   final String? title;

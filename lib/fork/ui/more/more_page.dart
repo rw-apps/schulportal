@@ -92,25 +92,35 @@ Future<String?> askMensaUrl(
   BuildContext context,
   String? current, {
   String? childName,
+  String? suggestion,
 }) => showDialog<String>(
   context: context,
-  builder: (context) => _MensaUrlDialog(current: current, childName: childName),
+  builder: (context) => _MensaUrlDialog(
+    current: current,
+    childName: childName,
+    suggestion: current == null ? suggestion : null,
+  ),
 );
 
 /// Eigenes Widget, damit der TextEditingController mit dem Dialog freigegeben
 /// wird (Prüfbefund 17.10.26: vorher nie dispose).
 class _MensaUrlDialog extends StatefulWidget {
-  const _MensaUrlDialog({this.current, this.childName});
+  const _MensaUrlDialog({this.current, this.childName, this.suggestion});
 
   final String? current;
   final String? childName;
+
+  /// Aus der App-Liste der Schule (mensaSuggestion); nur ohne eigene Adresse.
+  final String? suggestion;
 
   @override
   State<_MensaUrlDialog> createState() => _MensaUrlDialogState();
 }
 
 class _MensaUrlDialogState extends State<_MensaUrlDialog> {
-  late final _c = TextEditingController(text: widget.current ?? '');
+  late final _c = TextEditingController(
+    text: widget.current ?? widget.suggestion ?? '',
+  );
 
   @override
   void dispose() {
@@ -134,6 +144,10 @@ class _MensaUrlDialogState extends State<_MensaUrlDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(t.mensaDialogText, style: k.meta),
+          if (widget.suggestion != null) ...[
+            const SizedBox(height: Sp.s),
+            Text(t.mensaSuggested, style: k.planMeta(k.p.ink)),
+          ],
           const SizedBox(height: Sp.m),
           TextField(
             controller: _c,

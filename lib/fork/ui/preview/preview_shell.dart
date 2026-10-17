@@ -186,7 +186,12 @@ class _PreviewShellState extends State<PreviewShell> {
               await openMensa(context, s, kid, name: name);
               return;
             }
-            final url = await askMensaUrl(context, null, childName: name);
+            final url = await askMensaUrl(
+              context,
+              null,
+              childName: name,
+              suggestion: mensaSuggestion(s.session.travelMenu),
+            );
             if (url != null && mounted) _saveMensa(s, kid, url);
           },
         ),

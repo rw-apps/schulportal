@@ -18,10 +18,7 @@ bool isPrivacyPolicyAccepted(TypedSettings shared) {
 }
 
 void acceptPrivacyPolicy(TypedSettings shared) {
-  shared.setString(
-    privacyPolicyAcceptedVersionKey,
-    privacyPolicyPublishedAt,
-  );
+  shared.setString(privacyPolicyAcceptedVersionKey, privacyPolicyPublishedAt);
 }
 
 /// Whether background fetch may authenticate (same gate as cold-start auth).

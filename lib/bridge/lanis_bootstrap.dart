@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:liblanis/liblanis.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -7,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:riverpod/misc.dart' show Override;
 
 import '../core/native_adapter_instance.dart';
+import '../fork/error_log.dart';
 import '../fork/parent_support.dart';
 import '../utils/glitchtip.dart';
 import 'database_storage_migration.dart';
@@ -27,10 +29,19 @@ Future<List<Override>> bootstrapLanisClient({
     persistentDirectory: persistentDir,
   );
 
+  // Fork: lokales Fehlerprotokoll ohne Inhalte (fork/error_log.dart) und
+  // Bereinigung des Dateispeichers (ersetzt den Knopf „Zwischenspeicher
+  // leeren“, Entscheidung 17.10.26).
+  ErrorLog.instance
+    ..version = '${packageInfo.version}+${packageInfo.buildNumber}'
+    ..attach(File(p.join(persistentDir.path, 'fork_errors.json')));
+  final documents = p.join(tempDir.path, 'lanis_documents');
+  unawaited(Future(() => pruneOldFiles(Directory(documents))));
+
   final overrides = LanisClient.configure(
     databasePath: databasePath,
     secretStore: store,
-    documentCacheDirectory: p.join(tempDir.path, 'lanis_documents'),
+    documentCacheDirectory: documents,
     httpAdapter: getNativeAdapterInstance(),
     userAgent: forkUserAgent(packageInfo.version, packageInfo.buildNumber),
     onUnexpectedError: (error, stackTrace, {required appletPhpUrl}) {

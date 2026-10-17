@@ -128,7 +128,8 @@ class _ConversationsChatState extends ConsumerState<ConversationsChat>
   Future<void> refreshConversation({bool scrollToEnd = true}) async {
     if (widget.newSettings == null) {
       try {
-        final result = await ref.read(conversationsParserProvider)
+        final result = await ref
+            .read(conversationsParserProvider)
             .refreshConversation(widget.id, _lastRefresh);
 
         if (!mounted) return;
@@ -249,13 +250,15 @@ class _ConversationsChatState extends ConsumerState<ConversationsChat>
 
     late final ReplyToConversationResult result;
     try {
-      result = await ref.read(conversationsParserProvider).replyToConversation(
-        settings.id,
-        "all",
-        settings.groupChat ? "ja" : "nein",
-        settings.onlyPrivateAnswers ? "ja" : "nein",
-        text,
-      );
+      result = await ref
+          .read(conversationsParserProvider)
+          .replyToConversation(
+            settings.id,
+            "all",
+            settings.groupChat ? "ja" : "nein",
+            settings.onlyPrivateAnswers ? "ja" : "nein",
+            text,
+          );
     } catch (_) {
       _notifySidebar();
       if (!mounted) return;
@@ -331,7 +334,9 @@ class _ConversationsChatState extends ConsumerState<ConversationsChat>
     authors.clear(); // Clear existing authors
 
     // Process parent message
-    final DateTime parentDate = parseConversationDate(unparsedMessages.parent.date);
+    final DateTime parentDate = parseConversationDate(
+      unparsedMessages.parent.date,
+    );
     final String parentAuthor = unparsedMessages.parent.author;
 
     if (unparsedMessages.parent.own != true) {
@@ -354,7 +359,8 @@ class _ConversationsChatState extends ConsumerState<ConversationsChat>
 
   Future<void> initConversation() async {
     if (widget.newSettings == null) {
-      Conversation result = await ref.read(conversationsParserProvider)
+      Conversation result = await ref
+          .read(conversationsParserProvider)
           .getSingleConversation(widget.id);
       _lastRefresh = result.msgLastRefresh;
       logger.d("last refresh: $_lastRefresh");

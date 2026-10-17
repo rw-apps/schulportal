@@ -42,7 +42,9 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
 
   void forceReloadPage() {
     setState(() {
-      _future = ref.read(lessonsStudentParserProvider).getUploadInfo(widget.url);
+      _future = ref
+          .read(lessonsStudentParserProvider)
+          .getUploadInfo(widget.url);
     });
   }
 
@@ -189,9 +191,11 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                                 // Clone before each attempt: Dio MultipartFile
                                 // streams can only be finalized once (retry after
                                 // a failed upload would otherwise crash).
-                                final uploadFiles =
-                                    cloneMultipartFiles(_multipartFiles);
-                                fileStatus = await ref.read(lessonsStudentParserProvider)
+                                final uploadFiles = cloneMultipartFiles(
+                                  _multipartFiles,
+                                );
+                                fileStatus = await ref
+                                    .read(lessonsStudentParserProvider)
                                     .uploadFile(
                                       course: snapshot.data["course_id"],
                                       entry: snapshot.data["entry_id"],
@@ -578,15 +582,15 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                                     );
                                   },
                                 );
-                                final storage = ref.read(storageManagerProvider);
+                                final storage = ref.read(
+                                  storageManagerProvider,
+                                );
                                 if (storage == null) {
                                   if (context.mounted) {
                                     Navigator.of(context).pop();
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text(
-                                          AppLocalizations().error,
-                                        ),
+                                        content: Text(AppLocalizations().error),
                                       ),
                                     );
                                   }
@@ -723,7 +727,10 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                                               );
                                               String response;
                                               try {
-                                                response = await ref.read(lessonsStudentParserProvider)
+                                                response = await ref
+                                                    .read(
+                                                      lessonsStudentParserProvider,
+                                                    )
                                                     .deleteUploadedFile(
                                                       course: snapshot
                                                           .data["course_id"],
@@ -736,7 +743,9 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                                                           .index,
                                                       userPasswordEncrypted: () {
                                                         final session = ref
-                                                            .read(sessionProvider)
+                                                            .read(
+                                                              sessionProvider,
+                                                            )
                                                             .asData
                                                             ?.value;
                                                         if (session == null) {
@@ -746,9 +755,9 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                                                         }
                                                         return session.cryptor
                                                             .encryptString(
-                                                          passwordController
-                                                              .text,
-                                                        );
+                                                              passwordController
+                                                                  .text,
+                                                            );
                                                       }(),
                                                     );
                                               } on LanisException catch (ex) {

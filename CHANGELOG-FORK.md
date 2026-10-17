@@ -1,5 +1,12 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9343** – Fehlersuche und Aufräumen
+
+- **Probleme erkennen ohne Inhalte:** Die App merkt sich Abstürze und Lesefehler nur auf dem Handy, ohne Namen, Noten oder Nachrichten. Unter Einstellungen → Fehlersuche steht dann „1 Problem erkannt“; der Bericht ist vor dem Senden vollständig sichtbar und lässt sich teilen (Messenger, Mail) oder auf GitHub melden. Automatisch gesendet wird nichts.
+- **Debug-Export versteckt:** Er enthält echte Portalseiten und erscheint erst nach siebenmaligem Antippen der Version.
+- **Zwischenspeicher räumt sich selbst auf:** Geöffnete Dateien werden nach 30 Tagen gelöscht; der Knopf „Zwischenspeicher leeren“ entfällt.
+- **Mensa-Adresse vorgeschlagen:** Führt die Schule die Essensbestellung in ihrer App-Liste, schlägt die App diese Adresse beim Eintragen vor.
+
 **4.1.0+9342** – Essen bestellen je Kind, direkt in der App
 
 - **Eine Bestellseite je Kind:** Unter „Mehr“ steht bei mehreren Kindern je Kind ein Eintrag „Essen bestellen · Name“. Die bisher eingetragene Adresse gilt weiter, bis ein Kind eine eigene bekommt.

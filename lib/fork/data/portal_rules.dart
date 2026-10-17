@@ -44,6 +44,15 @@ abstract final class PortalRules {
     caseSensitive: false,
   );
 
+  /// Eintrag der App-Liste der Schule (Session.travelMenu), der zur
+  /// Essensbestellung führt – Name oder Link (school_links.dart,
+  /// mensaSuggestion). Ganze Wörter, damit „Interessen“ nicht trifft.
+  static final mensaLink = RegExp(
+    r'\b(mittag)?essen\b|\bmensa\b|\bspeise|\bkantine\b|\bcafeteria\b|'
+    r'catering|essensbestell|menübestell|schulverpflegung',
+    caseSensitive: false,
+  );
+
   /// Jahrgangsangaben im Titel: Bereich „5-7 Klassen“ / „Jg. 8–10“ und
   /// Aufzählung „nur für 5, 6 und 7 Jg.“.
   static final gradeRangeBefore = RegExp(

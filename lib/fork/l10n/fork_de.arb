@@ -324,7 +324,6 @@
     }
   },
   "teacherNameHint": "z. B. Frau Muster",
-  "cacheCleared": "Zwischenspeicher geleert",
   "logoutQuestion": "Abmelden?",
   "logoutText": "Das Konto wird von diesem Gerät entfernt, auch gespeicherte Gruppenwahl und Lehrernamen. Zum Wiederkommen meldest du dich neu an.",
   "logout": "Abmelden",
@@ -363,8 +362,6 @@
   "languageNote": "Inhalte der Schule wie Fächer, Termine und Nachrichten bleiben so, wie die Schule sie schreibt.",
   "sectionData": "Daten",
   "subscribeEventsDetail": "Schultermine im eigenen Kalender",
-  "clearCache": "Zwischenspeicher leeren",
-  "clearCacheDetail": "Geladene Dateien aus Kursen und Nachrichten",
   "sectionAbout": "Über die App",
   "versionValue": "Version {version}",
   "@versionValue": {
@@ -389,9 +386,7 @@
   },
   "libraries": "Verwendete Bibliotheken",
   "sectionDebug": "Fehlersuche",
-  "debugToggle": "Für Rückfragen bei Problemen",
   "debugExport": "Debug-Export",
-  "debugExportDetail": "Protokoll zum Weitergeben, Passwörter geschwärzt",
   "userDataNote": "Was das Schulportal über dieses Konto führt. Ändern lässt es sich nur im Portal selbst.",
   "homeworkEntered": "Hausaufgabe eingetragen",
   "homework": "Hausaufgaben",
@@ -844,5 +839,25 @@
     }
   },
   "mensaInherited": "gleiche Seite wie bisher – eigene eintragen",
-  "chooseChild": "Für welches Kind?"
+  "chooseChild": "Für welches Kind?",
+  "errorsFound": "{count, plural, =1{1 Problem erkannt} other{{count} Probleme erkannt}}",
+  "@errorsFound": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "errorsFoundDetail": "Ansehen und melden – ohne Namen oder Inhalte",
+  "noErrors": "Keine Probleme erkannt",
+  "noErrorsDetail": "Die App merkt sich Fehler ohne Inhalte; gesendet wird nur, was du teilst.",
+  "errorReportTitle": "Erkannte Probleme",
+  "errorReportIntro": "Genau dieser Text wird geteilt: App-Version, Bereich, Fehlerart und Stellen im Code. Keine Namen, Noten oder Nachrichten.",
+  "shareReport": "Teilen",
+  "reportOnGithub": "Auf GitHub melden",
+  "deleteErrors": "Löschen",
+  "errorsDeleted": "Liste gelöscht",
+  "debugUnlocked": "Debug-Export freigeschaltet (unter Fehlersuche)",
+  "debugExportWarning": "Enthält echte Portalseiten mit Namen und Noten – nur an die Person geben, die die App betreut.",
+  "mensaSuggested": "Vorschlag aus der App-Liste der Schule – bitte prüfen."
 }

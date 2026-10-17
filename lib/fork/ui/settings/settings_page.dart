@@ -13,14 +13,15 @@ import 'package:lanis/fork_identity.dart';
 import 'package:lanis/fork/start.dart' show firstSupportedHomePath;
 import 'package:lanis/utils/safe_launch.dart';
 import 'package:lanis/utils/theme_settings.dart';
-import 'package:lanis/view/settings/subsettings/cache.dart' show CacheSettings;
 import 'package:lanis/view/settings/subsettings/debug_export.dart';
 
+import '../../error_log.dart';
 import '../../l10n/l10n.dart';
 import '../font_step.dart';
 import '../language.dart';
 import '../kit.dart';
 import '../today/today_from_lanis.dart' show shortSchoolName;
+import 'error_report_page.dart';
 
 /// Einstellungen im Stil der neuen Oberfläche (Entscheidung 17.10.26).
 ///
@@ -40,8 +41,12 @@ class ForkSettingsPage extends ConsumerStatefulWidget {
 class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
   PermissionStatus? _permission;
   String? _version;
-  int? _cacheBytes;
-  bool _debugOpen = false;
+
+  /// Debug-Export erst nach 7× Antippen der Version (Entscheidung 17.10.26):
+  /// Er enthält echte Portalseiten und ist ein Werkzeug für Rückfragen.
+  /// Grenze: gilt bis zum Verlassen der Seite.
+  int _versionTaps = 0;
+  bool get _debugUnlocked => _versionTaps >= 7;
 
   @override
   void initState() {
@@ -60,23 +65,15 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
           }
         })
         .catchError((Object _) {});
-    WidgetsBinding.instance.addPostFrameCallback((_) => _readCache());
   }
 
-  void _readCache() {
-    final dir = ref.read(storageManagerProvider)?.getDocumentCacheDirectory();
-    if (dir == null || !mounted) return;
-    setState(() => _cacheBytes = CacheSettings.dirStatSync(dir.path)['size']);
-  }
-
-  Future<void> _clearCache() async {
-    final dir = ref.read(storageManagerProvider)?.getDocumentCacheDirectory();
-    if (dir != null && dir.existsSync()) dir.deleteSync(recursive: true);
-    _readCache();
-    if (mounted) {
+  void _tapVersion() {
+    if (_debugUnlocked) return;
+    setState(() => _versionTaps++);
+    if (_debugUnlocked) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(context.t.cacheCleared)));
+      ).showSnackBar(SnackBar(content: Text(context.t.debugUnlocked)));
     }
   }
 
@@ -222,6 +219,7 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
     final accountSettings = ref.watch(accountSpecificSettingsProvider);
     final shared = ref.watch(sharedOverAccountSettingsProvider);
     final supported = ref.watch(supportedAppletPhpUrlsProvider);
+    final errors = ErrorLog.instance.records.length;
     final theme = ref.watch(themeSettingsProvider)['theme'] as String;
     final font = ref.watch(fontStepProvider);
     final language = ref.watch(languageProvider);
@@ -431,14 +429,6 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
                   detail: t.subscribeEventsDetail,
                   onTap: _calendarLink,
                 ),
-              _Item(
-                icon: Icons.cleaning_services_outlined,
-                label: t.clearCache,
-                detail: _cacheBytes == null
-                    ? t.clearCacheDetail
-                    : '${(_cacheBytes! / (1024 * 1024)).toStringAsFixed(1)} MB',
-                onTap: _clearCache,
-              ),
             ]),
 
             _Section(t.sectionAbout, [
@@ -449,6 +439,8 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
                   if (_version != null) t.versionValue(_version!),
                   t.unofficial,
                 ].join(' · '),
+                onTap: _tapVersion,
+                trailing: const SizedBox.shrink(),
               ),
               _Item(
                 icon: Icons.new_releases_outlined,
@@ -479,16 +471,31 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
             ]),
 
             _Section(t.sectionDebug, [
-              _Item(
-                icon: _debugOpen ? Icons.expand_less : Icons.expand_more,
-                label: t.debugToggle,
-                onTap: () => setState(() => _debugOpen = !_debugOpen),
-              ),
-              if (_debugOpen)
+              if (errors > 0)
+                _Item(
+                  icon: Icons.error_outline,
+                  label: t.errorsFound(errors),
+                  detail: t.errorsFoundDetail,
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ErrorReportPage(),
+                      ),
+                    );
+                    if (mounted) setState(() {});
+                  },
+                )
+              else
+                _Item(
+                  icon: Icons.check_circle_outline,
+                  label: t.noErrors,
+                  detail: t.noErrorsDetail,
+                ),
+              if (_debugUnlocked)
                 _Item(
                   icon: Icons.bug_report_outlined,
                   label: t.debugExport,
-                  detail: t.debugExportDetail,
+                  detail: t.debugExportWarning,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => const DebugExport(),

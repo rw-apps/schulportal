@@ -63,10 +63,7 @@ class AppletErrorView extends StatelessWidget {
             children: [
               OutlinedButton(
                 onPressed: () {
-                  safeLaunchUrl(
-                    Uri.parse(forkIssuesUrl),
-                    context: context,
-                  );
+                  safeLaunchUrl(Uri.parse(forkIssuesUrl), context: context);
                 },
                 child: const Text("GitHub"),
               ),

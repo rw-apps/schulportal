@@ -102,8 +102,9 @@ class DebugExportPresetContext {
 /// zwei VERSCHIEDENE Kurse kommen.
 List<String> parseCourseDetailLinks(String html, {int max = 2}) {
   final links = <String>[];
-  for (final m in RegExp(r'href="(meinunterricht\.php\?a=sus_view[^"]*)"')
-      .allMatches(html)) {
+  for (final m in RegExp(
+    r'href="(meinunterricht\.php\?a=sus_view[^"]*)"',
+  ).allMatches(html)) {
     final link = m.group(1)!.replaceAll('&amp;', '&');
     if (link.contains('halb=') || links.contains(link)) continue;
     links.add(link);
@@ -276,10 +277,7 @@ final debugExportPresets = <DebugExportPreset>[
     // `#liste` nachlädt, steht nur dort; ohne das lässt sich das Absenden
     // der Krankmeldung nicht sicher nachbauen.
     buildSections: (_) => [
-      ..._single(
-        DebugExportPresetId.absences,
-        _get('abwesenheitsmeldung.php'),
-      ),
+      ..._single(DebugExportPresetId.absences, _get('abwesenheitsmeldung.php')),
       DebugExportSection(
         name: '${DebugExportPresetId.absences.name}Script',
         request: _get('module/abwesenheitsmeldung/js/meldungEltern.js'),
@@ -291,8 +289,10 @@ final debugExportPresets = <DebugExportPreset>[
     modulePhp: 'vertretungsplan.php',
     label: (l) => l.debugExportPresetSubstitutionsMain,
     needsSubstitutionHtml: true,
-    buildSections: (_) =>
-        _single(DebugExportPresetId.substitutionsMain, substitutionsMainRequest()),
+    buildSections: (_) => _single(
+      DebugExportPresetId.substitutionsMain,
+      substitutionsMainRequest(),
+    ),
   ),
   DebugExportPreset(
     id: DebugExportPresetId.timetable,
@@ -322,7 +322,9 @@ final debugExportPresets = <DebugExportPreset>[
     modulePhp: 'meinunterricht.php',
     label: (l) => l.debugExportPresetLessonsCourseDetail,
     buildSections: (ctx) => [
-      for (final (i, link) in parseCourseDetailLinks(ctx.lessonsHtml ?? '').indexed)
+      for (final (i, link) in parseCourseDetailLinks(
+        ctx.lessonsHtml ?? '',
+      ).indexed)
         DebugExportSection(
           name: '${DebugExportPresetId.lessonsCourseDetail.name}#${i + 1}',
           request: _get(link),

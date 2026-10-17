@@ -154,7 +154,8 @@ void sendEmail(FlutterErrorDetails errorDetails) async {
   final emailUri = Uri(
     scheme: 'mailto',
     queryParameters: {
-      'subject': '[FEHLERBERICHT $forkAppName] ${errorDetails.exceptionAsString()}',
+      'subject':
+          '[FEHLERBERICHT $forkAppName] ${errorDetails.exceptionAsString()}',
       'body': '\n\n\n$errorReport',
     },
   );

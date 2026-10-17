@@ -1,3 +1,5 @@
+import 'data/portal_rules.dart';
+
 /// Normalisiert eine eingetragene Adresse der Mensa-Bestellseite:
 /// „bestellung.example.de“ → „https://bestellung.example.de“; leer = null.
 ///
@@ -46,3 +48,30 @@ bool offersMoodle(List<dynamic> travelMenu) => travelMenu.any((e) {
       text.contains('lernplattform') ||
       RegExp(r'\bmo\d+\.schulportal').hasMatch(text);
 });
+
+/// Vorschlag für die Mensa-Bestellseite aus der App-Liste der Schule.
+///
+/// Ursache (Wunsch 17.10.26): Manche Schulen führen die Essensbestellung als
+/// externen Link in ihrer App-Liste; dann muss die Familie die Adresse nicht
+/// suchen. Erkannt an [PortalRules.mensaLink] in Name oder Link; nur
+/// Adressen außerhalb des Schulportals und nur, was [normalizeMensaUrl]
+/// annimmt. Grenze: Nur ein Vorschlag – die Familie bestätigt ihn im Dialog;
+/// führt die Schule keinen Link, bleibt das Feld leer wie bisher.
+String? mensaSuggestion(List<dynamic> travelMenu) {
+  for (final e in travelMenu) {
+    if (e is! Map) continue;
+    final link = '${e['link'] ?? ''}'.trim();
+    final text = '${e['Name'] ?? ''} $link';
+    if (!PortalRules.mensaLink.hasMatch(text)) continue;
+    if (!RegExp(r'^https?://', caseSensitive: false).hasMatch(link)) continue;
+    final url = normalizeMensaUrl(link);
+    if (url == null) continue;
+    final host = Uri.parse(url).host.toLowerCase();
+    if (host == 'schulportal.hessen.de' ||
+        host.endsWith('.schulportal.hessen.de')) {
+      continue;
+    }
+    return url;
+  }
+  return null;
+}

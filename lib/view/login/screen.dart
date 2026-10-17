@@ -73,8 +73,8 @@ class _WelcomeLoginScreenState extends State<WelcomeLoginScreen> {
                   duration: const Duration(milliseconds: 300),
                   transitionBuilder:
                       (Widget child, Animation<double> animation) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
+                        return FadeTransition(opacity: animation, child: child);
+                      },
                   child: _currentPageIndex == pages.length - 1
                       ? SizedBox(
                           key: const ValueKey('continue_btn'),

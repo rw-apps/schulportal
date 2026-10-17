@@ -12,10 +12,8 @@ class UploadDates {
     required this.automaticDeletion,
   });
 
-  static String _normalizeDateTime(String raw) => raw
-      .replaceAll(",", "")
-      .replaceAll(" den", "")
-      .replaceAll(" Uhr", "");
+  static String _normalizeDateTime(String raw) =>
+      raw.replaceAll(",", "").replaceAll(" den", "").replaceAll(" Uhr", "");
 
   /// Returns null if any field is missing or unparsable.
   static UploadDates? tryParse({
@@ -28,12 +26,14 @@ class UploadDates {
     }
     try {
       return UploadDates(
-        start: DateFormat("EEEE d.M.yy H:mm", "de").parse(
-          _normalizeDateTime(startRaw),
-        ),
-        deadline: DateFormat("EEEE d.M.yy H:mm", "de").parse(
-          _normalizeDateTime(deadlineRaw),
-        ),
+        start: DateFormat(
+          "EEEE d.M.yy H:mm",
+          "de",
+        ).parse(_normalizeDateTime(startRaw)),
+        deadline: DateFormat(
+          "EEEE d.M.yy H:mm",
+          "de",
+        ).parse(_normalizeDateTime(deadlineRaw)),
         automaticDeletion: DateFormat("d.M.yyyy", "de").parse(deletionRaw),
       );
     } catch (_) {
