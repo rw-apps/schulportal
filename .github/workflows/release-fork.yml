@@ -91,14 +91,45 @@ jobs:
           flutter analyze --no-fatal-infos
           flutter test
 
-      - name: APK bauen
+      # Je Prozessorart eine APK statt einer „fat“ APK (17.10.26): Die
+      # gemeinsame APK trug App-Code, Flutter und Cronet dreifach (arm64,
+      # armv7, x86_64) und wog 53 MB; arm64 allein 19,5 MB. x86_64 entfällt
+      # (nur Emulatoren/Chromebooks). Grenze: --split-per-abi setzt den
+      # versionCode auf 1000 × ABI + Build (armv7 10334, arm64 11334 bei
+      # Build 9334). Eine spätere gemeinsame APK müsste darüber liegen, sonst
+      # lehnt Android das Update ab. --split-debug-info verschiebt die
+      # Debug-Symbole aus der APK; sie liegen als Lauf-Artefakt bei
+      # (Absturzanalyse).
+      - name: APKs bauen
         if: steps.ver.outputs.neu == 'true'
         run: |
-          flutter build apk --release --dart-define=cronetHttpNoPlay=true
-          mv build/app/outputs/flutter-apk/app-release.apk "schulportal-${{ steps.ver.outputs.tag }}.apk"
+          flutter build apk --release --split-per-abi \
+            --target-platform android-arm,android-arm64 \
+            --split-debug-info=build/symbols \
+            --dart-define=cronetHttpNoPlay=true
+          tag="${{ steps.ver.outputs.tag }}"
+          mv build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "schulportal-$tag-arm64-v8a.apk"
+          mv build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk "schulportal-$tag-armeabi-v7a.apk"
+          ls -la schulportal-*.apk
+
+      - name: Debug-Symbole sichern
+        if: steps.ver.outputs.neu == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: symbols-${{ steps.ver.outputs.tag }}
+          path: build/symbols
+          retention-days: 90
+
+      # Nur der oberste Abschnitt des Änderungsprotokolls (diese Version),
+      # nicht die ganze Datei wie bisher.
+      - name: Notizen dieser Version
+        if: steps.ver.outputs.neu == 'true'
+        run: |
+          awk 'BEGIN{n=0} /^\*\*[0-9]/{n++} n==1' CHANGELOG-FORK.md > notes.md
+          test -s notes.md || cp CHANGELOG-FORK.md notes.md
 
       - name: Release veröffentlichen
         if: steps.ver.outputs.neu == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ steps.ver.outputs.tag }}" "schulportal-${{ steps.ver.outputs.tag }}.apk" --target "$GITHUB_SHA" --title "Schulportal ${{ steps.ver.outputs.tag }}" --notes-file CHANGELOG-FORK.md
+        run: gh release create "${{ steps.ver.outputs.tag }}" schulportal-*.apk --target "$GITHUB_SHA" --title "Schulportal ${{ steps.ver.outputs.tag }}" --notes-file notes.md

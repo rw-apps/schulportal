@@ -1,5 +1,10 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9335**
+
+- **Kleinere Downloads:** Je Prozessorart eine eigene APK – „arm64-v8a“ für fast alle Handys (etwa 20 MB statt 53 MB), „armeabi-v7a“ für ältere 32-Bit-Geräte. In Obtainium einmal die arm64-Datei wählen (APK-Filter „arm64“). Keine Änderung an der App selbst.
+- Die Release-Notizen zeigen nur noch die Neuerungen der jeweiligen Version.
+
 **4.1.0+9334**
 
 - **Neue Kursseite** statt der bisherigen Lanis-Ansicht: getrennte Bereiche mit eigenem Kopf – Als Nächstes (nächste Stunde laut Plan, anstehende Arbeit laut Schulkalender, offene Abgaben), Lehrkraft mit „Schreiben“ und letzter Nachricht, Anwesenheit als Balken mit den Fehltagen, Verlauf zugeklappt und nach Themen gegliedert, Material gesammelt, Leistungen. Halbjahr umschaltbar, wenn das Portal es anbietet; leere Kursmappe mit Hinweis.
