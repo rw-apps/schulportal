@@ -2,10 +2,11 @@
 /// „bestellung.example.de“ → „https://bestellung.example.de“; leer = null.
 ///
 /// Die Adresse trägt jede Familie selbst ein (Mehr → Essen bestellen),
-/// gespeichert je Konto auf dem Gerät. Ursache: Eine feste Zuordnung
-/// Schulnummer → Caterer im Code verriet im öffentlichen Repository die
-/// Schule (Entscheidung 17.10.26). Grenze: Die App öffnet nur die Seite im
-/// Browser; Anmeldung und Bestellung bleiben dort, kein Passwort in der App.
+/// gespeichert je Kind auf dem Gerät (mensa.dart). Ursache: Eine feste
+/// Zuordnung Schulnummer → Caterer im Code verriet im öffentlichen
+/// Repository die Schule (Entscheidung 17.10.26). Die Seite öffnet in der App
+/// (MensaPage); das Passwort tippt man in die Seite des Caterers, die App
+/// speichert es nicht – nur dessen Sitzungs-Cookie bleibt im WebView.
 ///
 /// Sicherheitsprüfung 17.10.26: nur https („http://“ wird zu https), keine
 /// Anmeldedaten in der Adresse („user@host“ wird abgelehnt) – sonst ließe

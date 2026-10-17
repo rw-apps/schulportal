@@ -1,5 +1,12 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9342** – Essen bestellen je Kind, direkt in der App
+
+- **Eine Bestellseite je Kind:** Unter „Mehr“ steht bei mehreren Kindern je Kind ein Eintrag „Essen bestellen · Name“. Die bisher eingetragene Adresse gilt weiter, bis ein Kind eine eigene bekommt.
+- **Bestellseite in der App:** Sie öffnet jetzt in der App statt im Browser und bleibt angemeldet. Steht in der eingetragenen Adresse eine Woche (…/2025/35/), öffnet die App stattdessen die aktuelle Bestellwoche, ab Freitagmittag die nächste.
+- **Schutz vor Bestellung fürs falsche Kind:** War auf derselben Bestellseite zuletzt ein anderes Kind angemeldet, erscheint ein Hinweis mit „Abmelden“.
+- Fremde Links der Bestellseite (z. B. Zahlungsanbieter) öffnen im Browser. „Abmelden“ in den Einstellungen meldet auch dort ab.
+
 **4.1.0+9341** – Mehrsprachigkeit, Teil 2
 
 - **Nachrichten, Neue Nachricht und Krankmeldung** erscheinen jetzt auch auf Englisch und Türkisch, samt Prüfhinweisen der Krankmeldung.

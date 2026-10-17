@@ -10,7 +10,7 @@ import '../../lessons_parent.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
 import 'serial_loader.dart';
-import '../../school_links.dart' show normalizeMensaUrl;
+import '../../mensa.dart';
 import '../plan/plan_from_lanis.dart';
 import '../plan/plan_model.dart';
 import '../today/today_from_lanis.dart' show classFromCourses;
@@ -27,8 +27,12 @@ const teacherNamesSetting = 'fork-teacher-names';
 
 const _settingsApplet = 'stundenplan.php';
 
-/// Adresse der Mensa-Bestellseite, je Konto (normalizeMensaUrl).
+/// Alte Adresse der Mensa-Bestellseite je Konto (bis 9341); gilt weiter für
+/// Kinder ohne eigene Adresse (MensaAddresses.legacy).
 const mensaUrlSetting = 'fork-mensa-url';
+
+/// Adressen der Mensa-Bestellseite je Kind (MensaAddresses, JSON).
+const mensaUrlsSetting = 'fork-mensa-urls';
 
 /// Gespeicherte Map (JSON) als Kürzel → Text; Fremdes wird übergangen.
 Map<String, String> settingStrings(Object? m) => <String, String>{
@@ -114,7 +118,8 @@ class LiveSnapshot {
     required this.refresh,
     required this.refreshMessages,
     required this.setMensaUrl,
-    this.mensaUrl,
+    this.mensa = const MensaAddresses({}),
+    this.accountKey = '',
     this.kids = const [],
   });
 
@@ -130,9 +135,12 @@ class LiveSnapshot {
   final GroupChoice userChoice;
   final Map<String, String> ownNames;
 
-  /// Selbst eingetragene Mensa-Bestellseite (null = keine).
-  final String? mensaUrl;
-  final void Function(String? url) setMensaUrl;
+  /// Selbst eingetragene Mensa-Bestellseiten je Kind.
+  final MensaAddresses mensa;
+  final void Function(MensaKidKey kid, String? url) setMensaUrl;
+
+  /// Lokale Kontonummer (für die Zuordnung der Mensa-Anmeldung).
+  final String accountKey;
   final void Function(GroupChoice) setUserChoice;
   final void Function(Map<String, String>) setOwnNames;
 
@@ -163,6 +171,15 @@ class LiveSnapshot {
     if (session.accountTypeOrNull == AccountType.parent) return '';
     return (session.userData['vorname'] ?? '').trim();
   }
+
+  /// Kind der Karte in „Heute“ (ein Kind je Konto, siehe LiveTodayPage).
+  MensaKidKey get mensaKid => kids.isEmpty ? '' : kids.first.pupilId;
+
+  /// Bestellseite des Kindes in „Heute“.
+  String? get mensaUrl => mensa.of(mensaKid);
+
+  /// Wer auf der Bestellseite angemeldet ist (MensaPage.owner).
+  String mensaOwner(MensaKidKey kid) => '$accountKey:$kid';
 
   List<String> get courseNames => [
     for (final l in lessons.content ?? const <Lesson>[]) l.name,
@@ -228,7 +245,7 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
 
   GroupChoice _choice = const {};
   Map<String, String> _names = const {};
-  String? _mensa;
+  MensaAddresses _mensa = const MensaAddresses({});
   int? _settingsFor;
   late final _loader = SerialLoader(
     (force, only) => _run(_supported, force, only),
@@ -309,7 +326,10 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
         const <String, dynamic>{},
       ),
     );
-    _mensa = normalizeMensaUrl(s.getString('fork/$mensaUrlSetting'));
+    _mensa = MensaAddresses.decode(
+      s.getString('fork/$mensaUrlsSetting'),
+      legacy: s.getString('fork/$mensaUrlSetting'),
+    );
   }
 
   void _write(String key, Map<String, String> value) {
@@ -391,13 +411,15 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
           _write(teacherNamesSetting, n);
         },
         refresh: () => _loader.run(force: true),
-        mensaUrl: _mensa,
-        setMensaUrl: (u) {
-          final v = normalizeMensaUrl(u);
-          setState(() => _mensa = v);
-          ref
-              .read(accountSpecificSettingsProvider)
-              ?.setString('fork/$mensaUrlSetting', v);
+        mensa: _mensa,
+        accountKey: '${account.localId}',
+        setMensaUrl: (kid, u) {
+          final next = _mensa.withUrl(kid, u);
+          setState(() => _mensa = next);
+          final s = ref.read(accountSpecificSettingsProvider);
+          s?.setString('fork/$mensaUrlsSetting', next.encode());
+          // Alte Kontoadresse nur löschen, wenn MensaAddresses sie verwirft.
+          if (next.legacy == null) s?.setString('fork/$mensaUrlSetting', null);
         },
         refreshMessages: () =>
             _loader.run(force: true, only: const {'nachrichten.php'}),

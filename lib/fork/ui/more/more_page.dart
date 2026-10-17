@@ -88,18 +88,22 @@ class _EntryTile extends StatelessWidget {
 
 /// Fragt die Adresse der Mensa-Bestellseite ab. null = abgebrochen, '' =
 /// Eintrag löschen.
-Future<String?> askMensaUrl(BuildContext context, String? current) =>
-    showDialog<String>(
-      context: context,
-      builder: (context) => _MensaUrlDialog(current: current),
-    );
+Future<String?> askMensaUrl(
+  BuildContext context,
+  String? current, {
+  String? childName,
+}) => showDialog<String>(
+  context: context,
+  builder: (context) => _MensaUrlDialog(current: current, childName: childName),
+);
 
 /// Eigenes Widget, damit der TextEditingController mit dem Dialog freigegeben
 /// wird (Prüfbefund 17.10.26: vorher nie dispose).
 class _MensaUrlDialog extends StatefulWidget {
-  const _MensaUrlDialog({this.current});
+  const _MensaUrlDialog({this.current, this.childName});
 
   final String? current;
+  final String? childName;
 
   @override
   State<_MensaUrlDialog> createState() => _MensaUrlDialogState();
@@ -119,7 +123,12 @@ class _MensaUrlDialogState extends State<_MensaUrlDialog> {
     final k = Kit.of(context);
     final t = context.t;
     return AlertDialog(
-      title: Text(t.mensaDialogTitle, style: k.sheetTitle),
+      title: Text(
+        widget.childName == null
+            ? t.mensaDialogTitle
+            : t.mensaDialogTitleFor(widget.childName!),
+        style: k.sheetTitle,
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

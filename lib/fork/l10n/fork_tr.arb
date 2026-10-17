@@ -60,7 +60,7 @@
   "settingsDetail": "Hesap, bildirimler, görünüm, gizlilik",
   "invalidUrl": "Bu bir web adresine benzemiyor.",
   "mensaDialogTitle": "Yemekhane sipariş sayfası",
-  "mensaDialogText": "Yemeği sipariş ettiğiniz sayfanın adresi. Uygulama sayfayı tarayıcıda açar; giriş orada yapılır.",
+  "mensaDialogText": "Yemek siparişi verdiğiniz sayfanın adresi – tercihen giriş sayfası. Uygulama sayfayı kendisi açar ve orada oturumu açık tutar; adresteki hafta (…/2025/35/) güncel sipariş haftasıyla değiştirilir.",
   "mensaDialogHint": "ör. siparis.example.com",
   "delete": "Sil",
   "cancel": "İptal",
@@ -301,5 +301,15 @@
   "absenceErrEndRange": "Bitiş yalnızca {first} – {last}.",
   "absenceErrBlocks": "Lütfen başlangıç ve bitiş bloğunu seçin.",
   "absenceErrBlockOrder": "Son blok ilk bloktan önce.",
-  "absenceErrOrder": "Bitiş başlangıçtan önce."
+  "absenceErrOrder": "Bitiş başlangıçtan önce.",
+  "orderMealFor": "Yemek siparişi · {name}",
+  "openInBrowser": "Tarayıcıda aç",
+  "mensaOtherLoggedIn": "Burada en son başka bir çocuk oturum açmıştı.",
+  "mensaOtherLoggedInName": "Burada en son {name} oturum açmıştı.",
+  "mensaLogout": "Oturumu kapat",
+  "mensaLoadFailed": "Sipariş sayfası yüklenemedi.",
+  "mensaDialogTitleFor": "{name} için sipariş sayfası",
+  "mensaChangeFor": "Yemekhane adresini değiştir · {name}",
+  "mensaInherited": "önceki sayfayla aynı – ayrı adres girin",
+  "chooseChild": "Hangi çocuk için?"
 }

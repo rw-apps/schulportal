@@ -194,7 +194,7 @@
   "settingsDetail": "Konto, Benachrichtigungen, Darstellung, Datenschutz",
   "invalidUrl": "Das sieht nicht nach einer Web-Adresse aus.",
   "mensaDialogTitle": "Bestellseite der Mensa",
-  "mensaDialogText": "Adresse der Seite, auf der ihr das Essen bestellt. Die App öffnet sie im Browser; die Anmeldung bleibt dort.",
+  "mensaDialogText": "Adresse der Seite, auf der ihr das Essen bestellt – am besten die Anmeldeseite. Die App öffnet sie selbst und bleibt dort angemeldet; eine Woche in der Adresse (…/2025/35/) ersetzt sie durch die aktuelle Bestellwoche.",
   "mensaDialogHint": "z. B. bestellung.example.de",
   "delete": "Löschen",
   "cancel": "Abbrechen",
@@ -806,5 +806,43 @@
   },
   "absenceErrBlocks": "Bitte Block von und bis wählen.",
   "absenceErrBlockOrder": "Der letzte Block liegt vor dem ersten.",
-  "absenceErrOrder": "Das Ende liegt vor dem Beginn."
+  "absenceErrOrder": "Das Ende liegt vor dem Beginn.",
+  "orderMealFor": "Essen bestellen · {name}",
+  "@orderMealFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "openInBrowser": "Im Browser öffnen",
+  "mensaOtherLoggedIn": "Hier war zuletzt ein anderes Kind angemeldet.",
+  "mensaOtherLoggedInName": "Hier war zuletzt {name} angemeldet.",
+  "@mensaOtherLoggedInName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mensaLogout": "Abmelden",
+  "mensaLoadFailed": "Die Bestellseite ließ sich nicht laden.",
+  "mensaDialogTitleFor": "Bestellseite für {name}",
+  "@mensaDialogTitleFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mensaChangeFor": "Mensa-Adresse ändern · {name}",
+  "@mensaChangeFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mensaInherited": "gleiche Seite wie bisher – eigene eintragen",
+  "chooseChild": "Für welches Kind?"
 }

@@ -105,10 +105,10 @@ class _PreviewShellState extends State<PreviewShell> {
     NavDest(Icons.more_horiz, Icons.more_horiz, t.navMore),
   ];
 
-  void _saveMensa(LiveSnapshot s, String raw) {
+  void _saveMensa(LiveSnapshot s, String kid, String raw) {
     final ok = raw.trim().isEmpty || normalizeMensaUrl(raw) != null;
     if (ok) {
-      s.setMensaUrl(raw);
+      s.setMensaUrl(kid, raw);
       return;
     }
     ScaffoldMessenger.of(
@@ -116,10 +116,58 @@ class _PreviewShellState extends State<PreviewShell> {
     ).showSnackBar(SnackBar(content: Text(context.t.invalidUrl)));
   }
 
+  String _mensaDetail(
+    ForkL10n t,
+    LiveSnapshot s,
+    String kid, {
+    required bool several,
+  }) {
+    final url = s.mensa.of(kid);
+    if (url == null) return t.orderMealSetup;
+    final host = Uri.parse(url).host;
+    return several && !s.mensa.ownFor(kid)
+        ? '$host · ${t.mensaInherited}'
+        : host;
+  }
+
+  Future<(String, String?)?> _chooseKid(
+    BuildContext context,
+    List<(String, String?)> kids,
+  ) {
+    final k = Kit.of(context);
+    return showModalBottomSheet<(String, String?)>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: k.p.card,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(Sp.xl, 0, Sp.xl, Sp.l),
+          children: [
+            Text(context.t.chooseChild, style: k.sheetTitle),
+            const SizedBox(height: Sp.m),
+            for (final x in kids)
+              ListTile(
+                title: Text(x.$2 ?? '', style: k.planSubject(k.p.ink)),
+                onTap: () => Navigator.of(context).pop(x),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   List<MoreEntry> _liveEntries(BuildContext context, LiveSnapshot? s) {
     if (s == null) return const [];
-    final mensa = s.mensaUrl;
     final t = context.t;
+    // Ein Eintrag je Kind (Wunsch 17.10.26); Schülerkonto bzw. Kinder noch
+    // nicht geladen: ein Eintrag ohne Namen.
+    final kids = <(String, String?)>[
+      if (s.kids.isEmpty) ('', null),
+      for (final k in s.kids)
+        (k.pupilId, s.kids.length > 1 ? k.firstName : null),
+    ];
+    final anyMensa = kids.any((k) => s.mensa.of(k.$1) != null);
     return [
       if (s.offers('abwesenheitsmeldung.php'))
         MoreEntry(
@@ -128,26 +176,35 @@ class _PreviewShellState extends State<PreviewShell> {
           detail: t.reportSickDetail,
           onTap: () => openAbsence(context),
         ),
-      MoreEntry(
-        icon: Icons.restaurant_menu,
-        label: t.orderMeal,
-        detail: mensa == null ? t.orderMealSetup : Uri.parse(mensa).host,
-        onTap: () async {
-          if (mensa != null) {
-            await openMensa(context, mensa);
-            return;
-          }
-          final url = await askMensaUrl(context, null);
-          if (url != null && mounted) _saveMensa(s, url);
-        },
-      ),
-      if (mensa != null)
+      for (final (kid, name) in kids)
+        MoreEntry(
+          icon: Icons.restaurant_menu,
+          label: name == null ? t.orderMeal : t.orderMealFor(name),
+          detail: _mensaDetail(t, s, kid, several: kids.length > 1),
+          onTap: () async {
+            if (s.mensa.of(kid) != null) {
+              await openMensa(context, s, kid, name: name);
+              return;
+            }
+            final url = await askMensaUrl(context, null, childName: name);
+            if (url != null && mounted) _saveMensa(s, kid, url);
+          },
+        ),
+      if (anyMensa)
         MoreEntry(
           icon: Icons.edit_outlined,
           label: t.mensaChange,
           onTap: () async {
-            final url = await askMensaUrl(context, mensa);
-            if (url != null && mounted) _saveMensa(s, url);
+            final pick = kids.length == 1
+                ? kids.single
+                : await _chooseKid(context, kids);
+            if (pick == null || !mounted) return;
+            final url = await askMensaUrl(
+              this.context,
+              s.mensa.of(pick.$1),
+              childName: pick.$2,
+            );
+            if (url != null && mounted) _saveMensa(s, pick.$1, url);
           },
         ),
       if (offersMoodle(s.session.travelMenu))

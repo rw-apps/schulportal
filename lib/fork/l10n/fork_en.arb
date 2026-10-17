@@ -60,7 +60,7 @@
   "settingsDetail": "Account, notifications, appearance, privacy",
   "invalidUrl": "That doesn't look like a web address.",
   "mensaDialogTitle": "Canteen order page",
-  "mensaDialogText": "Address of the page where you order lunch. The app opens it in the browser; you sign in there.",
+  "mensaDialogText": "Address of the page where you order meals – ideally the login page. The app opens it itself and stays logged in there; a week in the address (…/2025/35/) is replaced with the current order week.",
   "mensaDialogHint": "e.g. order.example.com",
   "delete": "Delete",
   "cancel": "Cancel",
@@ -301,5 +301,15 @@
   "absenceErrEndRange": "End only {first} to {last}.",
   "absenceErrBlocks": "Please choose the first and last block.",
   "absenceErrBlockOrder": "The last block is before the first.",
-  "absenceErrOrder": "The end is before the start."
+  "absenceErrOrder": "The end is before the start.",
+  "orderMealFor": "Order meals · {name}",
+  "openInBrowser": "Open in browser",
+  "mensaOtherLoggedIn": "Another child was logged in here last.",
+  "mensaOtherLoggedInName": "{name} was logged in here last.",
+  "mensaLogout": "Log out",
+  "mensaLoadFailed": "The order page could not be loaded.",
+  "mensaDialogTitleFor": "Order page for {name}",
+  "mensaChangeFor": "Change canteen address · {name}",
+  "mensaInherited": "same page as before – enter its own",
+  "chooseChild": "For which child?"
 }

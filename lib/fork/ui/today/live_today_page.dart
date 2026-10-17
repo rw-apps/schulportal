@@ -3,23 +3,33 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:lanis/fork/absence/absence_view.dart';
-import 'package:lanis/utils/safe_launch.dart';
-import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 
 import '../../l10n/l10n.dart';
 import '../live/live_data.dart';
+import '../mensa/mensa_page.dart';
 import '../plan/plan_from_lanis.dart' show subjectFullName;
 import '../plan/plan_model.dart';
 import 'today_from_lanis.dart';
 import 'today_model.dart';
 import 'today_page.dart';
 
-/// Mensa-Seite im Browser öffnen (Grenze bei mensaLinks).
-Future<void> openMensa(BuildContext context, String url) => safeLaunchUrl(
-  Uri.parse(url),
-  context: context,
-  mode: LaunchMode.externalApplication,
-);
+/// Bestellseite des Kindes in der App öffnen (MensaPage). Ohne Adresse
+/// geschieht nichts – die Oberfläche bietet dann „eintragen“ an.
+Future<void> openMensa(
+  BuildContext context,
+  LiveSnapshot s,
+  String kid, {
+  String? name,
+}) async {
+  final url = s.mensa.of(kid);
+  if (url == null) return;
+  await Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) =>
+          MensaPage(url: url, owner: s.mensaOwner(kid), childName: name),
+    ),
+  );
+}
 
 /// Krankmeldung über der neuen Oberfläche öffnen.
 Future<void> openAbsence(BuildContext context) => Navigator.of(
@@ -114,7 +124,14 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
           onReportAbsence: kid.canReportAbsence
               ? (_) => openAbsence(context)
               : null,
-          onOrderMeal: mensa == null ? null : (_) => openMensa(context, mensa),
+          onOrderMeal: mensa == null
+              ? null
+              : (_) => openMensa(
+                  context,
+                  s,
+                  s.mensaKid,
+                  name: s.kids.length > 1 ? s.firstName : null,
+                ),
           onOpenCalendar: widget.onOpenCalendar,
           onOpenHomework: widget.onOpenHomework == null
               ? null
