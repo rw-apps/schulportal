@@ -73,4 +73,7 @@ generated/
 # FVM Version Cache
 .fvm/
 # FVM Version file
-.fvmrclib/fork/l10n/gen/
+.fvmrc
+
+# Fork: aus lib/fork/l10n/*.arb erzeugt (flutter pub get, l10n.yaml)
+lib/fork/l10n/gen/
