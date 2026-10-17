@@ -108,7 +108,23 @@ List<CourseItem> courseItemsFrom(
     (fullByTitle[courseTitle(l.name)] ??= {}).add(l.name.trim());
   }
   CourseItem item(Lesson l) {
-    final codes = [for (final t in l.teachers) t.teacherKuerzel ?? ''];
+    // Name und Kürzel als PAAR filtern. Ursache (Prüfbefund 17.10.26): Die
+    // Namen wurden einzeln um leere Einträge gekürzt, die Kürzel nicht – die
+    // Kursseite ordnete dann „Schreiben“ der falschen Lehrkraft zu. Ein leer
+    // gespeicherter eigener Name gilt als „nicht gesetzt“ (wie
+    // KidPlan.withTeacherNames).
+    final pairs = <(String, String)>[];
+    for (final t in l.teachers) {
+      final kz = t.teacherKuerzel ?? '';
+      final own = ownNames[kz]?.trim() ?? '';
+      final name = own.isNotEmpty
+          ? own
+          : (t.teacher != null && t.teacher!.trim().isNotEmpty
+                ? portalNameToDisplay(t.teacher!)
+                : kz);
+      if (name.isNotEmpty) pairs.add((kz, name));
+    }
+    final codes = [for (final p in pairs) p.$1];
     final short = plan == null
         ? null
         : courseShortIn(plan, courseTitle(l.name), codes.toSet()..remove(''));
@@ -122,13 +138,7 @@ List<CourseItem> courseItemsFrom(
       extra: plan != null && isExtraOffer(l.name, inPlan: short != null),
       missing: attendanceCounts(l.attendances ?? const {})?.missing ?? 0,
       fullName: l.name.trim(),
-      teachers: [
-        for (final t in l.teachers)
-          ownNames[t.teacherKuerzel ?? ''] ??
-              (t.teacher != null && t.teacher!.isNotEmpty
-                  ? portalNameToDisplay(t.teacher!)
-                  : (t.teacherKuerzel ?? '')),
-      ].where((s) => s.isNotEmpty).toList(),
+      teachers: [for (final p in pairs) p.$2],
       topic: _blank(l.currentEntry?.topicTitle),
       date: l.currentEntry?.topicDate,
       homework: l.currentEntry?.homework == null

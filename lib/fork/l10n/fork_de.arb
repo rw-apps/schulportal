@@ -672,5 +672,6 @@
       }
     }
   },
-  "offlineHint": "Ohne Verbindung zeigt die App den zuletzt geladenen Stundenplan und Vertretungsplan. Nachrichten, Unterricht und Termine brauchen eine Verbindung."
+  "offlineHint": "Ohne Verbindung zeigt die App den zuletzt geladenen Stundenplan und Vertretungsplan. Nachrichten, Unterricht und Termine brauchen eine Verbindung.",
+  "yourChild": "Dein Kind"
 }

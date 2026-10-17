@@ -424,7 +424,8 @@ class _KidCardState extends State<KidCard> {
                   shape: BoxShape.circle,
                 ),
                 child: Text(
-                  kid.firstName.characters.first,
+                  // Leerer Name (offline, unbekannt) darf nicht abstürzen.
+                  kid.firstName.isEmpty ? '?' : kid.firstName.characters.first,
                   style: k.avatarLetter.copyWith(color: k.p.card),
                 ),
               ),

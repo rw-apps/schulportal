@@ -81,34 +81,45 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
   bool _hasFirstHalf = false;
   final _open = <int>{};
 
+  /// Nummer der jüngsten Anfrage. Ursache (Prüfbefund 17.10.26): Wechselte
+  /// man schnell zwischen den Halbjahren, konnte die langsamere, ältere
+  /// Antwort zuletzt eintreffen und unter dem falschen Halbjahr stehen.
+  int _request = 0;
+
   @override
   void initState() {
     super.initState();
-    _fetch();
+    _fetch(clear: true);
   }
 
-  Future<void> _fetch() async {
+  /// [clear]: Inhalt sofort leeren (Halbjahr gewechselt). Beim Ziehen zum
+  /// Aktualisieren bleibt der alte Stand stehen, bis der neue da ist – und
+  /// auch, wenn das Laden scheitert.
+  Future<void> _fetch({bool clear = false}) async {
+    final id = ++_request;
+    final firstHalf = _firstHalf;
     setState(() {
       _failed = false;
-      _data = null;
+      if (clear) _data = null;
     });
     try {
-      final d = await widget.load(firstHalf: _firstHalf);
-      if (!mounted) return;
+      final d = await widget.load(firstHalf: firstHalf);
+      if (!mounted || id != _request) return;
       setState(() {
         _data = d;
-        _open.clear();
-        if (!_firstHalf) _hasFirstHalf = d.semester1URL != null;
+        if (clear) _open.clear();
+        if (!firstHalf) _hasFirstHalf = d.semester1URL != null;
       });
     } catch (_) {
-      if (mounted) setState(() => _failed = true);
+      if (!mounted || id != _request) return;
+      setState(() => _failed = _data == null);
     }
   }
 
   void _half(bool first) {
     if (first == _firstHalf) return;
     _firstHalf = first;
-    _fetch();
+    _fetch(clear: true);
   }
 
   @override
@@ -148,7 +159,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                   children: [
                     Text(t.courseLoadFailed, style: k.meta),
                     TextButton(
-                      onPressed: _fetch,
+                      onPressed: () => _fetch(clear: true),
                       child: Text(t.retry, style: k.link),
                     ),
                   ],

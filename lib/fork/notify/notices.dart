@@ -25,8 +25,11 @@ class Notice {
   final List<String> keys;
 }
 
-/// Ruhezeit 21–6 Uhr (Konzept 17.10.26): keine Meldungen.
-bool inQuietHours(DateTime now) => now.hour >= 21 || now.hour < 6;
+// Ruhezeit: keine eigene feste Regel mehr. Ursache (Prüfbefund 17.10.26):
+// Die feste 21–6-Uhr-Sperre überstimmte das Zeitfenster aus den
+// Einstellungen (Benachrichtigungen → Zeitfenster, Standard 6–21 Uhr), das
+// background_service.dart (isTaskWithinConstraints) schon vor jeder Aufgabe
+// prüft – ein Ende 22 Uhr blieb wirkungslos.
 
 /// Ab 19 Uhr kommt die Sammelmeldung für den nächsten Schultag.
 const eveningHour = 19;
@@ -107,7 +110,6 @@ List<Notice> buildNotices({
   Set<String> sent = const {},
   String Function(String code)? subjectName,
 }) {
-  if (inQuietHours(now)) return const [];
   final r = applySubstitutions(
     plan: plan,
     choice: choice,

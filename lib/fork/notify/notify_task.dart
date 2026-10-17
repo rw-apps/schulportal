@@ -28,8 +28,8 @@ const sentNoticesSetting = 'fork-notify/sent';
 /// des Vertretungsplans der Klasse, auch die der anderen Gruppen und ohne
 /// Bezug zur eigenen Stunde. Jetzt: nur, was die Stunden des Kindes betrifft
 /// (gleiche Zuordnung wie „Heute“, applySubstitutions), heute sofort, für den
-/// nächsten Schultag gesammelt ab 19 Uhr, dazu große Termine; Ruhezeit
-/// 21–6 Uhr (buildNotices).
+/// nächsten Schultag gesammelt ab 19 Uhr, dazu große Termine; Zeitfenster
+/// aus den Einstellungen (isTaskWithinConstraints, background_service.dart).
 ///
 /// Grenze: Ohne Stundenplan im Portal (z. B. Lehrkräfte) läuft die
 /// bisherige Lanis-Aufgabe weiter. Android lässt die App nur etwa alle 15
@@ -68,7 +68,6 @@ Future<void> _run(
     return;
   }
   final now = DateTime.now();
-  if (inQuietHours(now)) return;
 
   // Ein Fehler hier darf die Schleife über die Konten nicht abbrechen
   // (callbackDispatcher, background_service.dart): sonst entfiele für alle

@@ -71,7 +71,10 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
   Widget build(BuildContext context) {
     return LiveGate(
       builder: (context, s) {
-        final (:plan, :auto) = livePlanOf(s)!;
+        final (:plan, :auto) = livePlanOf(
+          s,
+          fallbackName: context.t.yourChild,
+        )!;
         final now = DateTime.now();
         final className = liveClassName(s);
         final courses = s.courseNames;

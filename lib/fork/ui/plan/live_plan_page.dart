@@ -20,7 +20,10 @@ class LiveCalendarPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return LiveGate(
       builder: (context, s) {
-        final (:plan, :auto) = livePlanOf(s)!;
+        final (:plan, :auto) = livePlanOf(
+          s,
+          fallbackName: context.t.yourChild,
+        )!;
         final now = DateTime.now();
         final withSubs = planWithSubstitutions(
           plan: plan,

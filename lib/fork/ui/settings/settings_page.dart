@@ -154,7 +154,7 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
       context: context,
       initialTime: TimeOfDay(hour: cur[0], minute: cur[1]),
     );
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
     shared.setJsonList(key, [picked.hour, picked.minute]);
     setState(() {});
   }

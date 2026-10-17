@@ -172,7 +172,7 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
       lastDate: last,
       helpText: isFrom ? 'Erster Tag' : 'Letzter Tag',
     );
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
     setState(() {
       if (isFrom) {
         _from = picked;

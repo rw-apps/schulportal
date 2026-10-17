@@ -163,6 +163,27 @@ void main() {
     expect(items.single.teacherCodes, ['WOL']);
   });
 
+  test('Lehrkräfte: Name und Kürzel bleiben gepaart', () {
+    // Prüfbefund 17.10.26: leerer eigener Name verschob die Zuordnung.
+    final items = courseItemsFrom(
+      [
+        Lesson(
+          courseID: '1',
+          name: 'Projekt 7 b',
+          teachers: [
+            LessonTeacher(teacher: 'Alt, Anna', teacherKuerzel: 'AAA'),
+            LessonTeacher(teacher: null, teacherKuerzel: null),
+            LessonTeacher(teacher: 'Berg, Ben', teacherKuerzel: 'BBB'),
+          ],
+          courseURL: Uri.parse('x'),
+        ),
+      ],
+      ownNames: const {'AAA': ''},
+    );
+    expect(items.single.teachers, ['Anna Alt', 'Ben Berg']);
+    expect(items.single.teacherCodes, ['AAA', 'BBB']);
+  });
+
   for (final (lang, scale) in [('de', 1.0), ('tr', 1.26 * 1.3)]) {
     testWidgets('Kursseite $lang ohne Überlauf bei ×$scale', (t) async {
       t.view.physicalSize = const Size(1080, 2424);

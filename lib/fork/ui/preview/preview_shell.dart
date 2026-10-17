@@ -138,7 +138,7 @@ class _PreviewShellState extends State<PreviewShell> {
             return;
           }
           final url = await askMensaUrl(context, null);
-          if (url != null) _saveMensa(s, url);
+          if (url != null && mounted) _saveMensa(s, url);
         },
       ),
       if (mensa != null)
@@ -147,7 +147,7 @@ class _PreviewShellState extends State<PreviewShell> {
           label: t.mensaChange,
           onTap: () async {
             final url = await askMensaUrl(context, mensa);
-            if (url != null) _saveMensa(s, url);
+            if (url != null && mounted) _saveMensa(s, url);
           },
         ),
       if (offersMoodle(s.session.travelMenu))

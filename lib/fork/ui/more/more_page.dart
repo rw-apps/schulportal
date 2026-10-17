@@ -88,13 +88,37 @@ class _EntryTile extends StatelessWidget {
 
 /// Fragt die Adresse der Mensa-Bestellseite ab. null = abgebrochen, '' =
 /// Eintrag löschen.
-Future<String?> askMensaUrl(BuildContext context, String? current) {
-  final k = Kit.of(context);
-  final t = context.t;
-  final c = TextEditingController(text: current ?? '');
-  return showDialog<String>(
-    context: context,
-    builder: (context) => AlertDialog(
+Future<String?> askMensaUrl(BuildContext context, String? current) =>
+    showDialog<String>(
+      context: context,
+      builder: (context) => _MensaUrlDialog(current: current),
+    );
+
+/// Eigenes Widget, damit der TextEditingController mit dem Dialog freigegeben
+/// wird (Prüfbefund 17.10.26: vorher nie dispose).
+class _MensaUrlDialog extends StatefulWidget {
+  const _MensaUrlDialog({this.current});
+
+  final String? current;
+
+  @override
+  State<_MensaUrlDialog> createState() => _MensaUrlDialogState();
+}
+
+class _MensaUrlDialogState extends State<_MensaUrlDialog> {
+  late final _c = TextEditingController(text: widget.current ?? '');
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final t = context.t;
+    return AlertDialog(
       title: Text(t.mensaDialogTitle, style: k.sheetTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -103,7 +127,7 @@ Future<String?> askMensaUrl(BuildContext context, String? current) {
           Text(t.mensaDialogText, style: k.meta),
           const SizedBox(height: Sp.m),
           TextField(
-            controller: c,
+            controller: _c,
             autofocus: true,
             keyboardType: TextInputType.url,
             style: k.body,
@@ -115,7 +139,7 @@ Future<String?> askMensaUrl(BuildContext context, String? current) {
         ],
       ),
       actions: [
-        if (current != null)
+        if (widget.current != null)
           TextButton(
             onPressed: () => Navigator.pop(context, ''),
             child: Text(t.delete, style: k.link),
@@ -125,10 +149,10 @@ Future<String?> askMensaUrl(BuildContext context, String? current) {
           child: Text(t.cancel, style: k.link),
         ),
         TextButton(
-          onPressed: () => Navigator.pop(context, c.text),
+          onPressed: () => Navigator.pop(context, _c.text),
           child: Text(t.save, style: k.link),
         ),
       ],
-    ),
-  );
+    );
+  }
 }

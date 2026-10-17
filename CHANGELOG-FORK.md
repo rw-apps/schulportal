@@ -1,5 +1,12 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9339** – Korrekturen nach der Code-Prüfung
+
+- **Kursseite:** „Schreiben“ wählt immer die richtige Lehrkraft (vorher verschoben, wenn ein eigener Lehrername gelöscht war). Schnelles Umschalten der Halbjahre zeigt nicht mehr das falsche; Aktualisieren behält den Stand, bis der neue da ist.
+- **Elternkonto:** Solange der Name des Kindes noch nicht geladen ist, steht „Dein Kind“ statt des Namens des Elternteils.
+- **Benachrichtigungen:** Es gilt nur noch das Zeitfenster aus den Einstellungen; die zusätzliche feste Ruhezeit 21–6 Uhr entfällt (ein Ende um 22 Uhr wirkte vorher nicht).
+- Kleinere Stabilitätskorrekturen (Dialoge und Auswahlfenster).
+
 **4.1.0+9338** – Aufräumen, Teil 2
 
 - **Alte Lanis-Ansichten entfernt** (rund 16 000 Zeilen): Gerüst mit Schublade, alte Bereiche (Vertretungsplan, Kalender, Stundenplan, Unterricht, Nachrichtenliste, Dateispeicher, Lerngruppen), alte Einstellungen und ungenutzte Bausteine. Unterhaltung, Abgabe, Moodle, Kontowechsel und Anmeldung bleiben.

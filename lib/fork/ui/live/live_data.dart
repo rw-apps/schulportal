@@ -150,11 +150,18 @@ class LiveSnapshot {
   /// Schülerkonten oder solange nicht geladen).
   final List<ChildLessons> kids;
 
+  /// Vorname des Kindes; leer, solange er unbekannt ist.
+  ///
+  /// Ursache (Prüfbefund 17.10.26): Beim Elternkonto steht in
+  /// userData['vorname'] der Name des Elternteils – „Heute“ zeigte ihn, bis
+  /// „Mein Unterricht“ geladen war (bei Ladefehler dauerhaft). Nur das
+  /// Schülerkonto ist selbst das Kind. Die Oberfläche setzt für leer
+  /// „Dein Kind“ in der Sprache ein ([livePlanOf] fallbackName).
   String get firstName {
     final k = kids;
-    return k.isNotEmpty
-        ? k.first.firstName
-        : (session.userData['vorname'] ?? 'Kind');
+    if (k.isNotEmpty) return k.first.firstName;
+    if (session.accountTypeOrNull == AccountType.parent) return '';
+    return (session.userData['vorname'] ?? '').trim();
   }
 
   List<String> get courseNames => [
@@ -422,13 +429,17 @@ String liveClassName(LiveSnapshot s) =>
     s.session.userData['klasse'] ?? classFromCourses(s.courseNames);
 
 /// Plan und automatische Gruppenwahl, sobald der Stundenplan da ist.
-({KidPlan plan, GroupChoice auto})? livePlanOf(LiveSnapshot s) {
+/// [fallbackName]: Anzeige, solange der Vorname unbekannt ist („Dein Kind“).
+({KidPlan plan, GroupChoice auto})? livePlanOf(
+  LiveSnapshot s, {
+  String fallbackName = '',
+}) {
   final tt = s.timetable.content;
   if (tt == null) return null;
   final r = livePlan(
     tt: tt,
     lessons: s.lessons.content ?? const [],
-    firstName: s.firstName,
+    firstName: s.firstName.isEmpty ? fallbackName : s.firstName,
   );
   return (plan: r.plan.withTeacherNames(s.ownNames), auto: r.auto);
 }

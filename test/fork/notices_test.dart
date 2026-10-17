@@ -87,9 +87,10 @@ void main() {
     sent: sent,
   );
 
-  test('Ruhezeit 21–6 Uhr', () {
-    expect(at(DateTime(2026, 10, 19, 5, 59)), isEmpty);
-    expect(at(DateTime(2026, 10, 19, 21)), isEmpty);
+  // Das Zeitfenster prüft background_service.dart (isTaskWithinConstraints);
+  // buildNotices selbst sperrt keine Uhrzeit mehr.
+  test('keine feste Ruhezeit in buildNotices', () {
+    expect(at(DateTime(2026, 10, 19, 21, 30)), isNotEmpty);
   });
 
   test(
