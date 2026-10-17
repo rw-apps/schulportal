@@ -8,6 +8,7 @@ import 'package:lanis/utils/applet_settings.dart';
 
 import '../../lessons_parent.dart';
 import '../kit.dart';
+import 'serial_loader.dart';
 import '../plan/plan_from_lanis.dart';
 import '../plan/plan_model.dart';
 import '../today/today_from_lanis.dart' show classFromCourses;
@@ -106,6 +107,7 @@ class LiveSnapshot {
     required this.setUserChoice,
     required this.setOwnNames,
     required this.refresh,
+    required this.refreshMessages,
     this.kids = const [],
   });
 
@@ -125,6 +127,9 @@ class LiveSnapshot {
 
   /// Alles neu vom Portal holen (Ziehen zum Aktualisieren).
   final Future<void> Function() refresh;
+
+  /// Nur die Nachrichten neu holen (nach dem Lesen einer Unterhaltung).
+  final Future<void> Function() refreshMessages;
 
   String get schoolId => session.account.schoolID.toString();
   String get schoolName => session.account.schoolName;
@@ -206,9 +211,9 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
   GroupChoice _choice = const {};
   Map<String, String> _names = const {};
   int? _settingsFor;
-  Future<void>? _running;
-  bool _again = false;
-  bool _againForce = false;
+  late final _loader = SerialLoader(
+    (force, only) => _run(_supported, force, only),
+  );
   Set<String> _loadedFor = const {};
   Set<String> _supported = const {};
   Timer? _timer;
@@ -226,7 +231,19 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _timer = Timer.periodic(_period, (_) => _loadAll(_supported, force: true));
+    // Nur im Vordergrund und nur, was sich im Lauf des Tages ändert
+    // (Vertretungen, Nachrichten). Ursache: Der Takt lief sonst auch bei
+    // verdeckter App weiter und holte alle fünf Quellen (Prüfbefund
+    // 17.10.26).
+    _timer = Timer.periodic(_period, (_) {
+      if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+        return;
+      }
+      _loader.run(
+        force: true,
+        only: const {'vertretungsplan.php', 'nachrichten.php'},
+      );
+    });
   }
 
   /// Zurück in die App nach mehr als 10 Minuten: neu laden, damit „Heute“
@@ -236,7 +253,7 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
     if (state != AppLifecycleState.resumed) return;
     final last = _lastLoad;
     if (last == null || DateTime.now().difference(last) > _period) {
-      _loadAll(_supported, force: true);
+      _loader.run(force: true);
     }
   }
 
@@ -281,50 +298,28 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
     persistAppletSetting(s, '$_settingsApplet/$key', value);
   }
 
-  /// Nacheinander laden, wichtigste Quelle zuerst. Ursache: Alle Parser
-  /// teilen eine Sitzung; schlägt einer fehl, meldet er sich neu an
-  /// (AppletParser.fetchData, secondTry). Parallel hätten sich mehrere
-  /// Neuanmeldungen überholt.
-  ///
-  /// Läuft schon ein Durchgang, wird danach genau einer nachgeholt (statt
-  /// den Wunsch zu verwerfen) – „Ziehen zum Aktualisieren“ wartet darauf.
-  /// Wirft ein Parser (Neuanmeldung fehlgeschlagen), gilt das nur für diese
-  /// Quelle; die übrigen werden trotzdem geladen.
-  Future<void> _loadAll(Set<String> supported, {bool force = false}) {
-    final running = _running;
-    if (running != null) {
-      _again = true;
-      _againForce |= force;
-      return running.then((_) => _running ?? Future<void>.value());
-    }
-    final f = _run(supported, force);
-    _running = f;
-    return f;
-  }
-
-  Future<void> _run(Set<String> supported, bool force) async {
-    try {
-      for (final s in [_tt, _lessons, _subs, _cal, _conv]) {
-        final p = s.parser;
-        if (p == null || !supported.contains(s.phpUrl)) continue;
-        try {
-          await p.fetchData(forceRefresh: force);
-        } catch (e) {
-          s.fail(e);
-          _changed();
-        }
-        if (!mounted) return;
+  /// Ein Durchgang: Quellen nacheinander, wichtigste zuerst (Reihenfolge
+  /// und Grund bei SerialLoader). Wirft ein Parser (Neuanmeldung
+  /// fehlgeschlagen), gilt das nur für diese Quelle; die übrigen werden
+  /// trotzdem geladen.
+  Future<void> _run(
+    Set<String> supported,
+    bool force,
+    Set<String>? only,
+  ) async {
+    for (final s in [_tt, _lessons, _subs, _cal, _conv]) {
+      final p = s.parser;
+      if (p == null || !supported.contains(s.phpUrl)) continue;
+      if (only != null && !only.contains(s.phpUrl)) continue;
+      try {
+        await p.fetchData(forceRefresh: force);
+      } catch (e) {
+        s.fail(e);
+        _changed();
       }
-      _lastLoad = DateTime.now();
-    } finally {
-      _running = null;
-      if (_again && mounted) {
-        final f = _againForce;
-        _again = false;
-        _againForce = false;
-        await _loadAll(_supported, force: f);
-      }
+      if (!mounted) return;
     }
+    if (only == null) _lastLoad = DateTime.now();
   }
 
   @override
@@ -347,7 +342,7 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
     if (!_setEquals(key, _loadedFor)) {
       _loadedFor = key;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _loadAll(supported);
+        if (mounted) _loader.run();
       });
     }
 
@@ -375,7 +370,9 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
           setState(() => _names = {...n});
           _write(teacherNamesSetting, n);
         },
-        refresh: () => _loadAll(supported, force: true),
+        refresh: () => _loader.run(force: true),
+        refreshMessages: () =>
+            _loader.run(force: true, only: const {'nachrichten.php'}),
         kids: kids,
       ),
       child: widget.child,

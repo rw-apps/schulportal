@@ -56,8 +56,10 @@ class LiveMessagesPage extends ConsumerWidget {
                 unread: e.unread,
               ),
         ];
-        Future<void> reload() =>
-            ref.read(conversationsParserProvider).fetchData(forceRefresh: true);
+        // Über den gemeinsamen Lader: Fehler landen im Feed („Erneut
+        // versuchen“) statt unbehandelt, und kein zweiter Durchgang läuft
+        // parallel (Prüfbefund 17.10.26).
+        final reload = s.refreshMessages;
         return MessagesPage(
           items: items,
           loading: s.conversations.content == null,

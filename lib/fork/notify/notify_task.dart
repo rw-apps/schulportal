@@ -36,6 +36,24 @@ Future<void> forkSubstitutionsTask(
   AccountType accountType,
   BackgroundTaskToolkit tools,
 ) async {
+  // Nichts darf aus dieser Aufgabe herausfallen: Ein Fehler bräche in
+  // callbackDispatcher (background_service.dart) die Schleife über alle
+  // Konten samt Abmelden ab (Prüfbefund 17.10.26). Grenze: Die Anmeldung
+  // selbst liegt davor im Dispatcher (Lanis-Code) und ist hier nicht
+  // abgedeckt.
+  try {
+    await _run(container, accountType, tools);
+  } catch (e, st) {
+    backgroundLogger.w('Fork-Benachrichtigung übersprungen: $e');
+    backgroundLogger.e(e, stackTrace: st);
+  }
+}
+
+Future<void> _run(
+  ProviderContainer container,
+  AccountType accountType,
+  BackgroundTaskToolkit tools,
+) async {
   final session = container.read(sessionProvider).asData?.value;
   if (session == null) return;
   bool offers(AppletMeta a) =>
@@ -73,9 +91,11 @@ Future<void> forkSubstitutionsTask(
   final kids = parser is LessonsParentAwareParser
       ? parser.lastKids
       : const <ChildLessons>[];
-  // Schülerkonto (keine Kinder): ohne Namen („Heute in der Schule“). Die
-  // Anmeldung im Hintergrund lädt keine Benutzerdaten (withoutData).
-  final firstName = kids.isNotEmpty ? kids.first.firstName : '';
+  // Schülerkonto: ohne Namen („Heute in der Schule“). Elternkonto ohne
+  // geladene Kinder (Unterricht fehlgeschlagen): „bei deinem Kind“.
+  final firstName = kids.isNotEmpty
+      ? kids.first.firstName
+      : (accountType == AccountType.parent ? 'deinem Kind' : '');
 
   var events = const <CalendarEvent>[];
   if (now.hour >= eveningHour) {
@@ -125,7 +145,9 @@ Future<void> forkSubstitutionsTask(
     substitutions: subs.days,
     events: events,
     now: now,
-    className: session.userData['klasse'] ?? classFromCourses(courses),
+    // Nur aus den Kursnamen: Die Anmeldung im Hintergrund lädt keine
+    // Benutzerdaten (authenticate(withoutData: true), background_service).
+    className: classFromCourses(courses),
     sent: sent.toSet(),
     subjectName: (c) => subjectFullName(c, courses, schoolId: schoolId),
   );

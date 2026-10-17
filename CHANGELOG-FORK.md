@@ -1,5 +1,13 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9329**
+
+Korrekturen nach der Nachprüfung von 9328:
+- **Laden konnte dauerhaft hängen bleiben** (in 9328 neu eingeführt): Lief ein Ladedurchgang ohne eine einzige Abfrage durch – etwa kurz vor der Anmeldung oder nach einem Kontowechsel –, blieb jedes weitere Laden gesperrt und „Erneut versuchen“ wirkungslos. Der Lader ist jetzt ein eigener, getesteter Baustein.
+- Nachladen alle 10 Minuten nur noch bei geöffneter App und nur Vertretungen und Nachrichten; beim Zurückkehren nach mehr als 10 Minuten alles.
+- Nachrichten: Aktualisieren und das Nachladen nach dem Lesen laufen über denselben Lader; ein Fehler zeigt „Erneut versuchen“ statt endlos „Wird geladen …“.
+- Benachrichtigungen: Die ganze Aufgabe ist gegen Fehler abgesichert, andere Konten werden weiter geprüft. Elternkonto ohne geladene Kinder: „… bei deinem Kind“.
+
 **4.1.0+9328**
 
 Korrekturen nach einer unabhängigen Prüfung des Codes:
