@@ -1,5 +1,9 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9350** – Absturz in „Unterricht“ behoben
+
+- Nach einem Kindwechsel konnte „Unterricht“ mit „Ein Fehler ist aufgetreten“ abstürzen, wenn eine Kursseite offen war. Geöffnete Seiten werden jetzt einmal aufgebaut und hängen nicht mehr an der Seite, aus der sie kamen.
+
 **4.1.0+9349** – Kindwahl bleibt beim Reiterwechsel
 
 - **Ein Kind für alle Bereiche:** Die Wahl oben (Kalender, Unterricht, Nachrichten, Mehr) gilt jetzt für alle Reiter; nach einem Wechsel bleibt das gewählte Kind stehen.

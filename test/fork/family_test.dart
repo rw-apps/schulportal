@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:lanis/fork/ui/live/family.dart';
 import 'package:lanis/fork/ui/live/live_data.dart';
+import 'package:lanis/fork/ui/nav.dart';
 import 'package:liblanis/liblanis.dart';
 
 final _checkers = <ConnectionChecker>[];
@@ -112,5 +113,35 @@ void main() {
     expect(kidLabel(_snap(1, 'Anna', 'Schule A')), 'Anna');
     expect(kidLabel(_snap(2, '', 'Schule B')), 'Schule B');
     _disposeCheckers();
+  });
+
+  testWidgets('geöffnete Seite wird nur einmal gebaut', (t) async {
+    var builds = 0;
+    late BuildContext ctx;
+    await t.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (c) {
+            ctx = c;
+            return const SizedBox();
+          },
+        ),
+      ),
+    );
+    pushInTab<void>(ctx, (_) {
+      builds++;
+      return const Text('Seite');
+    });
+    await t.pumpAndSettle();
+    // Neuaufbau der Route (z. B. Theme-/Daten-Wechsel) baut nicht neu.
+    await t.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(brightness: Brightness.dark),
+        home: Builder(builder: (c) => const SizedBox()),
+      ),
+    );
+    await t.pumpAndSettle();
+    expect(find.text('Seite'), findsOneWidget);
+    expect(builds, 1);
   });
 }
