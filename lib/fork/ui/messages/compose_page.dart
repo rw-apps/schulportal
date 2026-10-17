@@ -63,10 +63,14 @@ class ComposePage extends StatefulWidget {
     super.key,
     required this.candidates,
     required this.backend,
+    this.initialKuerzel,
   });
 
   final List<RecipientCandidate> candidates;
   final ComposeBackend backend;
+
+  /// Lehrkraft, die schon gewählt sein soll (Kursseite → „Schreiben“).
+  final String? initialKuerzel;
 
   @override
   State<ComposePage> createState() => _ComposePageState();
@@ -85,6 +89,17 @@ class _ComposePageState extends State<ComposePage> {
   List<ReceiverEntry> _found = const [];
   bool _searching = false;
   bool _sending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final kz = widget.initialKuerzel;
+    final c = widget.candidates.where((c) => c.kuerzel == kz).firstOrNull;
+    // Nach dem ersten Bild: _toggle sucht im Portal und kann bei mehreren
+    // Treffern eine Auswahl öffnen (braucht einen fertigen Kontext).
+    if (c != null)
+      WidgetsBinding.instance.addPostFrameCallback((_) => _toggle(c));
+  }
 
   @override
   void dispose() {

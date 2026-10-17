@@ -11,7 +11,7 @@ Map<String, dynamic> _arb(String l) =>
         as Map<String, dynamic>;
 
 Set<String> _placeholders(String s) =>
-    RegExp(r'\{(\w+)(?=[},])').allMatches(s).map((m) => m[1]!).toSet();
+    RegExp(r'(?<![\w=])\{(\w+)(?=[},])').allMatches(s).map((m) => m[1]!).toSet();
 
 void main() {
   test('alle Sprachen haben dieselben Schlüssel und Platzhalter', () {

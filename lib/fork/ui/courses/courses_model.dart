@@ -1,6 +1,7 @@
 import 'package:liblanis/liblanis.dart';
 
-import '../plan/plan_model.dart' show portalNameToDisplay;
+import '../plan/plan_model.dart';
+import 'course_detail_model.dart';
 
 /// Ein Kurs aus „Mein Unterricht“, aufbereitet für den Bereich „Unterricht“.
 class CourseItem {
@@ -9,12 +10,16 @@ class CourseItem {
     required this.title,
     required this.fullName,
     this.teachers = const [],
+    this.teacherCodes = const [],
     this.topic,
     this.date,
     this.homework,
     this.homeworkDone = false,
     this.attendance,
+    this.missing = 0,
     this.files = 0,
+    this.colorSlot,
+    this.extra = false,
   });
 
   /// Kurs-ID wie im Portal (bei Eltern mit „&p=Kind-ID“, siehe
@@ -28,6 +33,10 @@ class CourseItem {
   /// Ausgeschrieben („Anna Alt“), sonst das Kürzel.
   final List<String> teachers;
 
+  /// Kürzel in derselben Reihenfolge wie [teachers] (leer, wo das Portal
+  /// keins nennt) – für „Schreiben“ und die Zuordnung zum Stundenplan.
+  final List<String> teacherCodes;
+
   /// Neuester Eintrag der Kursmappe.
   final String? topic;
   final DateTime? date;
@@ -36,7 +45,16 @@ class CourseItem {
 
   /// „Fehlstunden 2 · entschuldigt 2“; null, wenn nichts eingetragen ist.
   final String? attendance;
+
+  /// Fehlstunden laut Anwesenheit (attendanceCounts.missing).
+  final int missing;
   final int files;
+
+  /// Fachfarbe wie im Wochenraster; null, wenn der Kurs nicht im Plan steht.
+  final int? colorSlot;
+
+  /// Weiteres Angebot (Ganztag, Training …), siehe isExtraOffer.
+  final bool extra;
 
   bool get hasOpenHomework => homework != null && !homeworkDone;
 }
@@ -72,11 +90,16 @@ String? attendanceLine(Map<String, String>? a) {
 /// Kurse für den Bereich „Unterricht“, neueste Einträge zuerst.
 ///
 /// Gleiche Überschriften mit verschiedenen Kursnamen bekommen den vollen
-/// Namen, sonst wären sie nicht zu unterscheiden.
+/// Namen, sonst wären sie nicht zu unterscheiden. Mit [plan] bekommt jeder
+/// Kurs seine Fachfarbe; Kurse ohne Platz im Plan gelten als weiteres
+/// Angebot. Eine Hausaufgabe ohne Text hat [CourseItem.homework] = '' (die
+/// Oberfläche schreibt dann „Hausaufgabe eingetragen“ in der Sprache).
 List<CourseItem> courseItemsFrom(
   Lessons lessons, {
   Map<String, String> ownNames = const {},
+  KidPlan? plan,
 }) {
+  final slots = plan == null ? const <String, int>{} : subjectColorSlots(plan);
   // Überschriften, die mehrere Kurse mit VERSCHIEDENEN vollen Namen teilen.
   // Sind auch die vollen Namen gleich (Schule A: zweimal „Ganztagsangebot 06 …“),
   // hilft der volle Name nicht – dann bleibt die kurze Überschrift.
@@ -84,33 +107,40 @@ List<CourseItem> courseItemsFrom(
   for (final l in lessons) {
     (fullByTitle[courseTitle(l.name)] ??= {}).add(l.name.trim());
   }
-  final items = [
-    for (final l in lessons)
-      CourseItem(
-        id: l.courseID,
-        title: (fullByTitle[courseTitle(l.name)]?.length ?? 0) > 1
-            ? l.name.trim()
-            : courseTitle(l.name),
-        fullName: l.name.trim(),
-        teachers: [
-          for (final t in l.teachers)
-            ownNames[t.teacherKuerzel ?? ''] ??
-                (t.teacher != null && t.teacher!.isNotEmpty
-                    ? portalNameToDisplay(t.teacher!)
-                    : (t.teacherKuerzel ?? '')),
-        ].where((s) => s.isNotEmpty).toList(),
-        topic: _blank(l.currentEntry?.topicTitle),
-        date: l.currentEntry?.topicDate,
-        homework:
-            _blank(l.currentEntry?.homework?.description) ??
-            (l.currentEntry?.homework != null
-                ? 'Hausaufgabe eingetragen'
-                : null),
-        homeworkDone: l.currentEntry?.homework?.homeWorkDone ?? false,
-        attendance: attendanceLine(l.attendances),
-        files: l.currentEntry?.files.length ?? 0,
-      ),
-  ];
+  CourseItem item(Lesson l) {
+    final codes = [for (final t in l.teachers) t.teacherKuerzel ?? ''];
+    final short = plan == null
+        ? null
+        : courseShortIn(plan, courseTitle(l.name), codes.toSet()..remove(''));
+    return CourseItem(
+      id: l.courseID,
+      title: (fullByTitle[courseTitle(l.name)]?.length ?? 0) > 1
+          ? l.name.trim()
+          : courseTitle(l.name),
+      teacherCodes: codes,
+      colorSlot: short == null ? null : slots[short],
+      extra: plan != null && isExtraOffer(l.name, inPlan: short != null),
+      missing: attendanceCounts(l.attendances ?? const {})?.missing ?? 0,
+      fullName: l.name.trim(),
+      teachers: [
+        for (final t in l.teachers)
+          ownNames[t.teacherKuerzel ?? ''] ??
+              (t.teacher != null && t.teacher!.isNotEmpty
+                  ? portalNameToDisplay(t.teacher!)
+                  : (t.teacherKuerzel ?? '')),
+      ].where((s) => s.isNotEmpty).toList(),
+      topic: _blank(l.currentEntry?.topicTitle),
+      date: l.currentEntry?.topicDate,
+      homework: l.currentEntry?.homework == null
+          ? null
+          : (_blank(l.currentEntry?.homework?.description) ?? ''),
+      homeworkDone: l.currentEntry?.homework?.homeWorkDone ?? false,
+      attendance: attendanceLine(l.attendances),
+      files: l.currentEntry?.files.length ?? 0,
+    );
+  }
+
+  final items = [for (final l in lessons) item(l)];
   items.sort((a, b) {
     final da = a.date;
     final db = b.date;

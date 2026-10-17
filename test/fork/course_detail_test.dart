@@ -1,0 +1,216 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
+import 'package:lanis/fork/ui/courses/course_detail_model.dart';
+import 'package:lanis/fork/ui/courses/course_detail_page.dart';
+import 'package:lanis/fork/ui/courses/courses_model.dart';
+import 'package:lanis/fork/ui/kit.dart';
+import 'package:lanis/fork/ui/plan/plan_model.dart';
+import 'package:lanis/fork/ui/today/today_model.dart';
+import 'package:liblanis/liblanis.dart';
+
+CurrentEntry _e(
+  String id,
+  String? topic,
+  DateTime date, {
+  Homework? hw,
+  String? presence,
+  List<FileInfo> files = const [],
+  List<LessonUpload> uploads = const [],
+}) => CurrentEntry(
+  entryID: id,
+  topicTitle: topic,
+  topicDate: date,
+  homework: hw,
+  presence: presence,
+  files: files,
+  uploads: uploads,
+  schoolHours: '3.–4. Stunde',
+);
+
+/// Erfundene Kursmappe (keine echten Daten).
+DetailedLesson _lesson() => DetailedLesson(
+  courseID: 'c1',
+  name: 'Englisch 07 b',
+  teachers: [LessonTeacher(teacher: 'Wolf, Tim', teacherKuerzel: 'WOL')],
+  history: [
+    _e(
+      '5',
+      'Unit 2: At the station',
+      DateTime(2026, 10, 15),
+      hw: Homework(description: 'Vokabeln lernen', homeWorkDone: false),
+      files: [FileInfo(name: 'Arbeitsblatt.pdf', url: Uri.parse('x'))],
+    ),
+    _e('4', 'Unit 2: Tickets', DateTime(2026, 10, 13), presence: 'fehlend'),
+    _e('3', 'Unit 1: Test zurück', DateTime(2026, 10, 8)),
+    _e('2', 'Unit 1: My school', DateTime(2026, 9, 29), presence: 'anwesend'),
+    _e('1', null, DateTime(2026, 9, 22), presence: 'nicht erfasst'),
+  ],
+  marks: [LessonMark(name: 'Vokabeltest', date: '24.09.2026', mark: '2')],
+  exams: [],
+  attendances: {'anwesend': '26', 'entschuldigt': '1', 'fehlend': '1'},
+);
+
+void main() {
+  test('Themen: Teil vor dem Trenner, aufeinanderfolgende zusammen', () {
+    expect(topicKey('Unit 2: Tickets'), 'Unit 2');
+    expect(topicRest('Unit 2: Tickets'), 'Tickets');
+    expect(topicKey('KL'), 'KL');
+    expect(topicRest('KL'), isNull);
+    final g = groupHistory(_lesson().history, noTopic: 'Ohne Thema');
+    expect(g.map((x) => x.title), ['Unit 2', 'Unit 1', 'Ohne Thema']);
+    expect(g.first.entries.length, 2);
+    expect(g.first.openHomework, 1);
+    expect(g.first.from, DateTime(2026, 10, 13));
+    expect(g.first.to, DateTime(2026, 10, 15));
+  });
+
+  test('Anwesenheit, Abwesenheiten, Dateien', () {
+    final d = _lesson();
+    final c = attendanceCounts(d.attendances)!;
+    expect((c.present, c.excused, c.missing), (26, 1, 1));
+    expect(
+      attendanceCounts({'unentschuldigt': '2', 'kurs': 'x'})!.missing,
+      2,
+      reason: '„unentschuldigt“ ist Fehlen, nicht Entschuldigt',
+    );
+    expect(attendanceCounts({'kurs': 'x'}), isNull);
+    expect(absentEntries(d.history).map((e) => e.entryID), ['4']);
+    expect(allFiles(d.history).single.$1.name, 'Arbeitsblatt.pdf');
+  });
+
+  test('nächste Stunde und Arbeit aus dem Kalender', () {
+    const slots = [
+      PlanSlot(label: '1. Block', start: '08:00', end: '09:30'),
+      PlanSlot(label: '2. Block', start: '09:50', end: '11:20'),
+    ];
+    const en = PlanLesson(
+      subject: 'Englisch',
+      short: 'E',
+      room: 'R112',
+      teacher: 'WOL',
+    );
+    final plan = KidPlan(
+      firstName: 'Kind',
+      colorIndex: 0,
+      slots: slots,
+      days: [
+        [
+          const PlanCell([en]),
+          const PlanCell([]),
+        ],
+        [const PlanCell([]), const PlanCell([])],
+        [const PlanCell([]), const PlanCell([])],
+        [
+          const PlanCell([]),
+          const PlanCell([en]),
+        ],
+        [const PlanCell([]), const PlanCell([])],
+      ],
+    );
+    // Montag 10 Uhr: Montagsstunde vorbei → Donnerstag 2. Block.
+    final n = nextLessonOf(plan, const {}, 'Englisch', {
+      'WOL',
+    }, DateTime(2026, 10, 19, 10))!;
+    expect(n.day, DateTime(2026, 10, 22));
+    expect(n.slot, '2. Block');
+    expect(n.room, 'R112');
+    expect(courseShortIn(plan, 'Englisch', const {}), 'E');
+    expect(courseShortIn(plan, 'Ganztagsangebot', const {}), isNull);
+    expect(
+      isExtraOffer('Ganztagsangebot 06 (061KeineNoten04-IGS)', inPlan: true),
+      isTrue,
+    );
+    expect(isExtraOffer('Englisch 07 b', inPlan: true), isFalse);
+
+    final now = DateTime(2026, 10, 19);
+    final items = [
+      WeekItem(
+        day: DateTime(2026, 10, 27),
+        title: 'Klassenarbeit Englisch',
+        kind: WeekKind.exam,
+      ),
+      WeekItem(
+        day: DateTime(2026, 10, 28),
+        title: 'Klassenarbeit Mathe',
+        kind: WeekKind.exam,
+      ),
+    ];
+    expect(upcomingExamOf(items, 'Englisch', now)?.day, DateTime(2026, 10, 27));
+    expect(upcomingExamOf(items, 'Deutsch', now), isNull);
+  });
+
+  test('Kursliste: Hausaufgabe ohne Text, Fehlstunden, Kürzel', () {
+    final items = courseItemsFrom([
+      Lesson(
+        courseID: '1',
+        name: 'Englisch 07 b',
+        teachers: [LessonTeacher(teacher: 'Wolf, Tim', teacherKuerzel: 'WOL')],
+        courseURL: Uri.parse('x'),
+        attendances: {'fehlend': '2'},
+        currentEntry: CurrentEntry(
+          entryID: 'e',
+          files: const [],
+          uploads: const [],
+          topicDate: DateTime(2026, 10, 1),
+          homework: Homework(description: ' ', homeWorkDone: false),
+        ),
+      ),
+    ]);
+    expect(items.single.homework, '');
+    expect(items.single.hasOpenHomework, isTrue);
+    expect(items.single.missing, 2);
+    expect(items.single.teacherCodes, ['WOL']);
+  });
+
+  for (final (lang, scale) in [('de', 1.0), ('tr', 1.26 * 1.3)]) {
+    testWidgets('Kursseite $lang ohne Überlauf bei ×$scale', (t) async {
+      t.view.physicalSize = const Size(1080, 2424);
+      t.view.devicePixelRatio = 2.625;
+      addTearDown(t.view.reset);
+      await t.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: ForkL10n.localizationsDelegates,
+          supportedLocales: ForkL10n.supportedLocales,
+          locale: Locale(lang),
+          builder: (c, w) => MediaQuery(
+            data: MediaQuery.of(
+              c,
+            ).copyWith(textScaler: TextScaler.linear(scale)),
+            child: w!,
+          ),
+          home: CourseDetailPage(
+            course: CourseContext(
+              title: 'Englisch',
+              fullName: 'Englisch 07 b',
+              teachers: const [('WOL', 'Tim Wolf')],
+              colorSlot: 2,
+              exam: WeekItem(
+                day: DateTime.now().add(const Duration(days: 9)),
+                title: 'Klassenarbeit Englisch',
+                kind: WeekKind.exam,
+              ),
+            ),
+            load: ({required bool firstHalf}) async => _lesson(),
+            onWrite: (_) {},
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(t.takeException(), isNull);
+      final list = find.byType(Scrollable).first;
+      await t.scrollUntilVisible(find.text('Unit 2'), 300, scrollable: list);
+      expect(find.text('Unit 2'), findsOneWidget);
+      // Verlauf zugeklappt: Stunden erst nach Antippen sichtbar.
+      expect(find.text('Tickets'), findsNothing);
+      await t.ensureVisible(find.text('Unit 2'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Unit 2'));
+      await t.pumpAndSettle();
+      await t.scrollUntilVisible(find.text('Tickets'), 200, scrollable: list);
+      expect(find.text('Tickets'), findsOneWidget);
+      expect(t.takeException(), isNull);
+      expect(KitPalette.light.bg, isNotNull);
+    });
+  }
+}

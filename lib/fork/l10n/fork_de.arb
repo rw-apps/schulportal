@@ -392,5 +392,264 @@
   "debugToggle": "Für Rückfragen bei Problemen",
   "debugExport": "Debug-Export",
   "debugExportDetail": "Protokoll zum Weitergeben, Passwörter geschwärzt",
-  "userDataNote": "Was das Schulportal über dieses Konto führt. Ändern lässt es sich nur im Portal selbst."
+  "userDataNote": "Was das Schulportal über dieses Konto führt. Ändern lässt es sich nur im Portal selbst.",
+  "homeworkEntered": "Hausaufgabe eingetragen",
+  "homework": "Hausaufgaben",
+  "loading": "Wird geladen …",
+  "noHomework": "Keine Hausaufgaben eingetragen.",
+  "courses": "Kurse",
+  "noCourses": "Keine Kurse gefunden.",
+  "fromDate": "vom {date}",
+  "@fromDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "homeworkOpen": "offen",
+  "homeworkDone": "erledigt",
+  "coursesFailed": "Der Unterricht ließ sich nicht laden.",
+  "whichPerson": "Welche Person ist {who}?",
+  "@whichPerson": {
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "sendQuestion": "Nachricht senden?",
+  "sendConfirmText": "An {names}. Die Nachricht geht sofort über das Schulportal an die Schule.",
+  "@sendConfirmText": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "send": "Senden",
+  "sentTo": "Gesendet an {names}",
+  "@sentTo": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "sendFailed": "Das Portal hat die Nachricht nicht angenommen. Bitte später erneut versuchen.",
+  "newMessage": "Neue Nachricht",
+  "stepToWhom": "An wen?",
+  "noKnownTeachers": "Keine Lehrkräfte aus dem Unterricht bekannt – bitte suchen.",
+  "searchOtherPerson": "Andere Person suchen (Name)",
+  "teacher": "Lehrkraft",
+  "stepTopic": "Worum geht es?",
+  "subject": "Betreff",
+  "message": "Nachricht",
+  "chooseRecipientFirst": "Erst Empfänger wählen",
+  "sendToOne": "Senden an {name}",
+  "@sendToOne": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sendToMany": "Senden an {count} Personen",
+  "@sendToMany": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notReachable": "Über das Portal nicht erreichbar",
+  "templatesNote": "Vorlagen sind auf Deutsch, weil die Schule Deutsch liest.",
+  "noMessagesOffered": "Die Schule bietet für dieses Konto keine Nachrichten an.",
+  "messagesFailed": "Die Nachrichten ließen sich nicht laden.",
+  "allRead": "Alles gelesen",
+  "unreadShort": "{count} ungelesen",
+  "@unreadShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noMessages": "Keine Nachrichten.",
+  "noSubject": "(ohne Betreff)",
+  "semester1": "1. Halbjahr",
+  "semester2": "2. Halbjahr",
+  "blockNext": "Als Nächstes",
+  "inDays": "{count, plural, =0{heute} =1{morgen} other{in {count} Tagen}}",
+  "@inDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "fromSchoolCalendar": "laut Schulkalender",
+  "uploadTitle": "Abgabe „{name}“",
+  "@uploadTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadUntil": "bis {date}",
+  "@uploadUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadNotYet": "noch nicht abgegeben",
+  "uploadDone": "abgegeben: {what}",
+  "@uploadDone": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "nothingNext": "Nichts Anstehendes in diesem Fach.",
+  "blockTeacher": "Lehrkraft",
+  "blockTeachers": "Lehrkräfte",
+  "lastMessageOn": "Letzte Nachricht {date}",
+  "@lastMessageOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "write": "Schreiben",
+  "blockAttendance": "Anwesenheit",
+  "attendanceLine": "{present} anwesend · {excused} entschuldigt · {missing} fehlend",
+  "@attendanceLine": {
+    "placeholders": {
+      "present": {
+        "type": "int"
+      },
+      "excused": {
+        "type": "int"
+      },
+      "missing": {
+        "type": "int"
+      }
+    }
+  },
+  "missingShort": "{count} fehlend",
+  "@missingShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "absentOn": "Abwesend: {dates}",
+  "@absentOn": {
+    "placeholders": {
+      "dates": {
+        "type": "String"
+      }
+    }
+  },
+  "blockHistory": "Verlauf",
+  "lessonsCount": "{count, plural, =1{1 Stunde} other{{count} Stunden}}",
+  "@lessonsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "topicsCount": "{count, plural, =1{1 Thema} other{{count} Themen}}",
+  "@topicsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "openCount": "{count} offen",
+  "@openCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noTopic": "Ohne Thema",
+  "historyEmptyTitle": "Noch keine Einträge",
+  "historyEmptyText": "Hier erscheinen Thema, Hausaufgaben und Material, sobald die Lehrkraft sie in die Kursmappe einträgt.",
+  "blockMaterial": "Material",
+  "filesCount": "{count, plural, =1{1 Datei} other{{count} Dateien}}",
+  "@filesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "blockMarks": "Leistungen",
+  "blockExams": "Leistungskontrollen",
+  "withoutGrades": "ohne Noten",
+  "openInPortal": "Im Portal öffnen",
+  "courseLoadFailed": "Die Kursseite ließ sich nicht laden.",
+  "showMore": "mehr",
+  "showLess": "weniger",
+  "moreTeachers": "+ {count} weitere",
+  "@moreTeachers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "openHomeworkTitle": "Offene Hausaufgaben",
+  "noOpenHomework": "Keine offenen Hausaufgaben.",
+  "givenOn": "{subject} · aufgegeben {date}",
+  "@givenOn": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subjectsTitle": "Fächer",
+  "extraOffers": "Weitere Angebote",
+  "show": "zeigen",
+  "hide": "ausblenden",
+  "chipHomeworkOpen": "Hausaufgabe offen",
+  "absentCount": "{count, plural, =1{1 Fehlstunde} other{{count} Fehlstunden}}",
+  "@absentCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subjectsCount": "{count, plural, =1{1 Fach} other{{count} Fächer}}",
+  "@subjectsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "lessonOfDay": "{slot} Std.",
+  "@lessonOfDay": {
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      }
+    }
+  },
+  "dateDayMonth": "d.M."
 }

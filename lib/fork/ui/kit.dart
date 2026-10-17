@@ -89,7 +89,8 @@ abstract final class Sz {
   static const double buttonSmall = 44;
 
   /// Schwebende untere Leiste: Höhe und Abstand zum Rand.
-  static const double navHeight = 68;
+  // 64 statt 68 (Entwurf Leiste 17.10.26): Platz für Marken ohne mehr Höhe.
+  static const double navHeight = 64;
   static const double navMargin = 16;
   static const double navBottom = 24;
 

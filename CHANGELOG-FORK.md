@@ -1,5 +1,13 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9334**
+
+- **Neue Kursseite** statt der bisherigen Lanis-Ansicht: getrennte Bereiche mit eigenem Kopf – Als Nächstes (nächste Stunde laut Plan, anstehende Arbeit laut Schulkalender, offene Abgaben), Lehrkraft mit „Schreiben“ und letzter Nachricht, Anwesenheit als Balken mit den Fehltagen, Verlauf zugeklappt und nach Themen gegliedert, Material gesammelt, Leistungen. Halbjahr umschaltbar, wenn das Portal es anbietet; leere Kursmappe mit Hinweis.
+- **Unterricht neu geordnet:** offene Hausaufgaben oben, Fächer in Reihenfolge und Farbe des Wochenplans mit Marken für offene Hausaufgabe und Fehlstunden, weitere Angebote (Ganztag u. a.) eingeklappt.
+- **Marken in der unteren Leiste:** offene Hausaufgaben, ungelesene Nachrichten, „!“ bei Ausfall heute oder morgen; Leiste etwas flacher.
+- **Schriftgrößen** Klein, Normal, Groß – jede etwa 2 Punkte kleiner als bisher; „Sehr groß“ entfällt.
+- Alle neuen Texte in Deutsch, Englisch und Türkisch.
+
 **4.1.0+9333**
 
 - **Sprachen Deutsch, Englisch und Türkisch:** Neue Wahl unter Einstellungen → Darstellung → Sprache (wie das Handy, Deutsch, English, Türkçe). Übersetzt sind in diesem Schritt Heute, Kalender (Tag, Woche, Termine), Mehr, Einstellungen, die Benachrichtigungen und alle übernommenen Lanis-Seiten; Unterricht, Nachrichten und Krankmeldung folgen. Datum und Wochentage stehen in der gewählten Sprache. Inhalte der Schule (Fächer, Termine, Nachrichten) bleiben, wie die Schule sie schreibt.

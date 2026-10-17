@@ -16,7 +16,8 @@ import '../messages/messages_page.dart';
 import '../more/more_page.dart';
 import '../plan/live_plan_page.dart';
 import '../settings/settings_page.dart';
-import '../plan/plan_model.dart' show GroupChoice;
+import '../plan/plan_model.dart' show GroupChoice, effectiveChoice;
+import '../today/today_from_lanis.dart' show applySubstitutions;
 import '../plan/plan_page.dart';
 import '../today/live_today_page.dart';
 import '../today/today_model.dart';
@@ -86,12 +87,22 @@ class _PreviewShellState extends State<PreviewShell> {
 
   void _select(ShellTab t) => setState(() => _tab = t);
 
-  static List<(IconData, IconData, String)> _dest(ForkL10n t) => [
-    (Icons.home_outlined, Icons.home, t.navToday),
-    (Icons.calendar_month_outlined, Icons.calendar_month, t.navCalendar),
-    (Icons.menu_book_outlined, Icons.menu_book, t.navCourses),
-    (Icons.chat_bubble_outline, Icons.chat_bubble, t.navMessages),
-    (Icons.more_horiz, Icons.more_horiz, t.navMore),
+  static List<NavDest> _dest(ForkL10n t, [NavBadges b = const NavBadges()]) => [
+    NavDest(Icons.home_outlined, Icons.home, t.navToday, alert: b.todayAlert),
+    NavDest(Icons.calendar_month_outlined, Icons.calendar_month, t.navCalendar),
+    NavDest(
+      Icons.menu_book_outlined,
+      Icons.menu_book,
+      t.navCourses,
+      count: b.homework,
+    ),
+    NavDest(
+      Icons.chat_bubble_outline,
+      Icons.chat_bubble,
+      t.navMessages,
+      count: b.unread,
+    ),
+    NavDest(Icons.more_horiz, Icons.more_horiz, t.navMore),
   ];
 
   void _saveMensa(LiveSnapshot s, String raw) {
@@ -215,10 +226,19 @@ class _PreviewShellState extends State<PreviewShell> {
       // (Rückmeldung 16.10.26 zur Tagesansicht).
       extendBody: false,
       body: widget.liveData ? Builder(builder: _liveBody) : _demoBody(),
-      bottomNavigationBar: FloatingNavBar(
-        selected: _tab.index,
-        items: _dest(context.t),
-        onSelect: (i) => _select(ShellTab.values[i]),
+      // Builder: liegt unter LiveDataScope (siehe unten), damit die Marken
+      // die geladenen Daten lesen können.
+      bottomNavigationBar: Builder(
+        builder: (c) => FloatingNavBar(
+          selected: _tab.index,
+          items: _dest(
+            c.t,
+            widget.liveData
+                ? navBadgesOf(LiveData.of(c), c.t)
+                : const NavBadges(),
+          ),
+          onSelect: (i) => _select(ShellTab.values[i]),
+        ),
       ),
     );
     return MediaQuery(
@@ -254,7 +274,7 @@ class FloatingNavBar extends StatelessWidget {
   });
 
   final int selected;
-  final List<(IconData, IconData, String)> items;
+  final List<NavDest> items;
   final ValueChanged<int> onSelect;
 
   @override
@@ -284,12 +304,14 @@ class FloatingNavBar extends StatelessWidget {
           // über („Nachrichten“, Test today_page_test, Schrift ×1,3).
           child: Row(
             children: [
-              for (final (i, (icon, iconSel, label)) in items.indexed)
+              for (final (i, d) in items.indexed)
                 Expanded(
                   child: _NavItem(
-                    icon: i == selected ? iconSel : icon,
-                    label: label,
+                    icon: i == selected ? d.iconSelected : d.icon,
+                    label: d.label,
                     selected: i == selected,
+                    count: d.count,
+                    alert: d.alert,
                     onTap: () => onSelect(i),
                   ),
                 ),
@@ -307,12 +329,16 @@ class _NavItem extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.count = 0,
+    this.alert = false,
   });
 
   final IconData icon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final int count;
+  final bool alert;
 
   @override
   Widget build(BuildContext context) {
@@ -338,7 +364,18 @@ class _NavItem extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: Sz.navIcon, color: fg),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(icon, size: Sz.navIcon, color: fg),
+                  if (alert || count > 0)
+                    Positioned(
+                      right: -Sp.s - 1,
+                      top: -Sp.xs - 1,
+                      child: _Badge(text: alert ? '!' : '$count', alert: alert),
+                    ),
+                ],
+              ),
               const SizedBox(height: Sp.xxs),
               // Zu lange Beschriftung wird verkleinert, nie abgeschnitten
               // oder umgebrochen („Stundenpla-n“ im Lanis-Original).
@@ -350,6 +387,97 @@ class _NavItem extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Ein Ziel der unteren Leiste mit optionaler Marke.
+class NavDest {
+  const NavDest(
+    this.icon,
+    this.iconSelected,
+    this.label, {
+    this.count = 0,
+    this.alert = false,
+  });
+
+  final IconData icon;
+  final IconData iconSelected;
+  final String label;
+
+  /// Zahl an der Marke (0 = keine).
+  final int count;
+
+  /// Rote Marke „!“ statt Zahl.
+  final bool alert;
+}
+
+/// Marken der unteren Leiste (Entwurf 17.10.26): offene Hausaufgaben an
+/// „Unterricht“, ungelesene Nachrichten an „Nachrichten“, „!“ an „Heute“
+/// bei Ausfall heute oder morgen.
+class NavBadges {
+  const NavBadges({
+    this.homework = 0,
+    this.unread = 0,
+    this.todayAlert = false,
+  });
+
+  final int homework;
+  final int unread;
+  final bool todayAlert;
+}
+
+/// Marken aus den geladenen Daten. Grenze: Der Ausfall zählt nur für die
+/// Stunden des Kindes (applySubstitutions, wie „Heute“); ohne Stundenplan
+/// gibt es kein „!“.
+NavBadges navBadgesOf(LiveSnapshot? s, ForkL10n t) {
+  if (s == null) return const NavBadges();
+  var alert = false;
+  final live = s.offers('stundenplan.php') && s.timetable.content != null
+      ? livePlanOf(s)
+      : null;
+  if (live != null) {
+    final now = DateTime.now();
+    final r = applySubstitutions(
+      plan: live.plan,
+      choice: effectiveChoice(live.auto, s.userChoice),
+      days: s.substitutions.content?.days ?? const [],
+      now: now,
+      t: t,
+    );
+    final today = DateTime(now.year, now.month, now.day);
+    alert = r.changes.any(
+      (c) =>
+          c.kind == ChangeKind.cancelled &&
+          (dayDiff(today, c.day) == 0 || dayDiff(today, c.day) == 1),
+    );
+  }
+  return NavBadges(
+    homework: liveOpenHomework(s),
+    unread: liveUnreadMessages(s),
+    todayAlert: alert,
+  );
+}
+
+class _Badge extends StatelessWidget {
+  const _Badge({required this.text, required this.alert});
+
+  final String text;
+  final bool alert;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    return Container(
+      constraints: const BoxConstraints(minWidth: Sp.l),
+      height: Sp.l,
+      padding: const EdgeInsets.symmetric(horizontal: Sp.xs),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: alert ? k.p.cancel.dot : k.p.strong,
+        borderRadius: BorderRadius.circular(Sp.s),
+      ),
+      child: Text(text, style: k.cellTeacher(k.p.onStrong)),
     );
   }
 }
