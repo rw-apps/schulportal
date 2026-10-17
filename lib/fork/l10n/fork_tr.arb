@@ -208,7 +208,7 @@
   "missingShort": "{count} devamsız",
   "absentOn": "Devamsız: {dates}",
   "blockHistory": "Geçmiş",
-  "lessonsCount": "{count, plural, other{{count} ders}}",
+  "lessonsCount": "{n} ders",
   "topicsCount": "{count, plural, other{{count} konu}}",
   "openCount": "{count} açık",
   "noTopic": "Konusuz",
@@ -332,5 +332,17 @@
   "prevWeek": "Önceki hafta",
   "nextWeek": "Sonraki hafta",
   "pickWeek": "Hafta seç",
-  "thisWeek": "Bu hafta"
+  "thisWeek": "Bu hafta",
+  "lessonTimesTitle": "Ders saatleri",
+  "lessonTimesText": "Okul ders programında saat göstermiyor. Düzeni bir kez girin – yalnızca bu telefonda ve bu hesap için geçerlidir.",
+  "lessonTimesStart": "1. dersin başlangıcı",
+  "lessonTimesLength": "Bir dersin süresi",
+  "lessonTimesEvery": "Teneffüs her",
+  "lessonTimesPause": "Teneffüs süresi",
+  "minutesShort": "{n} dk",
+  "noBreak": "teneffüs yok",
+  "breakShort": "Teneffüs",
+  "enterLessonTimes": "Ders saatlerini gir",
+  "ownLessonTimes": "Kendi girdiğiniz ders saatleri",
+  "changeAction": "Değiştir"
 }

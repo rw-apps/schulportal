@@ -29,7 +29,12 @@ class PlanPage extends StatefulWidget {
     this.events,
     this.onRefresh,
     this.plansForWeek,
+    this.onEditTimes,
   });
+
+  /// Stundenzeiten des Kindes [kid] (Index in [plans]) eintragen; null =
+  /// ohne Knopf (Vorschau, Tests).
+  final void Function(int kid)? onEditTimes;
 
   final List<KidPlan> plans;
 
@@ -394,6 +399,9 @@ class _PlanPageState extends State<PlanPage> {
               now: _day == _todayIndex ? widget.now : null,
               onOpenGroup: _openGroupSheet,
               onOpenLesson: _openLesson,
+              onEditTimes: widget.onEditTimes == null
+                  ? null
+                  : () => widget.onEditTimes!(_kid),
             ),
           ),
         ),
@@ -676,10 +684,15 @@ class DayPlan extends StatelessWidget {
     required this.onOpenGroup,
     this.onOpenLesson,
     this.now,
+    this.onEditTimes,
   });
 
   final KidPlan plan;
   final int day;
+
+  /// Stundenzeiten eintragen/ändern (nur Schulen ohne Uhrzeiten); null =
+  /// ohne Knopf.
+  final VoidCallback? onEditTimes;
   final GroupChoice choice;
   final ValueChanged<String> onOpenGroup;
 
@@ -706,10 +719,37 @@ class DayPlan extends StatelessWidget {
       );
     }
     final rows = <Widget>[
-      if (!plan.timed)
+      if (plan.customTimes)
         Padding(
           padding: const EdgeInsets.only(left: Sp.xs, bottom: Sp.s),
-          child: Text(context.t.noTimesHint, style: k.meta),
+          child: Row(
+            children: [
+              Expanded(child: Text(context.t.ownLessonTimes, style: k.meta)),
+              if (onEditTimes != null)
+                TextButton(
+                  onPressed: onEditTimes,
+                  child: Text(context.t.changeAction, style: k.link),
+                ),
+            ],
+          ),
+        )
+      else if (!plan.timed)
+        // Hinweis über die ganze Breite, Knopf darunter: neben dem Knopf
+        // brach der lange Hinweis Wort für Wort um (Bildschirmfoto-Test).
+        Padding(
+          padding: const EdgeInsets.only(left: Sp.xs, bottom: Sp.s),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(context.t.noTimesHint, style: k.meta),
+              if (onEditTimes != null)
+                TextButton(
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                  onPressed: onEditTimes,
+                  child: Text(context.t.enterLessonTimes, style: k.link),
+                ),
+            ],
+          ),
         ),
     ];
     for (var i = 0; i < blocks.length; i++) {

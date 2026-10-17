@@ -241,6 +241,7 @@ KidPlan planWithSubstitutions({
     ],
     teacherNames: plan.teacherNames,
     timed: plan.timed,
+    customTimes: plan.customTimes,
   );
 }
 

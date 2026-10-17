@@ -553,10 +553,10 @@
     }
   },
   "blockHistory": "Verlauf",
-  "lessonsCount": "{count, plural, =1{1 Stunde} other{{count} Stunden}}",
+  "lessonsCount": "{n, plural, =1{1 Stunde} other{{n} Stunden}}",
   "@lessonsCount": {
     "placeholders": {
-      "count": {
+      "n": {
         "type": "int"
       }
     }
@@ -889,5 +889,24 @@
   "prevWeek": "Vorherige Woche",
   "nextWeek": "Nächste Woche",
   "pickWeek": "Woche wählen",
-  "thisWeek": "Diese Woche"
+  "thisWeek": "Diese Woche",
+  "lessonTimesTitle": "Stundenzeiten",
+  "lessonTimesText": "Die Schule zeigt im Stundenplan keine Uhrzeiten. Trag das Raster einmal ein – es gilt nur auf diesem Handy und nur für dieses Konto.",
+  "lessonTimesStart": "Beginn der 1. Stunde",
+  "lessonTimesLength": "Länge einer Stunde",
+  "lessonTimesEvery": "Pause nach je",
+  "lessonTimesPause": "Länge der Pause",
+  "minutesShort": "{n} Min.",
+  "@minutesShort": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "noBreak": "keine Pause",
+  "breakShort": "Pause",
+  "enterLessonTimes": "Stundenzeiten eintragen",
+  "ownLessonTimes": "Selbst eingetragene Stundenzeiten",
+  "changeAction": "Ändern"
 }

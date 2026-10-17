@@ -73,6 +73,7 @@ class KidPlan {
     required this.days,
     this.teacherNames = const {},
     this.timed = true,
+    this.customTimes = false,
   });
 
   final String firstName;
@@ -83,6 +84,9 @@ class KidPlan {
   /// Oberfläche zeigt Stundennummern statt Uhrzeiten, ohne „Jetzt“, Pausen
   /// oder Zeitlinie. Grenze: Was „gerade läuft“, weiß die App dann nicht.
   final bool timed;
+
+  /// Uhrzeiten selbst eingetragen (LessonTimes), nicht vom Portal.
+  final bool customTimes;
   final int colorIndex;
   final List<PlanSlot> slots;
 
@@ -116,6 +120,7 @@ class KidPlan {
       days: days,
       teacherNames: merged,
       timed: timed,
+      customTimes: customTimes,
     );
   }
 

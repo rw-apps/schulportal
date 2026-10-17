@@ -208,7 +208,7 @@
   "missingShort": "{count} absent",
   "absentOn": "Absent: {dates}",
   "blockHistory": "History",
-  "lessonsCount": "{count, plural, =1{1 lesson} other{{count} lessons}}",
+  "lessonsCount": "{n, plural, =1{1 lesson} other{{n} lessons}}",
   "topicsCount": "{count, plural, =1{1 topic} other{{count} topics}}",
   "openCount": "{count} open",
   "noTopic": "No topic",
@@ -332,5 +332,17 @@
   "prevWeek": "Previous week",
   "nextWeek": "Next week",
   "pickWeek": "Choose week",
-  "thisWeek": "This week"
+  "thisWeek": "This week",
+  "lessonTimesTitle": "Lesson times",
+  "lessonTimesText": "The school shows no times in the timetable. Enter the schedule once – it applies only on this phone and only to this account.",
+  "lessonTimesStart": "Start of 1st lesson",
+  "lessonTimesLength": "Length of a lesson",
+  "lessonTimesEvery": "Break after every",
+  "lessonTimesPause": "Length of the break",
+  "minutesShort": "{n} min",
+  "noBreak": "no break",
+  "breakShort": "Break",
+  "enterLessonTimes": "Enter lesson times",
+  "ownLessonTimes": "Lesson times entered by you",
+  "changeAction": "Change"
 }

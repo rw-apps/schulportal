@@ -111,6 +111,7 @@ class _OfflinePageState extends ConsumerState<OfflinePage> {
       // Vorname des Kindes ist offline nicht gespeichert – Schulname statt
       // leerer Karte.
       firstName: shortSchoolName(s.account.schoolName),
+      lessonTimes: storedLessonTimes(settings),
     );
     final named = plan.withTeacherNames(ownNames);
     final choice = effectiveChoice(auto, userChoice);

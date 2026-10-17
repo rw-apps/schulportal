@@ -1,5 +1,16 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9348** – Stundenzeiten selbst eintragen
+
+- **Für Schulen ohne Uhrzeiten im Stundenplan:** Im Kalender (Tag) steht „Stundenzeiten eintragen“. Einmal Beginn der 1. Stunde, Länge einer Stunde, Pause nach je wie vielen Stunden und Pausenlänge wählen (Vorgabe: 8:00, 45 Minuten, Pause nach je 2 Stunden, 15 Minuten) – die Vorschau zeigt sofort die Zeiten. Danach gibt es wieder „Jetzt“, „Danach“, die Zeitlinie und Uhrzeiten in Heute, Kalender und Kursseite.
+- Ohne Eintrag funktioniert alles wie bisher mit Stundennummern. Gespeichert wird nur auf dem Handy und nur für dieses Konto; „Ändern“ oder „Löschen“ jederzeit. Liefert das Portal Uhrzeiten, gelten immer diese.
+
+**4.1.0+9348** – 0. Stunde, Stundenzeiten selbst eintragen
+
+- **0. Stunde/Block fehlte:** Stand in der ersten Zeile des Stundenplans ein Eintrag (z. B. die Klassenstunde im 0. Block um 8:00), ließ die App ihn weg – Heute und Kalender begannen erst mit dem 1. Block. Jetzt erscheint er wie im Portal.
+- **Stundenzeiten selbst eintragen** (für Schulen ohne Uhrzeiten im Stundenplan): Im Kalender (Tag) steht „Stundenzeiten eintragen“. Beginn der 1. Stunde, Länge einer Stunde, Pause nach je wie vielen Stunden und Pausenlänge wählen (Vorgabe: 8:00, 45 Minuten, Pause nach je 2 Stunden, 15 Minuten); die Vorschau zeigt sofort die Zeiten. Danach gibt es wieder „Jetzt“, „Danach“, die Zeitlinie und Uhrzeiten.
+- Ohne Eintrag funktioniert alles wie bisher mit Stundennummern. Gespeichert wird nur auf dem Handy und nur für dieses Konto; „Ändern“ oder „Löschen“ jederzeit. Liefert das Portal Uhrzeiten, gelten immer diese.
+
 **4.1.0+9347** – Wochen blättern, Raster ohne abgeschnittene Zeilen
 
 - **Kalender: Wochen wechseln.** Über den Tagen steht die Woche („19.10.–23.10. · KW 43“) mit Pfeilen; Wischen nach links/rechts blättert ebenfalls. Antippen der Woche öffnet einen Kalender, um auch Monate weiter zu springen; „Diese Woche“ führt zurück. Vertretungen erscheinen, soweit das Portal sie für jene Tage schon zeigt.

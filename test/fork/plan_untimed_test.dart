@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/l10n/l10n.dart';
+import 'package:lanis/fork/ui/plan/lesson_times.dart';
+import 'package:lanis/fork/ui/plan/lesson_times_dialog.dart';
 import 'package:lanis/fork/ui/plan/plan_from_lanis.dart';
 import 'package:lanis/fork/ui/plan/plan_page.dart';
 import 'package:lanis/fork/ui/today/today_from_lanis.dart';
@@ -103,5 +105,68 @@ void main() {
     expect(t.takeException(), isNull);
     expect(find.textContaining('AB 1.'), findsOneWidget);
     expect(find.text('Geschichte'), findsWidgets);
+  });
+
+  test('Stundenzeiten: Raster und gespeicherte Form', () {
+    const v = LessonTimes(start: 8 * 60);
+    expect(v.of(1), (start: 480, end: 525));
+    expect(v.of(2), (start: 525, end: 570));
+    expect(v.of(3), (start: 585, end: 630)); // nach 2 Stunden 15 Min. Pause
+    expect(v.of(5).start, 690); // 11:30
+    expect(v.of(0), (start: 435, end: 480));
+    expect(LessonTimes.fromMap(v.toMap())?.of(3), v.of(3));
+    expect(LessonTimes.fromMap(const {}), isNull);
+    expect(
+      LessonTimes.fromMap(const {
+        'start': '25:00',
+        'length': '45',
+        'every': '2',
+        'pause': '15',
+      }),
+      isNull,
+    );
+
+    final p = kidPlanFromTimetable(
+      _tt(),
+      firstName: 'B',
+      colorIndex: 1,
+      lessonTimes: v,
+    );
+    expect(p.timed, isTrue);
+    expect(p.customTimes, isTrue);
+    expect(p.slots.first.start, '08:00');
+    expect(p.slots[2].start, '09:45');
+    final l = dayLessonsFor(p, 0, const {}, t: forkL10nFor('de'));
+    expect(l.first.start, '08:00');
+    expect(dayStatus(l, DateTime(2026, 10, 19, 8, 10)).phase, DayPhase.running);
+  });
+
+  testWidgets('Knopf „Stundenzeiten eintragen“ und Dialog', (t) async {
+    final p = kidPlanFromTimetable(_tt(), firstName: 'B', colorIndex: 1);
+    LessonTimesResult? got;
+    await t.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: ForkL10n.localizationsDelegates,
+        supportedLocales: ForkL10n.supportedLocales,
+        locale: const Locale('de'),
+        home: Builder(
+          builder: (c) => Scaffold(
+            body: PlanPage(
+              plans: [p],
+              now: DateTime(2026, 10, 19, 10),
+              onEditTimes: (_) async => got = await askLessonTimes(c, null),
+            ),
+          ),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.tap(find.text('Stundenzeiten eintragen'));
+    await t.pumpAndSettle();
+    expect(find.textContaining('3. 09:45–10:30'), findsOneWidget);
+    expect(t.takeException(), isNull);
+    await t.tap(find.text('Speichern'));
+    await t.pumpAndSettle();
+    expect(got?.times?.of(1).start, 480);
   });
 }

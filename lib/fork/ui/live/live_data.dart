@@ -11,6 +11,7 @@ import '../../l10n/l10n.dart';
 import '../kit.dart';
 import 'serial_loader.dart';
 import '../../mensa.dart';
+import '../plan/lesson_times.dart';
 import '../plan/plan_from_lanis.dart';
 import '../plan/plan_model.dart';
 import '../today/today_from_lanis.dart' show classFromCourses;
@@ -24,6 +25,21 @@ const groupChoiceSetting = 'fork-group-choice';
 /// Bewusst nur auf dem Gerät: Echte Namen gehören nicht ins öffentliche
 /// Repository (Entscheidung 16.10.26).
 const teacherNamesSetting = 'fork-teacher-names';
+
+/// Selbst eingetragene Stundenzeiten (LessonTimes.toMap), je Konto; nur für
+/// Schulen ohne Uhrzeiten im Stundenplan.
+const lessonTimesSetting = 'fork-lesson-times';
+
+/// Gespeicherte Stundenzeiten eines Kontos, null = keine.
+LessonTimes? storedLessonTimes(TypedSettings s) => LessonTimes.fromMap(
+  settingStrings(
+    resolveStoredAppletSetting(
+      s,
+      'stundenplan.php/$lessonTimesSetting',
+      const <String, dynamic>{},
+    ),
+  ),
+);
 
 const _settingsApplet = 'stundenplan.php';
 
@@ -49,6 +65,7 @@ Map<String, String> settingStrings(Object? m) => <String, String>{
   required Lessons lessons,
   required String firstName,
   int colorIndex = 0,
+  LessonTimes? lessonTimes,
 }) {
   final names = <String, String>{};
   for (final l in lessons) {
@@ -68,6 +85,7 @@ Map<String, String> settingStrings(Object? m) => <String, String>{
     tt,
     firstName: firstName,
     colorIndex: colorIndex,
+    lessonTimes: lessonTimes,
     teacherNames: names,
     courseNames: [for (final l in lessons) l.name],
     courses: courses,
@@ -119,6 +137,8 @@ class LiveSnapshot {
     required this.refresh,
     required this.refreshMessages,
     required this.setMensaUrl,
+    this.lessonTimes,
+    this.setLessonTimes,
     this.mensa = const MensaAddresses({}),
     this.accountKey = '',
     this.kids = const [],
@@ -135,6 +155,11 @@ class LiveSnapshot {
   /// Eigene Gruppenwahl ('' = bewusst alle zeigen) und Lehrernamen.
   final GroupChoice userChoice;
   final Map<String, String> ownNames;
+
+  /// Selbst eingetragene Stundenzeiten (null = keine) und Speichern
+  /// (null = löschen).
+  final LessonTimes? lessonTimes;
+  final void Function(LessonTimes? times)? setLessonTimes;
 
   /// Selbst eingetragene Mensa-Bestellseiten je Kind.
   final MensaAddresses mensa;
@@ -246,6 +271,7 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
 
   GroupChoice _choice = const {};
   Map<String, String> _names = const {};
+  LessonTimes? _times;
   MensaAddresses _mensa = const MensaAddresses({});
   int? _settingsFor;
   late final _loader = SerialLoader(
@@ -327,6 +353,7 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
         const <String, dynamic>{},
       ),
     );
+    _times = storedLessonTimes(s);
     _mensa = MensaAddresses.decode(
       s.getString('fork/$mensaUrlsSetting'),
       legacy: s.getString('fork/$mensaUrlSetting'),
@@ -413,6 +440,11 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
         },
         refresh: () => _loader.run(force: true),
         mensa: _mensa,
+        lessonTimes: _times,
+        setLessonTimes: (v) {
+          setState(() => _times = v);
+          _write(lessonTimesSetting, v?.toMap() ?? const {});
+        },
         accountKey: '${account.localId}',
         setMensaUrl: (kid, u) {
           final next = _mensa.withUrl(kid, u);
@@ -465,6 +497,7 @@ String liveClassName(LiveSnapshot s) =>
     lessons: s.lessons.content ?? const [],
     firstName: s.firstName.isEmpty ? fallbackName : s.firstName,
     colorIndex: colorIndex,
+    lessonTimes: s.lessonTimes,
   );
   return (plan: r.plan.withTeacherNames(s.ownNames), auto: r.auto);
 }

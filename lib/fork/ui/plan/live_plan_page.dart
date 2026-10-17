@@ -6,6 +6,7 @@ import '../live/live_data.dart';
 import '../today/today_from_lanis.dart'
     show planWithSubstitutions, weekItemsFromCalendar;
 import '../today/today_page.dart' show schoolWeek;
+import 'lesson_times_dialog.dart';
 import 'plan_page.dart';
 
 /// Bereich „Kalender“ mit echten Daten: Stunden je Kind (Gruppenwahl und
@@ -83,6 +84,13 @@ class LiveCalendarPage extends StatelessWidget {
               ),
           ],
           now: now,
+          onEditTimes: (i) async {
+            final m = shown[i].$1.snapshot;
+            final save = m.setLessonTimes;
+            if (save == null) return;
+            final r = await askLessonTimes(context, m.lessonTimes);
+            if (r != null) save(r.times);
+          },
           initialChoices: {
             for (final (i, (m, _)) in shown.indexed) i: m.snapshot.userChoice,
           },

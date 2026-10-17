@@ -145,6 +145,7 @@ Future<void> _run(
     tt: tt,
     lessons: lessons,
     firstName: firstName,
+    lessonTimes: storedLessonTimes(s),
   );
   final courses = [for (final l in lessons) l.name];
   final sent = [

@@ -4,6 +4,7 @@ import 'package:riverpod/misc.dart' show Override;
 
 import 'absence/absence_parser.dart';
 import 'lessons_parent.dart';
+import 'timetable_fix.dart';
 
 /// Module, die der Fork über liblanis hinaus für weitere Kontoarten freigibt.
 ///
@@ -49,6 +50,16 @@ List<Override> forkProviderOverrides() => [
   lessonsStudentParserProvider.overrideWith((ref) {
     final ctx = ref.watch(appletContextProvider);
     final parser = LessonsParentAwareParser(
+      ctx,
+      isConnected: () => ref.read(connectionCheckerProvider).connected,
+    );
+    ref.onDispose(parser.dispose);
+    return parser;
+  }),
+  // 0. Stunde/Block in der ersten Tabellenzeile (fork/timetable_fix.dart).
+  timetableParserProvider.overrideWith((ref) {
+    final ctx = ref.watch(appletContextProvider);
+    final parser = ForkTimetableParser(
       ctx,
       isConnected: () => ref.read(connectionCheckerProvider).connected,
     );

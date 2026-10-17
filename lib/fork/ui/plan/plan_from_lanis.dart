@@ -1,5 +1,6 @@
 import 'package:liblanis/liblanis.dart';
 
+import 'lesson_times.dart';
 import 'plan_model.dart';
 import '../../data/portal_rules.dart';
 
@@ -22,6 +23,7 @@ KidPlan kidPlanFromTimetable(
   Map<String, String> teacherNames = const {},
   List<String> courseNames = const [],
   List<CourseRef> courses = const [],
+  LessonTimes? lessonTimes,
 }) {
   final rows = [
     for (final r in tt.hours ?? const <TimeTableRow>[])
@@ -43,7 +45,16 @@ KidPlan kidPlanFromTimetable(
               end: _hm(r.endTime),
             ),
         ]
-      : [for (final n in untimed) placeholderSlot(n)];
+      : [
+          for (final n in untimed)
+            lessonTimes == null
+                ? placeholderSlot(n)
+                : PlanSlot(
+                    label: '$n. Stunde',
+                    start: LessonTimes.hm(lessonTimes.of(n).start),
+                    end: LessonTimes.hm(lessonTimes.of(n).end),
+                  ),
+        ];
 
   final days = <List<PlanCell>>[];
   for (var d = 0; d < 5; d++) {
@@ -117,7 +128,9 @@ KidPlan kidPlanFromTimetable(
     slots: slots,
     days: finalDays,
     teacherNames: teacherNames,
-    timed: rows.isNotEmpty,
+    // Eigene Zeiten nur, wo das Portal keine liefert (Portal geht vor).
+    timed: rows.isNotEmpty || lessonTimes != null,
+    customTimes: rows.isEmpty && lessonTimes != null,
   );
 }
 
