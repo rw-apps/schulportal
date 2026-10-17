@@ -350,5 +350,12 @@
   "gradesWithout": "Notu olmayanlar",
   "gradesFailed": "{n} ders yüklenemedi.",
   "marksCount": "{n} not",
-  "gradesNoAverage": "Ortalama yok: Notların ağırlığını her öğretmen kendisi belirler."
+  "gradesNoAverage": "Ortalama yok: Notların ağırlığını her öğretmen kendisi belirler.",
+  "gradesExamsTitle": "Yaklaşan sınavlar",
+  "absenceTotals": "Bu dönem devamsızlık: {excused} izinli · {missing} izinsiz",
+  "absenceNone": "Bu dönem devamsızlık yok.",
+  "courseNewsTitle": "Derslerde yeni",
+  "courseNewsTitleFor": "{name} için derslerde yeni",
+  "noticeNewMark": "{subject} dersinde yeni not",
+  "noticeNewExam": "{subject}: {date} tarihine {kind} eklendi"
 }

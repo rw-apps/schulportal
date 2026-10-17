@@ -1,5 +1,6 @@
 import 'package:liblanis/liblanis.dart';
 
+import '../../courses_scan.dart';
 import '../../l10n/l10n.dart';
 import '../plan/plan_model.dart';
 import 'today_model.dart';
@@ -554,4 +555,49 @@ bool forGrade(String title, int grade) {
     return grades.contains(grade);
   }
   return true;
+}
+
+/// [calendar] plus die Arbeiten aus den Kursseiten (CourseScan) in den
+/// nächsten [days] Tagen, als „Mathematik: Arbeit“ mit den Stunden als Zeit.
+///
+/// Ursache (Wunsch 17.10.26): Viele Schulen tragen Arbeiten nur in der
+/// Kursmappe ein, nicht im Schulkalender – „Demnächst“ kannte sie nicht.
+/// Doppelt wird nichts: Steht am selben Tag schon eine Arbeit im Kalender,
+/// deren Titel das Fach nennt, entfällt die aus der Kursmappe. Grenze: Die
+/// Kursmappen-Arbeiten sind so aktuell wie die letzte Auswertung (Noten
+/// geöffnet oder täglicher Abruf im Hintergrund).
+List<WeekItem> withCourseExams(
+  List<WeekItem> calendar,
+  CourseScan? scan,
+  DateTime now, {
+  int? childIndex,
+  int days = 14,
+}) {
+  if (scan == null) return calendar;
+  final horizon = DateTime(now.year, now.month, now.day + days);
+  bool inCalendar(ScanExam e) {
+    final subject = e.subject.toLowerCase();
+    return calendar.any(
+      (w) =>
+          w.kind == WeekKind.exam &&
+          w.day.year == e.day.year &&
+          w.day.month == e.day.month &&
+          w.day.day == e.day.day &&
+          subject.length >= 3 &&
+          w.title.toLowerCase().contains(subject),
+    );
+  }
+
+  return [
+    ...calendar,
+    for (final e in scan.upcoming(now))
+      if (!e.day.isAfter(horizon) && !inCalendar(e))
+        WeekItem(
+          day: e.day,
+          title: '${e.subject}: ${e.kind}',
+          kind: WeekKind.exam,
+          childIndex: childIndex,
+          time: e.hours,
+        ),
+  ];
 }

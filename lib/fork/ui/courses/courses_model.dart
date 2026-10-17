@@ -166,3 +166,10 @@ String? _blank(String? s) {
   final t = s?.trim();
   return t == null || t.isEmpty ? null : t;
 }
+
+/// Kursseite in „Mein Unterricht“; ohne [firstHalf] das laufende Halbjahr.
+/// [id] trägt bei Elternkonten schon „&p=Kind“ (CourseItem.id). Hier statt
+/// in der Seite, weil auch der Abruf im Hintergrund sie braucht
+/// (notify_task.dart).
+String courseUrl(String id, {required bool firstHalf}) =>
+    'meinunterricht.php?a=sus_view&id=$id${firstHalf ? '&halb=1' : ''}';

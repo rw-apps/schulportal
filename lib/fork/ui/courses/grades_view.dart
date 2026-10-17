@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:liblanis/liblanis.dart';
 
+import '../../courses_scan.dart';
 import '../../error_log.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
@@ -15,6 +16,7 @@ class GradesSource {
     required this.account,
     required this.courses,
     required this.load,
+    this.onCurrentLoaded,
   });
 
   /// Konto-Schlüssel für den Zwischenspeicher (LiveSnapshot.accountKey).
@@ -25,6 +27,12 @@ class GradesSource {
     required bool firstHalf,
   })
   load;
+
+  /// Nach einem Durchgang im laufenden Halbjahr mit allen bis dahin
+  /// geladenen Seiten – für die gespeicherte Auswertung (courses_scan.dart),
+  /// damit „Heute“ die Arbeiten kennt und der Hinweis im Hintergrund schon
+  /// Gesehenes nicht noch einmal meldet.
+  final void Function(Map<String, DetailedLesson> pages)? onCurrentLoaded;
 }
 
 /// „Noten“ im Bereich Unterricht (Vorschlag abgenommen 17.10.26): je
@@ -88,8 +96,9 @@ class GradesViewState extends State<GradesView> {
   void didUpdateWidget(GradesView oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Kursliste kam nach (erstes Laden) oder änderte sich: fehlende holen.
-    if (oldWidget.source.courses.length != widget.source.courses.length)
+    if (oldWidget.source.courses.length != widget.source.courses.length) {
       _load();
+    }
   }
 
   /// Neu laden (Ziehen zum Aktualisieren): Zwischenspeicher dieses
@@ -127,6 +136,9 @@ class GradesViewState extends State<GradesView> {
       setState(() => _done++);
     }
     if (mounted && run == _run) setState(() => _loading = false);
+    if (!firstHalf && todo.isNotEmpty) {
+      widget.source.onCurrentLoaded?.call(Map.of(pages));
+    }
   }
 
   void _half(bool first) {
@@ -169,6 +181,33 @@ class GradesViewState extends State<GradesView> {
       out.add(_Section(title: first ? t.semester1 : t.semester2));
     }
 
+    final pages = GradesCache.instance.pagesFor(_key);
+    final absent = absenceTotals([for (final c in courses) ?pages[c.id]]);
+    if (absent != null) {
+      out.add(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Sp.xs, Sp.s, Sp.xs, 0),
+          child: Text(
+            absent.excused + absent.missing == 0
+                ? t.absenceNone
+                : t.absenceTotals(absent.excused, absent.missing),
+            style: k.meta,
+          ),
+        ),
+      );
+    }
+
+    // Arbeiten nur im laufenden Halbjahr; die des 1. sind vorbei.
+    final now = widget.now ?? DateTime.now();
+    final exams = _firstHalf
+        ? const <ScanExam>[]
+        : upcomingExams(courses, pages, now);
+    if (exams.isNotEmpty) {
+      out
+        ..add(_Section(title: t.gradesExamsTitle))
+        ..add(_ExamCard(exams: exams));
+    }
+
     if (_loading) {
       out.add(
         Padding(
@@ -190,6 +229,9 @@ class GradesViewState extends State<GradesView> {
       );
     }
 
+    if (exams.isNotEmpty && o.withMarks.isNotEmpty) {
+      out.add(_Section(title: t.gradesTab));
+    }
     for (final s in o.withMarks) {
       out.add(_SubjectCard(item: s, onTap: widget.onOpen));
     }
@@ -357,6 +399,40 @@ class _SubjectCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Anstehende Arbeiten aller Fächer in einer Karte: Fach, Art und Stunden,
+/// rechts das Datum. Ursache: Auf der Kursseite steht jede nur im eigenen
+/// Fach – für die Wochenplanung zählt die Reihenfolge über alle Fächer.
+class _ExamCard extends StatelessWidget {
+  const _ExamCard({required this.exams});
+
+  final List<ScanExam> exams;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final t = context.t;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(Sp.l, Sp.s, Sp.l, Sp.s),
+      decoration: BoxDecoration(
+        color: k.p.card,
+        borderRadius: BorderRadius.circular(Rad.box),
+        boxShadow: k.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final e in exams)
+            ValueRow(
+              name: e.subject,
+              note: e.text,
+              value: formatDate(t, t.dateShort, e.day),
+            ),
+        ],
       ),
     );
   }

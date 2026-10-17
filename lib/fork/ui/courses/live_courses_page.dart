@@ -7,6 +7,7 @@ import 'package:lanis/applets/conversations/chat_pages.dart'
 import 'package:lanis/applets/lessons/student/upload_page.dart';
 import 'package:lanis/utils/file_operations.dart' as fo;
 
+import '../../courses_scan.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
 import '../nav.dart';
@@ -69,6 +70,11 @@ class LiveCoursesPage extends ConsumerWidget {
               courseUrl(c.id, firstHalf: firstHalf),
               force: true,
             ),
+            onCurrentLoaded: (pages) {
+              final save = s.setCourseScan;
+              if (save == null) return;
+              save(scanFrom(items, pages, DateTime.now(), old: s.courseScan));
+            },
           ),
           firstName: s.kids.isNotEmpty ? s.firstName : null,
           className: liveClassName(s),
@@ -177,8 +183,3 @@ class LiveCoursesPage extends ConsumerWidget {
     );
   }
 }
-
-/// Kursseite in „Mein Unterricht“; ohne [firstHalf] das laufende Halbjahr.
-/// [id] trägt bei Elternkonten schon „&p=Kind“ (CourseItem.id).
-String courseUrl(String id, {required bool firstHalf}) =>
-    'meinunterricht.php?a=sus_view&id=$id${firstHalf ? '&halb=1' : ''}';

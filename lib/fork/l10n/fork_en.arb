@@ -350,5 +350,12 @@
   "gradesWithout": "No grades yet",
   "gradesFailed": "{n, plural, =1{1 course could not be loaded.} other{{n} courses could not be loaded.}}",
   "marksCount": "{n, plural, =1{1 grade} other{{n} grades}}",
-  "gradesNoAverage": "No average: each teacher decides how grades are weighted."
+  "gradesNoAverage": "No average: each teacher decides how grades are weighted.",
+  "gradesExamsTitle": "Upcoming tests",
+  "absenceTotals": "Missed lessons this term: {excused} excused · {missing} missing",
+  "absenceNone": "No missed lessons this term.",
+  "courseNewsTitle": "New in lessons",
+  "courseNewsTitleFor": "New in {name}'s lessons",
+  "noticeNewMark": "New grade in {subject}",
+  "noticeNewExam": "{subject}: {kind} on {date} added"
 }

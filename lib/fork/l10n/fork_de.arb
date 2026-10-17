@@ -938,5 +938,49 @@
       }
     }
   },
-  "gradesNoAverage": "Ohne Durchschnitt: Wie Noten gewichtet werden, legt jede Lehrkraft selbst fest."
+  "gradesNoAverage": "Ohne Durchschnitt: Wie Noten gewichtet werden, legt jede Lehrkraft selbst fest.",
+  "gradesExamsTitle": "Nächste Arbeiten",
+  "absenceTotals": "Fehlstunden im Halbjahr: {excused} entschuldigt · {missing} fehlend",
+  "@absenceTotals": {
+    "placeholders": {
+      "excused": {
+        "type": "int"
+      },
+      "missing": {
+        "type": "int"
+      }
+    }
+  },
+  "absenceNone": "Keine Fehlstunden im Halbjahr.",
+  "courseNewsTitle": "Neu im Unterricht",
+  "courseNewsTitleFor": "Neu im Unterricht bei {name}",
+  "@courseNewsTitleFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeNewMark": "Neue Note in {subject}",
+  "@noticeNewMark": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeNewExam": "{subject}: {kind} am {date} eingetragen",
+  "@noticeNewExam": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      },
+      "kind": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -131,11 +131,16 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
         final merged =
             [
               for (final (i, (m, _)) in shown.indexed)
-                ...weekItemsFromCalendar(
-                  m.snapshot.calendar.content ?? const [],
+                ...withCourseExams(
+                  weekItemsFromCalendar(
+                    m.snapshot.calendar.content ?? const [],
+                    now,
+                    childIndex: i,
+                    className: liveClassName(m.snapshot),
+                  ),
+                  m.snapshot.courseScan,
                   now,
                   childIndex: i,
-                  className: liveClassName(m.snapshot),
                 ),
             ].indexed.toList()..sort((a, b) {
               final d = a.$2.day.compareTo(b.$2.day);

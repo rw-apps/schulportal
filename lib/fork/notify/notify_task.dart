@@ -9,11 +9,13 @@ import 'package:lanis/background_service.dart';
 import 'package:lanis/utils/applet_settings.dart';
 import 'package:lanis/utils/logger.dart';
 
+import '../courses_scan.dart';
 import '../l10n/l10n.dart';
 import '../lessons_parent.dart';
 import '../parent_support.dart';
 import '../ui/language.dart' show languageKey;
 import '../ui/live/live_data.dart';
+import '../ui/courses/courses_model.dart';
 import '../ui/plan/plan_from_lanis.dart' show subjectFullName;
 import '../ui/plan/plan_model.dart';
 import '../ui/today/today_from_lanis.dart' show classFromCourses;
@@ -176,4 +178,80 @@ Future<void> _run(
     remembered = rememberKeys(remembered, n.keys);
   }
   if (notices.isNotEmpty) s.setJsonList(sentNoticesSetting, remembered);
+
+  if (offers(Applets.byPhpUrl('meinunterricht.php')) && lessons.isNotEmpty) {
+    await _courseNews(
+      container: container,
+      s: s,
+      items: courseItemsFrom(lessons, ownNames: ownNames, plan: plan),
+      firstName: firstName,
+      t: t,
+      tools: tools,
+      now: now,
+    );
+  }
+}
+
+/// Ab dieser Stunde sieht der Hintergrund einmal täglich in die Kursmappen.
+/// Ursache: Lehrkräfte tragen Noten und Arbeitstermine meist nach dem
+/// Unterricht ein; ein Abruf am Morgen fände den Vortag, der Hinweis käme
+/// einen Tag zu spät.
+const courseScanHour = 15;
+
+/// Kennung der Meldung „Neu im Unterricht“ (notices.dart nutzt 1 und 2;
+/// sendMessage verlangt 0–10000).
+const courseNewsId = 3;
+
+/// Neue Noten und Arbeitstermine melden – höchstens einmal am Tag.
+///
+/// Lädt jede Kursseite des laufenden Halbjahrs (nacheinander, wie
+/// GradesView) und vergleicht mit der gespeicherten Auswertung
+/// (courses_scan.dart, newsSince). Die Meldung nennt nur das Fach, nie die
+/// Note. Ursache: Hinweise stehen auch auf dem Sperrbildschirm. Grenze: rund
+/// 15 Abrufe je Konto und Tag; schlagen alle fehl, versucht es der nächste
+/// Lauf erneut, schlagen einzelne fehl, behalten diese Kurse ihren alten
+/// Stand (scanFrom).
+Future<void> _courseNews({
+  required ProviderContainer container,
+  required TypedSettings s,
+  required List<CourseItem> items,
+  required String firstName,
+  required ForkL10n t,
+  required BackgroundTaskToolkit tools,
+  required DateTime now,
+}) async {
+  final old = storedCourseScan(s);
+  final today = DateTime(now.year, now.month, now.day);
+  if (now.hour < courseScanHour) return;
+  if (old != null && !old.day.isBefore(today)) return;
+  final parser = container.read(lessonsStudentParserProvider);
+  final pages = <String, DetailedLesson>{};
+  for (final c in items) {
+    try {
+      pages[c.id] = await parser.getDetailedCourseView(
+        courseUrl(c.id, firstHalf: false),
+        force: true,
+      );
+    } catch (e) {
+      backgroundLogger.w('Kursseite übersprungen: ${e.runtimeType}');
+    }
+  }
+  if (pages.isEmpty) return;
+  final fresh = scanFrom(items, pages, now, old: old);
+  final news = newsSince(old, fresh, {for (final c in items) c.id: c.title});
+  storeCourseScan(s, fresh);
+  final lines = [
+    for (final subject in news.marks) t.noticeNewMark(subject),
+    for (final e in news.exams)
+      t.noticeNewExam(e.subject, e.kind, formatDate(t, t.dateShort, e.day)),
+  ];
+  if (lines.isEmpty) return;
+  await tools.sendMessage(
+    title: firstName.isEmpty
+        ? t.courseNewsTitle
+        : t.courseNewsTitleFor(firstName),
+    message: lines.join('\n'),
+    id: courseNewsId,
+    importance: Importance.defaultImportance,
+  );
 }
