@@ -19,6 +19,7 @@ import 'course_detail_model.dart';
 import 'course_detail_page.dart';
 import 'courses_model.dart';
 import 'courses_page.dart';
+import 'grades_view.dart';
 
 /// „Unterricht“ mit echten Daten (LiveDataScope, Quelle „Mein Unterricht“).
 /// Antippen öffnet die neue Kursseite ([CourseDetailPage]); sie lädt die
@@ -55,8 +56,20 @@ class LiveCoursesPage extends ConsumerWidget {
           ownNames: s.ownNames,
           plan: live?.plan,
         );
+        // Parser hier lesen, nicht im späteren Abruf: Die Übersicht lädt
+        // asynchron weiter, auch wenn die Seite inzwischen neu gebaut wurde
+        // (ref nach dem Abbau = Absturz 9349, siehe nav.dart _once).
+        final parser = ref.read(lessonsStudentParserProvider);
         return CoursesPage(
           items: items,
+          grades: GradesSource(
+            account: s.accountKey,
+            courses: items,
+            load: (c, {required firstHalf}) => parser.getDetailedCourseView(
+              courseUrl(c.id, firstHalf: firstHalf),
+              force: true,
+            ),
+          ),
           firstName: s.kids.isNotEmpty ? s.firstName : null,
           className: liveClassName(s),
           loading: s.lessons.content == null && !s.lessons.failed,
@@ -126,7 +139,7 @@ class LiveCoursesPage extends ConsumerWidget {
         extraOffer: i.extra,
       ),
       load: ({required bool firstHalf}) => parser.getDetailedCourseView(
-        'meinunterricht.php?a=sus_view&id=${i.id}${firstHalf ? '&halb=1' : ''}',
+        courseUrl(i.id, firstHalf: firstHalf),
         force: true,
       ),
       onWrite: s.offers('nachrichten.php')
@@ -164,3 +177,8 @@ class LiveCoursesPage extends ConsumerWidget {
     );
   }
 }
+
+/// Kursseite in „Mein Unterricht“; ohne [firstHalf] das laufende Halbjahr.
+/// [id] trägt bei Elternkonten schon „&p=Kind“ (CourseItem.id).
+String courseUrl(String id, {required bool firstHalf}) =>
+    'meinunterricht.php?a=sus_view&id=$id${firstHalf ? '&halb=1' : ''}';

@@ -341,5 +341,14 @@
   "enterLessonTimes": "Enter lesson times",
   "ownLessonTimes": "Lesson times entered by you",
   "changeAction": "Change",
-  "pauseAfter": "Break after"
+  "pauseAfter": "Break after",
+  "coursesTab": "Courses",
+  "gradesTab": "Grades",
+  "gradesLoading": "Loading grades … {done} of {total}",
+  "gradesNone": "No grades entered yet.",
+  "gradesNoneHint": "Teachers often enter grades in the school portal late or not at all. As soon as a grade is there, it shows up here.",
+  "gradesWithout": "No grades yet",
+  "gradesFailed": "{n, plural, =1{1 course could not be loaded.} other{{n} courses could not be loaded.}}",
+  "marksCount": "{n, plural, =1{1 grade} other{{n} grades}}",
+  "gradesNoAverage": "No average: each teacher decides how grades are weighted."
 }

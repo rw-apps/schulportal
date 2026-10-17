@@ -3,6 +3,7 @@ import 'package:liblanis/liblanis.dart';
 
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import '../segments.dart';
 import '../today/today_model.dart' show WeekItem;
 import '../today/today_page.dart' show dayDiff, relativeDay;
 import 'course_detail_model.dart';
@@ -146,7 +147,13 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
       _Header(course: c, tone: f),
       if (_hasFirstHalf) ...[
         const SizedBox(height: Sp.m),
-        _HalfSwitch(firstHalf: _firstHalf, tone: f, onChanged: _half),
+        PillSegments(
+          labels: [t.semester1, t.semester2],
+          selected: _firstHalf ? 0 : 1,
+          onChanged: (i) => _half(i == 0),
+          bg: f.bg,
+          ink: f.ink,
+        ),
       ],
     ];
 
@@ -451,7 +458,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
           title: t.blockMarks,
           children: [
             for (final m in d.marks)
-              _ValueRow(
+              ValueRow(
                 name: m.name,
                 note: [
                   m.date,
@@ -578,52 +585,6 @@ class _Header extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _HalfSwitch extends StatelessWidget {
-  const _HalfSwitch({
-    required this.firstHalf,
-    required this.tone,
-    required this.onChanged,
-  });
-
-  final bool firstHalf;
-  final FachTone tone;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    final t = context.t;
-    Widget seg(String label, bool first) {
-      final sel = firstHalf == first;
-      return Expanded(
-        child: Material(
-          color: sel ? k.p.card : Colors.transparent,
-          borderRadius: BorderRadius.circular(Rad.pill),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(Rad.pill),
-            onTap: () => onChanged(first),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: Sp.s),
-              child: Center(
-                child: Text(label, style: k.chipLabel(sel, tone.ink)),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(Sp.xxs + 1),
-      decoration: BoxDecoration(
-        color: tone.bg,
-        borderRadius: BorderRadius.circular(Rad.pill),
-      ),
-      child: Row(children: [seg(t.semester1, true), seg(t.semester2, false)]),
     );
   }
 }
@@ -1079,8 +1040,11 @@ class _Chip extends StatelessWidget {
   }
 }
 
-class _ValueRow extends StatelessWidget {
-  const _ValueRow({
+/// Zeile „Name / Notiz … Wert“ (Leistungen, Leistungskontrollen); auch in
+/// der Notenübersicht (grades_view.dart), damit beide gleich aussehen.
+class ValueRow extends StatelessWidget {
+  const ValueRow({
+    super.key,
     required this.name,
     required this.note,
     required this.value,

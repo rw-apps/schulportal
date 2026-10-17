@@ -341,5 +341,14 @@
   "enterLessonTimes": "Ders saatlerini gir",
   "ownLessonTimes": "Kendi girdiğiniz ders saatleri",
   "changeAction": "Değiştir",
-  "pauseAfter": "Sonraki teneffüs"
+  "pauseAfter": "Sonraki teneffüs",
+  "coursesTab": "Dersler",
+  "gradesTab": "Notlar",
+  "gradesLoading": "Notlar yükleniyor … {done}/{total}",
+  "gradesNone": "Henüz not girilmemiş.",
+  "gradesNoneHint": "Öğretmenler notları okul portalına çoğu zaman geç girer ya da hiç girmez. Bir not girildiğinde burada görünür.",
+  "gradesWithout": "Notu olmayanlar",
+  "gradesFailed": "{n} ders yüklenemedi.",
+  "marksCount": "{n} not",
+  "gradesNoAverage": "Ortalama yok: Notların ağırlığını her öğretmen kendisi belirler."
 }

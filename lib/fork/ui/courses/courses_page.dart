@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import '../segments.dart';
 import 'courses_model.dart';
+import 'grades_view.dart';
 
 /// Höchstens drei Namen, sonst zwei und „+n“. Ursache: Das Ganztagsangebot
 /// von Schule A nennt sechs Lehrkräfte; die Zeile lief über vier Zeilen.
@@ -22,6 +24,9 @@ String lastNameOf(String display) {
 ///
 /// Grenze: Das Portal zeigt in der Übersicht nur den neuesten Eintrag je
 /// Kurs; ältere Hausaufgaben stehen auf der Kursseite (Antippen).
+///
+/// Mit [grades] oben der Umschalter „Kurse | Noten“ (abgenommen 17.10.26);
+/// „Noten“ zeigt GradesView in derselben Liste unter Titel und Kind.
 class CoursesPage extends StatefulWidget {
   const CoursesPage({
     super.key,
@@ -31,6 +36,7 @@ class CoursesPage extends StatefulWidget {
     this.onOpen,
     this.onRefresh,
     this.loading = false,
+    this.grades,
   });
 
   final List<CourseItem> items;
@@ -40,12 +46,34 @@ class CoursesPage extends StatefulWidget {
   final Future<void> Function()? onRefresh;
   final bool loading;
 
+  /// Quelle der Notenübersicht; null = kein Umschalter (Vorschau, kein
+  /// „Mein Unterricht“).
+  final GradesSource? grades;
+
   @override
   State<CoursesPage> createState() => _CoursesPageState();
 }
 
 class _CoursesPageState extends State<CoursesPage> {
   bool _showExtra = false;
+
+  /// „Noten“ gewählt. In PageStorage, damit die Wahl beim Wechsel des Kindes
+  /// bleibt – FamilySwitch baut die Seite je Konto neu (KeyedSubtree), der
+  /// Speicher hängt aber am Reiter.
+  static const _modeId = 'courses-grades';
+  late bool _grades =
+      PageStorage.maybeOf(context)?.readState(context, identifier: _modeId)
+          as bool? ??
+      false;
+  final _gradesKey = GlobalKey<GradesViewState>();
+
+  void _mode(bool grades) {
+    if (grades == _grades) return;
+    setState(() => _grades = grades);
+    PageStorage.maybeOf(
+      context,
+    )?.writeState(context, grades, identifier: _modeId);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +96,8 @@ class _CoursesPageState extends State<CoursesPage> {
       if (subjects.isNotEmpty) t.subjectsCount(subjects.length),
     ].join(' · ');
 
+    final grades = widget.grades;
+    final showGrades = grades != null && _grades;
     final children = <Widget>[
       Padding(
         padding: const EdgeInsets.only(left: Sp.xs),
@@ -78,6 +108,48 @@ class _CoursesPageState extends State<CoursesPage> {
           padding: const EdgeInsets.only(left: Sp.xs),
           child: Text(meta, style: k.meta),
         ),
+      if (grades != null)
+        Padding(
+          padding: const EdgeInsets.only(top: Sp.l),
+          child: PillSegments(
+            labels: [t.coursesTab, t.gradesTab],
+            selected: showGrades ? 1 : 0,
+            onChanged: (i) => _mode(i == 1),
+            bg: k.p.inset,
+            ink: k.p.ink,
+          ),
+        ),
+      if (showGrades)
+        GradesView(key: _gradesKey, source: grades, onOpen: widget.onOpen)
+      else
+        ..._courseList(k, t, items, open, subjects, extra),
+    ];
+
+    final view = ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(
+        Sp.page,
+        MediaQuery.paddingOf(context).top + Sp.xl,
+        Sp.page,
+        bottom + Sp.xl,
+      ),
+      children: children,
+    );
+    final r = showGrades
+        ? () async => _gradesKey.currentState?.reload()
+        : widget.onRefresh;
+    return r == null ? view : RefreshIndicator(onRefresh: r, child: view);
+  }
+
+  List<Widget> _courseList(
+    Kit k,
+    ForkL10n t,
+    List<CourseItem> items,
+    List<CourseItem> open,
+    List<CourseItem> subjects,
+    List<CourseItem> extra,
+  ) {
+    return [
       _Section(title: t.openHomeworkTitle),
       if (open.isEmpty)
         Padding(
@@ -125,19 +197,6 @@ class _CoursesPageState extends State<CoursesPage> {
             ),
       ],
     ];
-
-    final view = ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(
-        Sp.page,
-        MediaQuery.paddingOf(context).top + Sp.xl,
-        Sp.page,
-        bottom + Sp.xl,
-      ),
-      children: children,
-    );
-    final r = widget.onRefresh;
-    return r == null ? view : RefreshIndicator(onRefresh: r, child: view);
   }
 }
 

@@ -905,5 +905,38 @@
   "enterLessonTimes": "Stundenzeiten eintragen",
   "ownLessonTimes": "Selbst eingetragene Stundenzeiten",
   "changeAction": "Ändern",
-  "pauseAfter": "Pause danach"
+  "pauseAfter": "Pause danach",
+  "coursesTab": "Kurse",
+  "gradesTab": "Noten",
+  "gradesLoading": "Noten werden geladen … {done} von {total}",
+  "@gradesLoading": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "gradesNone": "Noch keine Noten eingetragen.",
+  "gradesNoneHint": "Lehrkräfte tragen Noten im Schulportal oft erst spät oder gar nicht ein. Sobald eine Note da ist, erscheint sie hier.",
+  "gradesWithout": "Ohne Noten",
+  "gradesFailed": "{n, plural, =1{1 Kurs konnte nicht geladen werden.} other{{n} Kurse konnten nicht geladen werden.}}",
+  "@gradesFailed": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "marksCount": "{n, plural, =1{1 Note} other{{n} Noten}}",
+  "@marksCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "gradesNoAverage": "Ohne Durchschnitt: Wie Noten gewichtet werden, legt jede Lehrkraft selbst fest."
 }
