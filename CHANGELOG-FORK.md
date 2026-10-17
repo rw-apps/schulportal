@@ -1,5 +1,13 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9331**
+
+- **Einstellungen neu** im Stil der App, nur noch das Nötige: Konto (Benutzerdaten, wechseln/hinzufügen, abmelden), Benachrichtigungen (an/aus, Vertretungen, Nachrichten, Zeitfenster), Darstellung (hell/dunkel/wie das Handy, Schriftgröße), Daten (Termine abonnieren, Zwischenspeicher), Über die App (Version, Neuerungen, Datenschutz, Quellcode und Lizenz), Fehlersuche (Debug-Export, eingeklappt). Entfallen: Sprache, Farbschemata, Moodle, Stundenplan-Anpassung, Lanis-Mitwirkende.
+- **Bisherige Ansicht entfernt:** Die App startet immer mit der neuen Oberfläche; „Alle Funktionen“ und der Start-Schalter sind weg.
+- **Kalender zeigt Vertretungen:** Ausfall, Vertretung und Raumwechsel der laufenden Woche stehen jetzt auch in Tag und Woche, nicht nur unter „Heute“.
+- **Schriftgröße gilt überall**, auch auf Kursseite, Unterhaltung, Krankmeldung und Einstellungen.
+- „Mehr“ ist aufgeräumt: Krank melden, Essen bestellen, Lernplattform (falls angeboten), Schulportal im Browser, Einstellungen.
+
 **4.1.0+9330**
 
 - **Datenschutz:** Schulnamen, Schulnummer, Räume und der Caterer stehen nicht mehr im öffentlichen Code. Die Fachnamen-Zuordnung „TXT → Projekt Text“ stand fest im Code an der Schulnummer; jetzt erkennt die App den Fachnamen allgemein über die Lehrkräfte des passenden Kurses in „Mein Unterricht“.

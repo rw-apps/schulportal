@@ -9,6 +9,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lanis/fork/ui/font_step.dart';
 import 'package:lanis/applets/conversations/view/shared.dart';
 import 'package:lanis/background_service.dart';
 import 'package:lanis/bridge/lanis_bootstrap.dart';
@@ -66,9 +67,7 @@ Future<void> _startApp() async {
     runApp(
       ProviderScope(
         overrides: overrides,
-        child: Phoenix(
-          child: SentryWidget(child: const App()),
-        ),
+        child: Phoenix(child: SentryWidget(child: const App())),
       ),
     );
   } catch (e, st) {
@@ -152,10 +151,8 @@ class App extends ConsumerWidget {
           }
         }
 
-        final lightTheme =
-            theme.lightTheme ?? Themes.standardTheme.lightTheme!;
-        final darkTheme =
-            theme.darkTheme ?? Themes.standardTheme.darkTheme!;
+        final lightTheme = theme.lightTheme ?? Themes.standardTheme.lightTheme!;
+        final darkTheme = theme.darkTheme ?? Themes.standardTheme.darkTheme!;
         if (mode == ThemeMode.light ||
             (mode == ThemeMode.system &&
                 MediaQuery.of(context).platformBrightness ==
@@ -173,6 +170,14 @@ class App extends ConsumerWidget {
           darkTheme: darkTheme,
           themeMode: mode,
           routerConfig: router,
+          // Fork: Schriftgröße für alle Seiten (fork/ui/font_step.dart).
+          builder: (context, child) => MediaQuery(
+            data: scaledFor(
+              MediaQuery.of(context),
+              ref.watch(fontStepProvider),
+            ),
+            child: child ?? const SizedBox.shrink(),
+          ),
           localizationsDelegates: const [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
@@ -222,10 +227,7 @@ Widget errorWidget(FlutterErrorDetails details, {BuildContext? context}) {
               fontSize: 16,
               color: Color.fromARGB(255, 179, 38, 30),
             ),
-            child: Text(
-              'Problem: $error',
-              textAlign: TextAlign.center,
-            ),
+            child: Text('Problem: $error', textAlign: TextAlign.center),
           ),
           const SizedBox(height: 24),
           FilledButton(

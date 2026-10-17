@@ -157,7 +157,7 @@ void main() {
     }
     await t.tap(find.text('Mehr'));
     await t.pumpAndSettle();
-    expect(find.text('Schriftgröße'), findsOneWidget);
+    expect(find.text('Mehr'), findsNWidgets(2), reason: 'Titel und Leiste');
     await t.tap(find.text('Kalender'));
     await t.pumpAndSettle();
     await t.tap(find.text('Termine'));
@@ -170,10 +170,10 @@ void main() {
     await t.pumpWidget(_app(b: Brightness.light));
     await t.tap(find.text('Mehr'));
     await t.pumpAndSettle();
-    expect(find.text('Schriftgröße'), findsOneWidget);
+    expect(find.text('Mehr'), findsNWidgets(2));
     await t.binding.handlePopRoute();
     await t.pumpAndSettle();
-    expect(find.text('Schriftgröße'), findsNothing);
+    expect(find.text('Mehr'), findsOneWidget);
     expect(find.textContaining('Guten'), findsOneWidget);
   });
 }

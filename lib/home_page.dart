@@ -45,23 +45,14 @@ String firstSupportedHomePathFor({
 
 /// Startseite nach Anmeldung, Kontowechsel usw.
 ///
-/// Fork: die neue Oberfläche ([forkHomePath]), solange sie unter „Mehr“ als
-/// Start gewählt ist (Standard, fork/start.dart); sonst wie bei Lanis der
-/// erste unterstützte Bereich ([lanisHomePath]).
-String firstSupportedHomePath(WidgetRef ref) =>
-    newUiIsStart(ref.read(sharedOverAccountSettingsProvider))
-    ? forkHomePath
-    : lanisHomePath(ref);
+/// Fork: immer die neue Oberfläche ([forkHomePath]). Die bisherige Ansicht
+/// ist seit 4.1.0+9331 nicht mehr wählbar (Entscheidung 17.10.26); ihre
+/// Seiten bleiben nur dort, wo die neue Oberfläche sie öffnet (Kursseite,
+/// Unterhaltung).
+String firstSupportedHomePath(WidgetRef ref) => forkHomePath;
 
 /// Same as [firstSupportedHomePath] for non-widget [Ref] (e.g. go_router).
-String firstSupportedHomePathFromRef(Ref ref) =>
-    newUiIsStart(ref.read(sharedOverAccountSettingsProvider))
-    ? forkHomePath
-    : firstSupportedHomePathFor(
-        supported: ref.read(supportedAppletPhpUrlsProvider),
-        accountType:
-            ref.read(activeAccountProvider)?.accountType ?? AccountType.student,
-      );
+String firstSupportedHomePathFromRef(Ref ref) => forkHomePath;
 
 /// Erster unterstützter Bereich der bisherigen (Lanis-)Ansicht.
 String lanisHomePath(WidgetRef ref) {

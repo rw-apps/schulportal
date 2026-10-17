@@ -156,6 +156,77 @@ bool _concerns(Substitution s, PlanLesson? lesson) {
   return KidPlan.kuerzelOf(lesson.teacher).contains(absent);
 }
 
+/// Der Plan mit den Vertretungen der angezeigten Woche ([week], Mo–Fr) –
+/// für Tag und Woche im Kalender.
+///
+/// Ursache: Mit dem Wegfall der bisherigen Ansicht (Entscheidung 17.10.26)
+/// gab es den Vertretungsplan sonst nur noch auszugsweise in „Heute“. Die
+/// Zuordnung ist dieselbe wie dort (Stundennummer, Lehrkraft der Gruppe,
+/// classifySubstitution). Grenze: Bei offener Gruppenwahl („2 Gruppen –
+/// wählen“) wird die Zeile jeder passenden Gruppe angehängt; Tage außerhalb
+/// von [week] bleiben unberührt.
+KidPlan planWithSubstitutions({
+  required KidPlan plan,
+  required List<SubstitutionDay> days,
+  required List<DateTime> week,
+}) {
+  if (days.isEmpty) return plan;
+  final out = [
+    for (final d in plan.days) [for (final c in d) List.of(c.options)],
+  ];
+  String nameOf(String k) => plan.teacherFull(k) ?? k;
+  var changed = false;
+  for (final d in days) {
+    final date = DateTime(d.dateTime.year, d.dateTime.month, d.dateTime.day);
+    final wd = week.indexWhere(
+      (w) => w.year == date.year && w.month == date.month && w.day == date.day,
+    );
+    if (wd < 0 || wd >= out.length) continue;
+    for (final s in d.substitutions) {
+      final hours = hoursOf(s.stunde);
+      final code = (_plain(s.fach) ?? _plain(s.fach_alt))?.toUpperCase();
+      for (var i = 0; i < plan.slots.length && i < out[wd].length; i++) {
+        if (!hours.contains(slotNumber(plan.slots[i].label))) continue;
+        final opts = out[wd][i];
+        for (var j = 0; j < opts.length; j++) {
+          final o = opts[j];
+          if (code != null && o.short.toUpperCase() != code) continue;
+          if (!_concerns(s, o)) continue;
+          final c = classifySubstitution(
+            s,
+            lessonRoom: o.room,
+            lessonTeachers: KidPlan.kuerzelOf(o.teacher),
+            nameOf: nameOf,
+          );
+          // Ausfall schlägt alles; sonst bleibt die erste Angabe.
+          if (o.change != null && c.kind != ChangeKind.cancelled) continue;
+          opts[j] = PlanLesson(
+            subject: o.subject,
+            short: o.short,
+            room: c.kind == ChangeKind.roomChange
+                ? (_plain(s.raum) ?? o.room)
+                : o.room,
+            teacher: o.teacher,
+            change: c.kind,
+            changeDetail: c.detail,
+          );
+          changed = true;
+        }
+      }
+    }
+  }
+  if (!changed) return plan;
+  return KidPlan(
+    firstName: plan.firstName,
+    colorIndex: plan.colorIndex,
+    slots: plan.slots,
+    days: [
+      for (final d in out) [for (final o in d) PlanCell(o)],
+    ],
+    teacherNames: plan.teacherNames,
+  );
+}
+
 /// Vertretungen eines Kindes: als [ChangeItem]s (Kasten, Wochenleiste) und
 /// für [today] eingearbeitet in die Abschnitte des Tages.
 ///

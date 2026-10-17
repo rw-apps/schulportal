@@ -149,6 +149,45 @@ void main() {
     expect(di.detail, 'Fritz Fink');
   });
 
+  test(
+    'Kalender: Vertretungen der Woche im Plan, nur die betroffene Gruppe',
+    () {
+      final week = [for (var i = 0; i < 5; i++) DateTime(2026, 10, 19 + i)];
+      final p = planWithSubstitutions(
+        plan: plan,
+        week: week,
+        days: [
+          _day('19.10.2026', [
+            _sub('19.10.2026', '2', art: 'Entfall', fach: 'TXT', lehrer: 'CCC'),
+          ]),
+          _day('20.10.2026', [
+            _sub(
+              '20.10.2026',
+              '1 - 2',
+              art: 'Raumänderung',
+              fach: 'SP',
+              raum: 'H2',
+              raumAlt: 'H',
+            ),
+          ]),
+          _day('03.11.2026', [_sub('03.11.2026', '1', art: 'Entfall')]),
+        ],
+      );
+      final mo2 = p.days[0][1].options;
+      expect(
+        mo2.firstWhere((o) => o.teacher == 'CCC').change,
+        ChangeKind.cancelled,
+      );
+      expect(mo2.firstWhere((o) => o.teacher == 'DDD').change, isNull);
+      expect(p.days[1][0].options.single.room, 'H2');
+      expect(p.days[1][1].options.single.change, ChangeKind.roomChange);
+      expect(
+        planWithSubstitutions(plan: plan, week: week, days: const []),
+        same(plan),
+      );
+    },
+  );
+
   test('Vertretung der anderen Gruppe wird übergangen', () {
     final r = applySubstitutions(
       plan: plan,

@@ -1,17 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:liblanis/liblanis.dart'
-    show
-        AccountType,
-        TypedSettings,
-        activeAccountProvider,
-        sharedOverAccountSettingsProvider,
-        supportedAppletPhpUrlsProvider;
 
 import 'package:lanis/applets/external_definitions.dart';
 import 'package:lanis/fork/start.dart';
-import 'package:lanis/home_page.dart' show firstSupportedHomePathFor;
 import 'package:lanis/utils/deep_link.dart';
 
 import '../../school_links.dart';
@@ -23,6 +14,7 @@ import '../messages/live_messages_page.dart';
 import '../messages/messages_page.dart';
 import '../more/more_page.dart';
 import '../plan/live_plan_page.dart';
+import '../settings/settings_page.dart';
 import '../plan/plan_model.dart' show GroupChoice;
 import '../plan/plan_page.dart';
 import '../today/live_today_page.dart';
@@ -61,42 +53,10 @@ class PreviewShell extends StatefulWidget {
 
 class _PreviewShellState extends State<PreviewShell> {
   ShellTab _tab = ShellTab.today;
-  KitFontStep _font = KitFontStep.normal;
 
-  /// Geräteweit (nicht je Konto): Die Schriftgröße ist eine Frage des
-  /// Handys und der Augen, nicht des Schulkontos.
-  static const _fontKey = 'fork-ui/font-step';
-
-  TypedSettings? _deviceSettings() {
-    if (!widget.liveData) return null;
-    try {
-      return ProviderScope.containerOf(
-        context,
-        listen: false,
-      ).read(sharedOverAccountSettingsProvider);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final settings = _deviceSettings();
-      final stored = settings?.getString(_fontKey);
-      if (!mounted || settings == null) return;
-      setState(() {
-        if (stored != null) _font = KitFontStep.parse(stored);
-        _startNew = newUiIsStart(settings);
-      });
-    });
-  }
-
-  void _setFont(KitFontStep step) {
-    setState(() => _font = step);
-    _deviceSettings()?.setString(_fontKey, step.name);
-  }
+  /// Nur Tests/Beispieldaten: eigene Schriftstufe. Mit echten Daten setzt
+  /// sie die App für alle Seiten (fork/ui/font_step.dart).
+  final KitFontStep _font = KitFontStep.normal;
 
   final FamilyToday _data = demoFamily();
   final _plans = demoPlans();
@@ -121,31 +81,6 @@ class _PreviewShellState extends State<PreviewShell> {
     }
     Navigator.of(context).maybePop();
     router?.go(path);
-  }
-
-  bool? _startNew;
-
-  void _setStartNew(bool v) {
-    setState(() => _startNew = v);
-    _deviceSettings()?.setBool(newUiStartKey, v);
-  }
-
-  /// Bisherige Ansicht (Lanis-Startbereich) öffnen.
-  void _openAll() {
-    if (!widget.asRoot) {
-      Navigator.of(context).maybePop();
-      return;
-    }
-    try {
-      final c = ProviderScope.containerOf(context, listen: false);
-      _goOld(
-        firstSupportedHomePathFor(
-          supported: c.read(supportedAppletPhpUrlsProvider),
-          accountType:
-              c.read(activeAccountProvider)?.accountType ?? AccountType.student,
-        ),
-      );
-    } catch (_) {}
   }
 
   void _select(ShellTab t) => setState(() => _tab = t);
@@ -212,28 +147,18 @@ class _PreviewShellState extends State<PreviewShell> {
           label: 'Lernplattform (Moodle)',
           onTap: () => _goOld(SettingsDeepLinks.moodle),
         ),
-      if (s.offers('kalender.php'))
-        MoreEntry(
-          icon: Icons.event_available_outlined,
-          label: 'Termine in eigenen Kalender',
-          detail: 'Schultermine abonnieren',
-          onTap: () => _goOld(SettingsDeepLinks.calendarExport),
-        ),
       MoreEntry(
         icon: Icons.open_in_browser,
         label: 'Schulportal im Browser',
         onTap: () => openLanisDefinition.action?.call(context),
       ),
       MoreEntry(
-        icon: Icons.apps,
-        label: 'Alle Funktionen',
-        detail: 'Bisherige Ansicht',
-        onTap: _openAll,
-      ),
-      MoreEntry(
         icon: Icons.settings_outlined,
         label: 'Einstellungen',
-        onTap: () => _goOld(SettingsDeepLinks.home),
+        detail: 'Konto, Benachrichtigungen, Darstellung, Datenschutz',
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const ForkSettingsPage()),
+        ),
       ),
     ];
   }
@@ -249,13 +174,7 @@ class _PreviewShellState extends State<PreviewShell> {
       ShellTab.calendar => const LiveCalendarPage(),
       ShellTab.courses => const LiveCoursesPage(),
       ShellTab.messages => const LiveMessagesPage(),
-      ShellTab.more => MorePage(
-        font: _font,
-        onFont: _setFont,
-        entries: _liveEntries(context, s),
-        startNew: _startNew,
-        onStartNew: _setStartNew,
-      ),
+      ShellTab.more => MorePage(entries: _liveEntries(context, s)),
     };
   }
 
@@ -281,7 +200,7 @@ class _PreviewShellState extends State<PreviewShell> {
       items: demoMessages(),
       onCompose: () => _notYet('Neue Nachricht'),
     ),
-    ShellTab.more => MorePage(font: _font, onFont: _setFont),
+    ShellTab.more => const MorePage(),
   };
 
   @override
@@ -305,7 +224,9 @@ class _PreviewShellState extends State<PreviewShell> {
       ),
     );
     return MediaQuery(
-      data: mq.copyWith(textScaler: TextScaler.linear(system * _font.factor)),
+      data: widget.liveData
+          ? mq
+          : mq.copyWith(textScaler: TextScaler.linear(system * _font.factor)),
       child: Theme(
         data: theme.copyWith(
           textTheme: theme.textTheme.apply(fontFamily: kitFont),

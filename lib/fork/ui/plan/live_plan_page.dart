@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../live/live_data.dart';
-import '../today/today_from_lanis.dart' show weekItemsFromCalendar;
+import '../today/today_from_lanis.dart'
+    show planWithSubstitutions, weekItemsFromCalendar;
+import '../today/today_page.dart' show schoolWeek;
 import 'plan_page.dart';
 
 /// Bereich „Kalender“ mit echten Daten: Stunden des Kindes (Gruppenwahl und
@@ -19,6 +21,11 @@ class LiveCalendarPage extends StatelessWidget {
       builder: (context, s) {
         final (:plan, :auto) = livePlanOf(s)!;
         final now = DateTime.now();
+        final withSubs = planWithSubstitutions(
+          plan: plan,
+          days: s.substitutions.content?.days ?? const [],
+          week: schoolWeek(now),
+        );
         final events = s.offers('kalender.php')
             ? weekItemsFromCalendar(
                 s.calendar.content ?? const [],
@@ -31,7 +38,7 @@ class LiveCalendarPage extends StatelessWidget {
             : null;
         return PlanPage(
           key: ValueKey('plan-${s.session.account.localId}'),
-          plans: [plan],
+          plans: [withSubs],
           now: now,
           initialChoices: {0: s.userChoice},
           onChoicesChanged: (c) => s.setUserChoice(c[0] ?? const {}),

@@ -18,24 +18,11 @@ class MoreEntry {
   final VoidCallback onTap;
 }
 
-/// Bereich „Mehr“: Einträge, darunter die Schriftgröße der Oberfläche.
+/// Bereich „Mehr“: Dienste und Aktionen; Einstellungen als eigener Eintrag.
 class MorePage extends StatelessWidget {
-  const MorePage({
-    super.key,
-    required this.font,
-    required this.onFont,
-    this.entries = const [],
-    this.startNew,
-    this.onStartNew,
-  });
+  const MorePage({super.key, this.entries = const []});
 
-  final KitFontStep font;
-  final ValueChanged<KitFontStep> onFont;
   final List<MoreEntry> entries;
-
-  /// Startet die App mit der neuen Oberfläche? null = Schalter fehlt.
-  final bool? startNew;
-  final ValueChanged<bool>? onStartNew;
 
   @override
   Widget build(BuildContext context) {
@@ -52,73 +39,6 @@ class MorePage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: Sp.s),
               child: _EntryTile(entry: e),
-            ),
-          if (startNew != null) ...[
-            const SizedBox(height: Sp.s),
-            Material(
-              color: k.p.card,
-              borderRadius: BorderRadius.circular(Rad.signal),
-              child: SwitchListTile(
-                value: startNew!,
-                onChanged: onStartNew,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(Rad.signal),
-                ),
-                title: Text(
-                  'Mit der neuen Oberfläche starten',
-                  style: k.planSubject(k.p.ink),
-                ),
-                subtitle: Text(
-                  startNew!
-                      ? 'Aus: Die App startet wieder mit der bisherigen Ansicht.'
-                      : 'Die App startet mit der bisherigen Ansicht.',
-                  style: k.planMeta(k.p.muted),
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: Sp.l),
-          Text('Schriftgröße', style: k.section),
-          const SizedBox(height: Sp.xs),
-          Text(
-            'Gilt für die neue Oberfläche, zusätzlich zur Einstellung des '
-            'Handys.',
-            style: k.meta,
-          ),
-          const SizedBox(height: Sp.m),
-          for (final step in KitFontStep.values)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Sp.s),
-              child: Material(
-                color: step == font ? k.kid(0).tint : k.p.card,
-                borderRadius: BorderRadius.circular(Rad.signal),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(Rad.signal),
-                  onTap: () => onFont(step),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: Sp.l,
-                      vertical: Sp.m,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            step.label,
-                            style: k.planSubject(k.p.ink),
-                          ),
-                        ),
-                        if (step == font)
-                          Icon(
-                            Icons.check,
-                            size: Sz.icon,
-                            color: k.kid(0).label,
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
             ),
         ],
       ),
