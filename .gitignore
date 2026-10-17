@@ -77,3 +77,6 @@ generated/
 
 # Fork: aus lib/fork/l10n/*.arb erzeugt (flutter pub get, l10n.yaml)
 lib/fork/l10n/gen/
+
+# Fork: lokale Tests mit echten Portaldaten – nie ins Repository
+test/_local/

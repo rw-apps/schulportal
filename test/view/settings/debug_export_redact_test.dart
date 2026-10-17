@@ -18,4 +18,23 @@ void main() {
   test('Namen, die nur auf sid enden, bleiben unberührt', () {
     expect(redactSessionCookies('xsid=1; a=b'), 'xsid=1; a=b');
   });
+
+  test('Set-Cookie: alle Werte außer i und Attributen geschwärzt', () {
+    final out = redactSessionCookies(
+      'set-cookie: MoodleSession=abc123; path=/; secure, '
+      'SPH-Sessionpdata=geheim; domain=.hessen.de, i=4711',
+    );
+    expect(out, isNot(contains('abc123')));
+    expect(out, isNot(contains('geheim')));
+    expect(out, contains('MoodleSession=<geschwaerzt>'));
+    expect(out, contains('path=/'));
+    expect(out, contains('i=4711'));
+  });
+
+  test('Location: Abfragewerte geschwärzt', () {
+    expect(
+      redactSessionCookies('location: https://x.de/sso?SAMLRequest=abc&a=1'),
+      'location: https://x.de/sso?SAMLRequest=<geschwaerzt>&a=<geschwaerzt>',
+    );
+  });
 }

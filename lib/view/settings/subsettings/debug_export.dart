@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
@@ -36,17 +37,17 @@ class _DebugExportState extends ConsumerState<DebugExport> {
   Future<void> _runExport() async {
     final l10n = AppLocalizations.of(context);
     if (_selected.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.debugExportSelectAtLeastOne)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.debugExportSelectAtLeastOne)));
       return;
     }
 
     final session = ref.read(sessionProvider).asData?.value;
     if (session == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.debugExportNoSession)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.debugExportNoSession)));
       return;
     }
 
@@ -81,9 +82,9 @@ class _DebugExportState extends ConsumerState<DebugExport> {
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
@@ -136,22 +137,26 @@ class _DebugExportState extends ConsumerState<DebugExport> {
               label: Text(l10n.debugExportRun),
             ),
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.edit_note),
-            title: Text(l10n.debugExportCustomRequest),
-            subtitle: Text(l10n.debugExportCustomRequestSubtitle),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _exporting
-                ? null
-                : () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const DebugExportCustomRequest(),
-                      ),
-                    );
-                  },
-          ),
+          // Fork (Sicherheitsprüfung 17.10.26): Eigene Anfragen mit der
+          // Portal-Sitzung nur in Entwickler-Builds. Ursache: Im Release
+          // wären sie ein Hebel für „füg das mal ein“-Betrug.
+          if (kDebugMode) const Divider(),
+          if (kDebugMode)
+            ListTile(
+              leading: const Icon(Icons.edit_note),
+              title: Text(l10n.debugExportCustomRequest),
+              subtitle: Text(l10n.debugExportCustomRequestSubtitle),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _exporting
+                  ? null
+                  : () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const DebugExportCustomRequest(),
+                        ),
+                      );
+                    },
+            ),
           const SizedBox(height: 16),
         ],
       ),
@@ -221,7 +226,7 @@ Future<void> writeSessionCheck({
       }
       report.log(
         '[$label] Probe App-Liste: HTTP ${r.statusCode}'
-        '${r.headers.value('location') != null ? ' → ${r.headers.value('location')}' : ''}'
+        '${r.headers.value('location') != null ? ' → ${redactSessionCookies('location: ${r.headers.value('location')}').substring(10)}' : ''}'
         ' → ${ok ? 'ANGEMELDET' : 'NICHT ANGEMELDET'}',
       );
       return ok;
@@ -261,20 +266,52 @@ void _writeRequestDescription(
   report.write('------------- END REQUEST DESCRIPTION -------------');
 }
 
-/// Ersetzt den Wert jedes `sid`-Cookies durch `<geschwaerzt>`.
+/// Schwärzt Sitzungsdaten in einer Kopfzeile des Berichts.
+///
+/// - Jede Zeile: Wert jedes `sid`-Cookies.
+/// - `set-cookie:`/`cookie:`: ALLE Cookie-Werte außer [_cookieKeep] und den
+///   Attributen (path, domain …). Ursache (Sicherheitsprüfung 17.10.26):
+///   Nur `sid` zu schwärzen ließ SPH-Session-, Moodle- und SSO-Cookies im
+///   Klartext.
+/// - `location:`: alle Werte der Abfrage (Weiterleitungen tragen Tokens).
 ///
 /// replaceAllMapped statt replaceAll: Dart setzt in replaceAll keine
 /// Rückverweise wie `$1` ein (es stünde wörtlich im Text).
-String redactSessionCookies(String line) => line.replaceAllMapped(
-  RegExp(r'(\bsid=)[^;,\s]+', caseSensitive: false),
-  (m) => '${m[1]}<geschwaerzt>',
-);
+String redactSessionCookies(String line) {
+  var out = line.replaceAllMapped(
+    RegExp(r'(\bsid=)[^;,\s]+', caseSensitive: false),
+    (m) => '${m[1]}<geschwaerzt>',
+  );
+  final lower = out.toLowerCase();
+  if (lower.startsWith('set-cookie:') || lower.startsWith('cookie:')) {
+    final i = out.indexOf(':');
+    final body = out.substring(i + 1).replaceAllMapped(
+      RegExp(r'(^\s*|[;,]\s*)([^=;,\s]+)=([^;,]*)'),
+      (m) {
+        final name = m[2]!;
+        final keep =
+            _cookieKeep.contains(name.toLowerCase()) ||
+            _cookieAttributes.contains(name.toLowerCase());
+        return keep ? m[0]! : '${m[1]}$name=<geschwaerzt>';
+      },
+    );
+    out = '${out.substring(0, i + 1)}$body';
+  } else if (lower.startsWith('location:')) {
+    out = out.replaceAllMapped(
+      RegExp(r'([?&][^=&\s]+=)[^&\s]*'),
+      (m) => '${m[1]}<geschwaerzt>',
+    );
+  }
+  return out;
+}
+
+/// Cookies ohne Geheimnis: `i` ist die Schulnummer.
+const _cookieKeep = {'i'};
+const _cookieAttributes = {'path', 'domain', 'expires', 'max-age', 'samesite'};
 
 void _writeResponse(MemoryLogger report, Response<dynamic> response) {
   report.write('------------- BEGIN RESPONSE -------------');
-  report.log(
-    'Status Code: ${response.statusCode} (${response.statusMessage})',
-  );
+  report.log('Status Code: ${response.statusCode} (${response.statusMessage})');
   report.write('-------- BEGIN HEADER --------');
   for (final key in response.headers.map.keys) {
     // Fork: Sitzungsschlüssel schwärzen. Ursache: Export vom 16.10.26 09:54
@@ -379,12 +416,16 @@ Future<String?> appendRequestSection({
 
       final nextUrl = _resolveRedirectLocation(current.url, location);
       if (nextUrl == null) {
-        report.log('Could not resolve Location: $location');
+        report.log(
+          'Could not resolve ${redactSessionCookies('location: $location')}',
+        );
         break;
       }
 
       hop += 1;
-      report.log('Following 302 Location -> $nextUrl (hop $hop/$_maxRedirectDepth)');
+      report.log(
+        'Following 302 Location -> $nextUrl (hop $hop/$_maxRedirectDepth)',
+      );
       current = DebugExportHttpRequest(
         method: 'GET',
         url: nextUrl,
@@ -683,8 +724,9 @@ Future<String> createCustomDebugExport({
 
   final session = ref.read(sessionProvider).asData?.value;
   final headers = headersJson.isNotEmpty
-      ? Map<String, dynamic>.from(jsonDecode(headersJson))
-          .map((k, v) => MapEntry(k, v.toString()))
+      ? Map<String, dynamic>.from(
+          jsonDecode(headersJson),
+        ).map((k, v) => MapEntry(k, v.toString()))
       : <String, String>{};
   final query = queryJson.isNotEmpty
       ? Map<String, dynamic>.from(jsonDecode(queryJson))

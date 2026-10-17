@@ -77,6 +77,16 @@ List<RouteBase> _lessonsRoutesFor(AccountType type, AppletRouteContext ctx) {
                   fallbackPath: home,
                 );
               }
+              // Fork (Sicherheitsprüfung 17.10.26): Die Seite lädt die URL
+              // mit der Portal-Sitzung (getUploadInfo). Nur Abgaben aus
+              // „Mein Unterricht“ zulassen, sonst könnte ein Link fremde
+              // Inhalte als Abgabe zeigen oder Portal-Aufrufe auslösen.
+              if (!isLessonsUploadUrl(Uri.decodeComponent(url))) {
+                return DeepLinkErrorPage(
+                  error: DeepLinkException('Upload url not allowed'),
+                  fallbackPath: home,
+                );
+              }
               return DeepLinkPopScope(
                 fallbackPath: home,
                 child: UploadScreen(
@@ -148,4 +158,15 @@ class LessonsAttendancesRoutePage extends ConsumerWidget {
       },
     );
   }
+}
+
+/// Abgabe-URL aus „Mein Unterricht“: relativ („meinunterricht.php?…“) oder
+/// https auf start.schulportal.hessen.de mit Pfad meinunterricht.php.
+bool isLessonsUploadUrl(String raw) {
+  final u = Uri.tryParse(raw.trim());
+  if (u == null) return false;
+  final path = u.path.replaceFirst(RegExp(r'^/+'), '');
+  if (path != 'meinunterricht.php') return false;
+  if (!u.hasScheme && u.host.isEmpty) return true;
+  return u.scheme == 'https' && u.host == 'start.schulportal.hessen.de';
 }

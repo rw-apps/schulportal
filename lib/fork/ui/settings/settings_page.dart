@@ -6,6 +6,7 @@ import 'package:liblanis/liblanis.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
+import 'package:webview_flutter/webview_flutter.dart' show WebViewCookieManager;
 
 import 'package:lanis/features/auth/auth_controller.dart';
 import 'package:lanis/fork_identity.dart';
@@ -104,9 +105,20 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
     if (ok != true || !mounted) return;
     // Wie die bisherige Ansicht (home_page.dart, _logout).
     final router = GoRouter.of(context);
+    // Fork (Sicherheitsprüfung 17.10.26): Auf geteilten Familiengeräten
+    // sollen nach dem Abmelden keine Dateien und keine Moodle-Anmeldung
+    // dieses Kontos zurückbleiben. Grenze: Die WebView-Cookies gelten für
+    // alle Konten – andere Konten melden sich in Moodle neu an.
+    final cache = ref.read(storageManagerProvider)?.getDocumentCacheDirectory();
     await ref
         .read(authControllerProvider.notifier)
         .removeAccountAndContinue(account.localId);
+    try {
+      if (cache != null && cache.existsSync()) {
+        cache.deleteSync(recursive: true);
+      }
+      await WebViewCookieManager().clearCookies();
+    } catch (_) {}
     if (!mounted) return;
     final phase = ref.read(authControllerProvider).phase;
     router.go(

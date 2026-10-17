@@ -48,8 +48,14 @@ class DownloadableFile {
     return "";
   }
 
-  /// Create a file info for a remote file
-  DownloadableFile({this.name, this.size, this.url}) : localPath = null;
+  /// Create a file info for a remote file.
+  ///
+  /// Fork (Sicherheitsprüfung 17.10.26): Der Name kommt vom Server (Portal,
+  /// Moodle) und wird Teil des Speicherpfads (StorageManager.resolvePath);
+  /// [safeFileName] entfernt Pfadanteile wie „../“.
+  DownloadableFile({String? name, this.size, this.url})
+    : name = name == null ? null : safeFileName(name, 'datei'),
+      localPath = null;
 
   /// Create a file info for a local file
   DownloadableFile.local({String? name, String? size, required String filePath})
@@ -331,10 +337,7 @@ AlertDialog errorDialog(BuildContext context) => AlertDialog(
   actions: [
     TextButton(
       onPressed: () {
-        safeLaunchUrl(
-          Uri.parse(forkIssuesUrl),
-          context: context,
-        );
+        safeLaunchUrl(Uri.parse(forkIssuesUrl), context: context);
       },
       child: const Text("GitHub"),
     ),
@@ -365,4 +368,13 @@ Future<File> moveFile(String originPath, String targetPath) async {
     await originFile.delete();
     return newFile;
   }
+}
+
+/// Dateiname ohne Pfadanteile und Steuerzeichen; leer, „.“ oder „..“ →
+/// [fallback]. Siehe [DownloadableFile] (Fork, Sicherheitsprüfung 17.10.26).
+String safeFileName(String raw, String fallback) {
+  var n = raw.replaceAll('\\', '/').split('/').last;
+  n = n.replaceAll(RegExp(r'[\x00-\x1f]'), '').trim();
+  if (n.isEmpty || n == '.' || n == '..') return fallback;
+  return n;
 }

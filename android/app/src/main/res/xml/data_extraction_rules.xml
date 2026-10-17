@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fork (Sicherheitsprüfung 17.10.26): Keine App-Daten in Cloud-Backups und
+     keine Übertragung beim Gerätewechsel. Ursache: allowBackup="false" stoppt
+     ab Android 12 nur das Cloud-Backup, nicht den Gerät-zu-Gerät-Transfer.
+     Übertragen würden Datenbank (Konten, gespeicherte Stundenpläne) und die
+     verschlüsselten Einstellungen – letztere sind auf dem neuen Gerät nicht
+     lesbar und führten zu Fehlerzuständen. Nach dem Wechsel meldet man sich
+     neu an. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+    </device-transfer>
+</data-extraction-rules>

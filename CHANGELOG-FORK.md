@@ -1,5 +1,17 @@
 ## Schulportal (rw-apps) – Änderungen gegenüber Lanis-Mobile
 
+**4.1.0+9336** – Sicherheitsprüfung
+
+- **Benachrichtigungen vertraulich:** Auf dem gesperrten Handy zeigt Android nur „Schulportal“ ohne Inhalt, wenn unter Sperrbildschirm „sensible Inhalte ausblenden“ gewählt ist.
+- **Keine Übertragung beim Gerätewechsel:** Konten und gespeicherte Daten gehen weder ins Cloud-Backup noch beim Umzug aufs neue Handy; dort meldet man sich neu an.
+- **Kein „lanis://“-Link mehr:** Webseiten können die App nicht mehr mit eigenen Adressen öffnen; die Abgabe-Seite lädt nur Adressen aus „Mein Unterricht“.
+- **Dateinamen geprüft:** Namen von heruntergeladenen Dateien können keine Pfade mehr enthalten.
+- **Moodle:** Downloads nur vom Schulportal, fremde Seiten öffnen erst nach Antippen, die Anmeldung schickt das Passwort nur an Adressen des Schulportals.
+- **Abmelden** entfernt auch die heruntergeladenen Dateien und die Moodle-Anmeldung.
+- **Fehlersuche:** Der Bericht schwärzt alle Sitzungs-Cookies und Weiterleitungsadressen; ältere Berichtsdateien werden gelöscht; eigene Portal-Anfragen gibt es nur noch in Entwicklerversionen.
+- **Mensa-Adresse** nur noch mit https und ohne Anmeldedaten in der Adresse.
+- Türkisch steht in den Android-Spracheinstellungen der App zur Auswahl.
+
 **4.1.0+9335**
 
 - **Kleinere Downloads:** Je Prozessorart eine eigene APK – „arm64-v8a“ für fast alle Handys (etwa 20 MB statt 53 MB), „armeabi-v7a“ für ältere 32-Bit-Geräte. In Obtainium einmal die arm64-Datei wählen (APK-Filter „arm64“). Keine Änderung an der App selbst.

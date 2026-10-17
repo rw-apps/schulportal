@@ -454,6 +454,11 @@ void main() {
       'https://x.example/login',
     );
     expect(normalizeMensaUrl('kein link'), isNull);
+    expect(
+      normalizeMensaUrl('http://bestellung.example.de/a'),
+      'https://bestellung.example.de/a',
+    );
+    expect(normalizeMensaUrl('https://nutzer@bestellung.example.de'), isNull);
     expect(normalizeMensaUrl(''), isNull);
   });
 }

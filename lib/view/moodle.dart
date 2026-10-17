@@ -180,6 +180,7 @@ class _MoodleWebViewState extends ConsumerState<MoodleWebView> {
     showFileModal(
       context,
       DownloadableFile(
+        // Pfadanteile entfernt DownloadableFile (safeFileName).
         name: fileName,
         url: uri,
         size: fileSize > 0 ? "(${fileSize.toStringAsFixed(2)} MB)" : "(N/A)",
@@ -250,16 +251,27 @@ class _MoodleWebViewState extends ConsumerState<MoodleWebView> {
                 return NavigationDecision.prevent;
               }
 
-              // Intercept file downloads
-              if (parsedUri.path.contains('pluginfile.php') ||
-                  parsedUri.queryParameters.containsKey('forcedownload')) {
+              // Intercept file downloads – nur vom Schulportal (Fork,
+              // Sicherheitsprüfung 17.10.26): Der Download läuft mit der
+              // Portal-Sitzung; fremde Links öffnet unten der Browser.
+              if (isSchulportalDomain(parsedUri) &&
+                  (parsedUri.path.contains('pluginfile.php') ||
+                      parsedUri.queryParameters.containsKey('forcedownload'))) {
                 _handleMoodleDownload(parsedUri);
                 return NavigationDecision.prevent;
               }
             }
 
-            // Open external URLs in browser
+            // Open external URLs in browser – nur echte Seitenwechsel per
+            // http(s) (Fork, Sicherheitsprüfung 17.10.26): eingebettete
+            // iFrames und Weiterleitungen öffneten sonst ungefragt fremde Apps.
             if (parsedUri == null || !isSchulportalDomain(parsedUri)) {
+              if (!request.isMainFrame ||
+                  parsedUri == null ||
+                  !(parsedUri.scheme == 'https' ||
+                      parsedUri.scheme == 'http')) {
+                return NavigationDecision.prevent;
+              }
               await safeLaunchUrl(Uri.parse(request.url), context: context);
               return NavigationDecision.prevent;
             }

@@ -6,15 +6,25 @@
 /// Schulnummer → Caterer im Code verriet im öffentlichen Repository die
 /// Schule (Entscheidung 17.10.26). Grenze: Die App öffnet nur die Seite im
 /// Browser; Anmeldung und Bestellung bleiben dort, kein Passwort in der App.
+///
+/// Sicherheitsprüfung 17.10.26: nur https („http://“ wird zu https), keine
+/// Anmeldedaten in der Adresse („user@host“ wird abgelehnt) – sonst ließe
+/// sich eine täuschende Adresse eintragen oder weitergeben.
 String? normalizeMensaUrl(String? raw) {
   final t = raw?.trim() ?? '';
   if (t.isEmpty) return null;
   final withScheme = RegExp(r'^https?://', caseSensitive: false).hasMatch(t)
-      ? t
+      ? t.replaceFirst(RegExp(r'^http://', caseSensitive: false), 'https://')
       : 'https://$t';
   final uri = Uri.tryParse(withScheme);
-  if (uri == null || uri.host.isEmpty || !uri.host.contains('.')) return null;
-  return withScheme;
+  if (uri == null ||
+      uri.scheme != 'https' ||
+      uri.host.isEmpty ||
+      !uri.host.contains('.') ||
+      uri.userInfo.isNotEmpty) {
+    return null;
+  }
+  return uri.toString();
 }
 
 /// Bietet die Schule eine Lernplattform (Moodle) an?

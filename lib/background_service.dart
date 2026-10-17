@@ -316,6 +316,12 @@ class BackgroundTaskToolkit {
         priority: Priority.high,
         styleInformation: BigTextStyleInformation(message),
         ongoing: false,
+        // Fork (Sicherheitsprüfung 17.10.26): Inhalt (Namen, Fächer,
+        // Betreffzeilen) gilt als vertraulich. Auf einem gesperrten Handy
+        // zeigt Android dann nur „Schulportal“ ohne Text, sofern unter
+        // „Sperrbildschirm“ das Ausblenden sensibler Inhalte gewählt ist.
+        // Grenze: Mit „Alle Inhalte anzeigen“ entscheidet der Nutzer anders.
+        visibility: NotificationVisibility.private,
       );
       const iOSDetails = DarwinNotificationDetails(
         presentAlert: false,

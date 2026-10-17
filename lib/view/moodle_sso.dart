@@ -78,14 +78,12 @@ Future<MoodleSsoResult> performMoodleSso({
     lastSchoolCookie,
   ]);
 
-  final response1 = await dio.head(
-    "https://mo$schoolID.schulportal.hessen.de",
-  );
-  final location_1 = response1.headers.value("location")!;
+  final response1 = await dio.head("https://mo$schoolID.schulportal.hessen.de");
+  final location_1 = _portalHop(response1.headers.value("location"));
 
   // llngproxy01.schulportal.hessen.de
   final response2 = await dio.get(location_1);
-  final location2 = response2.headers.value("location")!;
+  final location2 = _portalHop(response2.headers.value("location"));
 
   // login.schulportal.hessen.de/saml/singleSignOn?SAMLRequest=...
   // Getting url out of a cookie for POST.
@@ -109,7 +107,7 @@ Future<MoodleSsoResult> performMoodleSso({
       "url": url,
     },
   );
-  final location3 = response3.headers.value("location")!;
+  final location3 = _portalHop(response3.headers.value("location"));
 
   // llngproxy01.schulportal.hessen.de/saml/proxySingleSignOnArtifact...
   final response4 = await dio.get(location3);
@@ -117,7 +115,7 @@ Future<MoodleSsoResult> performMoodleSso({
   final moProd01Cookie = cookies2.firstWhere(
     (cookie) => cookie.name == "mo-prod01",
   );
-  final location4 = response4.headers.value("location")!;
+  final location4 = _portalHop(response4.headers.value("location"));
 
   // mo{SCHOOLID}.schulportal.hessen.de/login/index.php
   await dio.get(location4);
@@ -139,4 +137,18 @@ Future<MoodleSsoResult> performMoodleSso({
     location4: location4,
     moodleHomeUrl: "https://mo$schoolID.schulportal.hessen.de",
   );
+}
+
+/// Weiterleitungsziel der SSO-Kette, nur https auf *.schulportal.hessen.de.
+///
+/// Fork (Sicherheitsprüfung 17.10.26): Die Kette schickt das Passwort an
+/// das zweite Ziel (location2); ohne Prüfung ginge es an jede Adresse, die
+/// eine Antwort vorgibt. Grenze: Wirft bei fremdem Ziel – Moodle öffnet
+/// dann nicht, die Anmeldung am Portal bleibt unberührt.
+String _portalHop(String? location) {
+  final u = location == null ? null : Uri.tryParse(location);
+  if (u == null || u.scheme != 'https' || !isSchulportalDomain(u)) {
+    throw StateError('Unerwartetes Weiterleitungsziel in der Moodle-Anmeldung');
+  }
+  return location!;
 }
