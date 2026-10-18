@@ -20,7 +20,30 @@ class CourseItem {
     this.files = 0,
     this.colorSlot,
     this.extra = false,
+    this.entry,
   });
+
+  /// Kopie mit anderem Erledigt-Stand (Protokoll der App, homework_ledger).
+  CourseItem withHomeworkDone(bool done) => CourseItem(
+    id: id,
+    title: title,
+    fullName: fullName,
+    teachers: teachers,
+    teacherCodes: teacherCodes,
+    topic: topic,
+    date: date,
+    homework: homework,
+    homeworkDone: done,
+    attendance: attendance,
+    missing: missing,
+    files: files,
+    colorSlot: colorSlot,
+    extra: extra,
+    entry: entry,
+  );
+
+  /// Neuester Eintrag (CurrentEntry.entryID) – Schlüssel der Hausaufgabe.
+  final String? entry;
 
   /// Kurs-ID wie im Portal (bei Eltern mit „&p=Kind-ID“, siehe
   /// parseParentLessons) – für die Kursseite.
@@ -130,6 +153,7 @@ List<CourseItem> courseItemsFrom(
         : courseShortIn(plan, courseTitle(l.name), codes.toSet()..remove(''));
     return CourseItem(
       id: l.courseID,
+      entry: l.currentEntry?.entryID,
       title: (fullByTitle[courseTitle(l.name)]?.length ?? 0) > 1
           ? l.name.trim()
           : courseTitle(l.name),

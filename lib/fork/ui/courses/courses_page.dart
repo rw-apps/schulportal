@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../homework_ledger.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
 import '../segments.dart';
@@ -16,6 +17,24 @@ String teacherSummary(List<String> t) =>
 String lastNameOf(String display) {
   final w = display.trim().split(RegExp(r'\s+'));
   return w.isEmpty ? display : w.last;
+}
+
+/// Hausaufgaben für „Unterricht“: offen, Zahl der erledigten und Aktionen.
+/// Ohne (Vorschau) zeigt die Seite die offenen aus [CoursesPage.items].
+class HomeworkBoard {
+  const HomeworkBoard({
+    required this.open,
+    required this.doneCount,
+    required this.onDone,
+    required this.onReopen,
+    this.onOpenArchive,
+  });
+
+  final List<HomeworkItem> open;
+  final int doneCount;
+  final void Function(HomeworkItem item) onDone;
+  final void Function(HomeworkItem item) onReopen;
+  final VoidCallback? onOpenArchive;
 }
 
 /// Bereich „Unterricht“ (Entwurf 1, abgenommen 17.10.26): oben die offenen
@@ -40,7 +59,11 @@ class CoursesPage extends StatefulWidget {
     this.onRefresh,
     this.loading = false,
     this.grades,
+    this.homework,
   });
+
+  /// Abhaken und Archiv (Wunsch 18.10.26); null = nur Anzeige.
+  final HomeworkBoard? homework;
 
   final List<CourseItem> items;
   final String? firstName;
@@ -84,7 +107,19 @@ class _CoursesPageState extends State<CoursesPage> {
     final t = context.t;
     final bottom = MediaQuery.paddingOf(context).bottom;
     final items = widget.items;
-    final open = items.where((i) => i.hasOpenHomework).toList();
+    final open =
+        widget.homework?.open ??
+        [
+          for (final i in items)
+            if (i.hasOpenHomework)
+              HomeworkItem(
+                course: i.id,
+                entry: i.entry ?? '',
+                subject: i.title,
+                text: i.homework ?? '',
+                given: i.date,
+              ),
+        ];
     // Fächer nach Platz im Wochenplan (= Fachfarbe), ohne Platz ans Ende.
     final subjects = items.where((i) => !i.extra).toList()
       ..sort((a, b) {
@@ -142,16 +177,43 @@ class _CoursesPageState extends State<CoursesPage> {
     return r == null ? view : RefreshIndicator(onRefresh: r, child: view);
   }
 
+  /// Abhaken mit „Rückgängig“ – ein Fehlgriff auf dem kleinen Kreis soll
+  /// nicht erst über das Archiv zu reparieren sein.
+  void _done(HomeworkBoard hw, HomeworkItem i) {
+    hw.onDone(i);
+    final t = context.t;
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(t.homeworkMarkedDone),
+          action: SnackBarAction(
+            label: t.undo,
+            onPressed: () => hw.onReopen(i),
+          ),
+        ),
+      );
+  }
+
   List<Widget> _courseList(
     Kit k,
     ForkL10n t,
     List<CourseItem> items,
-    List<CourseItem> open,
+    List<HomeworkItem> open,
     List<CourseItem> subjects,
     List<CourseItem> extra,
   ) {
+    final hw = widget.homework;
+    CourseItem? courseOf(HomeworkItem h) =>
+        items.where((i) => i.id == h.course).firstOrNull;
     return [
-      _Section(title: t.openHomeworkTitle),
+      _Section(
+        title: t.openHomeworkTitle,
+        trailing: hw != null && hw.doneCount > 0 && hw.onOpenArchive != null
+            ? t.homeworkArchive(hw.doneCount)
+            : null,
+        onTap: hw != null && hw.doneCount > 0 ? hw.onOpenArchive : null,
+      ),
       if (open.isEmpty)
         Padding(
           padding: const EdgeInsets.only(left: Sp.xs),
@@ -163,7 +225,13 @@ class _CoursesPageState extends State<CoursesPage> {
       for (final i in open)
         Padding(
           padding: const EdgeInsets.only(bottom: Sp.s),
-          child: _HomeworkCard(item: i, onTap: widget.onOpen),
+          child: _HomeworkCard(
+            item: i,
+            onTap: widget.onOpen == null || courseOf(i) == null
+                ? null
+                : () => widget.onOpen!(courseOf(i)!),
+            onDone: hw == null ? null : () => _done(hw, i),
+          ),
         ),
       _Section(title: t.subjectsTitle),
       if (items.isEmpty)
@@ -227,43 +295,58 @@ class _Section extends StatelessWidget {
 }
 
 class _HomeworkCard extends StatelessWidget {
-  const _HomeworkCard({required this.item, this.onTap});
+  const _HomeworkCard({required this.item, this.onTap, this.onDone});
 
-  final CourseItem item;
-  final void Function(CourseItem)? onTap;
+  final HomeworkItem item;
+  final VoidCallback? onTap;
+
+  /// Kreis links hakt ab; null = nur Anzeige.
+  final VoidCallback? onDone;
 
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final t = context.t;
     final tone = k.p.change;
-    final text = item.homework!.isEmpty ? t.homeworkEntered : item.homework!;
-    final meta = item.date == null
-        ? item.title
-        : t.givenOn(item.title, formatDate(t, t.dateShort, item.date!));
+    final text = item.text.isEmpty ? t.homeworkEntered : item.text;
+    final meta = item.given == null
+        ? item.subject
+        : t.givenOn(item.subject, formatDate(t, t.dateShort, item.given!));
+    final circle = Icon(
+      Icons.radio_button_unchecked,
+      size: Sz.navIcon,
+      color: tone.ink,
+    );
     return Material(
       color: tone.bg,
       borderRadius: BorderRadius.circular(Rad.signal),
       child: InkWell(
         borderRadius: BorderRadius.circular(Rad.signal),
-        onTap: onTap == null ? null : () => onTap!(item),
+        onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Sp.l, vertical: Sp.m),
+          padding: const EdgeInsets.fromLTRB(Sp.xs, Sp.xs, Sp.l, Sp.xs),
           child: Row(
             children: [
-              Icon(
-                Icons.radio_button_unchecked,
-                size: Sz.navIcon,
-                color: tone.ink,
-              ),
-              const SizedBox(width: Sp.m),
+              // Eigene Trefferfläche (48 dp), getrennt vom Öffnen des Kurses.
+              if (onDone != null)
+                IconButton(
+                  onPressed: onDone,
+                  tooltip: t.homeworkMarkDone,
+                  icon: circle,
+                )
+              else
+                Padding(padding: const EdgeInsets.all(Sp.m), child: circle),
+              const SizedBox(width: Sp.xs),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(text, style: k.boxStrong(tone)),
-                    Text(meta, style: k.planMeta(tone.ink)),
-                  ],
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: Sp.s),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(text, style: k.boxStrong(tone)),
+                      Text(meta, style: k.planMeta(tone.ink)),
+                    ],
+                  ),
                 ),
               ),
             ],

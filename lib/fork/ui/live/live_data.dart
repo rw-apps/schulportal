@@ -7,6 +7,7 @@ import 'package:liblanis/liblanis.dart';
 import 'package:lanis/utils/applet_settings.dart';
 
 import '../../courses_scan.dart';
+import '../../homework_ledger.dart';
 import '../../lessons_parent.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
@@ -142,6 +143,8 @@ class LiveSnapshot {
     this.setLessonTimes,
     this.courseScan,
     this.setCourseScan,
+    this.homework = HomeworkLedger.empty,
+    this.setHomework,
     this.mensa = const MensaAddresses({}),
     this.accountKey = '',
     this.kids = const [],
@@ -168,6 +171,15 @@ class LiveSnapshot {
   /// Arbeiten für „Heute“, Notenzahl für den Hinweis im Hintergrund.
   final CourseScan? courseScan;
   final void Function(CourseScan scan)? setCourseScan;
+
+  /// Abgehakte und wieder geöffnete Hausaufgaben (homework_ledger.dart).
+  final HomeworkLedger homework;
+
+  /// Ändert den Stand mit einer Funktion auf dem JEWEILS aktuellen Stand.
+  /// Ursache: „Rückgängig“ in der Meldung hält einen älteren Stand fest; ein
+  /// fertiger Wert von damals würde spätere Haken überschreiben.
+  final void Function(HomeworkLedger Function(HomeworkLedger) update)?
+  setHomework;
 
   /// Selbst eingetragene Mensa-Bestellseiten je Kind.
   final MensaAddresses mensa;
@@ -281,6 +293,7 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
   Map<String, String> _names = const {};
   LessonTimes? _times;
   CourseScan? _scan;
+  HomeworkLedger _homework = HomeworkLedger.empty;
   MensaAddresses _mensa = const MensaAddresses({});
   int? _settingsFor;
   late final _loader = SerialLoader(
@@ -364,6 +377,7 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
     );
     _times = storedLessonTimes(s);
     _scan = storedCourseScan(s);
+    _homework = HomeworkLedger.decode(s.getString(homeworkLedgerSetting));
     _mensa = MensaAddresses.decode(
       s.getString('fork/$mensaUrlsSetting'),
       legacy: s.getString('fork/$mensaUrlSetting'),
@@ -459,6 +473,15 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
         // Die Notenübersicht ruft das am Ende ihres Ladens auf – dann kann
         // diese Seite schon abgebaut sein (Kontowechsel); ohne die Prüfung
         // käme ref nach dem Abbau (Absturz 9349).
+        homework: _homework,
+        setHomework: (update) {
+          if (!mounted) return;
+          final v = update(_homework);
+          setState(() => _homework = v);
+          ref
+              .read(accountSpecificSettingsProvider)
+              ?.setString(homeworkLedgerSetting, v.encode());
+        },
         setCourseScan: (v) {
           if (!mounted) return;
           setState(() => _scan = v);
@@ -583,14 +606,15 @@ class LiveMessage extends StatelessWidget {
   );
 }
 
-/// Offene Hausaufgaben: Kurse, deren neuester Eintrag eine Hausaufgabe hat,
-/// die nicht als erledigt markiert ist (Lesson.currentEntry, liblanis).
-/// Grenze: nur der neueste Eintrag je Kurs – ältere offene Aufgaben zeigt
-/// auch die Übersicht des Portals nicht.
-int liveOpenHomework(LiveSnapshot s) => [
-  for (final l in s.lessons.content ?? const <Lesson>[])
-    if (l.currentEntry?.homework case final h? when !h.homeWorkDone) l,
-].length;
+/// Offene Hausaufgaben: neueste Einträge mit Hausaufgabe, die weder Portal
+/// noch App als erledigt führen, dazu in der App wieder geöffnete
+/// (homeworkLists). Grenze: Ältere offene Aufgaben, die nie in der App
+/// standen, zeigt auch die Übersicht des Portals nicht.
+int liveOpenHomework(LiveSnapshot s) => homeworkLists(
+  s.lessons.content ?? const <Lesson>[],
+  s.homework,
+  subjectOf: (l) => l.name,
+).open.length;
 
 /// Ungelesene, nicht ausgeblendete Nachrichten laut Übersicht.
 int liveUnreadMessages(LiveSnapshot s) => [

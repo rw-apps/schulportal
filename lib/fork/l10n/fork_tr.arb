@@ -358,5 +358,16 @@
   "courseNewsTitleFor": "{name} için derslerde yeni",
   "noticeNewMark": "{subject} dersinde yeni not",
   "noticeNewExam": "{subject}: {date} tarihine {kind} eklendi",
-  "examsGradesTab": "Sınavlar ve notlar"
+  "examsGradesTab": "Sınavlar ve notlar",
+  "undo": "Geri al",
+  "homeworkArchive": "Tamamlanan ({n})",
+  "homeworkArchiveTitle": "Tamamlanan ödevler",
+  "homeworkArchiveEmpty": "Henüz tamamlanan ödev yok. İşaretlenen ödevler burada görünür ve yeniden açılabilir.",
+  "homeworkMarkedDone": "Tamamlandı olarak işaretlendi.",
+  "homeworkReopen": "Yeniden aç",
+  "homeworkReopened": "Açık ödevlere geri alındı.",
+  "homeworkDoneOn": "tamamlandı {date}",
+  "homeworkMarkDone": "Tamamlandı olarak işaretle",
+  "homeworkPortalFailed": "Okul portalına kaydedilmedi – işaret yalnızca uygulamada geçerli.",
+  "givenDate": "verildi {date}"
 }

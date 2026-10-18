@@ -358,5 +358,16 @@
   "courseNewsTitleFor": "New in {name}'s lessons",
   "noticeNewMark": "New grade in {subject}",
   "noticeNewExam": "{subject}: {kind} on {date} added",
-  "examsGradesTab": "Tests & grades"
+  "examsGradesTab": "Tests & grades",
+  "undo": "Undo",
+  "homeworkArchive": "Done ({n})",
+  "homeworkArchiveTitle": "Completed homework",
+  "homeworkArchiveEmpty": "No completed homework yet. Ticked-off tasks appear here and can be reopened.",
+  "homeworkMarkedDone": "Marked as done.",
+  "homeworkReopen": "Reopen",
+  "homeworkReopened": "Back in open homework.",
+  "homeworkDoneOn": "done {date}",
+  "homeworkMarkDone": "Mark as done",
+  "homeworkPortalFailed": "Not saved in the school portal – the tick only applies in the app.",
+  "givenDate": "set {date}"
 }

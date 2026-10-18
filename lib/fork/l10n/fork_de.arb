@@ -983,5 +983,37 @@
       }
     }
   },
-  "examsGradesTab": "Arbeiten & Noten"
+  "examsGradesTab": "Arbeiten & Noten",
+  "undo": "Rückgängig",
+  "homeworkArchive": "Erledigt ({n})",
+  "@homeworkArchive": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "homeworkArchiveTitle": "Erledigte Hausaufgaben",
+  "homeworkArchiveEmpty": "Noch keine erledigten Hausaufgaben. Abgehakte Aufgaben erscheinen hier und lassen sich wieder öffnen.",
+  "homeworkMarkedDone": "Als erledigt abgehakt.",
+  "homeworkReopen": "Wieder offen",
+  "homeworkReopened": "Wieder bei den offenen Hausaufgaben.",
+  "homeworkDoneOn": "erledigt {date}",
+  "@homeworkDoneOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "homeworkMarkDone": "Als erledigt abhaken",
+  "homeworkPortalFailed": "Im Schulportal nicht gespeichert – der Haken gilt nur in der App.",
+  "givenDate": "aufgegeben {date}",
+  "@givenDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  }
 }

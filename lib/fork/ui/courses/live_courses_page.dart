@@ -8,6 +8,7 @@ import 'package:lanis/applets/lessons/student/upload_page.dart';
 import 'package:lanis/utils/file_operations.dart' as fo;
 
 import '../../courses_scan.dart';
+import '../../homework_ledger.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
 import '../nav.dart';
@@ -21,6 +22,7 @@ import 'course_detail_page.dart';
 import 'courses_model.dart';
 import 'courses_page.dart';
 import 'grades_view.dart';
+import 'homework_archive.dart';
 
 /// „Unterricht“ mit echten Daten (LiveDataScope, Quelle „Mein Unterricht“).
 /// Antippen öffnet die neue Kursseite ([CourseDetailPage]); sie lädt die
@@ -52,10 +54,34 @@ class LiveCoursesPage extends ConsumerWidget {
         final live = s.offers('stundenplan.php') && s.timetable.content != null
             ? livePlanOf(s)
             : null;
-        final items = courseItemsFrom(
+        final raw = courseItemsFrom(
           s.lessons.content ?? const [],
           ownNames: s.ownNames,
           plan: live?.plan,
+        );
+        final titles = {for (final i in raw) i.id: i.title};
+        final hw = homeworkLists(
+          s.lessons.content ?? const <Lesson>[],
+          s.homework,
+          subjectOf: (l) => titles[l.courseID] ?? courseTitle(l.name),
+        );
+        // Abgehakt in der App gilt auch für die Marke an der Kurszeile.
+        final doneKeys = {for (final h in hw.done) h.key};
+        final items = [
+          for (final i in raw)
+            if (i.homework != null && i.entry != null)
+              i.withHomeworkDone(doneKeys.contains(homeworkKey(i.id, i.entry!)))
+            else
+              i,
+        ];
+        final hwParser = ref.read(lessonsStudentParserProvider);
+        void toggle(HomeworkItem h, bool done) => setHomeworkDone(
+          s: s,
+          parser: hwParser,
+          item: h,
+          done: done,
+          t: context.t,
+          messenger: ScaffoldMessenger.maybeOf(context),
         );
         // Parser hier lesen, nicht im späteren Abruf: Die Übersicht lädt
         // asynchron weiter, auch wenn die Seite inzwischen neu gebaut wurde
@@ -63,6 +89,14 @@ class LiveCoursesPage extends ConsumerWidget {
         final parser = ref.read(lessonsStudentParserProvider);
         return CoursesPage(
           items: items,
+          homework: HomeworkBoard(
+            open: hw.open,
+            doneCount: hw.done.length,
+            onDone: (h) => toggle(h, true),
+            onReopen: (h) => toggle(h, false),
+            onOpenArchive: () =>
+                pushInTab<void>(context, (_) => const LiveHomeworkArchive()),
+          ),
           grades: GradesSource(
             account: s.accountKey,
             courses: items,
