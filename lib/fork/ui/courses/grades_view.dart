@@ -45,9 +45,18 @@ class GradesSource {
 /// Kursen dauert das erste Öffnen einige Sekunden – der Fortschritt steht
 /// dabei („5 von 14“), danach kommt alles aus GradesCache.
 class GradesView extends StatefulWidget {
-  const GradesView({super.key, required this.source, this.onOpen, this.now});
+  const GradesView({
+    super.key,
+    required this.source,
+    this.onOpen,
+    this.now,
+    this.onOpenAbsences,
+  });
 
   final GradesSource source;
+
+  /// Zeile „Fehlstunden“ antippen → „Abwesenheiten“; null = nur Text.
+  final VoidCallback? onOpenAbsences;
   final void Function(CourseItem item)? onOpen;
 
   /// Nur für Tests; sonst DateTime.now().
@@ -184,15 +193,32 @@ class GradesViewState extends State<GradesView> {
     final pages = GradesCache.instance.pagesFor(_key);
     final absent = absenceTotals([for (final c in courses) ?pages[c.id]]);
     if (absent != null) {
+      final line = Text(
+        absent.excused + absent.missing == 0
+            ? t.absenceNone
+            : t.absenceTotals(absent.excused, absent.missing),
+        style: k.meta,
+      );
+      final open = widget.onOpenAbsences;
       out.add(
         Padding(
           padding: const EdgeInsets.fromLTRB(Sp.xs, Sp.s, Sp.xs, 0),
-          child: Text(
-            absent.excused + absent.missing == 0
-                ? t.absenceNone
-                : t.absenceTotals(absent.excused, absent.missing),
-            style: k.meta,
-          ),
+          child: open == null || absent.excused + absent.missing == 0
+              ? line
+              : InkWell(
+                  onTap: open,
+                  child: Row(
+                    children: [
+                      Expanded(child: line),
+                      Text(t.absenceOpenLink, style: k.link),
+                      Icon(
+                        Icons.chevron_right,
+                        size: Sz.icon,
+                        color: k.p.onNavSelected,
+                      ),
+                    ],
+                  ),
+                ),
         ),
       );
     }

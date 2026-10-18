@@ -119,3 +119,34 @@ class GradesCache {
 
   void clear() => _pages.clear();
 }
+
+/// Fehlende Kursseiten nacheinander in [pages] laden (GradesCache).
+///
+/// Für Seiten, die dieselben Kursmappen brauchen (Abwesenheiten); die
+/// Notenübersicht hat dieselbe Schleife mit eigenem Fortschritt
+/// (GradesViewState._load). Nacheinander aus demselben Grund wie dort: eine
+/// Portal-Sitzung für alle Abrufe. [alive] = false bricht ab (Seite zu).
+Future<void> loadCoursePages({
+  required List<CourseItem> courses,
+  required Map<String, DetailedLesson> pages,
+  required Future<DetailedLesson> Function(CourseItem c) load,
+  required bool Function() alive,
+  void Function(int done, int total)? progress,
+  void Function(CourseItem c, Object e, StackTrace st)? failed,
+}) async {
+  final todo = [
+    for (final c in courses)
+      if (!pages.containsKey(c.id)) c,
+  ];
+  var done = 0;
+  progress?.call(0, todo.length);
+  for (final c in todo) {
+    try {
+      pages[c.id] = await load(c);
+    } catch (e, st) {
+      failed?.call(c, e, st);
+    }
+    if (!alive()) return;
+    progress?.call(++done, todo.length);
+  }
+}

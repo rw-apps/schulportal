@@ -30,3 +30,22 @@ const messageTemplates = <MessageTemplate>[
     'Guten Tag,\n\nwir würden gern einen Gesprächstermin vereinbaren. ',
   ),
 ];
+
+/// Entschuldigung für eine Fehlstunde (Wunsch 18.10.26): Betreff und Text
+/// an die Lehrkraft des Fachs. Deutsch aus demselben Grund wie oben. Der
+/// Grund bleibt offen („Grund: “) – den kennt nur die Familie; die Seite
+/// setzt den Cursor dorthin. Grenze: Anrede ohne Namen („Guten Tag“), weil
+/// das Portal Lehrkräfte teils nur mit Kürzel nennt.
+({String subject, String text}) absenceExcuse({
+  required String child,
+  required String subject,
+  required String when,
+}) => (
+  subject: 'Entschuldigung $child – $subject am $when',
+  text:
+      'Guten Tag,\n\n'
+      '$child hat am $when im Fach $subject gefehlt.\n'
+      'Grund: \n\n'
+      'Bitte entschuldigen Sie das Fehlen.\n\n'
+      'Mit freundlichen Grüßen\n',
+);

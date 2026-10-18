@@ -66,7 +66,13 @@ class ComposePage extends StatefulWidget {
     required this.candidates,
     required this.backend,
     this.initialKuerzel,
+    this.initialSubject,
+    this.initialText,
   });
+
+  /// Vorausgefüllter Betreff und Text (Entschuldigung aus „Abwesenheiten“).
+  final String? initialSubject;
+  final String? initialText;
 
   final List<RecipientCandidate> candidates;
   final ComposeBackend backend;
@@ -95,6 +101,8 @@ class _ComposePageState extends State<ComposePage> {
   @override
   void initState() {
     super.initState();
+    _subject.text = widget.initialSubject ?? '';
+    _text.text = widget.initialText ?? '';
     final kz = widget.initialKuerzel;
     final c = widget.candidates.where((c) => c.kuerzel == kz).firstOrNull;
     // Nach dem ersten Bild: _toggle sucht im Portal und kann bei mehreren

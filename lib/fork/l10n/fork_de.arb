@@ -343,7 +343,7 @@
   "logoutDetail": "Entfernt das Konto von diesem Gerät",
   "sectionNotifications": "Benachrichtigungen",
   "allowNotifications": "Benachrichtigungen erlauben",
-  "notificationsBlocked": "Das Handy blockiert sie gerade für diese App",
+  "notificationsBlocked": "Das Gerät blockiert sie gerade für diese App",
   "forThisAccount": "Für dieses Konto",
   "notifySubstitutions": "Ausfall, Vertretung, große Termine",
   "notifySubstitutionsDetail": "Heute sofort, für morgen ab 19 Uhr",
@@ -351,7 +351,7 @@
   "timeWindow": "Zeitfenster",
   "timeWindowDetail": "Außerhalb ist Ruhe",
   "sectionAppearance": "Darstellung",
-  "likePhone": "Wie das Handy",
+  "likePhone": "Wie das Gerät",
   "themeLight": "Hell",
   "themeDark": "Dunkel",
   "fontSize": "Schriftgröße",
@@ -374,7 +374,7 @@
   "unofficial": "inoffiziell, nicht vom Land Hessen",
   "whatsNew": "Neu in dieser Version",
   "privacy": "Datenschutz",
-  "privacyDetail": "Kein eigener Server – alles bleibt auf dem Handy",
+  "privacyDetail": "Kein eigener Server – alles bleibt auf dem Gerät",
   "sourceLicense": "Quellcode und Lizenz",
   "sourceLicenseDetail": "Freie Software (GPL-3.0), Grundlage {upstream}",
   "@sourceLicenseDetail": {
@@ -891,7 +891,7 @@
   "pickWeek": "Woche wählen",
   "thisWeek": "Diese Woche",
   "lessonTimesTitle": "Stundenzeiten",
-  "lessonTimesText": "Die Schule zeigt im Stundenplan keine Uhrzeiten. Trag die Zeiten einmal ein – sie gelten nur auf diesem Handy und nur für dieses Konto.",
+  "lessonTimesText": "Die Schule zeigt im Stundenplan keine Uhrzeiten. Trag die Zeiten einmal ein – sie gelten nur auf diesem Gerät und nur für dieses Konto.",
   "lessonTimesStart": "Beginn der 1. Stunde",
   "lessonTimesLength": "Länge einer Stunde",
   "minutesShort": "{n} Min.",
@@ -1015,5 +1015,55 @@
         "type": "String"
       }
     }
-  }
+  },
+  "absenceOpenTitle": "Nicht entschuldigt",
+  "absenceExcusedTitle": "Entschuldigt",
+  "absenceExcuse": "Entschuldigen",
+  "absenceExcuseAgain": "Erneut schreiben",
+  "absenceSent": "Entschuldigung gesendet {date}",
+  "@absenceSent": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "absenceHours": "{hours} Stunde",
+  "@absenceHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "absenceAllSubjects": "Nur {subject} – alle Fächer zeigen",
+  "@absenceAllSubjects": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "absenceStudentHint": "Entschuldigen kann nur ein Elternkonto. Mit diesem Schülerkonto zeigt die App die Fehlstunden nur an.",
+  "absenceOpenHint": "{n, plural, =1{1 Fehlstunde nicht entschuldigt} other{{n} Fehlstunden nicht entschuldigt}}",
+  "@absenceOpenHint": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "absencesTitle": "Abwesenheiten",
+  "absencesSummary": "{open, plural, =0{Keine offenen Fehlstunden} =1{1 Stunde nicht entschuldigt} other{{open} Stunden nicht entschuldigt}} · {excused} entschuldigt",
+  "@absencesSummary": {
+    "placeholders": {
+      "open": {
+        "type": "int"
+      },
+      "excused": {
+        "type": "int"
+      }
+    }
+  },
+  "absenceOpenLink": "Abwesenheiten ansehen"
 }

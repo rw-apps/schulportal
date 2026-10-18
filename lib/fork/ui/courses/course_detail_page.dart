@@ -58,7 +58,11 @@ class CourseDetailPage extends StatefulWidget {
     this.onWrite,
     this.onOpenFile,
     this.onOpenUpload,
+    this.onOpenAbsences,
   });
+
+  /// Seite „Abwesenheiten“ für dieses Fach (Entschuldigen); null = ohne.
+  final VoidCallback? onOpenAbsences;
 
   final CourseContext course;
 
@@ -363,6 +367,20 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                   ].join(', '),
                 ),
                 style: k.planMeta(k.p.cancel.ink),
+              ),
+            if (absent.isNotEmpty && widget.onOpenAbsences != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: widget.onOpenAbsences,
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                  icon: Icon(
+                    Icons.chevron_right,
+                    size: Sz.icon,
+                    color: k.p.onNavSelected,
+                  ),
+                  label: Text(t.absenceOpenLink, style: k.link),
+                ),
               ),
           ],
         ),

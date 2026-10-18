@@ -60,7 +60,11 @@ class CoursesPage extends StatefulWidget {
     this.loading = false,
     this.grades,
     this.homework,
+    this.onOpenAbsences,
   });
+
+  /// „Abwesenheiten“ öffnen; [course] = nur dieses Fach, null = alle.
+  final void Function(String? course)? onOpenAbsences;
 
   /// Abhaken und Archiv (Wunsch 18.10.26); null = nur Anzeige.
   final HomeworkBoard? homework;
@@ -156,7 +160,14 @@ class _CoursesPageState extends State<CoursesPage> {
           ),
         ),
       if (showGrades)
-        GradesView(key: _gradesKey, source: grades, onOpen: widget.onOpen)
+        GradesView(
+          key: _gradesKey,
+          source: grades,
+          onOpen: widget.onOpen,
+          onOpenAbsences: widget.onOpenAbsences == null
+              ? null
+              : () => widget.onOpenAbsences!(null),
+        )
       else
         ..._courseList(k, t, items, open, subjects, extra),
     ];
@@ -233,6 +244,25 @@ class _CoursesPageState extends State<CoursesPage> {
             onDone: hw == null ? null : () => _done(hw, i),
           ),
         ),
+      // Fächer mit unentschuldigten Fehlstunden (Übersicht des Portals,
+      // CourseItem.missing) – Wunsch 18.10.26: Entschuldigen direkt von
+      // hier. Die Tage stehen erst auf den Kursseiten, daher öffnet das
+      // „Abwesenheiten“ für dieses Fach.
+      if (widget.onOpenAbsences != null && items.any((i) => i.missing > 0)) ...[
+        _Section(
+          title: t.absencesTitle,
+          trailing: t.absenceOpenLink,
+          onTap: () => widget.onOpenAbsences!(null),
+        ),
+        for (final i in items.where((i) => i.missing > 0))
+          Padding(
+            padding: const EdgeInsets.only(bottom: Sp.s),
+            child: _MissingCard(
+              item: i,
+              onTap: () => widget.onOpenAbsences!(i.id),
+            ),
+          ),
+      ],
       _Section(title: t.subjectsTitle),
       if (items.isEmpty)
         Padding(
@@ -349,6 +379,51 @@ class _HomeworkCard extends StatelessWidget {
                   ),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Fach mit unentschuldigten Fehlstunden; Antippen öffnet die Tage.
+class _MissingCard extends StatelessWidget {
+  const _MissingCard({required this.item, required this.onTap});
+
+  final CourseItem item;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final t = context.t;
+    final tone = k.p.cancel;
+    return Material(
+      color: tone.bg,
+      borderRadius: BorderRadius.circular(Rad.signal),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Rad.signal),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Sp.l, vertical: Sp.m),
+          child: Row(
+            children: [
+              Icon(Icons.event_busy, size: Sz.navIcon, color: tone.ink),
+              const SizedBox(width: Sp.m),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.title, style: k.boxStrong(tone)),
+                    Text(
+                      t.absenceOpenHint(item.missing),
+                      style: k.planMeta(tone.ink),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, size: Sz.navIcon, color: tone.ink),
             ],
           ),
         ),

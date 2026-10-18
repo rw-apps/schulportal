@@ -22,6 +22,7 @@ import 'course_detail_page.dart';
 import 'courses_model.dart';
 import 'courses_page.dart';
 import 'grades_view.dart';
+import 'absences_page.dart';
 import 'homework_archive.dart';
 
 /// „Unterricht“ mit echten Daten (LiveDataScope, Quelle „Mein Unterricht“).
@@ -116,7 +117,11 @@ class LiveCoursesPage extends ConsumerWidget {
           onRefresh: s.refresh,
           onOpen: (i) => pushInTab<void>(
             context,
-            (_) => _detail(context, ref, s, i, live),
+            (_) => _detail(context, ref, s, i, live, items),
+          ),
+          onOpenAbsences: (id) => pushInTab<void>(
+            context,
+            (_) => LiveAbsencesPage(courses: items, focus: id),
           ),
         );
       },
@@ -129,6 +134,7 @@ class LiveCoursesPage extends ConsumerWidget {
     LiveSnapshot s,
     CourseItem i,
     ({KidPlan plan, GroupChoice auto})? live,
+    List<CourseItem> items,
   ) {
     final now = DateTime.now();
     final codes = {...i.teacherCodes}..remove('');
@@ -181,6 +187,10 @@ class LiveCoursesPage extends ConsumerWidget {
       load: ({required bool firstHalf}) => parser.getDetailedCourseView(
         courseUrl(i.id, firstHalf: firstHalf),
         force: true,
+      ),
+      onOpenAbsences: () => pushInTab<void>(
+        context,
+        (_) => LiveAbsencesPage(courses: items, focus: i.id),
       ),
       onWrite: s.offers('nachrichten.php')
           // Eingabe-Seiten über der ganzen App (nav.dart, pushFullScreen).
