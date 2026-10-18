@@ -381,5 +381,6 @@
   "absenceOpenHint": "{n} devamsızlık izinsiz",
   "absencesTitle": "Devamsızlıklar",
   "absencesSummary": "{open} ders izinsiz · {excused} izinli",
-  "absenceOpenLink": "Devamsızlıkları gör"
+  "absenceOpenLink": "Devamsızlıkları gör",
+  "writeForWhom": "Hangi çocuk için yazılsın?"
 }

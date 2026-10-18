@@ -5,6 +5,7 @@ import 'package:liblanis/liblanis.dart';
 import 'package:lanis/bridge/lanis_bootstrap.dart' show bootstrapOverrides;
 
 import '../../error_log.dart';
+import '../../l10n/l10n.dart';
 import '../kid_chips.dart';
 import '../kit.dart';
 import 'live_data.dart';
@@ -311,10 +312,17 @@ class _Report extends StatelessWidget {
 /// unübersichtlich, und Schreiben braucht ohnehin ein Konto. Grenze: Die
 /// Wahl gilt je Bereich und bis zum Neustart.
 class FamilySwitch extends StatefulWidget {
-  const FamilySwitch({super.key, required this.child, this.kidName});
+  const FamilySwitch({super.key, required this.child, this.kidName, this.all});
 
   /// Seite mit echten Daten (liest LiveData.of und ref).
   final Widget child;
+
+  /// Ansicht über alle Kinder (Pille „Alle“ vorn, voreingestellt); null =
+  /// nur einzelne Kinder. Ursache (Wunsch 18.10.26, Nachrichten): Wer
+  /// mehrere Kinder hat, will neue Nachrichten an einer Stelle sehen. Die
+  /// Wahl „Alle“ gilt nur in diesem Bereich, nicht für die gemeinsame
+  /// Kindwahl.
+  final Widget Function(BuildContext context, List<FamilyMember> members)? all;
 
   /// Name eines Kontos für die Auswahl (Standard: Vorname aus dem Stand).
   final String Function(FamilyMember m)? kidName;
@@ -326,6 +334,9 @@ class FamilySwitch extends StatefulWidget {
 class _FamilySwitchState extends State<FamilySwitch> {
   /// Nur ohne FamilyScope (Tests): eigene Wahl.
   int? _account;
+
+  /// „Alle“ gewählt (nur mit [FamilySwitch.all]).
+  late bool _all = widget.all != null;
 
   @override
   Widget build(BuildContext context) {
@@ -344,6 +355,7 @@ class _FamilySwitchState extends State<FamilySwitch> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(Sp.page, Sp.m, Sp.page, 0),
             child: KidChips(
+              allLabel: widget.all == null ? null : context.t.forEveryone,
               kids: [
                 for (final m in members)
                   (
@@ -351,8 +363,13 @@ class _FamilySwitchState extends State<FamilySwitch> {
                     color: m.colorIndex,
                   ),
               ],
-              selected: members.indexOf(sel),
+              selected: _all ? -1 : members.indexOf(sel),
               onSelect: (i) {
+                if (i < 0) {
+                  setState(() => _all = true);
+                  return;
+                }
+                if (_all) setState(() => _all = false);
                 final id = members[i].accountId;
                 final pick = scope?.onSelect;
                 if (pick != null) {
@@ -368,10 +385,15 @@ class _FamilySwitchState extends State<FamilySwitch> {
           child: MediaQuery.removePadding(
             context: context,
             removeTop: true,
-            child: KeyedSubtree(
-              key: ValueKey('family-${sel.accountId}'),
-              child: sel.scope(widget.child),
-            ),
+            child: _all
+                ? KeyedSubtree(
+                    key: const ValueKey('family-all'),
+                    child: widget.all!(context, members),
+                  )
+                : KeyedSubtree(
+                    key: ValueKey('family-${sel.accountId}'),
+                    child: sel.scope(widget.child),
+                  ),
           ),
         ),
       ],

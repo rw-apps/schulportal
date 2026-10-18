@@ -11,7 +11,14 @@ class MessageItem {
     required this.sender,
     required this.date,
     this.unread = false,
+    this.kidName,
+    this.kidColor,
   });
+
+  /// Kind der Nachricht in der Ansicht „Alle“ (Wunsch 18.10.26); null =
+  /// Ansicht eines Kindes, ohne Zeile.
+  final String? kidName;
+  final int? kidColor;
 
   final String id;
   final String subject;
@@ -143,7 +150,7 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final tone = k.kid(0);
+    final tone = k.kid(item.kidColor ?? 0);
     return Material(
       color: item.unread ? tone.tint : k.p.card,
       borderRadius: BorderRadius.circular(Rad.signal),
@@ -183,6 +190,30 @@ class _Row extends StatelessWidget {
                       ].where((s) => s.isNotEmpty).join(' · '),
                       style: k.planMeta(item.unread ? tone.meta : k.p.muted),
                     ),
+                    if (item.kidName != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: Sp.xxs),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: Sz.dot,
+                              height: Sz.dot,
+                              decoration: BoxDecoration(
+                                color: tone.accent,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: Sp.xs + Sp.xxs),
+                            Flexible(
+                              child: Text(
+                                item.kidName!,
+                                style: k.tileKid(tone.accent),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),

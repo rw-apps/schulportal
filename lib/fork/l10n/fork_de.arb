@@ -1065,5 +1065,6 @@
       }
     }
   },
-  "absenceOpenLink": "Abwesenheiten ansehen"
+  "absenceOpenLink": "Abwesenheiten ansehen",
+  "writeForWhom": "Für welches Kind schreiben?"
 }
