@@ -98,7 +98,7 @@ void main() {
       _app(CoursesPage(items: _courses, firstName: 'Kind', grades: source)),
     );
     expect(find.text('Offene Hausaufgaben'), findsOneWidget);
-    await t.tap(find.text('Noten'));
+    await t.tap(find.text('Arbeiten & Noten'));
     await t.pumpAndSettle();
     expect(t.takeException(), isNull);
     expect(find.text('Mathematik'), findsOneWidget);
@@ -114,9 +114,9 @@ void main() {
 
     // Zurück zu Kurse und wieder Noten: nichts wird neu geladen außer dem
     // fehlgeschlagenen Kurs.
-    await t.tap(find.text('Kurse'));
+    await t.tap(find.text('Fächer & Hausaufgaben'));
     await t.pumpAndSettle();
-    await t.tap(find.text('Noten'));
+    await t.tap(find.text('Arbeiten & Noten'));
     await t.pumpAndSettle();
     expect(calls, 5);
   });

@@ -342,7 +342,7 @@
   "ownLessonTimes": "Kendi girdiğiniz ders saatleri",
   "changeAction": "Değiştir",
   "pauseAfter": "Sonraki teneffüs",
-  "coursesTab": "Dersler",
+  "coursesTab": "Dersler ve ödevler",
   "gradesTab": "Notlar",
   "gradesLoading": "Notlar yükleniyor … {done}/{total}",
   "gradesNone": "Henüz not girilmemiş.",
@@ -357,5 +357,6 @@
   "courseNewsTitle": "Derslerde yeni",
   "courseNewsTitleFor": "{name} için derslerde yeni",
   "noticeNewMark": "{subject} dersinde yeni not",
-  "noticeNewExam": "{subject}: {date} tarihine {kind} eklendi"
+  "noticeNewExam": "{subject}: {date} tarihine {kind} eklendi",
+  "examsGradesTab": "Sınavlar ve notlar"
 }

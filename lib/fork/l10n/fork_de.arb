@@ -906,7 +906,7 @@
   "ownLessonTimes": "Selbst eingetragene Stundenzeiten",
   "changeAction": "Ändern",
   "pauseAfter": "Pause danach",
-  "coursesTab": "Kurse",
+  "coursesTab": "Fächer & Hausaufgaben",
   "gradesTab": "Noten",
   "gradesLoading": "Noten werden geladen … {done} von {total}",
   "@gradesLoading": {
@@ -982,5 +982,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "examsGradesTab": "Arbeiten & Noten"
 }

@@ -342,7 +342,7 @@
   "ownLessonTimes": "Lesson times entered by you",
   "changeAction": "Change",
   "pauseAfter": "Break after",
-  "coursesTab": "Courses",
+  "coursesTab": "Subjects & homework",
   "gradesTab": "Grades",
   "gradesLoading": "Loading grades … {done} of {total}",
   "gradesNone": "No grades entered yet.",
@@ -357,5 +357,6 @@
   "courseNewsTitle": "New in lessons",
   "courseNewsTitleFor": "New in {name}'s lessons",
   "noticeNewMark": "New grade in {subject}",
-  "noticeNewExam": "{subject}: {kind} on {date} added"
+  "noticeNewExam": "{subject}: {kind} on {date} added",
+  "examsGradesTab": "Tests & grades"
 }

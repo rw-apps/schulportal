@@ -25,8 +25,11 @@ String lastNameOf(String display) {
 /// Grenze: Das Portal zeigt in der Übersicht nur den neuesten Eintrag je
 /// Kurs; ältere Hausaufgaben stehen auf der Kursseite (Antippen).
 ///
-/// Mit [grades] oben der Umschalter „Kurse | Noten“ (abgenommen 17.10.26);
-/// „Noten“ zeigt GradesView in derselben Liste unter Titel und Kind.
+/// Mit [grades] oben der Umschalter „Fächer & Hausaufgaben | Arbeiten &
+/// Noten“ (Namen nach Rückmeldung 18.10.26: „Kurse | Noten“ passte nicht,
+/// seit oben die anstehenden Arbeiten stehen; „gewählte Kurse“ wäre für die
+/// Pflichtfächer der Sekundarstufe I falsch). Rechts zeigt GradesView in
+/// derselben Liste unter Titel und Kind.
 class CoursesPage extends StatefulWidget {
   const CoursesPage({
     super.key,
@@ -111,12 +114,10 @@ class _CoursesPageState extends State<CoursesPage> {
       if (grades != null)
         Padding(
           padding: const EdgeInsets.only(top: Sp.l),
-          child: PillSegments(
-            labels: [t.coursesTab, t.gradesTab],
+          child: PillSegments.strong(
+            labels: [t.coursesTab, t.examsGradesTab],
             selected: showGrades ? 1 : 0,
             onChanged: (i) => _mode(i == 1),
-            bg: k.p.inset,
-            ink: k.p.ink,
           ),
         ),
       if (showGrades)
