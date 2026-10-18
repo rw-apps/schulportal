@@ -7,7 +7,7 @@ import '../ui/kit.dart';
 /// mittig), Farben und Schrift aus dem Kit.
 ///
 /// Ursache: Bisher lief die Anmeldung über die Lanis-Oberfläche (lila
-/// Material-Standard, sechs Einführungsseiten „lanis-mobile …“) – der
+/// Material-Standard, sechs Einführungsseiten der Vorlage) – der
 /// einzige Teil der App im fremden Stil.
 class OnbPage extends StatelessWidget {
   const OnbPage({

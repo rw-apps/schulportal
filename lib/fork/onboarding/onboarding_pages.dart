@@ -5,9 +5,9 @@ import '../l10n/l10n.dart';
 import '../ui/kit.dart';
 import 'onboarding_kit.dart';
 
-/// 1 – Willkommen (ersetzt die sechs Einführungsseiten von Lanis-Mobile).
+/// 1 – Willkommen (ersetzt die sechs Einführungsseiten der Vorlage).
 ///
-/// Ursache: Jene sprachen von „lanis-mobile“ und „von Schülern entwickelt“
+/// Ursache: Jene nannten den Namen der Vorlage und „von Schülern entwickelt“
 /// – beides trifft auf diese App nicht zu, und sechs Seiten bis zur Anmeldung
 /// sind zu viel. Jetzt eine Seite: was die App kann, dann „Anmelden“.
 class ForkWelcomePage extends StatelessWidget {
