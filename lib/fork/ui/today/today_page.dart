@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
 import '../kit.dart';
-import '../word_fit.dart';
 import 'today_model.dart';
 
 DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
@@ -55,7 +54,12 @@ List<DateTime> schoolWeek(DateTime now) {
   ];
 }
 
-/// Seite „Heute“ (Entwurf A + C, abgenommen 16.10.26).
+/// Seite „Heute“ (Entwurf A + C, abgenommen 16.10.26; kompakt nach
+/// Entwurf 18.10.26: „möglichst wenig scrollen, maximale Übersicht“).
+///
+/// Kopf in einer Zeile (Datum, Stand) statt Datum plus Begrüßung; Kasten nur
+/// für morgen (heute steht an der Karte); Karten je Kind; „Demnächst“ als
+/// Liste. Ab [Sz.wideLayout] Breite (Tablet) Kinder links, Termine rechts.
 class TodayPage extends StatelessWidget {
   const TodayPage({
     super.key,
@@ -64,6 +68,7 @@ class TodayPage extends StatelessWidget {
     this.onOpenHomework,
     this.onOpenMessages,
     this.onOpenCalendar,
+    this.onOpenDay,
     this.onOrderMeal,
     this.onRefresh,
   });
@@ -73,6 +78,10 @@ class TodayPage extends StatelessWidget {
   final void Function(ChildToday child)? onOpenHomework;
   final void Function(ChildToday child)? onOpenMessages;
   final VoidCallback? onOpenCalendar;
+
+  /// Tagesleiste angetippt: den Tag des Kindes im Kalender öffnen (ersetzt
+  /// „Ganzen Tag zeigen“ an der Karte).
+  final void Function(ChildToday child)? onOpenDay;
   final void Function(ChildToday child)? onOrderMeal;
 
   /// Ziehen zum Aktualisieren; null = ohne (Beispieldaten).
@@ -84,76 +93,103 @@ class TodayPage extends StatelessWidget {
     final t = context.t;
     // Enthält bei Scaffold(extendBody: true) die Höhe der schwebenden Leiste.
     final bottom = MediaQuery.paddingOf(context).bottom;
+    final wide = MediaQuery.sizeOf(context).width >= Sz.wideLayout;
+    final updated = data.updatedAt;
 
-    final view = CustomScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
-        SliverSafeArea(
-          bottom: false,
-          sliver: SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              Sp.page + Sp.xs,
-              Sp.xl,
-              Sp.page + Sp.xs,
-              0,
-            ),
-            sliver: SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(dateCaps(t, data.now), style: k.dateCaps),
-                  const SizedBox(height: Sp.xs),
-                  Text(greetingFor(t, data.now), style: k.greeting),
-                ],
-              ),
+    final head = Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        // Verkleinern statt umbrechen (wie der Titel im Kalender).
+        Expanded(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              formatDate(t, t.dateLong, data.now),
+              style: k.pageTitle,
+              maxLines: 1,
             ),
           ),
         ),
-        // Keine Wochenleiste Mo–Fr mehr (entfernt 17.10.26, Rückmeldung
-        // „verstehe ich nicht“): Sie war nicht antippbar, ihre Punkte
-        // unerklärt, und dieselben Termine stehen unten unter „Demnächst“
-        // (UpcomingTiles) und im Reiter Kalender. Samstags zeigte sie schon
-        // die nächste Woche ohne markierten Tag.
-        if (importantItems(data).isNotEmpty)
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
-            sliver: SliverToBoxAdapter(child: ImportantBox(data: data)),
+        if (updated != null) ...[
+          const SizedBox(width: Sp.s),
+          Text(
+            t.asOf(
+              '${updated.hour.toString().padLeft(2, '0')}:'
+              '${updated.minute.toString().padLeft(2, '0')}',
+            ),
+            style: k.meta,
+          ),
+        ],
+      ],
+    );
+
+    final kids = <Widget>[
+      for (final (i, kid) in data.kids.indexed) ...[
+        if (i > 0) const SizedBox(height: Sp.m),
+        KidCard(
+          kid: kid,
+          now: data.now,
+          onReportAbsence: onReportAbsence,
+          onOpenHomework: onOpenHomework,
+          onOpenMessages: onOpenMessages,
+          onOrderMeal: onOrderMeal,
+          onOpenDay: onOpenDay,
+        ),
+      ],
+    ];
+    final upcoming = data.week.isEmpty
+        ? null
+        : UpcomingList(
+            data: data,
+            max: wide ? 10 : 5,
+            onOpenAll: onOpenCalendar,
+          );
+
+    final view = ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(
+        Sp.page,
+        MediaQuery.paddingOf(context).top + Sp.l,
+        Sp.page,
+        bottom + Sp.xl,
+      ),
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Sp.xs),
+          child: head,
+        ),
+        if (tomorrowItems(data).isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: Sp.m),
+            child: ImportantBox(data: data),
           ),
         if (data.isDemo)
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
-            sliver: SliverToBoxAdapter(
-              child: Text(
-                t.demoNote,
-                style: k.meta,
-                textAlign: TextAlign.center,
+          Padding(
+            padding: const EdgeInsets.only(top: Sp.m),
+            child: Text(t.demoNote, style: k.meta, textAlign: TextAlign.center),
+          ),
+        const SizedBox(height: Sp.m),
+        if (wide)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 11,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: kids,
+                ),
               ),
-            ),
-          ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
-          sliver: SliverList.separated(
-            itemCount: data.kids.length,
-            separatorBuilder: (_, _) => const SizedBox(height: Sp.ml),
-            itemBuilder: (context, i) => KidCard(
-              kid: data.kids[i],
-              now: data.now,
-              onReportAbsence: onReportAbsence,
-              onOpenHomework: onOpenHomework,
-              onOpenMessages: onOpenMessages,
-              onOrderMeal: onOrderMeal,
-            ),
-          ),
-        ),
-        if (data.week.isNotEmpty)
-          SliverPadding(
-            padding: EdgeInsets.only(top: Sp.xl, bottom: bottom + Sp.xl),
-            sliver: SliverToBoxAdapter(
-              child: UpcomingTiles(data: data, onOpenAll: onOpenCalendar),
-            ),
+              const SizedBox(width: Sp.l),
+              Expanded(flex: 10, child: upcoming ?? const SizedBox.shrink()),
+            ],
           )
-        else
-          SliverToBoxAdapter(child: SizedBox(height: bottom + Sp.xl)),
+        else ...[
+          ...kids,
+          if (upcoming != null) ...[const SizedBox(height: Sp.l), upcoming],
+        ],
       ],
     );
     final refresh = onRefresh;
@@ -190,6 +226,15 @@ List<(ChildToday, ChangeItem)> importantItems(FamilyToday data) {
   return items;
 }
 
+/// Nur morgen – die heutigen Änderungen stehen an der Karte des Kindes
+/// (KidCard, Entwurf 18.10.26).
+List<(ChildToday, ChangeItem)> tomorrowItems(FamilyToday data) => [
+  for (final x in importantItems(data))
+    if (dayDiff(data.now, x.$2.day) == 1) x,
+];
+
+/// Kasten mit den Änderungen für morgen, eine Zeile je Änderung, ohne
+/// Überschrift (Entwurf 18.10.26: „Morgen“ steht in jeder Zeile).
 class ImportantBox extends StatelessWidget {
   const ImportantBox({super.key, required this.data});
 
@@ -198,22 +243,18 @@ class ImportantBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final items = importantItems(data);
+    final items = tomorrowItems(data);
     return Container(
-      padding: const EdgeInsets.fromLTRB(Sp.l, Sp.ml, Sp.l, Sp.ml),
+      padding: const EdgeInsets.fromLTRB(Sp.l, Sp.m, Sp.l, Sp.m),
       decoration: BoxDecoration(
         color: k.p.change.bg,
-        borderRadius: BorderRadius.circular(Rad.box),
+        borderRadius: BorderRadius.circular(Rad.signal),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            upperFor(context.t, context.t.importantTitle),
-            style: k.boxTitle,
-          ),
-          for (final (kid, c) in items) ...[
-            const SizedBox(height: Sp.s + Sp.xxs),
+          for (final (i, (kid, c)) in items.indexed) ...[
+            if (i > 0) const SizedBox(height: Sp.xs + Sp.xxs),
             _ImportantRow(kid: kid, item: c, now: data.now),
           ],
         ],
@@ -273,7 +314,7 @@ class _ImportantRow extends StatelessWidget {
 
 // ---- Karte je Kind ----------------------------------------------------------
 
-class KidCard extends StatefulWidget {
+class KidCard extends StatelessWidget {
   const KidCard({
     super.key,
     required this.kid,
@@ -282,7 +323,7 @@ class KidCard extends StatefulWidget {
     this.onOpenHomework,
     this.onOpenMessages,
     this.onOrderMeal,
-    this.initiallyExpanded = false,
+    this.onOpenDay,
   });
 
   final ChildToday kid;
@@ -291,43 +332,43 @@ class KidCard extends StatefulWidget {
   final void Function(ChildToday child)? onOpenHomework;
   final void Function(ChildToday child)? onOpenMessages;
   final void Function(ChildToday child)? onOrderMeal;
-  final bool initiallyExpanded;
+  final void Function(ChildToday child)? onOpenDay;
 
-  @override
-  State<KidCard> createState() => _KidCardState();
-}
-
-class _KidCardState extends State<KidCard> {
-  late bool _expanded = widget.initiallyExpanded;
+  /// Heutige Änderungen an Stunden, die noch kommen oder laufen.
+  List<DayLesson> _changesLeft() => [
+    for (final x in kid.lessons)
+      if (x.change != null && !lessonDone(x, now)) x,
+  ];
 
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final kid = widget.kid;
+    final t = context.t;
     final tone = k.kid(kid.colorIndex);
-    final status = dayStatus(kid.lessons, widget.now);
-
+    final status = dayStatus(kid.lessons, now);
     final meta = [
       kid.school,
       kid.className,
-      ?kid.periodsLabel,
     ].where((s) => s.isNotEmpty).join(' · ');
+    final changes = _changesLeft();
 
     return Container(
-      padding: const EdgeInsets.all(Sp.lx),
+      padding: const EdgeInsets.all(Sp.l),
       decoration: BoxDecoration(
         color: k.p.card,
-        borderRadius: BorderRadius.circular(Rad.card),
+        borderRadius: BorderRadius.circular(Rad.box),
         boxShadow: k.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Kopf in einer Zeile: Punkt mit Anfangsbuchstabe, Name, Schule.
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: Sz.avatar,
-                height: Sz.avatar,
+                width: Sz.avatarSmall,
+                height: Sz.avatarSmall,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: tone.accent,
@@ -339,107 +380,147 @@ class _KidCardState extends State<KidCard> {
                   style: k.avatarLetter.copyWith(color: k.p.card),
                 ),
               ),
-              const SizedBox(width: Sp.m),
+              const SizedBox(width: Sp.s + Sp.xxs),
+              Flexible(
+                child: Text(
+                  kid.firstName,
+                  style: k.cardName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: Sp.s),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(kid.firstName, style: k.cardName),
-                    Text(meta, style: k.cardMeta),
-                  ],
+                child: Text(
+                  meta,
+                  style: k.cardMeta,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: Sp.ml),
+          const SizedBox(height: Sp.m),
           _NowPanel(kid: kid, status: status, tone: tone),
           if (kid.lessons.isNotEmpty) ...[
-            const SizedBox(height: Sp.ml),
-            _DayBar(kid: kid, status: status, tone: tone, now: widget.now),
-            const SizedBox(height: Sp.s),
-            if (_expanded)
-              _DayList(kid: kid, status: status, tone: tone, now: widget.now),
-            _ToggleButton(
-              expanded: _expanded,
-              onTap: () => setState(() => _expanded = !_expanded),
-            ),
-          ],
-          if (kid.mealHint != null) ...[
             const SizedBox(height: Sp.m),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.restaurant, size: Sz.icon, color: k.p.muted),
-                const SizedBox(width: Sp.s),
-                Expanded(child: Text(kid.mealHint!, style: k.cardMeta)),
-              ],
+            // Antippen öffnet den Tag im Kalender (alle Stunden, Pausen).
+            Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: onOpenDay == null ? null : () => onOpenDay!(kid),
+                borderRadius: BorderRadius.circular(Rad.bar),
+                child: _DayBar(kid: kid, status: status, tone: tone, now: now),
+              ),
             ),
           ],
-          ..._actions(context, k),
+          for (final x in changes)
+            Padding(
+              padding: const EdgeInsets.only(top: Sp.s),
+              child: _ChangeLine(lesson: x),
+            ),
+          if (kid.mealHint != null)
+            Padding(
+              padding: const EdgeInsets.only(top: Sp.s),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.restaurant, size: Sz.icon, color: k.p.muted),
+                  const SizedBox(width: Sp.s),
+                  Expanded(child: Text(kid.mealHint!, style: k.cardMeta)),
+                ],
+              ),
+            ),
+          ..._actions(t),
         ],
       ),
     );
   }
 
-  List<Widget> _actions(BuildContext context, Kit k) {
-    final kid = widget.kid;
+  List<Widget> _actions(ForkL10n t) {
     final items = <Widget>[
       if (kid.openHomework > 0)
         _ActionButton(
           icon: Icons.menu_book_outlined,
-          label: context.t.homeworkCount(kid.openHomework),
-          onTap: widget.onOpenHomework == null
-              ? null
-              : () => widget.onOpenHomework!(kid),
+          label: t.homeworkCount(kid.openHomework),
+          onTap: onOpenHomework == null ? null : () => onOpenHomework!(kid),
         ),
       if (kid.unreadMessages > 0)
         _ActionButton(
           icon: Icons.mail_outline,
-          label: context.t.unreadCount(kid.unreadMessages),
-          onTap: widget.onOpenMessages == null
-              ? null
-              : () => widget.onOpenMessages!(kid),
+          label: t.unreadCount(kid.unreadMessages),
+          onTap: onOpenMessages == null ? null : () => onOpenMessages!(kid),
         ),
       if (kid.mensaUrl != null)
         _ActionButton(
           icon: Icons.restaurant_menu,
-          label: context.t.orderMeal,
-          onTap: widget.onOrderMeal == null
-              ? null
-              : () => widget.onOrderMeal!(kid),
+          label: t.orderMeal,
+          onTap: onOrderMeal == null ? null : () => onOrderMeal!(kid),
         ),
       if (kid.canReportAbsence)
         _ActionButton(
           icon: Icons.thermostat,
-          label: context.t.reportSick,
+          label: t.reportSick,
           strong: true,
-          onTap: widget.onReportAbsence == null
-              ? null
-              : () => widget.onReportAbsence!(kid),
+          onTap: onReportAbsence == null ? null : () => onReportAbsence!(kid),
         ),
     ];
     if (items.isEmpty) return const [];
-    // Zwei je Zeile; ein übrig bleibender Knopf nimmt die ganze Breite.
-    final rows = <Widget>[];
-    for (var i = 0; i < items.length; i += 2) {
-      rows.add(const SizedBox(height: Sp.s));
-      rows.add(
-        Row(
-          children: [
-            Expanded(child: items[i]),
-            if (i + 1 < items.length) ...[
-              const SizedBox(width: Sp.s),
-              Expanded(child: items[i + 1]),
-            ],
-          ],
-        ),
-      );
-    }
-    return [const SizedBox(height: Sp.xs), ...rows];
+    // Pillen in einer Reihe, bei Platzmangel umbrechend (Entwurf 18.10.26:
+    // statt zwei großer Knöpfe je Zeile).
+    return [
+      const SizedBox(height: Sp.m),
+      Wrap(spacing: Sp.s, runSpacing: Sp.s, children: items),
+    ];
   }
 }
 
-/// Fläche „JETZT · 3./4. STD. · NOCH 30 MIN.“
+/// Heutige Änderung als Zeile: „5. Std. Deutsch – Vertretung Tim Sommer“.
+class _ChangeLine extends StatelessWidget {
+  const _ChangeLine({required this.lesson});
+
+  final DayLesson lesson;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final t = context.t;
+    final x = lesson;
+    final tone = x.cancelled ? k.p.cancel : k.p.change;
+    final what = switch (x.change!) {
+      ChangeKind.cancelled => t.lessonCancelled,
+      ChangeKind.roomChange => '${t.changeRoom} ${x.changeDetail ?? ''}'.trim(),
+      ChangeKind.substitution =>
+        '${t.changeSubstitution} ${x.changeDetail ?? ''}'.trim(),
+    };
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: Sp.xs + 1),
+          child: _Dot(color: tone.dot),
+        ),
+        const SizedBox(width: Sp.s),
+        Expanded(
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: '${x.slot} ${x.subject}',
+                  style: k.boxStrong(tone),
+                ),
+                TextSpan(text: ' – $what', style: k.boxText(tone)),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Fläche „JETZT · 3./4. STD. · NOCH 30 MIN.“, Fach und Raum in einem
+/// Absatz (bricht nur um, wenn es nicht passt).
 class _NowPanel extends StatelessWidget {
   const _NowPanel({
     required this.kid,
@@ -464,10 +545,6 @@ class _NowPanel extends StatelessWidget {
       hasTime(x) ? '${x.start}–${x.end}' : x.slot,
       ?x.room,
       ?x.teacher,
-      if (x.change == ChangeKind.substitution)
-        '${t.changeSubstitution} ${x.changeDetail ?? ''}'.trim(),
-      if (x.change == ChangeKind.roomChange)
-        '${t.changeRoom} ${x.changeDetail ?? ''}'.trim(),
     ].join(' · ');
 
     switch (status.phase) {
@@ -504,18 +581,27 @@ class _NowPanel extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: Sp.l, vertical: Sp.ml),
+      padding: const EdgeInsets.symmetric(
+        horizontal: Sp.m,
+        vertical: Sp.s + Sp.xxs,
+      ),
       decoration: BoxDecoration(
         color: tone.tint,
-        borderRadius: BorderRadius.circular(Rad.panel),
+        borderRadius: BorderRadius.circular(Rad.row),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: k.nowLabel(tone)),
-          const SizedBox(height: Sp.xxs),
-          Text(title, style: k.nowSubject(tone)),
-          if (meta != null) Text(meta, style: k.nowMeta(tone)),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: title, style: k.nowSubject(tone)),
+                if (meta != null && meta.isNotEmpty)
+                  TextSpan(text: '   $meta', style: k.nowMeta(tone)),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -609,200 +695,7 @@ class _DayBar extends StatelessWidget {
   }
 }
 
-/// Aufgeklappter Tag: eine Zeile je Abschnitt, Pausen ab 30 Minuten.
-class _DayList extends StatelessWidget {
-  const _DayList({
-    required this.kid,
-    required this.status,
-    required this.tone,
-    required this.now,
-  });
-
-  final ChildToday kid;
-  final DayStatus status;
-  final KidTone tone;
-  final DateTime now;
-
-  /// Ab dieser Länge erscheint eine Pause als eigene Zeile. Kürzere
-  /// (5–20 Min.) sind normale Wechsel und würden die Liste nur verlängern.
-  static const pauseRowMinutes = 30;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    final l = kid.lessons;
-    final rows = <Widget>[];
-    for (var i = 0; i < l.length; i++) {
-      if (gapBefore(l, i) >= pauseRowMinutes) {
-        rows.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Sp.xs,
-              vertical: Sp.xs,
-            ),
-            child: Row(
-              children: [
-                const SizedBox(width: Sz.slotColumn + Sp.s + Sp.xxs),
-                Text(context.t.pauseUntil(l[i].start), style: k.rowPause),
-              ],
-            ),
-          ),
-        );
-      }
-      rows.add(_row(k, context.t, l[i], i));
-    }
-    return Container(
-      margin: const EdgeInsets.only(bottom: Sp.s),
-      padding: const EdgeInsets.only(top: Sp.xs + Sp.xxs),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: k.p.line)),
-      ),
-      child: Column(children: rows),
-    );
-  }
-
-  Widget _row(Kit k, ForkL10n t, DayLesson x, int i) {
-    final done = lessonDone(x, now) && status.current != i;
-    final running = status.current == i;
-    Color ink = k.p.ink;
-    Color sub = k.p.muted;
-    Color? bg;
-    var subject = x.subject;
-    // Rechts nur die Uhrzeit (und Raum); Angaben zur Änderung stehen als
-    // zweite Zeile unter dem Fach. Ursache: „11:40 · Tim Sommer, R 112“
-    // rechts drückte das Fach bei Schrift ×1,15 in zwei Zeilen.
-    var right = [
-      if (hasTime(x)) x.start,
-      if (x.change == null) ?x.room,
-    ].join(' · ');
-    String? second;
-    var strong = false;
-
-    if (x.cancelled) {
-      bg = k.p.cancel.bg;
-      ink = sub = k.p.cancel.ink;
-      second = t.lessonCancelled;
-      strong = true;
-    } else if (running) {
-      bg = tone.tint;
-      ink = tone.onTint;
-      sub = tone.label;
-      right = t.lessonRunning;
-      strong = true;
-    } else if (done) {
-      ink = sub = k.p.faint;
-    } else if (x.change != null) {
-      bg = k.p.change.bg;
-      ink = sub = k.p.change.ink;
-      final what = x.change == ChangeKind.substitution
-          ? t.changeSubstitution
-          : t.changeRoom;
-      second = [what, ?x.changeDetail].join(': ');
-      strong = true;
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(top: Sp.xxs),
-      padding: const EdgeInsets.symmetric(horizontal: Sp.xs, vertical: Sp.s),
-      decoration: bg == null
-          ? null
-          : BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(Rad.row),
-            ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
-        children: [
-          SizedBox(
-            width: Sz.slotColumn,
-            child: Text(listSlot(x.slot), style: k.rowSlot(sub)),
-          ),
-          const SizedBox(width: Sp.s + Sp.xxs),
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  subject,
-                  style: k
-                      .rowSubject(ink, strong: strong)
-                      .copyWith(
-                        decoration: done ? TextDecoration.lineThrough : null,
-                        decorationColor: ink,
-                      ),
-                ),
-                if (second != null) Text(second, style: k.rowTime(sub)),
-              ],
-            ),
-          ),
-          const SizedBox(width: Sp.s),
-          // Uhrzeit/Raum darf schrumpfen, das Fach hat Vorrang (flex 3:2).
-          // Ursache: Bei „Sehr groß“ lief die Zeile 32 px über
-          // (today_page_test, ×1,3 × 1,12).
-          Flexible(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(right, style: k.rowTime(sub)),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ToggleButton extends StatelessWidget {
-  const _ToggleButton({required this.expanded, required this.onTap});
-
-  final bool expanded;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    return Material(
-      color: k.p.inset,
-      borderRadius: BorderRadius.circular(Rad.buttonSmall),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(Rad.buttonSmall),
-        onTap: onTap,
-        child: SizedBox(
-          height: Sz.buttonSmall,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Verkleinern statt Überlauf: Bei Schriftstufe „Sehr groß“ plus
-              // großer Systemschrift lief der Text 27 px über die Karte
-              // (today_page_test, ×1,3 × 1,12).
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    expanded ? context.t.dayCollapse : context.t.dayExpand,
-                    style: k.button(k.p.muted),
-                  ),
-                ),
-              ),
-              const SizedBox(width: Sp.xs + Sp.xxs),
-              Icon(
-                expanded ? Icons.expand_less : Icons.expand_more,
-                size: Sz.icon,
-                color: k.p.muted,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
+/// Aktion als Pille (Höhe wie die Kinderwahl, Sz.buttonSmall).
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.icon,
@@ -822,28 +715,20 @@ class _ActionButton extends StatelessWidget {
     final fg = strong ? k.p.onStrong : k.p.ink;
     return Material(
       color: strong ? k.p.strong : k.p.inset,
-      borderRadius: BorderRadius.circular(Rad.button),
+      borderRadius: BorderRadius.circular(Rad.pill),
       child: InkWell(
-        borderRadius: BorderRadius.circular(Rad.button),
+        borderRadius: BorderRadius.circular(Rad.pill),
         onTap: onTap,
-        child: Tooltip(
-          message: label,
-          child: SizedBox(
-            height: Sz.button,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: Sz.icon, color: fg),
-                const SizedBox(width: Sp.s),
-                Flexible(
-                  child: Text(
-                    label,
-                    style: k.button(fg),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
+        child: Container(
+          height: Sz.buttonSmall,
+          padding: const EdgeInsets.symmetric(horizontal: Sp.l),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: Sz.icon, color: fg),
+              const SizedBox(width: Sp.s),
+              Text(label, style: k.button(fg)),
+            ],
           ),
         ),
       ),
@@ -853,48 +738,62 @@ class _ActionButton extends StatelessWidget {
 
 // ---- Demnächst --------------------------------------------------------------
 
-class UpcomingTiles extends StatelessWidget {
-  const UpcomingTiles({super.key, required this.data, this.onOpenAll});
+/// „Demnächst“ als Liste über die volle Breite: Tag, Titel mit Uhrzeit bzw.
+/// Art, Kind. Ursache (Rückmeldung 18.10.26): Die seitlich scrollenden
+/// Kacheln nutzten den Platz nicht und schnitten Termine ab.
+class UpcomingList extends StatelessWidget {
+  const UpcomingList({
+    super.key,
+    required this.data,
+    this.max = 5,
+    this.onOpenAll,
+  });
 
   final FamilyToday data;
+  final int max;
   final VoidCallback? onOpenAll;
 
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
+    final t = context.t;
     final items = [...data.week]..sort((a, b) => a.day.compareTo(b.day));
+    final shown = items.take(max).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Sp.page + Sp.xs),
+          padding: const EdgeInsets.only(left: Sp.xs),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Expanded(child: Text(context.t.upcoming, style: k.section)),
+              Expanded(child: Text(t.upcoming, style: k.section)),
               if (onOpenAll != null)
                 TextButton(
                   onPressed: onOpenAll,
-                  child: Text(context.t.allEvents, style: k.link),
+                  child: Text(t.allEvents, style: k.link),
                 ),
             ],
           ),
         ),
-        const SizedBox(height: Sp.xs),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: Sp.page),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final (i, w) in items.indexed) ...[
-                  if (i > 0) const SizedBox(width: Sp.s + Sp.xxs),
-                  _Tile(item: w, data: data),
-                ],
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Sp.l,
+            vertical: Sp.xs,
+          ),
+          decoration: BoxDecoration(
+            color: k.p.card,
+            borderRadius: BorderRadius.circular(Rad.box),
+            boxShadow: k.cardShadow,
+          ),
+          child: Column(
+            children: [
+              for (final (i, w) in shown.indexed) ...[
+                if (i > 0) Divider(height: 1, color: k.p.line),
+                _UpcomingRow(item: w, data: data),
               ],
-            ),
+            ],
           ),
         ),
       ],
@@ -902,8 +801,8 @@ class UpcomingTiles extends StatelessWidget {
   }
 }
 
-class _Tile extends StatelessWidget {
-  const _Tile({required this.item, required this.data});
+class _UpcomingRow extends StatelessWidget {
+  const _UpcomingRow({required this.item, required this.data});
 
   final WeekItem item;
   final FamilyToday data;
@@ -911,48 +810,57 @@ class _Tile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final ci = item.childIndex;
-    final kid = ci == null ? null : data.kids[ci];
-    final color = kid == null ? k.p.muted : k.kid(kid.colorIndex).accent;
     final t = context.t;
-    final caption = upperFor(
-      t,
-      [relativeDay(t, item.day, data.now), ?item.time].join(' · '),
-    );
-    return Container(
-      width: Sz.tileWidth,
-      padding: const EdgeInsets.all(Sp.ml),
-      decoration: BoxDecoration(
-        color: k.p.card,
-        borderRadius: BorderRadius.circular(Rad.tile),
-      ),
-      child: Column(
+    final ci = item.childIndex;
+    final kid = ci == null || ci >= data.kids.length ? null : data.kids[ci];
+    final color = kid == null ? k.p.muted : k.kid(kid.colorIndex).accent;
+    final kind = switch (item.kind) {
+      WeekKind.exam => t.kindExam,
+      WeekKind.free => t.kindFree,
+      WeekKind.deadline => t.kindDeadline,
+      WeekKind.meal => t.kindMeal,
+      WeekKind.event => null,
+    };
+    final meta = [
+      ?item.time,
+      if (item.until != null)
+        t.barUntil(formatDate(t, t.dateShort, item.until!)),
+      ?kind,
+    ].join(' · ');
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Sp.s + Sp.xxs),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(caption, style: k.tileCaption),
-          const SizedBox(height: Sp.xs + Sp.xxs),
-          // Ganze Wörter (word_fit.dart); Breite = Kachel minus Innenrand.
-          Expanded(
-            child: WordFitText(
-              item.title,
-              style: k.tileTitle,
-              width: Sz.tileWidth - 2 * Sp.ml,
+          SizedBox(
+            width: Sz.slotColumn + Sp.l,
+            child: Text(
+              relativeDay(t, item.day, data.now),
+              style: k.tileCaption,
             ),
           ),
-          const SizedBox(height: Sp.xs + Sp.xxs),
-          Row(
-            children: [
-              _Dot(color: color),
-              const SizedBox(width: Sp.xs + Sp.xxs),
-              Flexible(
-                child: Text(
-                  kid?.firstName ?? t.forEveryone,
-                  style: k.tileKid(color),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.title, style: k.tileTitle),
+                if (meta.isNotEmpty)
+                  Text(
+                    meta,
+                    style: k.planMeta(
+                      item.kind == WeekKind.exam ? k.p.cancel.ink : k.p.muted,
+                    ),
+                  ),
+              ],
+            ),
           ),
+          const SizedBox(width: Sp.s),
+          Padding(
+            padding: const EdgeInsets.only(top: Sp.xs),
+            child: _Dot(color: color),
+          ),
+          const SizedBox(width: Sp.xs + Sp.xxs),
+          Text(kid?.firstName ?? t.forEveryone, style: k.tileKid(color)),
         ],
       ),
     );

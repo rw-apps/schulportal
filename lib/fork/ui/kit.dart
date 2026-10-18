@@ -71,6 +71,12 @@ abstract final class Sz {
   static const double icon = 18;
   static const double navIcon = 22;
   static const double avatar = 44;
+
+  /// Punkt mit Anfangsbuchstabe im Kopf der Kinderkarte (kompakt, 18.10.26).
+  static const double avatarSmall = 32;
+
+  /// Ab dieser Breite zweispaltig (Tablet): Kinder links, Termine rechts.
+  static const double wideLayout = 700;
   static const double dot = 8;
   static const double dotSmall = 6;
 

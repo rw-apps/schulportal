@@ -382,5 +382,6 @@
   "absencesTitle": "Absences",
   "absencesSummary": "{open, plural, =0{No open absences} =1{1 lesson not excused} other{{open} lessons not excused}} · {excused} excused",
   "absenceOpenLink": "View absences",
-  "writeForWhom": "Write for which child?"
+  "writeForWhom": "Write for which child?",
+  "asOf": "As of {time}"
 }

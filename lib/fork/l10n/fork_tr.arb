@@ -382,5 +382,6 @@
   "absencesTitle": "Devamsızlıklar",
   "absencesSummary": "{open} ders izinsiz · {excused} izinli",
   "absenceOpenLink": "Devamsızlıkları gör",
-  "writeForWhom": "Hangi çocuk için yazılsın?"
+  "writeForWhom": "Hangi çocuk için yazılsın?",
+  "asOf": "Güncel: {time}"
 }

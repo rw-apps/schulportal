@@ -138,12 +138,17 @@ class FamilyToday {
     required this.kids,
     required this.week,
     this.isDemo = false,
+    this.updatedAt,
   });
 
   final DateTime now;
   final List<ChildToday> kids;
   final List<WeekItem> week;
   final bool isDemo;
+
+  /// Ältester Ladezeitpunkt der angezeigten Daten („Stand 10:48“); null =
+  /// unbekannt (Beispieldaten).
+  final DateTime? updatedAt;
 }
 
 // ---- Berechnung „Jetzt“ ---------------------------------------------------

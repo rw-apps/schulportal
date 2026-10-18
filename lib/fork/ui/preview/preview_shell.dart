@@ -81,6 +81,12 @@ class _PreviewShellState extends State<PreviewShell> {
     super.dispose();
   }
 
+  void _openDay() {
+    _calendarView.value = PlanView.day;
+    _navKeys[ShellTab.calendar]!.currentState?.popUntil((r) => r.isFirst);
+    _select(ShellTab.calendar);
+  }
+
   void _openEvents() {
     _calendarView.value = PlanView.events;
     _navKeys[ShellTab.calendar]!.currentState?.popUntil((r) => r.isFirst);
@@ -312,6 +318,7 @@ class _PreviewShellState extends State<PreviewShell> {
     return switch (tab) {
       ShellTab.today => LiveTodayPage(
         onOpenCalendar: _openEvents,
+        onOpenDay: _openDay,
         onOpenHomework: () => _select(ShellTab.courses),
         onOpenMessages: () => _select(ShellTab.messages),
       ),

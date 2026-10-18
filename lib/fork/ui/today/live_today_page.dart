@@ -48,8 +48,12 @@ class LiveTodayPage extends StatefulWidget {
     this.onOpenCalendar,
     this.onOpenHomework,
     this.onOpenMessages,
+    this.onOpenDay,
   });
 
+  /// Kalender in der Ansicht „Tag“ (Tagesleiste angetippt); das Kind ist
+  /// dann schon gewählt (FamilyData.onSelect).
+  final VoidCallback? onOpenDay;
   final VoidCallback? onOpenCalendar;
   final VoidCallback? onOpenHomework;
   final VoidCallback? onOpenMessages;
@@ -148,8 +152,35 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
               return d != 0 ? d : a.$1.compareTo(b.$1);
             });
         final week = [for (final x in merged) x.$2];
+        // Ältester Stand der angezeigten Pläne – ehrlicher als der neueste.
+        DateTime? updated;
+        for (final (m, _) in shown) {
+          for (final at in [
+            m.snapshot.timetable.fetchedAt,
+            m.snapshot.substitutions.fetchedAt,
+          ]) {
+            if (at != null && (updated == null || at.isBefore(updated))) {
+              updated = at;
+            }
+          }
+        }
+        // Vor dem Wechsel in einen anderen Reiter das Kind der Karte wählen
+        // (gemeinsame Kindwahl), damit dort gleich das richtige Kind steht.
+        void select(ChildToday c) =>
+            FamilyData.scopeOf(context)?.onSelect?.call(memberOf(c).accountId);
         return TodayPage(
-          data: FamilyToday(now: now, kids: kids, week: week),
+          data: FamilyToday(
+            now: now,
+            kids: kids,
+            week: week,
+            updatedAt: updated,
+          ),
+          onOpenDay: widget.onOpenDay == null
+              ? null
+              : (c) {
+                  select(c);
+                  widget.onOpenDay!();
+                },
           onReportAbsence: kids.any((k) => k.canReportAbsence)
               ? (c) {
                   final m = memberOf(c);
@@ -175,10 +206,16 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
           onOpenCalendar: widget.onOpenCalendar,
           onOpenHomework: widget.onOpenHomework == null
               ? null
-              : (_) => widget.onOpenHomework!(),
+              : (c) {
+                  select(c);
+                  widget.onOpenHomework!();
+                },
           onOpenMessages: widget.onOpenMessages == null
               ? null
-              : (_) => widget.onOpenMessages!(),
+              : (c) {
+                  select(c);
+                  widget.onOpenMessages!();
+                },
           onRefresh: () async {
             await Future.wait([for (final m in members) m.snapshot.refresh()]);
           },

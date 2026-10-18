@@ -173,6 +173,11 @@ class _PlanPageState extends State<PlanPage> {
     final v = r?.value;
     if (r == null || v == null) return;
     if (v != PlanView.events || widget.events != null) _view = v;
+    // „Tag“ von „Heute“: immer der heutige Tag der laufenden Woche.
+    if (v == PlanView.day) {
+      _weekOffset = 0;
+      _day = _todayIndex ?? 0;
+    }
     if (v == PlanView.events) _eventsKid = -1;
     r.value = null;
   }

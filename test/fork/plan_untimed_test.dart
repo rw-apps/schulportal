@@ -104,7 +104,7 @@ void main() {
     await t.pumpAndSettle();
     expect(t.takeException(), isNull);
     expect(find.textContaining('AB 1.'), findsOneWidget);
-    expect(find.text('Geschichte'), findsWidgets);
+    expect(find.textContaining('Geschichte'), findsWidgets);
   });
 
   test('Stundenzeiten: Raster und gespeicherte Form', () {

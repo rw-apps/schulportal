@@ -1066,5 +1066,13 @@
     }
   },
   "absenceOpenLink": "Abwesenheiten ansehen",
-  "writeForWhom": "Für welches Kind schreiben?"
+  "writeForWhom": "Für welches Kind schreiben?",
+  "asOf": "Stand {time}",
+  "@asOf": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

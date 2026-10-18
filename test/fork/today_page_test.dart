@@ -92,6 +92,43 @@ void main() {
   test('Wichtig: nur heute und morgen, nach Tag sortiert', () {
     final items = importantItems(demoFamily());
     expect(items.map((e) => e.$2.subject), ['Deutsch', 'Sport']);
+    // Kasten nur noch für morgen; heute steht an der Karte.
+    expect(tomorrowItems(demoFamily()).map((e) => e.$2.subject), ['Sport']);
+  });
+
+  testWidgets('Heute kompakt: Änderung an der Karte, Tagesleiste, Tablet', (
+    t,
+  ) async {
+    final opened = <String>[];
+    Widget page() => MaterialApp(
+      localizationsDelegates: ForkL10n.localizationsDelegates,
+      supportedLocales: ForkL10n.supportedLocales,
+      locale: const Locale('de'),
+      home: Scaffold(
+        body: TodayPage(
+          data: demoFamily(),
+          onOpenDay: (c) => opened.add(c.firstName),
+        ),
+      ),
+    );
+    await _pixel(t);
+    await t.pumpWidget(page());
+    await t.pumpAndSettle();
+    expect(t.takeException(), isNull);
+    expect(find.textContaining('morgen 1. Std. Sport'), findsOneWidget);
+    expect(find.text('Ganzen Tag zeigen'), findsNothing);
+    expect(find.textContaining('Tim Sommer'), findsOneWidget);
+    await t.tap(find.textContaining('Danach').first);
+    expect(opened, ['Lena']);
+    // Tablet: Termine neben den Kindern, ohne Scrollen sichtbar.
+    t.view.physicalSize = const Size(1600, 2560);
+    t.view.devicePixelRatio = 2.0;
+    await t.pumpWidget(page());
+    await t.pumpAndSettle();
+    expect(t.takeException(), isNull);
+    final lena = t.getTopLeft(find.text('Lena').first);
+    final soon = t.getTopLeft(find.text('Demnächst'));
+    expect(soon.dx, greaterThan(lena.dx + 200));
   });
 
   for (final b in Brightness.values) {
@@ -105,25 +142,7 @@ void main() {
         expect(find.textContaining('Vertretung Tim Sommer'), findsOneWidget);
         expect(find.textContaining('NOCH 30 MIN.'), findsOneWidget);
 
-        // Langer Tag aufklappen: alle 6 Abschnitte, Mittagspause sichtbar.
-        final open = find.text('Ganzen Tag zeigen').first;
-        // In die Bildmitte, damit der Knopf nicht hinter der Leiste liegt.
-        Scrollable.ensureVisible(t.element(open), alignment: 0.5);
-        await t.pumpAndSettle();
-        await t.tap(open, warnIfMissed: true);
-        await t.pumpAndSettle();
-        expect(t.takeException(), isNull);
-        expect(find.text('Musik', skipOffstage: false), findsOneWidget);
-        expect(
-          find.text('Pause bis 14:00', skipOffstage: false),
-          findsOneWidget,
-        );
-        expect(
-          find.text('Vertretung: Tim Sommer, R 112', skipOffstage: false),
-          findsOneWidget,
-        );
-
-        await t.drag(find.byType(CustomScrollView), const Offset(0, -6000));
+        await t.drag(find.byType(Scrollable).first, const Offset(0, -6000));
         await t.pumpAndSettle();
         expect(t.takeException(), isNull);
         expect(find.text('Demnächst'), findsOneWidget);
@@ -181,6 +200,6 @@ void main() {
     await t.binding.handlePopRoute();
     await t.pumpAndSettle();
     expect(find.text('Mehr'), findsOneWidget);
-    expect(find.textContaining('Guten'), findsOneWidget);
+    expect(find.text('Dienstag, 20. Oktober'), findsOneWidget);
   });
 }
