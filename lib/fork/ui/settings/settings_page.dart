@@ -15,6 +15,7 @@ import 'package:lanis/utils/safe_launch.dart';
 import 'package:lanis/utils/theme_settings.dart';
 import 'package:lanis/view/settings/subsettings/debug_export.dart';
 
+import '../../calendar_subscribe.dart';
 import '../../error_log.dart';
 import '../../l10n/l10n.dart';
 import '../font_step.dart';
@@ -202,6 +203,18 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
                 const SizedBox(height: Sp.m),
                 SelectableText(link, style: k.body),
                 const SizedBox(height: Sp.m),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    safeLaunchUrl(
+                      googleCalendarSubscribeUrl(link),
+                      context: this.context,
+                      mode: LaunchMode.externalApplication,
+                    );
+                  },
+                  icon: const Icon(Icons.open_in_new),
+                  label: Text(t.openInGoogleCalendar, style: k.link),
+                ),
                 TextButton.icon(
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: link));

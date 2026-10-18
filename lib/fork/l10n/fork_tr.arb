@@ -429,5 +429,6 @@
   "transferApplyText": "{schools} için. İşaretlenen ödevler birleştirilir, diğer her şey bu cihazdaki girişlerin yerine geçer.",
   "transferSkipped": "Dosyadaki {n} hesap burada kurulu değil ve atlanır.",
   "transferApply": "Al",
-  "transferDone": "Girişler alındı."
+  "transferDone": "Girişler alındı.",
+  "openInGoogleCalendar": "Google Takvim’de aç"
 }

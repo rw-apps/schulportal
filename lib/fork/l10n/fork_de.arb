@@ -1151,5 +1151,6 @@
     }
   },
   "transferApply": "Übernehmen",
-  "transferDone": "Eingaben übernommen."
+  "transferDone": "Eingaben übernommen.",
+  "openInGoogleCalendar": "In Google Kalender öffnen"
 }

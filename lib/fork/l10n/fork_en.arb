@@ -429,5 +429,6 @@
   "transferApplyText": "For {schools}. Ticked homework is merged, everything else replaces the entries on this device.",
   "transferSkipped": "{n, plural, =1{1 account in the file is not set up here and is skipped.} other{{n} accounts in the file are not set up here and are skipped.}}",
   "transferApply": "Import",
-  "transferDone": "Entries imported."
+  "transferDone": "Entries imported.",
+  "openInGoogleCalendar": "Open in Google Calendar"
 }
