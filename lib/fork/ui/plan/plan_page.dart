@@ -32,7 +32,14 @@ class PlanPage extends StatefulWidget {
     this.onEditTimes,
     this.selectedKid,
     this.onSelectKid,
+    this.viewRequest,
   });
+
+  /// Ansicht, die von außen verlangt wird (Heute → „Alle Termine“ setzt
+  /// [PlanView.events]); die Seite übernimmt sie und setzt den Wert wieder
+  /// auf null. Ursache (Rückmeldung 18.10.26): Der Knopf öffnete den
+  /// Kalender in der zuletzt gewählten Ansicht, oft „Tag“.
+  final ValueNotifier<PlanView?>? viewRequest;
 
   /// Von außen gewähltes Kind (Index in [plans], FamilyData); null = eigene
   /// Wahl der Seite.
@@ -79,6 +86,11 @@ class PlanPage extends StatefulWidget {
 class _PlanPageState extends State<PlanPage> {
   int _kid = 0;
   PlanView _view = PlanView.day;
+
+  /// Filter in „Termine“: -1 = alle Kinder, sonst Index in [PlanPage.plans].
+  /// Eigene Wahl statt der gemeinsamen Kindwahl: Die Liste aller Termine ist
+  /// hier der Normalfall, Tag und Woche zeigen dagegen immer ein Kind.
+  int _eventsKid = -1;
   late int _day;
   late final Map<int, GroupChoice> _choices = {
     for (final e in widget.initialChoices.entries) e.key: {...e.value},
@@ -141,6 +153,28 @@ class _PlanPageState extends State<PlanPage> {
     super.initState();
     _day = _todayIndex ?? 0;
     _kid = _validKid(widget.selectedKid) ?? 0;
+    widget.viewRequest?.addListener(_onRequest);
+    _takeRequest();
+  }
+
+  @override
+  void dispose() {
+    widget.viewRequest?.removeListener(_onRequest);
+    super.dispose();
+  }
+
+  void _onRequest() {
+    if (widget.viewRequest?.value != null) setState(_takeRequest);
+  }
+
+  /// Verlangte Ansicht übernehmen; „Termine“ beginnt dann mit allen Kindern.
+  void _takeRequest() {
+    final r = widget.viewRequest;
+    final v = r?.value;
+    if (r == null || v == null) return;
+    if (v != PlanView.events || widget.events != null) _view = v;
+    if (v == PlanView.events) _eventsKid = -1;
+    r.value = null;
   }
 
   int? _validKid(int? i) =>
@@ -149,6 +183,12 @@ class _PlanPageState extends State<PlanPage> {
   @override
   void didUpdateWidget(covariant PlanPage old) {
     super.didUpdateWidget(old);
+    if (old.viewRequest != widget.viewRequest) {
+      old.viewRequest?.removeListener(_onRequest);
+      widget.viewRequest?.addListener(_onRequest);
+      _takeRequest();
+    }
+    if (_eventsKid >= widget.plans.length) _eventsKid = -1;
     final k = _validKid(widget.selectedKid);
     if (k != null && k != _kid) _kid = k;
     if (_kid >= widget.plans.length) _kid = 0;
@@ -354,12 +394,45 @@ class _PlanPageState extends State<PlanPage> {
     }
 
     if (_view == PlanView.events) {
+      final many = widget.plans.length > 1;
+      final events = [
+        for (final e in widget.events ?? const <WeekItem>[])
+          if (_eventsKid < 0 ||
+              e.childIndex == null ||
+              e.childIndex == _eventsKid)
+            e,
+      ];
       final view = CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           SliverSafeArea(
             bottom: false,
-            sliver: SliverToBoxAdapter(child: head.first),
+            sliver: SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  head.first,
+                  if (many)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        Sp.page,
+                        Sp.ml,
+                        Sp.page,
+                        0,
+                      ),
+                      child: KidChips(
+                        allLabel: context.t.forEveryone,
+                        kids: [
+                          for (final p in widget.plans)
+                            (name: p.firstName, color: p.colorIndex),
+                        ],
+                        selected: _eventsKid,
+                        onSelect: (i) => setState(() => _eventsKid = i),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
           SliverPadding(
             padding: EdgeInsets.fromLTRB(
@@ -370,9 +443,14 @@ class _PlanPageState extends State<PlanPage> {
             ),
             sliver: SliverToBoxAdapter(
               child: EventList(
-                items: widget.events ?? const [],
+                items: events,
                 now: widget.now,
                 kidColor: _plan.colorIndex,
+                kids: [
+                  for (final p in widget.plans)
+                    (name: p.firstName, color: p.colorIndex),
+                ],
+                showKid: many && _eventsKid < 0,
               ),
             ),
           ),

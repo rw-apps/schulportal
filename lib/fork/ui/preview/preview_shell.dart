@@ -71,6 +71,22 @@ class _PreviewShellState extends State<PreviewShell> {
   final _visited = <ShellTab>{ShellTab.today};
   int _revision = 0;
 
+  /// „Alle Termine“ auf Heute: Kalender in der Ansicht „Termine“ öffnen
+  /// (PlanPage.viewRequest).
+  final _calendarView = ValueNotifier<PlanView?>(null);
+
+  @override
+  void dispose() {
+    _calendarView.dispose();
+    super.dispose();
+  }
+
+  void _openEvents() {
+    _calendarView.value = PlanView.events;
+    _navKeys[ShellTab.calendar]!.currentState?.popUntil((r) => r.isFirst);
+    _select(ShellTab.calendar);
+  }
+
   /// Nur Tests/Beispieldaten: eigene Schriftstufe. Mit echten Daten setzt
   /// sie die App für alle Seiten (fork/ui/font_step.dart).
   final KitFontStep _font = KitFontStep.normal;
@@ -295,11 +311,11 @@ class _PreviewShellState extends State<PreviewShell> {
   Widget _liveBody(BuildContext context, ShellTab tab) {
     return switch (tab) {
       ShellTab.today => LiveTodayPage(
-        onOpenCalendar: () => _select(ShellTab.calendar),
+        onOpenCalendar: _openEvents,
         onOpenHomework: () => _select(ShellTab.courses),
         onOpenMessages: () => _select(ShellTab.messages),
       ),
-      ShellTab.calendar => const LiveCalendarPage(),
+      ShellTab.calendar => LiveCalendarPage(viewRequest: _calendarView),
       // Je Kind getrennt; bei mehreren Konten mit Auswahl oben (family.dart).
       ShellTab.courses => const FamilySwitch(child: LiveCoursesPage()),
       ShellTab.messages => const FamilySwitch(child: LiveMessagesPage()),
@@ -317,7 +333,7 @@ class _PreviewShellState extends State<PreviewShell> {
       onReportAbsence: (c) => _notYet('Krankmeldung für ${c.firstName}'),
       onOpenHomework: (_) => _select(ShellTab.courses),
       onOpenMessages: (_) => _select(ShellTab.messages),
-      onOpenCalendar: () => _select(ShellTab.calendar),
+      onOpenCalendar: _openEvents,
     ),
     ShellTab.calendar => PlanPage(
       plans: _plans,
@@ -327,6 +343,7 @@ class _PreviewShellState extends State<PreviewShell> {
         for (final e in c.entries) e.key: {...e.value},
       },
       events: _data.week,
+      viewRequest: _calendarView,
     ),
     ShellTab.courses => Builder(
       builder: (c) => CoursesPage(

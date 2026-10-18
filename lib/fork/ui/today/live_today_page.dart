@@ -137,6 +137,7 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
                     now,
                     childIndex: i,
                     className: liveClassName(m.snapshot),
+                    skipHolidays: true,
                   ),
                   m.snapshot.courseScan,
                   now,

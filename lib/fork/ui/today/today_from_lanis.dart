@@ -431,6 +431,12 @@ String classFromCourses(List<String> courseNames) {
 /// Wort „Essen“/„Mittagessen“/„Mensa“ als ganzes Wort („Interessen“ nicht).
 bool isMealNote(String title) => PortalRules.meal.hasMatch(title);
 
+/// Allgemeiner Feiertag ohne Bezug zur Schule („Reformationstag“), siehe
+/// PortalRules.plainHoliday; Satzzeichen am Ende zählen nicht.
+bool isPlainHoliday(String title) => PortalRules.plainHoliday.hasMatch(
+  title.toLowerCase().trim().replaceAll(RegExp(r'[\s!.:]+$'), ''),
+);
+
 /// Termine ab jetzt für die nächsten [days] Tage.
 ///
 /// [includeMeals] = false für „Heute“ (dort steht der Essenshinweis an der
@@ -442,6 +448,9 @@ bool isMealNote(String title) => PortalRules.meal.hasMatch(title);
 /// Eltern nur Rauschen) sowie Termine für andere Jahrgänge, wenn der Titel
 /// sie nennt („8-10 Klassen …“, „nur für 5, 6 und 7 Jg.“) und die Klasse
 /// bekannt ist.
+///
+/// [skipHolidays]: allgemeine Feiertage weglassen (PortalRules.plainHoliday)
+/// – für „Demnächst“; der Kalender zeigt alles.
 List<WeekItem> weekItemsFromCalendar(
   List<CalendarEvent> events,
   DateTime now, {
@@ -449,6 +458,7 @@ List<WeekItem> weekItemsFromCalendar(
   String className = '',
   int days = 14,
   bool includeMeals = false,
+  bool skipHolidays = false,
 }) {
   final today = DateTime(now.year, now.month, now.day);
   final horizon = DateTime(now.year, now.month, now.day + days);
@@ -464,6 +474,7 @@ List<WeekItem> weekItemsFromCalendar(
     final meal = isMealNote(title);
     if (meal && !includeMeals) continue;
     final lower = title.toLowerCase();
+    if (skipHolidays && isPlainHoliday(lower)) continue;
     final kind = meal
         ? WeekKind.meal
         : PortalRules.examCategories.any(cat.contains) ||

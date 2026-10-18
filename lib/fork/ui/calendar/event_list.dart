@@ -33,13 +33,24 @@ class EventList extends StatelessWidget {
     required this.items,
     required this.now,
     this.kidColor = 0,
+    this.kids = const [],
+    this.showKid = false,
   });
 
   final List<WeekItem> items;
   final DateTime now;
 
-  /// Farbplatz des Kindes (KitPalette.kids) für normale Termine.
+  /// Farbplatz des Kindes (KitPalette.kids) für normale Termine ohne
+  /// [WeekItem.childIndex] bzw. ohne [kids].
   final int kidColor;
+
+  /// Kinder in der Reihenfolge von [WeekItem.childIndex]: Name und
+  /// Farbplatz. Ursache (Rückmeldung 18.10.26): Vorher trug jeder Termin die
+  /// Farbe des gerade gewählten Kindes – auch die des anderen.
+  final List<({String name, int color})> kids;
+
+  /// Unter jedem Termin „● Name“ (bei mehreren Kindern und Filter „Alle“).
+  final bool showKid;
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +87,13 @@ class EventList extends StatelessWidget {
       children.add(
         Padding(
           padding: const EdgeInsets.only(bottom: Sp.s),
-          child: _EventRow(item: it, now: now, kidColor: kidColor),
+          child: _EventRow(
+            item: it,
+            now: now,
+            kid: _kidOf(it),
+            fallbackColor: kidColor,
+            showKid: showKid,
+          ),
         ),
       );
     }
@@ -85,18 +102,27 @@ class EventList extends StatelessWidget {
       children: children,
     );
   }
+
+  ({String name, int color})? _kidOf(WeekItem it) {
+    final ci = it.childIndex;
+    return ci != null && ci >= 0 && ci < kids.length ? kids[ci] : null;
+  }
 }
 
 class _EventRow extends StatelessWidget {
   const _EventRow({
     required this.item,
     required this.now,
-    required this.kidColor,
+    required this.kid,
+    required this.fallbackColor,
+    required this.showKid,
   });
 
   final WeekItem item;
   final DateTime now;
-  final int kidColor;
+  final ({String name, int color})? kid;
+  final int fallbackColor;
+  final bool showKid;
 
   @override
   Widget build(BuildContext context) {
@@ -105,8 +131,10 @@ class _EventRow extends StatelessWidget {
       WeekKind.exam => k.p.cancel.dot,
       WeekKind.free => k.p.change.dot,
       WeekKind.meal => k.p.faint,
-      WeekKind.deadline || WeekKind.event => k.kid(kidColor).accent,
+      WeekKind.deadline ||
+      WeekKind.event => k.kid(kid?.color ?? fallbackColor).accent,
     };
+    final kidInk = kid == null ? null : k.kid(kid!.color).accent;
     final t = context.t;
     final until = item.until;
     final meta = [
@@ -127,11 +155,19 @@ class _EventRow extends StatelessWidget {
             Container(width: Sp.xs, color: accent),
             Padding(
               padding: const EdgeInsets.fromLTRB(Sp.m, Sp.m, 0, Sp.m),
+              // Einzeilig, notfalls kleiner: „ganztags“ brach in der schmalen
+              // Spalte als „ganzta/gs“ um (Bildschirmfoto 18.10.26).
               child: SizedBox(
                 width: Sz.slotColumn,
-                child: Text(
-                  item.time ?? t.allDay,
-                  style: item.time == null ? k.timeEnd : k.timeStart,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.topLeft,
+                  child: Text(
+                    item.time ?? t.allDay,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: item.time == null ? k.timeEnd : k.timeStart,
+                  ),
                 ),
               ),
             ),
@@ -144,6 +180,29 @@ class _EventRow extends StatelessWidget {
                     Text(item.title, style: k.planSubject(k.p.ink)),
                     if (meta.isNotEmpty)
                       Text(meta, style: k.planMeta(k.p.muted)),
+                    if (showKid && kid != null && kidInk != null) ...[
+                      const SizedBox(height: Sp.xxs),
+                      Row(
+                        children: [
+                          Container(
+                            width: Sz.dot,
+                            height: Sz.dot,
+                            decoration: BoxDecoration(
+                              color: kidInk,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: Sp.xs + Sp.xxs),
+                          Flexible(
+                            child: Text(
+                              kid!.name,
+                              style: k.tileKid(kidInk),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import '../word_fit.dart';
 import 'today_model.dart';
 
 DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
@@ -930,7 +931,14 @@ class _Tile extends StatelessWidget {
         children: [
           Text(caption, style: k.tileCaption),
           const SizedBox(height: Sp.xs + Sp.xxs),
-          Expanded(child: Text(item.title, style: k.tileTitle)),
+          // Ganze Wörter (word_fit.dart); Breite = Kachel minus Innenrand.
+          Expanded(
+            child: WordFitText(
+              item.title,
+              style: k.tileTitle,
+              width: Sz.tileWidth - 2 * Sp.ml,
+            ),
+          ),
           const SizedBox(height: Sp.xs + Sp.xxs),
           Row(
             children: [

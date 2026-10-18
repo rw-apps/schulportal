@@ -34,6 +34,30 @@ abstract final class PortalRules {
   static const freeCategories = ['ferien', 'frei'];
   static final freeTitle = RegExp(r'ferien|unterrichtsfrei');
 
+  /// Allgemeine Feier- und Gedenktage, die viele Schulkalender eintragen
+  /// („Reformationstag“, „Allerheiligen“, „1. Advent“). Unter „Demnächst“
+  /// ausgeblendet, im Kalender bleiben sie.
+  ///
+  /// Ursache (Rückmeldung 18.10.26): Sie sagen Eltern nichts Neues und
+  /// verdrängten echte Termine aus den Kacheln. Das Portal kennzeichnet sie
+  /// nicht – an Schule B stehen sie in derselben Kategorie wie
+  /// „Unterrichtsende nach der 3. Stunde“ (Export 17.10.26) –, daher die
+  /// Namensliste. Nur der GANZE Titel zählt: „Weihnachtskonzert“ oder
+  /// „Unterrichtsfrei (Fronleichnam)“ bleiben. Ferien und schulfreie Tage
+  /// sind kein Feiertag in diesem Sinn und bleiben ebenfalls.
+  static final plainHoliday = RegExp(
+    r'^(neujahr|heilige drei könige|valentinstag|weiberfastnacht|'
+    r'rosenmontag|fastnacht|faschingsdienstag|aschermittwoch|'
+    r'gründonnerstag|karfreitag|karsamstag|ostern|ostersonntag|ostermontag|'
+    r'tag der arbeit|maifeiertag|muttertag|vatertag|christi himmelfahrt|'
+    r'pfingsten|pfingstsonntag|pfingstmontag|fronleichnam|'
+    r'tag der deutschen einheit|erntedank(fest)?|reformationstag|halloween|'
+    r'allerheiligen|allerseelen|st\.? ?martin|martinstag|volkstrauertag|'
+    r'buß- und bettag|totensonntag|ewigkeitssonntag|\d\.\s*advent|'
+    r'nikolaus|nikolaustag|heiligabend|heiliger abend|weihnachten|'
+    r'\d\.\s*weihnachtstag|\d\.\s*weihnachtsfeiertag|silvester)$',
+  );
+
   /// Titel: Abgabetermin.
   static const deadlineWord = 'abgabe';
 
