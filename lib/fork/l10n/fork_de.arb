@@ -1121,5 +1121,35 @@
   "onbNotifyEventsText": "Elternabend, schulfreier Tag – am Vorabend",
   "onbNotifyLater": "Jederzeit änderbar unter Einstellungen → Benachrichtigungen.",
   "onbNotifyAllow": "Benachrichtigungen erlauben",
-  "later": "Später"
+  "later": "Später",
+  "transferTitle": "Eingaben übertragen",
+  "transferDetail": "Stundenzeiten, Mensa, Haken auf ein anderes Gerät",
+  "transferIntro": "Schick deine Eingaben als Datei an ein anderes Gerät mit dieser App – per Messenger, Mail oder Quick Share. Dort „Datei übernehmen“ tippen und die Datei wählen.",
+  "transferWhat": "Enthalten je Konto: Gruppenwahl und Lehrernamen im Stundenplan, Stundenzeiten, Mensa-Adressen, abgehakte Hausaufgaben, gesendete Entschuldigungen. Nicht enthalten: Zugangsdaten und Daten aus dem Portal.",
+  "transferSend": "Als Datei senden",
+  "transferReceive": "Datei übernehmen",
+  "transferLimit": "Ein Abgleich auf Knopfdruck: Was danach auf einem Gerät geändert wird, kommt erst mit der nächsten Übertragung aufs andere. Konten werden über Schule und Benutzername zugeordnet – sie müssen auf beiden Geräten eingerichtet sein.",
+  "transferShareText": "Eingaben für die Schulportal-App – in der App unter Einstellungen → Eingaben übertragen → Datei übernehmen öffnen.",
+  "transferFailed": "Das hat nicht geklappt.",
+  "transferNotOurs": "Das ist keine Übertragungsdatei dieser App.",
+  "transferNoMatch": "Keines der Konten in der Datei ist auf diesem Gerät eingerichtet.",
+  "transferApplyTitle": "Eingaben übernehmen?",
+  "transferApplyText": "Für {schools}. Abgehakte Hausaufgaben werden zusammengeführt, alles andere ersetzt die Eingaben auf diesem Gerät.",
+  "@transferApplyText": {
+    "placeholders": {
+      "schools": {
+        "type": "String"
+      }
+    }
+  },
+  "transferSkipped": "{n, plural, =1{1 Konto der Datei ist hier nicht eingerichtet und wird übersprungen.} other{{n} Konten der Datei sind hier nicht eingerichtet und werden übersprungen.}}",
+  "@transferSkipped": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "transferApply": "Übernehmen",
+  "transferDone": "Eingaben übernommen."
 }

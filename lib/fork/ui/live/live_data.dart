@@ -45,6 +45,12 @@ LessonTimes? storedLessonTimes(TypedSettings s) => LessonTimes.fromMap(
 
 const _settingsApplet = 'stundenplan.php';
 
+/// Zählt hoch, wenn Einstellungen von außen ersetzt wurden (Eingaben
+/// übertragen, settings_transfer.dart) – jede LiveDataScope liest dann neu.
+/// Ursache: _readSettings liest nur einmal je Konto; ohne Anstoß zeigte die
+/// App die übernommenen Stundenzeiten erst nach einem Neustart.
+final settingsRevision = ValueNotifier<int>(0);
+
 /// Alte Adresse der Mensa-Bestellseite je Konto (bis 9341); gilt weiter für
 /// Kinder ohne eigene Adresse (MensaAddresses.legacy).
 const mensaUrlSetting = 'fork-mensa-url';
@@ -315,6 +321,7 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
   @override
   void initState() {
     super.initState();
+    settingsRevision.addListener(_onSettingsReplaced);
     WidgetsBinding.instance.addObserver(this);
     // Nur im Vordergrund und nur, was sich im Lauf des Tages ändert
     // (Vertretungen, Nachrichten). Ursache: Der Takt lief sonst auch bei
@@ -348,12 +355,22 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
 
   @override
   void dispose() {
+    settingsRevision.removeListener(_onSettingsReplaced);
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     for (final s in [_tt, _lessons, _subs, _cal, _conv]) {
       s.dispose();
     }
     super.dispose();
+  }
+
+  void _onSettingsReplaced() {
+    final id = _settingsFor;
+    if (!mounted || id == null) return;
+    setState(() {
+      _settingsFor = null;
+      _readSettings(id);
+    });
   }
 
   void _readSettings(int accountId) {

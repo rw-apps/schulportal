@@ -23,6 +23,7 @@ import '../kit.dart';
 import '../live/family.dart';
 import '../today/today_from_lanis.dart' show shortSchoolName;
 import 'error_report_page.dart';
+import 'transfer_page.dart';
 
 /// Einstellungen im Stil der neuen Oberfläche (Entscheidung 17.10.26).
 ///
@@ -441,6 +442,14 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
             ]),
 
             _Section(t.sectionData, [
+              _Item(
+                icon: Icons.sync_alt,
+                label: t.transferTitle,
+                detail: t.transferDetail,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const TransferPage()),
+                ),
+              ),
               if (supported.contains('kalender.php'))
                 _Item(
                   icon: Icons.event_available_outlined,

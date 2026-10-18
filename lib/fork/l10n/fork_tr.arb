@@ -413,5 +413,21 @@
   "onbNotifyEventsText": "Veli toplantısı, tatil günü – bir önceki akşam",
   "onbNotifyLater": "İstediğiniz zaman Ayarlar → Bildirimler altından değiştirilebilir.",
   "onbNotifyAllow": "Bildirimlere izin ver",
-  "later": "Sonra"
+  "later": "Sonra",
+  "transferTitle": "Girişleri aktar",
+  "transferDetail": "Ders saatleri, yemekhane, işaretler başka cihaza",
+  "transferIntro": "Girişlerinizi bu uygulamanın olduğu başka bir cihaza dosya olarak gönderin – mesajlaşma, e-posta veya Quick Share ile. Orada “Dosyayı al”a dokunun ve dosyayı seçin.",
+  "transferWhat": "Hesap başına dahil: ders programında grup seçimi ve öğretmen adları, ders saatleri, yemekhane adresleri, işaretlenen ödevler, gönderilen mazeretler. Dahil değil: giriş bilgileri ve portal verileri.",
+  "transferSend": "Dosya olarak gönder",
+  "transferReceive": "Dosyayı al",
+  "transferLimit": "Tek seferlik aktarım: sonra bir cihazda yapılan değişiklikler diğerine ancak bir sonraki aktarımla gelir. Hesaplar okul ve kullanıcı adıyla eşleştirilir – iki cihazda da kurulu olmalıdır.",
+  "transferShareText": "Schulportal uygulaması için girişler – uygulamada Ayarlar → Girişleri aktar → Dosyayı al altında açın.",
+  "transferFailed": "Bu işe yaramadı.",
+  "transferNotOurs": "Bu, bu uygulamanın aktarım dosyası değil.",
+  "transferNoMatch": "Dosyadaki hesapların hiçbiri bu cihazda kurulu değil.",
+  "transferApplyTitle": "Girişler alınsın mı?",
+  "transferApplyText": "{schools} için. İşaretlenen ödevler birleştirilir, diğer her şey bu cihazdaki girişlerin yerine geçer.",
+  "transferSkipped": "Dosyadaki {n} hesap burada kurulu değil ve atlanır.",
+  "transferApply": "Al",
+  "transferDone": "Girişler alındı."
 }

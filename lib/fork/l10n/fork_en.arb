@@ -413,5 +413,21 @@
   "onbNotifyEventsText": "Parents' evening, day off – the evening before",
   "onbNotifyLater": "Can be changed any time under Settings → Notifications.",
   "onbNotifyAllow": "Allow notifications",
-  "later": "Later"
+  "later": "Later",
+  "transferTitle": "Transfer your entries",
+  "transferDetail": "Lesson times, canteen, ticks to another device",
+  "transferIntro": "Send your entries as a file to another device with this app – via messenger, mail or Quick Share. There, tap “Import file” and choose it.",
+  "transferWhat": "Included per account: group choice and teacher names in the timetable, lesson times, canteen addresses, ticked homework, sent excuses. Not included: credentials and portal data.",
+  "transferSend": "Send as file",
+  "transferReceive": "Import file",
+  "transferLimit": "A one-off transfer: changes made afterwards on one device only reach the other with the next transfer. Accounts are matched by school and username – they must be set up on both devices.",
+  "transferShareText": "Entries for the Schulportal app – open in the app under Settings → Transfer your entries → Import file.",
+  "transferFailed": "That didn't work.",
+  "transferNotOurs": "This is not a transfer file of this app.",
+  "transferNoMatch": "None of the accounts in the file is set up on this device.",
+  "transferApplyTitle": "Import entries?",
+  "transferApplyText": "For {schools}. Ticked homework is merged, everything else replaces the entries on this device.",
+  "transferSkipped": "{n, plural, =1{1 account in the file is not set up here and is skipped.} other{{n} accounts in the file are not set up here and are skipped.}}",
+  "transferApply": "Import",
+  "transferDone": "Entries imported."
 }
