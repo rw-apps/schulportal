@@ -1074,5 +1074,52 @@
         "type": "String"
       }
     }
-  }
+  },
+  "onbAppName": "Schulportal",
+  "onbIntro": "Stundenplan, Vertretungen, Termine und Nachrichten deiner Kinder – für alle Schulen im Schulportal Hessen.",
+  "onbToday": "Was gerade läuft, was ausfällt, was ansteht",
+  "onbCalendar": "Woche und Termine aller Kinder",
+  "onbCourses": "Hausaufgaben, Arbeiten und Noten",
+  "onbMessages": "Lehrkräfte direkt anschreiben",
+  "onbFamilyHint": "Für Eltern- und Schülerkonten. Mehrere Kinder an verschiedenen Schulen lassen sich zusammen einrichten.",
+  "onbLogin": "Anmelden",
+  "onbStep": "Schritt {n} von {of}",
+  "@onbStep": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "of": {
+        "type": "int"
+      }
+    }
+  },
+  "onbLoginTitle": "Bei der Schule anmelden",
+  "onbLoginText": "Mit denselben Zugangsdaten wie auf schulportal.hessen.de – Eltern- oder Schülerkonto.",
+  "onbAccountNumber": "Konto {n}",
+  "@onbAccountNumber": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "onbSchool": "Schule",
+  "onbSchoolPick": "Schule suchen …",
+  "onbStoredHint": "Die Zugangsdaten bleiben verschlüsselt auf diesem Gerät.",
+  "onbAccountReady": "Konto eingerichtet",
+  "onbAccountsReady": "Konten eingerichtet",
+  "onbAnotherHint": "Ein weiteres Kind an einer anderen Schule oder mit eigenem Schülerkonto? Füge das Konto hinzu – „Heute“ und „Kalender“ zeigen dann alle Kinder zusammen.",
+  "onbContinue": "Weiter",
+  "onbNotifyTitle": "Nichts verpassen",
+  "onbNotifyIntro": "Die App meldet sich nur, wenn es das Kind betrifft – nicht bei jeder Änderung im Plan der Klasse.",
+  "onbNotifyChanges": "Ausfall und Vertretung",
+  "onbNotifyChangesText": "Für heute sofort, für morgen gesammelt ab 19 Uhr",
+  "onbNotifyGrades": "Neue Noten und Arbeiten",
+  "onbNotifyGradesText": "Einmal am Tag – nur das Fach, nie die Note",
+  "onbNotifyEvents": "Wichtige Termine",
+  "onbNotifyEventsText": "Elternabend, schulfreier Tag – am Vorabend",
+  "onbNotifyLater": "Jederzeit änderbar unter Einstellungen → Benachrichtigungen.",
+  "onbNotifyAllow": "Benachrichtigungen erlauben",
+  "later": "Später"
 }

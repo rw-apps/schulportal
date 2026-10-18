@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart';
-import 'package:lanis/generated/l10n.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:lanis/view/login/screen.dart';
 
 import '../helpers/test_app.dart';
@@ -26,13 +26,12 @@ void main() {
       ],
     );
 
-    final l10n = AppLocalizations.of(
-      tester.element(find.byType(WelcomeLoginScreen)),
-    );
-    expect(find.text(l10n.introWelcomeTitle), findsOneWidget);
+    // Fork: eine Willkommensseite (ForkWelcomePage) statt sechs Seiten.
+    expect(find.text(forkL10nFor('en').onbAppName), findsOneWidget);
+    expect(find.text(forkL10nFor('en').navCalendar), findsOneWidget);
   });
 
-  testWidgets('skip navigates to login', (tester) async {
+  testWidgets('sign in navigates to login', (tester) async {
     await pumpTestRouterApp(
       tester,
       initialLocation: '/welcome',
@@ -48,10 +47,10 @@ void main() {
       ],
     );
 
-    final l10n = AppLocalizations.of(
-      tester.element(find.byType(WelcomeLoginScreen)),
-    );
-    await tester.tap(find.text(l10n.introSkip));
+    final login = find.text(forkL10nFor('en').onbLogin);
+    await tester.ensureVisible(login);
+    await tester.pumpAndSettle();
+    await tester.tap(login);
     await tester.pumpAndSettle();
     expect(find.text('login-marker'), findsOneWidget);
   });

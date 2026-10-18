@@ -27,8 +27,12 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
   @override
   void initState() {
     super.initState();
-    requestPermissions();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Fork: Bei der Erstanmeldung fragt NotifyIntroPage (erst erklären,
+      // dann fragen); hier nur, wenn schon Konten da sind.
+      final hasAccounts = (await ref.read(accountsProvider.future)).isNotEmpty;
+      if (hasAccounts && mounted) requestPermissions();
+      if (!mounted) return;
       final auth = ref.read(authControllerProvider);
       // In-app login failure may land here already in error (no phase transition).
       if (auth.phase == AuthPhase.error && auth.exception != null) {

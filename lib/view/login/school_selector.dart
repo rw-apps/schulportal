@@ -9,6 +9,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/native_adapter_instance.dart';
 import 'package:lanis/fork_identity.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
+import 'package:lanis/fork/ui/kit.dart';
 
 class SchoolSelector extends StatefulWidget {
   const SchoolSelector({
@@ -124,122 +126,155 @@ class _SchoolSelectorState extends State<SchoolSelector> {
 
   @override
   Widget build(BuildContext context) {
-    return ActionChip(
-      avatar: const Icon(Icons.account_balance),
-      label: Text(
-        selectedSchool != null
-            ? "${selectedSchool!.name} - ${selectedSchool!.city}"
-            : AppLocalizations.of(context).selectSchool,
-      ),
-      onPressed: schoolBezirke != null
-          ? () async {
-              showModalBottomSheet(
-                showDragHandle: true,
-                isDismissible: true,
-                useSafeArea: true,
-                isScrollControlled: true,
-                context: context,
-                builder: (context) {
-                  return Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 16.0),
-                        child: SearchBar(
-                          leading: const Padding(
-                            padding: EdgeInsets.only(left: 8.0),
-                            child: Icon(Icons.search),
-                          ),
-                          controller: searchController,
-                          hintText: AppLocalizations.of(context).searchSchools,
-                          autoFocus: true,
+    // Fork (Entwurf 18.10.26): Feld im Stil der App statt ActionChip;
+    // Suche und Liste wie bisher.
+    final k = Kit.of(context);
+    final picked = selectedSchool;
+    final open = schoolBezirke != null
+        ? () async {
+            showModalBottomSheet(
+              backgroundColor: k.p.card,
+              showDragHandle: true,
+              isDismissible: true,
+              useSafeArea: true,
+              isScrollControlled: true,
+              context: context,
+              builder: (context) {
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 16.0),
+                      child: SearchBar(
+                        leading: const Padding(
+                          padding: EdgeInsets.only(left: 8.0),
+                          child: Icon(Icons.search),
                         ),
+                        controller: searchController,
+                        hintText: AppLocalizations.of(context).searchSchools,
+                        autoFocus: true,
                       ),
-                      Expanded(
-                        child: ListenableBuilder(
-                          listenable: searchController,
-                          builder: (context, listenable) {
-                            final filteredSchools = filterSchools(
-                              searchController.text,
-                            );
+                    ),
+                    Expanded(
+                      child: ListenableBuilder(
+                        listenable: searchController,
+                        builder: (context, listenable) {
+                          final filteredSchools = filterSchools(
+                            searchController.text,
+                          );
 
-                            final List<ExpansionTile> tiles = [];
-                            for (var bezirk in filteredSchools) {
-                              if (bezirk.schools.isNotEmpty) {
-                                tiles.add(
-                                  ExpansionTile(
-                                    key: PageStorageKey<String>(
-                                      "${bezirk.id}${searchController.text}",
-                                    ),
-                                    title: Text(
-                                      bezirk.name,
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.titleMedium,
-                                    ),
-                                    subtitle: Text(
-                                      AppLocalizations.of(
-                                        context,
-                                      ).schoolCountString(
-                                        bezirk.schools.length,
+                          final List<ExpansionTile> tiles = [];
+                          for (var bezirk in filteredSchools) {
+                            if (bezirk.schools.isNotEmpty) {
+                              tiles.add(
+                                ExpansionTile(
+                                  key: PageStorageKey<String>(
+                                    "${bezirk.id}${searchController.text}",
+                                  ),
+                                  title: Text(
+                                    bezirk.name,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
+                                  ),
+                                  subtitle: Text(
+                                    AppLocalizations.of(
+                                      context,
+                                    ).schoolCountString(bezirk.schools.length),
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleSmall,
+                                  ),
+                                  initiallyExpanded: bezirk.schools.length < 4,
+                                  children: bezirk.schools.map((school) {
+                                    return ListTile(
+                                      title: Text(school.name),
+                                      subtitle: Text(school.city),
+                                      trailing: Text(school.id),
+                                      onTap: () {
+                                        setState(() {
+                                          selectedSchool = school;
+                                          widget.controller.text = school.id;
+                                          searchController.clear();
+                                        });
+                                        widget.onSchoolSelected(school.name);
+                                        Navigator.pop(context);
+                                      },
+                                    );
+                                  }).toList(),
+                                ),
+                              );
+                            }
+                          }
+
+                          return tiles.isNotEmpty
+                              ? ListView(children: tiles)
+                              : Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.search_off, size: 60),
+                                      Padding(
+                                        padding: const EdgeInsets.all(20.0),
+                                        child: Text(
+                                          AppLocalizations.of(
+                                            context,
+                                          ).noSchoolsFound,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.titleMedium,
+                                        ),
                                       ),
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.titleSmall,
-                                    ),
-                                    initiallyExpanded:
-                                        bezirk.schools.length < 4,
-                                    children: bezirk.schools.map((school) {
-                                      return ListTile(
-                                        title: Text(school.name),
-                                        subtitle: Text(school.city),
-                                        trailing: Text(school.id),
-                                        onTap: () {
-                                          setState(() {
-                                            selectedSchool = school;
-                                            widget.controller.text = school.id;
-                                            searchController.clear();
-                                          });
-                                          widget.onSchoolSelected(school.name);
-                                          Navigator.pop(context);
-                                        },
-                                      );
-                                    }).toList(),
+                                    ],
                                   ),
                                 );
-                              }
-                            }
-
-                            return tiles.isNotEmpty
-                                ? ListView(children: tiles)
-                                : Center(
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(Icons.search_off, size: 60),
-                                        Padding(
-                                          padding: const EdgeInsets.all(20.0),
-                                          child: Text(
-                                            AppLocalizations.of(
-                                              context,
-                                            ).noSchoolsFound,
-                                            style: Theme.of(
-                                              context,
-                                            ).textTheme.titleMedium,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                          },
-                        ),
+                        },
                       ),
-                    ],
-                  );
-                },
-              );
-            }
-          : null,
+                    ),
+                  ],
+                );
+              },
+            );
+          }
+        : null;
+    return Material(
+      color: k.p.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Rad.row),
+        side: BorderSide(color: k.p.line),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Rad.row),
+        onTap: open,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(Sp.m, Sp.m, Sp.m, Sp.m),
+          child: Row(
+            children: [
+              Icon(Icons.account_balance_outlined, color: k.p.muted),
+              const SizedBox(width: Sp.m),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(context.t.onbSchool.toUpperCase(), style: k.dateCaps),
+                    const SizedBox(height: Sp.xxs),
+                    Text(
+                      picked != null
+                          ? '${picked.name} · ${picked.city}'
+                          : (schoolBezirke == null
+                                ? context.t.loading
+                                : context.t.onbSchoolPick),
+                      style: picked != null
+                          ? k.body
+                          : k.body.copyWith(color: k.p.faint),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.search, color: k.p.muted),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

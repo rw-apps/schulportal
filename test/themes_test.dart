@@ -4,7 +4,10 @@ import 'package:lanis/themes.dart';
 
 void main() {
   test('flutterColorThemes contains expected keys', () {
-    expect(Themes.flutterColorThemes.keys, containsAll(['pink', 'blue', 'teal']));
+    expect(
+      Themes.flutterColorThemes.keys,
+      containsAll(['pink', 'blue', 'teal']),
+    );
     expect(Themes.flutterColorThemes['blue']?.lightTheme, isNotNull);
     expect(Themes.flutterColorThemes['blue']?.darkTheme, isNotNull);
   });

@@ -42,13 +42,15 @@ Future<int> addTestAccount(
   String password = 'secret',
   AccountType? accountType = AccountType.student,
 }) {
-  return container.read(accountsProvider.notifier).add(
-    schoolId: schoolId,
-    schoolName: schoolName,
-    username: username,
-    password: password,
-    accountType: accountType,
-  );
+  return container
+      .read(accountsProvider.notifier)
+      .add(
+        schoolId: schoolId,
+        schoolName: schoolName,
+        username: username,
+        password: password,
+        accountType: accountType,
+      );
 }
 
 void acceptPrivacy(ProviderContainer container) {

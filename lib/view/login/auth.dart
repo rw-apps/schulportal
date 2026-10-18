@@ -5,6 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/generated/l10n.dart';
 import 'package:lanis/fork/l10n/l10n.dart';
+import 'package:lanis/fork/onboarding/onboarding_kit.dart';
+import 'package:lanis/fork/onboarding/onboarding_pages.dart';
+import 'package:lanis/fork/ui/kit.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:lanis/fork/start.dart';
 import 'package:lanis/features/auth/auth_controller.dart';
 import 'package:lanis/utils/logger.dart';
@@ -129,7 +133,21 @@ class LoginFormState extends ConsumerState<LoginForm> {
           });
           return;
         }
-        context.go(firstSupportedHomePath(ref));
+        // Schritt 2: Benachrichtigungen erklären, dann fragen – nur wenn
+        // Android sie noch nicht erlaubt hat (NotifyIntroPage).
+        final home = firstSupportedHomePath(ref);
+        if (await Permission.notification.isGranted) {
+          if (mounted) context.go(home);
+          return;
+        }
+        if (!mounted) return;
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (page) =>
+                NotifyIntroPage(onDone: () => Navigator.of(page).pop()),
+          ),
+        );
+        if (mounted) context.go(home);
         return;
       }
       if (!mounted) return;
@@ -181,46 +199,13 @@ class LoginFormState extends ConsumerState<LoginForm> {
     }
   }
 
-  Future<bool?> _askForAnother() {
-    final t = context.t;
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text(t.accountAdded),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(t.accountsSoFar),
-            for (final a in _added)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check_circle, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(a)),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 12),
-            Text(t.addAnotherText),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(t.addAnotherAccount),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(t.done),
-          ),
-        ],
-      ),
-    );
-  }
+  /// „Konto eingerichtet“ als eigene Seite (Entwurf 18.10.26) statt des
+  /// Dialogs; true = weiteres Konto.
+  Future<bool?> _askForAnother() => Navigator.of(context).push<bool>(
+    MaterialPageRoute<bool>(
+      builder: (_) => AccountAddedPage(accounts: List.of(_added)),
+    ),
+  );
 
   @override
   void dispose() {
@@ -232,214 +217,159 @@ class LoginFormState extends ConsumerState<LoginForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        if (widget.showBackButton)
-          Padding(
-            padding: EdgeInsets.only(right: 32, top: 32),
-            child: IconButton(
-              onPressed: () {
-                // Welcome uses go('/login') (no stack); account switcher uses push.
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/welcome');
+    // Fork (Entwurf 18.10.26): Formular im Stil der App (onboarding_kit.dart)
+    // statt Lanis-Standard; Logik (login, Prüfung, Schulwahl) unverändert.
+    final k = Kit.of(context);
+    final t = context.t;
+    final l = AppLocalizations.of(context);
+    final firstSetup =
+        ref.watch(accountsProvider).value?.isEmpty == true || _added.isNotEmpty;
+    final ready = schoolIDController.text.isNotEmpty;
+    return Form(
+      key: _formKey,
+      child: AutofillGroup(
+        child: OnbPage(
+          step: firstSetup ? t.onbStep(1, 2) : null,
+          onBack: widget.showBackButton && _added.isEmpty
+              ? () {
+                  // Welcome uses go('/login') (no stack); account switcher uses push.
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/welcome');
+                  }
                 }
-              },
-              icon: Icon(Icons.arrow_back),
+              : null,
+          top: [
+            const SizedBox(height: Sp.m),
+            if (firstSetup)
+              Text(
+                OnbPage.upper(t.onbAccountNumber(_added.length + 1)),
+                style: k.dateCaps,
+              ),
+            const SizedBox(height: Sp.xs),
+            Text(
+              _added.isEmpty ? t.onbLoginTitle : t.anotherAccountTitle,
+              style: k.pageTitle,
             ),
-          ),
-        Padding(
-          padding: const EdgeInsets.all(padding),
-          child: Center(
-            child: Container(
-              constraints: BoxConstraints(maxWidth: 550),
-              child: Form(
-                key: _formKey,
-                child: AutofillGroup(
-                  child: Center(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+            const SizedBox(height: Sp.s),
+            Text(t.onbLoginText, style: k.meta),
+            const SizedBox(height: Sp.xl),
+            SchoolSelector(
+              key: ValueKey(_round),
+              controller: schoolIDController,
+              outContext: context,
+              onSchoolSelected: (name) {
+                selectedSchoolName = name;
+                setState(() {});
+              },
+            ),
+            const SizedBox(height: Sp.m),
+            TextFormField(
+              controller: usernameController,
+              enabled: ready,
+              autofillHints: const [AutofillHints.username],
+              autocorrect: false,
+              style: k.body,
+              decoration: onbInput(
+                k,
+                label: l.authUsernameHint,
+                icon: Icons.person_outline,
+              ),
+              validator: (value) =>
+                  value == null || value.isEmpty ? l.authValidationError : null,
+            ),
+            const SizedBox(height: Sp.m),
+            TextFormField(
+              controller: passwordController,
+              enabled: ready,
+              autofillHints: const [AutofillHints.password],
+              autocorrect: false,
+              obscureText: true,
+              style: k.body,
+              decoration: onbInput(
+                k,
+                label: l.authPasswordHint,
+                icon: Icons.lock_outline,
+              ),
+              validator: (value) =>
+                  value == null || value.isEmpty ? l.authValidationError : null,
+            ),
+            const SizedBox(height: Sp.m),
+            InkWell(
+              onTap: ready ? () => setState(() => dseAgree = !dseAgree) : null,
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: dseAgree,
+                    onChanged: ready
+                        ? (v) => setState(() => dseAgree = v ?? false)
+                        : null,
+                  ),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        style: k.meta,
                         children: [
-                          const SizedBox(height: padding),
-                          Center(
-                            child: Column(
-                              children: [
-                                const Icon(Icons.person, size: 70),
-                                Text(
-                                  _added.isEmpty
-                                      ? AppLocalizations.of(context).logIn
-                                      : context.t.anotherAccountTitle,
-                                  style: const TextStyle(fontSize: 35),
-                                ),
-                                for (final a in _added)
-                                  Text('✓ $a', textAlign: TextAlign.center),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: padding * 5),
-                          SchoolSelector(
-                            key: ValueKey(_round),
-                            controller: schoolIDController,
-                            outContext: context,
-                            onSchoolSelected: (name) {
-                              selectedSchoolName = name;
-                              setState(() {});
-                            },
-                          ),
-                          const SizedBox(height: padding),
-                          TextFormField(
-                            controller: usernameController,
-                            enabled: schoolIDController.text != "",
-                            autofillHints: [AutofillHints.username],
-                            autocorrect: false,
-                            decoration: InputDecoration(
-                              labelText: AppLocalizations.of(
-                                context,
-                              ).authUsernameHint,
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return AppLocalizations.of(
-                                  context,
-                                ).authValidationError;
-                              }
-
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: padding),
-                          TextFormField(
-                            controller: passwordController,
-                            enabled: schoolIDController.text.isNotEmpty,
-                            autofillHints: [AutofillHints.password],
-                            autocorrect: false,
-                            obscureText: true,
-                            decoration: InputDecoration(
-                              labelText: AppLocalizations.of(
-                                context,
-                              ).authPasswordHint,
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return AppLocalizations.of(
-                                  context,
-                                ).authValidationError;
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: padding),
-                          Visibility(
-                            child: ExcludeSemantics(
-                              child: CheckboxListTile(
-                                enabled: schoolIDController.text.isNotEmpty,
-                                value: dseAgree,
-                                title: RichText(
-                                  text: TextSpan(
-                                    text: AppLocalizations.of(
-                                      context,
-                                    ).authIAccept,
-                                    style: DefaultTextStyle.of(context).style,
-                                    children: <TextSpan>[
-                                      TextSpan(
-                                        text: AppLocalizations.of(
-                                          context,
-                                        ).authTermsOfService,
-                                        style: TextStyle(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.primary,
-                                        ),
-                                        recognizer: TapGestureRecognizer()
-                                          ..onTap = () => safeLaunchUrl(
-                                            Uri.parse(privacyPolicyUrl),
-                                            context: context,
-                                          ),
-                                      ),
-                                      TextSpan(
-                                        text: AppLocalizations.of(
-                                          context,
-                                        ).authOfLanisMobile,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                onChanged: (val) {
-                                  setState(() {
-                                    dseAgree = val!;
-                                  });
-                                },
+                          TextSpan(text: l.authIAccept),
+                          TextSpan(
+                            text: l.authTermsOfService,
+                            style: k.link,
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () => safeLaunchUrl(
+                                Uri.parse(privacyPolicyUrl),
+                                context: context,
                               ),
-                            ),
                           ),
-                          Visibility(
-                            visible:
-                                false, // Fork: keine Fehlerberichte (utils/glitchtip.dart)
-                            child: ExcludeSemantics(
-                              child: CheckboxListTile(
-                                enabled: schoolIDController.text.isNotEmpty,
-                                value: errorReportingAgree,
-                                title: Text(
-                                  AppLocalizations.of(
-                                    context,
-                                  ).authErrorReportingOptional,
-                                  style: DefaultTextStyle.of(context).style,
-                                ),
-                                onChanged: (val) {
-                                  setState(() {
-                                    errorReportingAgree = val!;
-                                  });
-                                },
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: padding),
-                          FilledButton(
-                            onPressed: dseAgree
-                                ? () {
-                                    if (_formKey.currentState!.validate()) {
-                                      login(
-                                        usernameController.text.toLowerCase(),
-                                        passwordController.text,
-                                        schoolIDController.text,
-                                      );
-                                    }
-                                  }
-                                : null,
-                            child: Text(AppLocalizations.of(context).logIn),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              TextButton(
-                                onPressed: schoolIDController.text.isNotEmpty
-                                    ? () => safeLaunchUrl(
-                                        Uri.parse(
-                                          "https://start.schulportal.hessen.de/benutzerverwaltung.php?a=userPWreminder&i=${schoolIDController.text}",
-                                        ),
-                                        context: context,
-                                      )
-                                    : null,
-                                child: Text(
-                                  AppLocalizations.of(
-                                    context,
-                                  ).authResetPassword,
-                                ),
-                              ),
-                            ],
-                          ),
+                          TextSpan(text: l.authOfLanisMobile),
                         ],
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
-          ),
+          ],
+          bottom: [
+            Row(
+              children: [
+                Icon(Icons.shield_outlined, size: Sz.icon, color: k.p.muted),
+                const SizedBox(width: Sp.s),
+                Expanded(child: Text(t.onbStoredHint, style: k.meta)),
+              ],
+            ),
+            const SizedBox(height: Sp.l),
+            OnbButton(
+              label: l.logIn,
+              onPressed: dseAgree && ready
+                  ? () {
+                      if (_formKey.currentState!.validate()) {
+                        login(
+                          usernameController.text.toLowerCase(),
+                          passwordController.text,
+                          schoolIDController.text,
+                        );
+                      }
+                    }
+                  : null,
+            ),
+            const SizedBox(height: Sp.s),
+            Center(
+              child: TextButton(
+                onPressed: ready
+                    ? () => safeLaunchUrl(
+                        Uri.parse(
+                          "https://start.schulportal.hessen.de/benutzerverwaltung.php?a=userPWreminder&i=${schoolIDController.text}",
+                        ),
+                        context: context,
+                      )
+                    : null,
+                child: Text(l.authResetPassword, style: k.link),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/generated/l10n.dart';
+import 'package:lanis/fork/onboarding/onboarding_kit.dart';
 import 'package:lanis/utils/glitchtip.dart';
 import 'package:lanis/view/login/auth.dart';
 import 'package:lanis/view/login/school_selector.dart';
@@ -30,13 +31,12 @@ void main() {
       child: const Scaffold(body: LoginForm(showBackButton: false)),
     );
 
-    final l10n = AppLocalizations.of(
-      tester.element(find.byType(LoginForm)),
-    );
+    final l10n = AppLocalizations.of(tester.element(find.byType(LoginForm)));
     expect(find.text(l10n.logIn), findsWidgets);
 
-    final filled = tester.widget<FilledButton>(find.byType(FilledButton).first);
-    expect(filled.onPressed, isNull);
+    // Fork: Knopf im Stil der App (OnbButton).
+    final button = tester.widget<OnbButton>(find.byType(OnbButton).first);
+    expect(button.onPressed, isNull);
   });
 
   testWidgets('username and password fields disabled without school id', (
@@ -57,9 +57,7 @@ void main() {
   // Fork: Soll geändert. Ursache: Häkchen „Fehlerberichte (optional)“ ist in
   // lib/view/login/auth.dart per Visibility(visible: false) ausgeblendet und
   // bleibt aus, selbst wenn die Geräte-Einstellung true wäre.
-  testWidgets('error reporting checkbox hidden and off (fork)', (
-    tester,
-  ) async {
+  testWidgets('error reporting checkbox hidden and off (fork)', (tester) async {
     final overrides = LanisClient.configure();
     var seeded = false;
 
@@ -71,8 +69,9 @@ void main() {
             if (!seeded) {
               seeded = true;
               setGlitchTipEnabled(
-                ProviderScope.containerOf(context)
-                    .read(sharedOverAccountSettingsProvider),
+                ProviderScope.containerOf(
+                  context,
+                ).read(sharedOverAccountSettingsProvider),
                 true,
               );
             }
@@ -80,9 +79,7 @@ void main() {
               locale: const Locale('en'),
               localizationsDelegates: testLocalizationsDelegates,
               supportedLocales: AppLocalizations.delegate.supportedLocales,
-              home: const Scaffold(
-                body: LoginForm(showBackButton: false),
-              ),
+              home: const Scaffold(body: LoginForm(showBackButton: false)),
             );
           },
         ),
@@ -91,12 +88,10 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    final l10n = AppLocalizations.of(
-      tester.element(find.byType(LoginForm)),
-    );
+    final l10n = AppLocalizations.of(tester.element(find.byType(LoginForm)));
     // Unsichtbar: Visibility(visible: false) baut das Kind nicht -> nicht findbar.
     expect(find.text(l10n.authErrorReportingOptional), findsNothing);
     // Datenschutz-Häkchen bleibt als einziges sichtbar.
-    expect(find.byType(CheckboxListTile), findsOneWidget);
+    expect(find.byType(Checkbox), findsOneWidget);
   });
 }

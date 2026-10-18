@@ -50,7 +50,8 @@ void main() {
         for (final e in ok) {
           z = z.replaceAll(e, '');
         }
-        if (muster.hasMatch(z)) funde.add('${f.path}:${i + 1}: ${zeilen[i].trim()}');
+        if (muster.hasMatch(z))
+          funde.add('${f.path}:${i + 1}: ${zeilen[i].trim()}');
       }
     }
     expect(funde, isEmpty, reason: funde.join('\n'));
@@ -67,8 +68,13 @@ void main() {
   // Anlegen des Releases (HTTP 403). Dieser Test meldet das schon lokal.
   test('Release-Workflow darf Releases anlegen', () {
     final s = File('.github/workflows/release-fork.yml').readAsStringSync();
-    expect(RegExp(r'^permissions:\s*\n\s+contents: write', multiLine: true)
-        .hasMatch(s), isTrue);
+    expect(
+      RegExp(
+        r'^permissions:\s*\n\s+contents: write',
+        multiLine: true,
+      ).hasMatch(s),
+      isTrue,
+    );
   });
 
   // Seit 4.1.0+9337 ohne Sentry-SDK: Es darf gar nicht mehr eingebunden sein.

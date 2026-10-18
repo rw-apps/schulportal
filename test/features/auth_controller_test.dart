@@ -16,30 +16,45 @@ void main() {
     final before = AuthController.authenticateCallCount;
     await container.read(authControllerProvider.notifier).bootstrap();
 
-    expect(container.read(authControllerProvider).phase, AuthPhase.unauthenticated);
+    expect(
+      container.read(authControllerProvider).phase,
+      AuthPhase.unauthenticated,
+    );
     expect(AuthController.authenticateCallCount, before);
   });
 
-  test('bootstrap without privacy and empty accounts is unauthenticated', () async {
-    installFakeSessionAuth();
-    final container = createAuthTestContainer();
-    addTearDown(container.dispose);
+  test(
+    'bootstrap without privacy and empty accounts is unauthenticated',
+    () async {
+      installFakeSessionAuth();
+      final container = createAuthTestContainer();
+      addTearDown(container.dispose);
 
-    await container.read(authControllerProvider.notifier).bootstrap();
-    expect(container.read(authControllerProvider).phase, AuthPhase.unauthenticated);
-    expect(AuthController.authenticateCallCount, 0);
-  });
+      await container.read(authControllerProvider.notifier).bootstrap();
+      expect(
+        container.read(authControllerProvider).phase,
+        AuthPhase.unauthenticated,
+      );
+      expect(AuthController.authenticateCallCount, 0);
+    },
+  );
 
-  test('bootstrap with privacy and empty accounts is unauthenticated', () async {
-    installFakeSessionAuth();
-    final container = createAuthTestContainer();
-    addTearDown(container.dispose);
-    acceptPrivacy(container);
+  test(
+    'bootstrap with privacy and empty accounts is unauthenticated',
+    () async {
+      installFakeSessionAuth();
+      final container = createAuthTestContainer();
+      addTearDown(container.dispose);
+      acceptPrivacy(container);
 
-    await container.read(authControllerProvider.notifier).bootstrap();
-    expect(container.read(authControllerProvider).phase, AuthPhase.unauthenticated);
-    expect(AuthController.authenticateCallCount, 0);
-  });
+      await container.read(authControllerProvider.notifier).bootstrap();
+      expect(
+        container.read(authControllerProvider).phase,
+        AuthPhase.unauthenticated,
+      );
+      expect(AuthController.authenticateCallCount, 0);
+    },
+  );
 
   test('bootstrap with privacy and account succeeds via FakeSession', () async {
     installFakeSessionAuth();
@@ -49,7 +64,10 @@ void main() {
     await addTestAccount(container);
 
     await container.read(authControllerProvider.notifier).bootstrap();
-    expect(container.read(authControllerProvider).phase, AuthPhase.authenticated);
+    expect(
+      container.read(authControllerProvider).phase,
+      AuthPhase.authenticated,
+    );
     expect(AuthController.authenticateCallCount, 1);
     expect(container.read(activeAccountProvider), isNotNull);
   });
@@ -136,7 +154,10 @@ void main() {
     // After login starts, bootstrapIfNeeded should skip.
     await container.read(authControllerProvider.notifier).bootstrapIfNeeded();
     await loginFuture;
-    expect(container.read(authControllerProvider).phase, AuthPhase.authenticated);
+    expect(
+      container.read(authControllerProvider).phase,
+      AuthPhase.authenticated,
+    );
   });
 
   test('loginWithAccount success', () async {
@@ -150,7 +171,10 @@ void main() {
         .read(authControllerProvider.notifier)
         .loginWithAccount(id);
     expect(ok, isTrue);
-    expect(container.read(authControllerProvider).phase, AuthPhase.authenticated);
+    expect(
+      container.read(authControllerProvider).phase,
+      AuthPhase.authenticated,
+    );
   });
 
   test('loginWithAccount privacy blocked', () async {
@@ -195,11 +219,7 @@ void main() {
     addTearDown(container.dispose);
     acceptPrivacy(container);
     final idA = await addTestAccount(container, username: 'a');
-    final idB = await addTestAccount(
-      container,
-      schoolId: 2,
-      username: 'b',
-    );
+    final idB = await addTestAccount(container, schoolId: 2, username: 'b');
 
     // Establish A as active via successful login.
     installFakeSessionAuth();
@@ -220,7 +240,10 @@ void main() {
         .read(authControllerProvider.notifier)
         .loginWithAccount(idB);
     expect(ok, isFalse);
-    expect(container.read(authControllerProvider).phase, AuthPhase.authenticated);
+    expect(
+      container.read(authControllerProvider).phase,
+      AuthPhase.authenticated,
+    );
     expect(container.read(activeAccountProvider)?.localId, idA);
   });
 
@@ -235,7 +258,10 @@ void main() {
     await container
         .read(authControllerProvider.notifier)
         .removeAccountAndContinue(id);
-    expect(container.read(authControllerProvider).phase, AuthPhase.unauthenticated);
+    expect(
+      container.read(authControllerProvider).phase,
+      AuthPhase.unauthenticated,
+    );
     expect(await container.read(accountsProvider.future), isEmpty);
   });
 
@@ -251,7 +277,10 @@ void main() {
     await container
         .read(authControllerProvider.notifier)
         .removeAccountAndContinue(idA);
-    expect(container.read(authControllerProvider).phase, AuthPhase.authenticated);
+    expect(
+      container.read(authControllerProvider).phase,
+      AuthPhase.authenticated,
+    );
     expect(container.read(activeAccountProvider)?.localId, idB);
   });
 
@@ -264,7 +293,10 @@ void main() {
     await container.read(authControllerProvider.notifier).loginWithAccount(id);
 
     await container.read(authControllerProvider.notifier).logout();
-    expect(container.read(authControllerProvider).phase, AuthPhase.unauthenticated);
+    expect(
+      container.read(authControllerProvider).phase,
+      AuthPhase.unauthenticated,
+    );
     expect(container.read(activeAccountProvider), isNull);
   });
 
@@ -288,6 +320,9 @@ void main() {
     expect(container.read(authControllerProvider).phase, AuthPhase.error);
 
     await container.read(authControllerProvider.notifier).retry();
-    expect(container.read(authControllerProvider).phase, AuthPhase.authenticated);
+    expect(
+      container.read(authControllerProvider).phase,
+      AuthPhase.authenticated,
+    );
   });
 }

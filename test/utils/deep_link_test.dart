@@ -46,7 +46,10 @@ void main() {
         DeepLinkPrefixes.common,
       );
       expect(
-        deepLinkPrefixAllowed('/common/substitutions/home', AccountType.student),
+        deepLinkPrefixAllowed(
+          '/common/substitutions/home',
+          AccountType.student,
+        ),
         isTrue,
       );
     });

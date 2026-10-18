@@ -103,7 +103,12 @@ void main() {
 
   group('authenticating', () {
     test('allows startup login accounts privacy', () {
-      for (final loc in ['/startup', '/login', '/accounts', '/privacy-policy']) {
+      for (final loc in [
+        '/startup',
+        '/login',
+        '/accounts',
+        '/privacy-policy',
+      ]) {
         expect(
           resolve(phase: AuthPhase.authenticating, loc: loc),
           isNull,
@@ -140,10 +145,7 @@ void main() {
         resolve(phase: AuthPhase.unauthenticated, loc: '/welcome'),
         isNull,
       );
-      expect(
-        resolve(phase: AuthPhase.unauthenticated, loc: '/login'),
-        isNull,
-      );
+      expect(resolve(phase: AuthPhase.unauthenticated, loc: '/login'), isNull);
     });
 
     test('deep links go to welcome', () {

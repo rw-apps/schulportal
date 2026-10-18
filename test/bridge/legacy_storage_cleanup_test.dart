@@ -54,8 +54,9 @@ void main() {
       await touch(cache, 'lanis.db');
       await touch(documents, 'session_2_db.sqlite');
 
-      final legacyDocs = Directory(p.join(temporary.path, '9', 'document_cache'))
-        ..createSync(recursive: true);
+      final legacyDocs = Directory(
+        p.join(temporary.path, '9', 'document_cache'),
+      )..createSync(recursive: true);
       File(p.join(legacyDocs.path, 'file.bin')).writeAsStringSync('old');
 
       final v4Docs = Directory(
@@ -73,16 +74,22 @@ void main() {
         temporaryDirectory: temporary,
       );
 
-      expect(File(p.join(cache.path, 'accounts_database.sqlite')).existsSync(), isFalse);
-      expect(File(p.join(cache.path, 'session_1_db.sqlite-wal')).existsSync(), isFalse);
-      expect(File(p.join(documents.path, 'session_2_db.sqlite')).existsSync(), isFalse);
+      expect(
+        File(p.join(cache.path, 'accounts_database.sqlite')).existsSync(),
+        isFalse,
+      );
+      expect(
+        File(p.join(cache.path, 'session_1_db.sqlite-wal')).existsSync(),
+        isFalse,
+      );
+      expect(
+        File(p.join(documents.path, 'session_2_db.sqlite')).existsSync(),
+        isFalse,
+      );
       expect(Directory(p.join(temporary.path, '9')).existsSync(), isFalse);
 
       expect(File(p.join(cache.path, 'lanis.db')).existsSync(), isTrue);
-      expect(
-        File(p.join(v4Docs.path, 'keep.bin')).existsSync(),
-        isTrue,
-      );
+      expect(File(p.join(v4Docs.path, 'keep.bin')).existsSync(), isTrue);
       expect(await store.read(legacyV3EncryptionKeyName), isNull);
       expect(await store.read('account_password_1'), 'secret');
     });

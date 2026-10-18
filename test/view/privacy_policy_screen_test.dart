@@ -22,7 +22,9 @@ void main() {
     expect(find.text(l10n.privacyPolicyGateAccept), findsOneWidget);
   });
 
-  testWidgets('accept writes shared settings and goes to welcome', (tester) async {
+  testWidgets('accept writes shared settings and goes to welcome', (
+    tester,
+  ) async {
     final container = await pumpTestRouterApp(
       tester,
       initialLocation: '/privacy-policy',

@@ -27,7 +27,9 @@ void main() {
     expect(find.textContaining('startup failed'), findsOneWidget);
   });
 
-  testWidgets('DeepLinkErrorPage shows app bar and error chrome', (tester) async {
+  testWidgets('DeepLinkErrorPage shows app bar and error chrome', (
+    tester,
+  ) async {
     await pumpTestApp(
       tester,
       child: DeepLinkErrorPage(

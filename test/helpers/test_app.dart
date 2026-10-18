@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/features/auth/auth_controller.dart';
 import 'package:lanis/generated/l10n.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
 
 export 'fake_session_auth.dart';
 
@@ -15,6 +16,8 @@ List<Override> testLanisOverrides() => LanisClient.configure();
 
 List<LocalizationsDelegate<dynamic>> get testLocalizationsDelegates => [
   AppLocalizations.delegate,
+  // Fork-Texte (context.t), wie in der App.
+  ForkL10n.delegate,
   GlobalMaterialLocalizations.delegate,
   GlobalWidgetsLocalizations.delegate,
   GlobalCupertinoLocalizations.delegate,
@@ -59,10 +62,7 @@ Future<ProviderContainer> pumpTestRouterApp(
 }) async {
   final allOverrides = [...testLanisOverrides(), ...overrides];
   late ProviderContainer container;
-  final router = GoRouter(
-    initialLocation: initialLocation,
-    routes: routes,
-  );
+  final router = GoRouter(initialLocation: initialLocation, routes: routes);
   await tester.pumpWidget(
     ProviderScope(
       overrides: allOverrides,

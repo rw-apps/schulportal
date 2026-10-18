@@ -9,7 +9,9 @@ import '../helpers/test_app.dart';
 void main() {
   tearDown(LanisClient.reset);
 
-  testWidgets('offline chrome shows wifi_off and offline title', (tester) async {
+  testWidgets('offline chrome shows wifi_off and offline title', (
+    tester,
+  ) async {
     await pumpTestApp(
       tester,
       child: StartupAuthErrorContent(
