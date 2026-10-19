@@ -87,6 +87,57 @@ abstract final class PortalRules {
     r'(?:klassen?|jg\.?|jahrgang|jahrgänge)\s*(\d{1,2})\s*[-–]\s*(\d{1,2})',
     caseSensitive: false,
   );
+
+  /// Einzelne Klasse im Titel: „9D“, „09A“ (ohne Leerzeichen) oder „06 xy“
+  /// (zweistellig mit Leerzeichen, Schreibweise Schule A). Ursache der
+  /// Strenge: Mit Leerzeichen und einstelliger Zahl wären „6 und“ (aus „5, 6
+  /// und 7 Jg.“) oder „9 in der Aula“ Klassen. Ziffern direkt nach „.“, „:“,
+  /// „,“ oder „/“ zählen nicht (Uhrzeit „19:00 Uhr“, „Str.60“).
+  static final classToken = RegExp(
+    r'(?<![\d.:,/])\b(?:0?(\d{1,2})([a-zA-Z]{1,3})|(\d{2}) ([a-zA-Z]{1,3}))'
+    r'\b(?![.:\d])',
+  );
+
+  /// Kein Klassenbuchstabe: „10 Uhr“, „6 Std“, „5 km“ …
+  static const notClassWords = {
+    'uhr',
+    'std',
+    'st',
+    'h',
+    'min',
+    'km',
+    'm',
+    'x',
+    'mal',
+    'ag',
+    'ags',
+    'jg',
+    'kl',
+    'tag',
+    'nr',
+    'pkt',
+    'kg',
+    'g',
+    'l',
+    'ct',
+    'eur',
+  };
+
+  /// Davor stehend kein Klassen-, sondern ein Raum-/Ortsbezug
+  /// („Raum 9a“, „Haus 2b“, „Bus 7A“).
+  static final placeBefore = RegExp(
+    r'(?:raum|r\.|zi\.|zimmer|haus|gebäude|geb\.|bus|linie|gleis|tor|'
+    r'halle|platz|nr\.?)\s*$',
+    caseSensitive: false,
+  );
+
+  /// Oberstufe („Q1“–„Q4“, „E1“/„E2“, „E-Phase“, „Einführungsphase“,
+  /// „Oberstufe“) – in Hessen frühestens ab Jahrgang 10 (G8: E-Phase in 10).
+  static final upperSchool = RegExp(
+    r'\b(?:q[1-4]|e[12]|e-?phase|einführungsphase|oberstufe)\b',
+    caseSensitive: false,
+  );
+
   static final gradeList = RegExp(
     r'((?:\d{1,2}\s*(?:,|und|u\.|/)\s*)+\d{1,2})\.?\s*(?:klass|jg|jahrg)',
     caseSensitive: false,

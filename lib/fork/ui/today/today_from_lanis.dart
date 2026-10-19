@@ -445,9 +445,8 @@ bool isPlainHoliday(String title) => PortalRules.plainHoliday.hasMatch(
 /// Art nach Kategorie der Schule (Schule A: „Arbeiten“, „Ferien/Schulfreie
 /// Tage“, „Erinnerung“ …) und Stichworten im Titel. Ausgelassen:
 /// „Pausenaufsicht“ und „Schulwochen“ (Lehrerdienst bzw. A/B-Wochen, für
-/// Eltern nur Rauschen) sowie Termine für andere Jahrgänge, wenn der Titel
-/// sie nennt („8-10 Klassen …“, „nur für 5, 6 und 7 Jg.“) und die Klasse
-/// bekannt ist.
+/// Eltern nur Rauschen) sowie Termine, die sicher nur andere Klassen oder
+/// Jahrgänge betreffen ([forClass]), wenn die Klasse bekannt ist.
 ///
 /// [skipHolidays]: allgemeine Feiertage weglassen (PortalRules.plainHoliday)
 /// – für „Demnächst“; der Kalender zeigt alles.
@@ -462,7 +461,6 @@ List<WeekItem> weekItemsFromCalendar(
 }) {
   final today = DateTime(now.year, now.month, now.day);
   final horizon = DateTime(now.year, now.month, now.day + days);
-  final grade = int.tryParse(RegExp(r'^\d+').stringMatch(className) ?? '');
   final out = <(DateTime, WeekItem)>[];
   for (final e in events) {
     if (e.endTime.isBefore(now) || !e.startTime.isBefore(horizon)) continue;
@@ -470,7 +468,7 @@ List<WeekItem> weekItemsFromCalendar(
     if (PortalRules.skipCategories.any(cat.contains)) continue;
     final title = e.title.trim();
     if (title.isEmpty) continue;
-    if (grade != null && !forGrade(title, grade)) continue;
+    if (!forClass(title, className)) continue;
     final meal = isMealNote(title);
     if (meal && !includeMeals) continue;
     final lower = title.toLowerCase();
@@ -531,12 +529,11 @@ String? mealHintFor(
 }) {
   final afternoon = now.hour >= 14;
   final target = DateTime(now.year, now.month, now.day + (afternoon ? 1 : 0));
-  final grade = int.tryParse(RegExp(r'^\d+').stringMatch(className) ?? '');
   final notes = <String>{};
   for (final e in events) {
     final title = e.title.trim();
     if (!isMealNote(title)) continue;
-    if (grade != null && !forGrade(title, grade)) continue;
+    if (!forClass(title, className)) continue;
     final a = DateTime(e.startTime.year, e.startTime.month, e.startTime.day);
     final b = DateTime(e.endTime.year, e.endTime.month, e.endTime.day);
     if (target.isBefore(a) || target.isAfter(b)) continue;
@@ -545,6 +542,47 @@ String? mealHintFor(
   if (notes.isEmpty) return null;
   final text = notes.join(' · ');
   return afternoon ? t.mealTomorrow(text) : t.mealToday(text);
+}
+
+/// Gilt der Termin [title] für die Klasse [className] („09C“, „06 XY“)?
+/// false nur, wenn der Titel sicher und ausschließlich andere nennt.
+///
+/// Ursache (Wunsch 20.10.26, Schülerin einer 9. Klasse): „Demnächst“ zeigte
+/// Termine wie „Elternabend 9D“ oder „Französisch 09A Arbeit“ (Kalender
+/// Schule B, Export 17.10.26: 4 von 21 Terminen für andere Klassen).
+///
+/// false, wenn der Titel
+/// - einen Jahrgangsbereich/-liste ohne den eigenen nennt ([forGrade]),
+/// - Klassen nennt (PortalRules.classToken), aber nicht die eigene –
+///   gleicher Jahrgang mit anderem Buchstaben zählt als andere Klasse,
+/// - nur die Oberstufe nennt (Q1–Q4, E-Phase) und das Kind höchstens in
+///   Jahrgang 9 ist.
+///
+/// Grenzen: Eine bloße Zahl („Betriebspraktikum 9“) bleibt sichtbar, ebenso
+/// alles ohne Klassenangabe. Ohne bekannte Klasse wird nichts ausgeblendet.
+/// Kennt die App nur den Jahrgang, zählt jede Klasse dieses Jahrgangs.
+bool forClass(String title, String className) {
+  final own = RegExp(
+    r'^\s*0?(\d{1,2})\s*([a-zA-Z]{1,3})?',
+  ).firstMatch(className);
+  if (own == null) return true;
+  final grade = int.parse(own[1]!);
+  final letters = own[2]?.toLowerCase();
+  if (!forGrade(title, grade)) return false;
+  var mentioned = false;
+  for (final m in PortalRules.classToken.allMatches(title)) {
+    final g = int.parse(m[1] ?? m[3]!);
+    final l = (m[2] ?? m[4]!).toLowerCase();
+    if (g < 5 || g > 13 || PortalRules.notClassWords.contains(l)) continue;
+    if (PortalRules.placeBefore.hasMatch(title.substring(0, m.start))) {
+      continue;
+    }
+    mentioned = true;
+    if (g == grade && (letters == null || l == letters)) return true;
+  }
+  if (mentioned) return false;
+  if (grade <= 9 && PortalRules.upperSchool.hasMatch(title)) return false;
+  return true;
 }
 
 /// Gilt der Titel für [grade]? Erkennt Bereiche („5-7 Klassen“, „Jg. 8–10“)

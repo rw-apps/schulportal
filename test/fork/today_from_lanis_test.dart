@@ -461,4 +461,45 @@ void main() {
     expect(normalizeMensaUrl('https://nutzer@bestellung.example.de'), isNull);
     expect(normalizeMensaUrl(''), isNull);
   });
+
+  group('forClass: nur sicher fremde Klassen ausblenden', () {
+    test('andere Klasse desselben oder anderen Jahrgangs', () {
+      expect(forClass('Elternabend 7B', '07A'), isFalse);
+      expect(forClass('Englisch 08A Arbeit', '07A'), isFalse);
+      expect(forClass('Klassenkonferenz 7b', '7a'), isFalse);
+      expect(forClass('Exkursion 06 zz', '06 XY'), isFalse);
+    });
+    test('eigene Klasse, auch neben anderen', () {
+      expect(forClass('Englisch 07A Arbeit', '07A'), isTrue);
+      expect(forClass('Elternabend 7a', '07A'), isTrue);
+      expect(forClass('Ausflug 7A und 7B', '7b'), isTrue);
+      expect(forClass('Lernkontrolle 06 xy', '06 XY'), isTrue);
+    });
+    test('keine Klassenangabe oder unsicher: sichtbar', () {
+      for (final t in [
+        'Betriebspraktikum 7',
+        'Schulschluss 10:15 Uhr',
+        'Unterrichtsende nach der 3. Stunde',
+        'SEB Sitzung 19:00 Uhr',
+        'Treffen in Raum 8b',
+        'Abfahrt Bus 9A',
+        'Konzert ab 10 Uhr',
+        '1. Advent',
+      ]) {
+        expect(forClass(t, '07A'), isTrue, reason: t);
+      }
+      expect(forClass('Elternabend 7B', ''), isTrue);
+    });
+    test('Jahrgang bekannt, Buchstabe nicht: jede Klasse des Jahrgangs', () {
+      expect(forClass('Elternabend 7B', '7'), isTrue);
+      expect(forClass('Elternabend 8B', '7'), isFalse);
+    });
+    test('Jahrgangsbereich und Oberstufe', () {
+      expect(forClass('8-10 Klassen Infoabend', '07A'), isFalse);
+      expect(forClass('5-7 Klassen Infoabend', '07A'), isTrue);
+      expect(forClass('Q2 Klausur Deutsch', '07A'), isFalse);
+      expect(forClass('E-Phase Exkursion', '07A'), isFalse);
+      expect(forClass('Q2 Klausur Deutsch', '11'), isTrue);
+    });
+  });
 }
