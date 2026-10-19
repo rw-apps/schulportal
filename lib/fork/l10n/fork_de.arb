@@ -1152,5 +1152,39 @@
   },
   "transferApply": "Übernehmen",
   "transferDone": "Eingaben übernommen.",
-  "openInGoogleCalendar": "In Google Kalender öffnen"
+  "openInGoogleCalendar": "In Google Kalender öffnen",
+  "loginWrongTitle": "Passwort abgelehnt",
+  "loginWrongText": "Das Schulportal hat das gespeicherte Passwort abgelehnt – wurde es auf der Webseite geändert? Die App meldet sich mit diesem Passwort nicht mehr von selbst an, damit das Konto nicht gesperrt wird. Trag das aktuelle Passwort ein.",
+  "loginLockedTitle": "Konto kurz gesperrt",
+  "loginLockedText": "Nach mehreren falschen Anmeldungen hat das Schulportal das Konto für {seconds} Sekunden gesperrt – auch auf der Webseite. Bitte so lange warten: Jeder Versuch verlängert die Sperre.",
+  "@loginLockedText": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "loginDownTitle": "Schulportal nicht erreichbar",
+  "loginDownText": "Das Schulportal antwortet gerade nicht (Wartung oder Störung). Bis dahin zeigt die App den zuletzt gespeicherten Stand.",
+  "loginOfflineTitle": "Keine Verbindung",
+  "loginOfflineText": "Das Gerät ist offline. Die App zeigt den zuletzt gespeicherten Stand.",
+  "loginIncompleteText": "Für dieses Konto fehlen Zugangsdaten. Trag das Passwort neu ein.",
+  "loginOtherTitle": "Anmeldung fehlgeschlagen",
+  "loginOtherText": "Etwas Unerwartetes ist passiert. Versuch es gleich noch einmal; bleibt es dabei, schick den Fehlerbericht (Einstellungen → Fehlersuche).",
+  "passwordNewTitle": "Passwort neu eintragen",
+  "passwordNewLabel": "Aktuelles Passwort",
+  "passwordChange": "Passwort ändern",
+  "loginRetry": "Erneut versuchen",
+  "loginStatusPage": "Status des Portals",
+  "loginFailedFor": "{school}: {title}",
+  "@loginFailedFor": {
+    "placeholders": {
+      "school": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  }
 }

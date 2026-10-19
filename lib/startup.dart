@@ -12,6 +12,10 @@ import 'package:lanis/utils/privacy_policy.dart';
 import 'package:lanis/fork/ui/offline/offline_page.dart';
 import 'package:lanis/widgets/reset_account_page.dart';
 import 'package:lanis/utils/safe_launch.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
+import 'package:lanis/fork/onboarding/onboarding_kit.dart';
+import 'package:lanis/fork/ui/kit.dart';
+import 'package:lanis/fork/ui/login_errors.dart';
 
 /// Splash / auth progress / recoverable auth errors.
 class StartupScreen extends ConsumerStatefulWidget {
@@ -145,8 +149,15 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
   }
 }
 
-/// Main-parity auth error chrome for the startup bottom sheet.
-class StartupAuthErrorContent extends StatelessWidget {
+/// Fehler beim Anmelden – im Stil der App, verständlich statt technisch.
+///
+/// Ursache (Rückmeldung 19.10.26, Bildschirmfoto „Kritischer Fehler! …
+/// LoginTimeoutException: Too many failed logins“): Die Vorlage zeigte den
+/// englischen Fehlertyp und bat, ihn zu melden – auch bei gesperrtem Konto
+/// oder falschem Passwort. Jetzt Überschrift und Erklärung aus
+/// loginErrorText; der technische Text nur noch bei unbekannten Fehlern
+/// (für eine Meldung). Bei abgelehntem Passwort „Passwort ändern“ direkt hier.
+class StartupAuthErrorContent extends ConsumerWidget {
   final LanisException exception;
   final VoidCallback onRetry;
 
@@ -160,101 +171,107 @@ class StartupAuthErrorContent extends StatelessWidget {
       'https://info.schulportal.hessen.de/status-des-schulportal-hessen/';
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final isDown = exception is LanisDownException;
-    final isOffline = exception is NoConnectionException;
-
-    final title = isDown
-        ? l10n.lanisDownError
-        : isOffline
-        ? l10n.noInternetConnection2
-        : l10n.startupError;
-
+  Widget build(BuildContext context, WidgetRef ref) {
+    final k = Kit.of(context);
+    final t = context.t;
+    final e = exception;
+    final msg = loginErrorText(t, e);
+    final isDown = e is LanisDownException;
+    final isOffline = e is NoConnectionException || e is NetworkException;
+    final wrong =
+        e is WrongCredentialsException || e is CredentialsIncompleteException;
+    final known = wrong || isDown || isOffline || e is LoginTimeoutException;
+    final account = ref.watch(activeAccountProvider);
     return SafeArea(
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.75,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.8,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.wifi_find_outlined),
-                  onPressed: () =>
-                      safeLaunchUrl(Uri.parse(_statusUrl), context: context),
-                  tooltip: l10n.checkStatus,
-                ),
-                Icon(isOffline ? Icons.wifi_off : Icons.error, size: 48),
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: onRetry,
-                  tooltip: l10n.tryAgain,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Center(child: Text(title)),
-            if (!isOffline && !isDown)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: Text.rich(
-                  TextSpan(
-                    text: l10n.startupErrorMessage,
-                    children: [
-                      TextSpan(
-                        text:
-                            '\n\n${exception.runtimeType}: ${exception.cause}',
-                        style: Theme.of(context).textTheme.labelLarge,
-                      ),
-                    ],
-                  ),
-                ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(Sp.xl, Sp.xl, Sp.xl, Sp.l),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Icon(
+                isOffline
+                    ? Icons.wifi_off
+                    : e is LoginTimeoutException
+                    ? Icons.lock_clock_outlined
+                    : Icons.error_outline,
+                size: Sz.navIcon * 2,
+                color: k.p.muted,
               ),
-            if (exception is WrongCredentialsException)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.lock_reset),
-                  label: Text(l10n.resetAccount),
-                  onPressed: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const ResetAccountPage(),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            if (isDown)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: Text(
-                  l10n.lanisDownErrorMessage,
-                  style: Theme.of(context).textTheme.labelLarge,
+              const SizedBox(height: Sp.m),
+              Text(msg.title, style: k.sheetTitle, textAlign: TextAlign.center),
+              if (account != null)
+                Text(
+                  [
+                    if (account.schoolName.isNotEmpty) account.schoolName,
+                    account.username,
+                  ].join(' · '),
+                  style: k.meta,
                   textAlign: TextAlign.center,
                 ),
+              const SizedBox(height: Sp.m),
+              Text(msg.text, style: k.body, textAlign: TextAlign.center),
+              if (!known) ...[
+                const SizedBox(height: Sp.m),
+                SelectableText(
+                  '${e.runtimeType}: ${e.cause}',
+                  style: k.meta,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: Sp.xl),
+              if (wrong && account != null) ...[
+                OnbButton(
+                  label: t.passwordChange,
+                  icon: Icons.key_outlined,
+                  onPressed: () async {
+                    final ok = await changeAccountPassword(
+                      context,
+                      ref,
+                      account.localId,
+                    );
+                    if (ok) onRetry();
+                  },
+                ),
+                const SizedBox(height: Sp.s),
+              ],
+              OnbButton(
+                label: t.loginRetry,
+                icon: Icons.refresh,
+                strong: !wrong,
+                onPressed: onRetry,
               ),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.sizeOf(context).height * 0.45,
+              Wrap(
+                alignment: WrapAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () =>
+                        safeLaunchUrl(Uri.parse(_statusUrl), context: context),
+                    child: Text(t.loginStatusPage, style: k.link),
+                  ),
+                  if (wrong)
+                    TextButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ResetAccountPage(),
+                        ),
+                      ),
+                      child: Text(
+                        AppLocalizations.of(context).resetAccount,
+                        style: k.link,
+                      ),
+                    ),
+                ],
               ),
               // Fork (17.10.26): statt der alten Lanis-Ansichten der zuletzt
               // gespeicherte Stand in der neuen Oberfläche.
-              child: SingleChildScrollView(
-                child: (isOffline || isDown)
-                    ? const OfflineEntry()
-                    : const SizedBox.shrink(),
-              ),
-            ),
-          ],
+              if (isOffline || isDown) const OfflineEntry(),
+            ],
+          ),
         ),
       ),
     );

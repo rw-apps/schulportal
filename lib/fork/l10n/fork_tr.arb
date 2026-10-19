@@ -430,5 +430,22 @@
   "transferSkipped": "Dosyadaki {n} hesap burada kurulu değil ve atlanır.",
   "transferApply": "Al",
   "transferDone": "Girişler alındı.",
-  "openInGoogleCalendar": "Google Takvim’de aç"
+  "openInGoogleCalendar": "Google Takvim’de aç",
+  "loginWrongTitle": "Şifre reddedildi",
+  "loginWrongText": "Okul portalı kayıtlı şifreyi reddetti – web sitesinde değiştirildi mi? Hesabın kilitlenmemesi için uygulama bu şifreyle artık kendiliğinden giriş yapmaz. Güncel şifreyi girin.",
+  "loginLockedTitle": "Hesap kısa süreliğine kilitli",
+  "loginLockedText": "Birkaç hatalı girişten sonra okul portalı hesabı {seconds} saniye kilitledi – web sitesinde de. Lütfen bekleyin: her deneme kilidi uzatır.",
+  "loginDownTitle": "Okul portalına ulaşılamıyor",
+  "loginDownText": "Okul portalı şu anda yanıt vermiyor (bakım veya arıza). O zamana kadar uygulama son kaydedilen durumu gösterir.",
+  "loginOfflineTitle": "Bağlantı yok",
+  "loginOfflineText": "Cihaz çevrimdışı. Uygulama son kaydedilen durumu gösterir.",
+  "loginIncompleteText": "Bu hesap için giriş bilgileri eksik. Şifreyi yeniden girin.",
+  "loginOtherTitle": "Giriş başarısız",
+  "loginOtherText": "Beklenmedik bir şey oldu. Birazdan tekrar deneyin; devam ederse hata raporunu gönderin (Ayarlar → Sorun giderme).",
+  "passwordNewTitle": "Şifreyi yeniden gir",
+  "passwordNewLabel": "Güncel şifre",
+  "passwordChange": "Şifreyi değiştir",
+  "loginRetry": "Tekrar dene",
+  "loginStatusPage": "Portal durumu",
+  "loginFailedFor": "{school}: {title}"
 }

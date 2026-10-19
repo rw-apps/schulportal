@@ -12,6 +12,7 @@ import '../plan/plan_from_lanis.dart' show subjectFullName;
 import '../plan/plan_model.dart';
 import 'today_from_lanis.dart';
 import 'today_model.dart';
+import 'login_failure_card.dart';
 import 'today_page.dart';
 import '../nav.dart';
 
@@ -168,7 +169,17 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
         // (gemeinsame Kindwahl), damit dort gleich das richtige Kind steht.
         void select(ChildToday c) =>
             FamilyData.scopeOf(context)?.onSelect?.call(memberOf(c).accountId);
+        final scope = FamilyData.scopeOf(context);
         return TodayPage(
+          notices: [
+            for (final f in scope?.failures ?? const <FamilyFailure>[])
+              LoginFailureCard(
+                failure: f,
+                onRetry: scope?.onRetry == null
+                    ? null
+                    : () => scope!.onRetry!(f.account.localId),
+              ),
+          ],
           data: FamilyToday(
             now: now,
             kids: kids,

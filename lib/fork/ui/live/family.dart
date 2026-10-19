@@ -5,6 +5,7 @@ import 'package:liblanis/liblanis.dart';
 import 'package:lanis/bridge/lanis_bootstrap.dart' show bootstrapOverrides;
 
 import '../../error_log.dart';
+import '../../login_guard.dart';
 import '../../l10n/l10n.dart';
 import '../kid_chips.dart';
 import '../kit.dart';
@@ -73,9 +74,18 @@ class FamilyData extends InheritedWidget {
     required super.child,
     this.selectedAccount,
     this.onSelect,
+    this.failures = const [],
+    this.onRetry,
   });
 
   final List<FamilyMember> members;
+
+  /// Weitere Konten, deren Anmeldung fehlschlug (Passwort abgelehnt, Sperre
+  /// des Portals, keine Verbindung …), mit „Erneut versuchen“ ([onRetry]).
+  /// Ursache (Rückmeldung 19.10.26): Vorher fehlte ein solches Kind einfach,
+  /// ohne Hinweis.
+  final List<FamilyFailure> failures;
+  final void Function(int accountId)? onRetry;
 
   /// Gewähltes Kind (Konto) für Kalender, Unterricht, Nachrichten und Mehr –
   /// EINE Wahl für alle Reiter. Ursache (Rückmeldung 17.10.26): Jeder
@@ -123,8 +133,24 @@ class FamilyScope extends ConsumerStatefulWidget {
   ConsumerState<FamilyScope> createState() => _FamilyScopeState();
 }
 
+/// Fehlgeschlagene Anmeldung eines weiteren Kontos.
+class FamilyFailure {
+  const FamilyFailure({required this.account, required this.error});
+
+  final AccountSummary account;
+  final Object error;
+}
+
 class _FamilyScopeState extends ConsumerState<FamilyScope> {
   final _containers = <int, ProviderContainer>{};
+
+  /// Konten, deren Anmeldung fehlschlug – bis „Erneut versuchen“ kein neuer
+  /// Versuch. Ursache (Fund 19.10.26): Ein fehlgeschlagenes Konto fiel aus
+  /// [_containers] und galt beim nächsten Aufbau (der ständig vorkommt)
+  /// wieder als neu – die App meldete sich in schneller Folge immer wieder
+  /// falsch an, und das Portal sperrte das Konto mit wachsender Wartezeit,
+  /// auch für die Webseite.
+  final _failed = <int, Object>{};
   final _hosts = <int, Widget>{};
   final _snaps = <int, LiveSnapshot>{};
   int? _selected;
@@ -157,7 +183,14 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
         .whenComplete(c.dispose);
   }
 
-  Future<void> _start(int id) async {
+  /// Erneut anmelden (Knopf): auf ausdrücklichen Wunsch, darf also auch ein
+  /// schon abgelehntes Passwort noch einmal versuchen (login_guard.dart).
+  void _retry(int id) {
+    setState(() => _failed.remove(id));
+    _start(id, user: true);
+  }
+
+  Future<void> _start(int id, {bool user = false}) async {
     final c = ProviderContainer(
       overrides: [
         ...bootstrapOverrides,
@@ -171,7 +204,13 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
     try {
       final before = (await db.getAccount(id))?.lastLogin;
       await c.read(activeAccountProvider.notifier).select(id);
-      await c.read(sessionProvider.notifier).authenticate();
+      final account = c.read(activeAccountProvider);
+      await guardedLogin(
+        TypedSettings.account(db, id),
+        account?.password ?? '',
+        () => c.read(sessionProvider.notifier).authenticate(),
+        userInitiated: user,
+      );
       // Anmelden setzt last_login; die App startet mit dem Konto mit dem
       // jüngsten Wert (getPreferredStartupAccount). Ohne Zurücksetzen wäre
       // nach jedem Start ein anderes Konto „aktiv“ (Einstellungen, Abmelden).
@@ -186,6 +225,7 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
         _containers.remove(id);
         c.dispose();
       }
+      if (mounted) setState(() => _failed[id] = e);
       return;
     }
     if (!mounted || _containers[id] != c) {
@@ -221,7 +261,11 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
     // Nicht mehr benötigte Container (gelöscht oder jetzt aktiv) freigeben,
     // neue anstoßen – nach dem Bauen, nie währenddessen.
     final stale = _containers.keys.where((id) => !others.contains(id)).toList();
-    final fresh = others.where((id) => !_containers.containsKey(id)).toList();
+    final fresh = others
+        .where((id) => !_containers.containsKey(id) && !_failed.containsKey(id))
+        .toList();
+    // Fehlschläge vergessen, wenn das Konto weg oder jetzt aktiv ist.
+    _failed.removeWhere((id, _) => !others.contains(id));
     if (loaded != null && (stale.isNotEmpty || fresh.isNotEmpty)) {
       final gone = {
         for (final id in stale)
@@ -278,6 +322,12 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
           members: members,
           selectedAccount: _selected,
           onSelect: (id) => setState(() => _selected = id),
+          failures: [
+            for (final a in ordered)
+              if (_failed[a.localId] case final e?)
+                FamilyFailure(account: a, error: e),
+          ],
+          onRetry: _retry,
           child: widget.child,
         ),
         // Zwischengespeicherte Widgets: Ein Neuaufbau hier baut die weiteren

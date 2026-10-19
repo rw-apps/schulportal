@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/bridge/login_telemetry.dart';
+import 'package:lanis/fork/login_guard.dart';
 import 'package:lanis/utils/privacy_policy.dart';
 
 enum AuthPhase { unauthenticated, authenticating, authenticated, error }
@@ -32,6 +33,11 @@ class AuthController extends Notifier<AuthState> {
   /// is already in flight (redirect to `/startup` would otherwise race).
   bool _authDrivenExternally = false;
 
+  /// Fork: Anmeldung auf ausdrücklichen Wunsch (Erneut versuchen, Konto
+  /// anmelden/wechseln) – darf ein schon abgelehntes Passwort noch einmal
+  /// versuchen (login_guard.dart); der Start der App nicht.
+  bool _userInitiated = false;
+
   /// Test-only: when set, replaces [sessionProvider.notifier.authenticate].
   @visibleForTesting
   static Future<void> Function(Ref ref)? debugAuthenticate;
@@ -61,7 +67,21 @@ class AuthController extends Notifier<AuthState> {
       await override(ref);
       return;
     }
-    await authenticateWithLoginTelemetry(ref.read(sessionProvider.notifier));
+    // Fork: Schutz vor Anmelde-Schleifen, die das Konto im Portal sperren
+    // (login_guard.dart).
+    final account = ref.read(activeAccountProvider);
+    if (account == null) {
+      await authenticateWithLoginTelemetry(ref.read(sessionProvider.notifier));
+      return;
+    }
+    final user = _userInitiated;
+    _userInitiated = false;
+    await guardedLogin(
+      TypedSettings.account(ref.read(lanisDatabaseProvider), account.localId),
+      account.password,
+      () => authenticateWithLoginTelemetry(ref.read(sessionProvider.notifier)),
+      userInitiated: user,
+    );
   }
 
   Future<void> _deauthenticate() async {
@@ -136,6 +156,7 @@ class AuthController extends Notifier<AuthState> {
     }
 
     _authDrivenExternally = true;
+    _userInitiated = true;
     final previousId = ref.read(activeAccountProvider)?.localId;
     state = const AuthState.authenticating();
     try {
@@ -210,7 +231,10 @@ class AuthController extends Notifier<AuthState> {
     await bootstrap();
   }
 
-  Future<void> retry() => bootstrap();
+  Future<void> retry() {
+    _userInitiated = true;
+    return bootstrap();
+  }
 }
 
 final authControllerProvider = NotifierProvider<AuthController, AuthState>(

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
+import 'package:lanis/fork/login_guard.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:lanis/applets/definitions.dart';
 import 'package:lanis/bridge/lanis_bootstrap.dart';
@@ -175,8 +176,8 @@ Future<void> callbackDispatcher() async {
       // 17.10.26): Schlug die Anmeldung oder eine Aufgabe eines Kontos fehl,
       // brach die Schleife ab – alle folgenden Konten blieben ohne Meldung,
       // und das Abmelden (deAuthenticate) entfiel. Jetzt: Fehler protokollieren,
-      // dieses Konto abmelden, mit dem nächsten weitermachen. Grenze: Ein
-      // Konto mit dauerhaft falschem Passwort versucht es bei jedem Lauf neu.
+      // dieses Konto abmelden, mit dem nächsten weitermachen. Ein Konto mit
+      // abgelehntem Passwort überspringt guardedLogin (login_guard.dart).
       for (final summary in accounts) {
         final db = container.read(lanisDatabaseProvider);
         final settings = TypedSettings.account(db, summary.localId);
@@ -204,9 +205,16 @@ Future<void> callbackDispatcher() async {
             }
 
             if (!authenticated) {
-              await container
-                  .read(sessionProvider.notifier)
-                  .authenticate(withoutData: true);
+              // Fork: nie mit einem schon abgelehnten Passwort und nie
+              // während einer Sperre des Portals (login_guard.dart) – sonst
+              // verlängerte jeder Lauf die Sperre, auch für die Webseite.
+              await guardedLogin(
+                settings,
+                account.password,
+                () => container
+                    .read(sessionProvider.notifier)
+                    .authenticate(withoutData: true),
+              );
               authenticated = true;
             }
 

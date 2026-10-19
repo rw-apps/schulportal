@@ -71,7 +71,11 @@ class TodayPage extends StatelessWidget {
     this.onOpenDay,
     this.onOrderMeal,
     this.onRefresh,
+    this.notices = const [],
   });
+
+  /// Hinweise oben (z. B. Konto nicht angemeldet, login_failure_card.dart).
+  final List<Widget> notices;
 
   final FamilyToday data;
   final void Function(ChildToday child)? onReportAbsence;
@@ -160,6 +164,11 @@ class TodayPage extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: Sp.xs),
           child: head,
         ),
+        for (final n in notices)
+          Padding(
+            padding: const EdgeInsets.only(top: Sp.m),
+            child: n,
+          ),
         if (tomorrowItems(data).isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: Sp.m),

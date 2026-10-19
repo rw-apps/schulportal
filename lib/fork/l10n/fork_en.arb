@@ -430,5 +430,22 @@
   "transferSkipped": "{n, plural, =1{1 account in the file is not set up here and is skipped.} other{{n} accounts in the file are not set up here and are skipped.}}",
   "transferApply": "Import",
   "transferDone": "Entries imported.",
-  "openInGoogleCalendar": "Open in Google Calendar"
+  "openInGoogleCalendar": "Open in Google Calendar",
+  "loginWrongTitle": "Password rejected",
+  "loginWrongText": "The school portal rejected the saved password – was it changed on the website? The app no longer signs in with this password on its own, so the account doesn't get locked. Enter the current password.",
+  "loginLockedTitle": "Account briefly locked",
+  "loginLockedText": "After several failed sign-ins the school portal locked the account for {seconds} seconds – on the website too. Please wait: every attempt extends the lock.",
+  "loginDownTitle": "School portal unavailable",
+  "loginDownText": "The school portal isn't responding right now (maintenance or outage). Until then the app shows the last saved state.",
+  "loginOfflineTitle": "No connection",
+  "loginOfflineText": "The device is offline. The app shows the last saved state.",
+  "loginIncompleteText": "Credentials are missing for this account. Enter the password again.",
+  "loginOtherTitle": "Sign-in failed",
+  "loginOtherText": "Something unexpected happened. Try again in a moment; if it persists, send the error report (Settings → Troubleshooting).",
+  "passwordNewTitle": "Enter password again",
+  "passwordNewLabel": "Current password",
+  "passwordChange": "Change password",
+  "loginRetry": "Try again",
+  "loginStatusPage": "Portal status",
+  "loginFailedFor": "{school}: {title}"
 }
