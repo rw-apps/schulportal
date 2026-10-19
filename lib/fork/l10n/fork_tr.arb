@@ -447,5 +447,6 @@
   "passwordChange": "Şifreyi değiştir",
   "loginRetry": "Tekrar dene",
   "loginStatusPage": "Portal durumu",
-  "loginFailedFor": "{school}: {title}"
+  "loginFailedFor": "{school}: {title}",
+  "loginSetupWrongText": "{school} kullanıcı adını veya şifreyi reddetti. Önce okulu kontrol edin: iki okulda çocuğu olan veliler genellikle her okul için ayrı bir hesaba sahiptir. Sonra kullanıcı adı (genellikle ad.soyad) ve şifre – telefonun otomatik doldurduğu eski bir şifre sık görülen bir nedendir."
 }

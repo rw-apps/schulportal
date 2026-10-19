@@ -1186,5 +1186,13 @@
         "type": "String"
       }
     }
+  },
+  "loginSetupWrongText": "{school} hat Benutzername oder Passwort abgelehnt. Prüfe zuerst die Schule: Eltern mit Kindern an zwei Schulen haben meist je Schule ein eigenes Konto. Dann Benutzername (meist vorname.nachname) und Passwort – ein vom Handy automatisch eingesetztes, altes Passwort ist eine häufige Ursache.",
+  "@loginSetupWrongText": {
+    "placeholders": {
+      "school": {
+        "type": "String"
+      }
+    }
   }
 }

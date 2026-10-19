@@ -8,6 +8,7 @@ import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:lanis/fork/onboarding/onboarding_kit.dart';
 import 'package:lanis/fork/onboarding/onboarding_pages.dart';
 import 'package:lanis/fork/ui/kit.dart';
+import 'package:lanis/fork/ui/login_errors.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:lanis/fork/start.dart';
 import 'package:lanis/features/auth/auth_controller.dart';
@@ -61,7 +62,50 @@ class LoginFormState extends ConsumerState<LoginForm> {
     });
   }
 
+  /// Ende einer Sperre des Portals, die die Einrichtung gemeldet hat.
+  /// Ursache (Rückmeldung 19.10.26): Jeder weitere Versuch während der
+  /// Sperre verlängert sie; die Einrichtung fragte trotzdem erneut an.
+  /// Grenze: nur für diese Seite – ein neuer Start der App kennt sie nicht.
+  DateTime? _lockedUntil;
+
+  /// Verständlicher Fehlerdialog (loginErrorText); bei abgelehnten
+  /// Zugangsdaten mit Hinweis auf Schule und automatisch eingesetzte
+  /// Passwörter statt des rohen Portaltexts.
+  void _showLoginError(Object ex) {
+    final t = context.t;
+    final k = Kit.of(context);
+    final msg = loginErrorText(t, ex);
+    final school = selectedSchoolName.isEmpty
+        ? schoolIDController.text
+        : selectedSchoolName;
+    final text = ex is WrongCredentialsException
+        ? t.loginSetupWrongText(school)
+        : msg.text;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(msg.title, style: k.sheetTitle),
+        content: Text(text, style: k.body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK', style: k.link),
+          ),
+        ],
+      ),
+    );
+  }
+
   void login(String username, String password, String schoolID) async {
+    final until = _lockedUntil;
+    if (until != null && until.isAfter(DateTime.now())) {
+      _showLoginError(
+        LoginTimeoutException(
+          '${until.difference(DateTime.now()).inSeconds + 1}',
+        ),
+      );
+      return;
+    }
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -151,52 +195,40 @@ class LoginFormState extends ConsumerState<LoginForm> {
         return;
       }
       if (!mounted) return;
-      final auth = ref.read(authControllerProvider);
-      final cause =
-          auth.exception?.cause ?? AppLocalizations.of(context).unknownError;
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(AppLocalizations.of(context).error),
-          content: Text(cause),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("OK"),
-            ),
-          ],
-        ),
-      );
+      final e = ref.read(authControllerProvider).exception;
+      _noteLock(e);
+      _showLoginError(e ?? UnknownException(''));
     } catch (ex, s) {
       logger.e(ex, stackTrace: s);
-
-      String cause = "";
-      if (ex is LanisException) {
-        cause = ex.cause;
-      } else {
-        if (mounted) {
-          cause = AppLocalizations.of(context).unknownError;
-        }
-      }
-
       if (!mounted) return;
       Navigator.pop(context); // pop dialog
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(AppLocalizations.of(context).error),
-          content: Text(cause),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text("OK"),
+      if (ex is AccountAlreadyExistsException) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            content: Text(
+              AppLocalizations.of(context).accountExists,
+              style: Kit.of(context).body,
             ),
-          ],
-        ),
-      );
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('OK', style: Kit.of(context).link),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+      _noteLock(ex);
+      _showLoginError(ex);
     }
+  }
+
+  void _noteLock(Object? e) {
+    if (e is! LoginTimeoutException) return;
+    final secs = int.tryParse(e.time.trim()) ?? 60;
+    _lockedUntil = DateTime.now().add(Duration(seconds: secs + 5));
   }
 
   /// „Konto eingerichtet“ als eigene Seite (Entwurf 18.10.26) statt des
@@ -270,6 +302,7 @@ class LoginFormState extends ConsumerState<LoginForm> {
               enabled: ready,
               autofillHints: const [AutofillHints.username],
               autocorrect: false,
+              enableSuggestions: false,
               style: k.body,
               decoration: onbInput(
                 k,
@@ -345,7 +378,10 @@ class LoginFormState extends ConsumerState<LoginForm> {
                   ? () {
                       if (_formKey.currentState!.validate()) {
                         login(
-                          usernameController.text.toLowerCase(),
+                          // trim: Android-Tastaturen hängen nach einem
+                          // Wortvorschlag ein Leerzeichen an – das Portal
+                          // lehnt den Namen dann ab (Rückmeldung 19.10.26).
+                          usernameController.text.trim().toLowerCase(),
                           passwordController.text,
                           schoolIDController.text,
                         );

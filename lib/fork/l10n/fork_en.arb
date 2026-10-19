@@ -447,5 +447,6 @@
   "passwordChange": "Change password",
   "loginRetry": "Try again",
   "loginStatusPage": "Portal status",
-  "loginFailedFor": "{school}: {title}"
+  "loginFailedFor": "{school}: {title}",
+  "loginSetupWrongText": "{school} rejected the user name or password. Check the school first: parents with children at two schools usually have a separate account per school. Then user name (usually firstname.lastname) and password – an old password filled in automatically by the phone is a common cause."
 }
