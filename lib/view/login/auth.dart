@@ -6,7 +6,10 @@ import 'package:liblanis/liblanis.dart';
 import 'package:lanis/generated/l10n.dart';
 import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:lanis/fork/onboarding/onboarding_kit.dart';
+import 'package:lanis/fork/class_choice.dart' show storeClass;
 import 'package:lanis/fork/onboarding/onboarding_pages.dart';
+import 'package:lanis/fork/onboarding/setup_class.dart';
+import 'package:lanis/fork/ui/settings/class_sheet.dart';
 import 'package:lanis/fork/ui/kit.dart';
 import 'package:lanis/fork/ui/login_errors.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -45,6 +48,11 @@ class LoginFormState extends ConsumerState<LoginForm> {
   /// Anmeldung; „Konto hinzufügen“ aus dem Kontowechsel endet wie bisher nach
   /// einem Konto.
   final _added = <String>[];
+
+  /// Je eingerichtetem Konto: Nummer, Schule, Kind und Klasse (Entwurf
+  /// 20.10.26 k3, setup_class.dart).
+  final _setup = <({int id, String school, SetupClass cls})>[];
+  final _classes = <({String value, bool detected})?>[];
 
   /// Neu erzeugt den Schulwähler je Runde (ValueKey), damit er leer beginnt.
   int _round = 0;
@@ -156,6 +164,9 @@ class LoginFormState extends ConsumerState<LoginForm> {
           .read(authControllerProvider.notifier)
           .loginWithAccount(newID, removeAccountOnFailure: true);
       if (!mounted) return;
+      // Klasse erkennen, solange der Ladedialog noch steht (höchstens 10 s).
+      final cls = ok && firstSetup ? await detectSetupClass(ref) : null;
+      if (!mounted) return;
       Navigator.pop(context); // pop dialog
       if (ok) {
         if (!firstSetup) {
@@ -165,6 +176,9 @@ class LoginFormState extends ConsumerState<LoginForm> {
         _added.add(
           '${selectedSchoolName.isEmpty ? schoolID : selectedSchoolName} · $username',
         );
+        final c = cls ?? (detected: '', kidName: '', show: false);
+        _setup.add((id: newID, school: selectedSchoolName, cls: c));
+        _classes.add(c.show ? (value: c.detected, detected: true) : null);
         final more = await _askForAnother();
         if (!mounted) return;
         if (more == true) {
@@ -231,11 +245,40 @@ class LoginFormState extends ConsumerState<LoginForm> {
     _lockedUntil = DateTime.now().add(Duration(seconds: secs + 5));
   }
 
+  /// Klasse eines eben eingerichteten Kontos ändern (class_sheet.dart) und
+  /// im Konto speichern (class_choice.dart).
+  Future<({String value, bool detected})?> _editClass(int i) async {
+    final e = _setup[i];
+    final cur = _classes[i];
+    final t = context.t;
+    final r = await showClassSheet(
+      context,
+      kidName: e.cls.kidName.isEmpty ? t.yourChild : e.cls.kidName,
+      school: e.school,
+      colorIndex: i,
+      detected: e.cls.detected,
+      current: cur?.value ?? '',
+      hasEntry: cur != null && !cur.detected,
+    );
+    if (r == null) return null;
+    final db = ref.read(lanisDatabaseProvider);
+    storeClass(TypedSettings.account(db, e.id), r.name);
+    final next = r.name == null
+        ? (value: e.cls.detected, detected: true)
+        : (value: r.name!, detected: false);
+    _classes[i] = next;
+    return next;
+  }
+
   /// „Konto eingerichtet“ als eigene Seite (Entwurf 18.10.26) statt des
   /// Dialogs; true = weiteres Konto.
   Future<bool?> _askForAnother() => Navigator.of(context).push<bool>(
     MaterialPageRoute<bool>(
-      builder: (_) => AccountAddedPage(accounts: List.of(_added)),
+      builder: (_) => AccountAddedPage(
+        accounts: List.of(_added),
+        classes: List.of(_classes),
+        onEditClass: _editClass,
+      ),
     ),
   );
 

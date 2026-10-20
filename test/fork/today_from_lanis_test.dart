@@ -502,4 +502,14 @@ void main() {
       expect(forClass('Q2 Klausur Deutsch', '11'), isTrue);
     });
   });
+
+  group('forClass mit Klassennamen', () {
+    test('Kürzel im Kalender, Name eingetragen', () {
+      expect(forClass('Lernkontrolle 06 ah', '6 Ahorn'), isTrue);
+      expect(forClass('Elternabend 06 bi', '6 Ahorn'), isFalse);
+      expect(forClass('Ausflug 06 bi und 6 Ahorn', '6 Ahorn'), isTrue);
+      expect(forClass('Lernkontrolle 06 ah', '06 AH'), isTrue);
+      expect(forClass('Elternabend 6 Birke', '6 Ahorn'), isTrue);
+    });
+  });
 }

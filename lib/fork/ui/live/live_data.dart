@@ -16,6 +16,7 @@ import '../../mensa.dart';
 import '../plan/lesson_times.dart';
 import '../plan/plan_from_lanis.dart';
 import '../plan/plan_model.dart';
+import '../../class_choice.dart';
 import '../today/today_from_lanis.dart' show classFromCourses;
 
 /// Schlüssel der Gruppenwahl in den Einstellungen des Kontos (unter
@@ -154,7 +155,19 @@ class LiveSnapshot {
     this.mensa = const MensaAddresses({}),
     this.accountKey = '',
     this.kids = const [],
+    this.classChoice,
+    this.classExpired = false,
+    this.setClass,
   });
+
+  /// Von Hand eingetragene Klasse (class_choice.dart), null = keine gültige.
+  final ClassChoice? classChoice;
+
+  /// Ein früherer Eintrag ist mit dem Schuljahr abgelaufen.
+  final bool classExpired;
+
+  /// Eintrag speichern; null entfernt ihn.
+  final void Function(String? name)? setClass;
 
   final LanisSession session;
   final Set<String> supported;
@@ -300,6 +313,8 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
   LessonTimes? _times;
   CourseScan? _scan;
   HomeworkLedger _homework = HomeworkLedger.empty;
+  ClassChoice? _class;
+  bool _classExpired = false;
   MensaAddresses _mensa = const MensaAddresses({});
   int? _settingsFor;
   late final _loader = SerialLoader(
@@ -395,6 +410,8 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
     _times = storedLessonTimes(s);
     _scan = storedCourseScan(s);
     _homework = HomeworkLedger.decode(s.getString(homeworkLedgerSetting));
+    _class = storedClass(s);
+    _classExpired = classExpired(s);
     _mensa = MensaAddresses.decode(
       s.getString('fork/$mensaUrlsSetting'),
       legacy: s.getString('fork/$mensaUrlSetting'),
@@ -517,6 +534,17 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
         refreshMessages: () =>
             _loader.run(force: true, only: const {'nachrichten.php'}),
         kids: kids,
+        classChoice: _class,
+        classExpired: _classExpired,
+        setClass: (name) {
+          final s = ref.read(accountSpecificSettingsProvider);
+          if (s == null || !mounted) return;
+          final c = storeClass(s, name);
+          setState(() {
+            _class = c;
+            _classExpired = false;
+          });
+        },
       ),
       child: widget.child,
     );
@@ -538,10 +566,20 @@ class LiveData extends InheritedWidget {
   bool updateShouldNotify(LiveData oldWidget) => true;
 }
 
-/// Klasse des Kindes: aus den Benutzerdaten, sonst aus den Kursnamen
-/// (classFromCourses, Ursache dort).
+/// Klasse des Kindes: der eigene Eintrag (class_choice.dart), sonst die
+/// erkannte ([detectedClassName]).
 String liveClassName(LiveSnapshot s) =>
-    s.session.userData['klasse'] ?? classFromCourses(s.courseNames);
+    s.classChoice?.name ?? detectedClassName(s);
+
+/// Von der App erkannte Klasse: aus den Benutzerdaten, sonst aus den
+/// Kursnamen (classFromCourses, Ursache dort); '' = unbekannt.
+String detectedClassName(LiveSnapshot s) => (s.session.userData['klasse'] ?? '')
+    .trim()
+    .ifEmptyThen(() => classFromCourses(s.courseNames));
+
+extension on String {
+  String ifEmptyThen(String Function() other) => isEmpty ? other() : this;
+}
 
 /// Plan und automatische Gruppenwahl, sobald der Stundenplan da ist.
 /// [fallbackName]: Anzeige, solange der Vorname unbekannt ist („Dein Kind“).

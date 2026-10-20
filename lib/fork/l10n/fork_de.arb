@@ -1194,5 +1194,60 @@
         "type": "String"
       }
     }
-  }
+  },
+  "classLine": "Klasse {cls}",
+  "@classLine": {
+    "placeholders": {
+      "cls": {
+        "type": "String"
+      }
+    }
+  },
+  "classDetected": "automatisch erkannt",
+  "classDetectedShort": "erkannt",
+  "classManualUntil": "von dir eingetragen, bis {date}",
+  "@classManualUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "classUnknown": "Klasse nicht erkannt",
+  "classEnter": "Eintragen",
+  "classSheetTitle": "In welche Klasse geht {name}?",
+  "@classSheetTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "classDetectedValue": "Erkannt: {cls}",
+  "@classDetectedValue": {
+    "placeholders": {
+      "cls": {
+        "type": "String"
+      }
+    }
+  },
+  "classGrade": "Jahrgang",
+  "classLetter": "Klasse",
+  "classOther": "andere",
+  "classOtherLabel": "Name der Klasse",
+  "classOtherHint": "z. B. Ahorn oder AH",
+  "classValidity": "Gilt bis zum Ende des Schuljahres am 31. Juli. Danach fragt die App neu, falls sie die Klasse nicht selbst erkennt.",
+  "classRemove": "Eintrag entfernen",
+  "classOnbHint": "Mit der Klasse blendet die App Termine aus, die nur andere Klassen betreffen.",
+  "classPromptTitle": "Neues Schuljahr: In welche Klasse geht {name}?",
+  "@classPromptTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "classPromptText": "Bis zum Eintrag zeigt die App alle Termine der Schule.",
+  "classPromptAction": "Klasse eintragen",
+  "classManualShort": "eingetragen"
 }

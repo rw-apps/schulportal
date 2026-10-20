@@ -16,12 +16,15 @@ import 'package:lanis/utils/theme_settings.dart';
 import 'package:lanis/view/settings/subsettings/debug_export.dart';
 
 import '../../calendar_subscribe.dart';
+import '../../class_choice.dart';
 import '../../error_log.dart';
 import '../../l10n/l10n.dart';
 import '../font_step.dart';
 import '../language.dart';
 import '../kit.dart';
 import '../live/family.dart';
+import '../live/live_data.dart' show LiveData, LiveSnapshot, detectedClassName;
+import 'class_sheet.dart';
 import '../today/today_from_lanis.dart' show shortSchoolName;
 import 'error_report_page.dart';
 import 'transfer_page.dart';
@@ -94,6 +97,47 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
   }
 
   // ---- Konto ---------------------------------------------------------------
+
+  /// „Klasse 9C · automatisch erkannt“ (class_choice.dart); null für
+  /// Lehrkräfte und solange keine Daten da sind.
+  static String? _classDetail(ForkL10n t, LiveSnapshot? s) {
+    if (s == null || s.session.accountTypeOrNull == AccountType.teacher) {
+      return null;
+    }
+    final own = s.classChoice;
+    if (own != null) {
+      return '${t.classLine(classLabel(own.name))} · '
+          '${t.classManualUntil(classUntilLabel(own.until))}';
+    }
+    final found = detectedClassName(s);
+    if (found.isEmpty) return t.classUnknown;
+    return '${t.classLine(classLabel(found))} · ${t.classDetected}';
+  }
+
+  /// Klasse ändern (class_sheet.dart); null ohne Daten oder für Lehrkräfte.
+  VoidCallback? _classTap(FamilyMember? m) {
+    final s = m?.snapshot;
+    if (m == null ||
+        s == null ||
+        s.setClass == null ||
+        s.session.accountTypeOrNull == AccountType.teacher) {
+      return null;
+    }
+    return () async {
+      final t = context.t;
+      final r = await showClassSheet(
+        context,
+        kidName: s.firstName.isEmpty ? t.yourChild : s.firstName,
+        school: shortSchoolName(s.schoolName),
+        colorIndex: m.colorIndex,
+        detected: detectedClassName(s),
+        current: s.classChoice?.name ?? '',
+        hasEntry: s.classChoice != null,
+      );
+      if (r == null || !mounted) return;
+      s.setClass!(r.name);
+    };
+  }
 
   Future<void> _logout(ClearTextAccount account) async {
     final k = Kit.of(context);
@@ -272,6 +316,20 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
       setState(() {});
     }
 
+    final members = FamilyData.of(context);
+    FamilyMember? activeMember;
+    for (final m in members) {
+      if (m.active) activeMember = m;
+    }
+    final live = LiveData.of(context);
+    if (activeMember == null && live != null) {
+      activeMember = FamilyMember(
+        accountId: live.session.account.localId,
+        snapshot: live,
+        colorIndex: 0,
+      );
+    }
+
     return Scaffold(
       backgroundColor: k.p.bg,
       body: SafeArea(
@@ -306,6 +364,8 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
                     ?type,
                     shortSchoolName(account.schoolName),
                   ].join(' · '),
+                  extra: _classDetail(t, activeMember?.snapshot),
+                  onTap: _classTap(activeMember),
                 ),
               // Weitere Konten der Familienansicht (family.dart) – angemeldet
               // und in Heute/Kalender sichtbar; Einstellungen hier gelten
@@ -319,6 +379,8 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
                       ?_typeOf(t, m.snapshot.session.accountTypeOrNull),
                       shortSchoolName(m.snapshot.schoolName),
                     ].join(' · '),
+                    extra: _classDetail(t, m.snapshot),
+                    onTap: _classTap(m),
                   ),
               if (session != null && session.userData.isNotEmpty)
                 _Item(
@@ -591,6 +653,7 @@ class _Item extends StatelessWidget {
     required this.icon,
     required this.label,
     this.detail,
+    this.extra,
     this.onTap,
     this.trailing,
   });
@@ -598,6 +661,9 @@ class _Item extends StatelessWidget {
   final IconData icon;
   final String label;
   final String? detail;
+
+  /// Dritte Zeile (Klasse des Kindes).
+  final String? extra;
   final VoidCallback? onTap;
   final Widget? trailing;
 
@@ -623,6 +689,8 @@ class _Item extends StatelessWidget {
                     Text(label, style: k.planSubject(k.p.ink)),
                     if (detail != null && detail!.isNotEmpty)
                       Text(detail!, style: k.planMeta(k.p.muted)),
+                    if (extra != null && extra!.isNotEmpty)
+                      Text(extra!, style: k.planMeta(k.p.muted)),
                   ],
                 ),
               ),

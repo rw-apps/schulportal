@@ -558,17 +558,30 @@ String? mealHintFor(
 /// - nur die Oberstufe nennt (Q1–Q4, E-Phase) und das Kind höchstens in
 ///   Jahrgang 9 ist.
 ///
+/// Klassennamen statt Buchstaben („6 Ahorn“, im Kalender „06 ah“): Kürzel
+/// und Name gelten als gleich, wenn eines mit dem anderen beginnt.
+///
 /// Grenzen: Eine bloße Zahl („Betriebspraktikum 9“) bleibt sichtbar, ebenso
-/// alles ohne Klassenangabe. Ohne bekannte Klasse wird nichts ausgeblendet.
+/// alles ohne Klassenangabe und ausgeschriebene fremde Namen („6 Birke“). Ohne bekannte Klasse wird nichts ausgeblendet.
 /// Kennt die App nur den Jahrgang, zählt jede Klasse dieses Jahrgangs.
 bool forClass(String title, String className) {
   final own = RegExp(
-    r'^\s*0?(\d{1,2})\s*([a-zA-Z]{1,3})?',
+    r'^\s*0?(\d{1,2})\s*([a-zA-ZäöüÄÖÜß]+)?',
   ).firstMatch(className);
   if (own == null) return true;
   final grade = int.parse(own[1]!);
   final letters = own[2]?.toLowerCase();
   if (!forGrade(title, grade)) return false;
+  // Eigener Klassenname ausgeschrieben im Titel („6 Ahorn“, „06 Ahorn“):
+  // sicher eigene Klasse, auch wenn daneben andere stehen.
+  if (letters != null &&
+      letters.length > 3 &&
+      RegExp(
+        '(?<!\\d)0?$grade\\s*${RegExp.escape(letters)}\\b',
+        caseSensitive: false,
+      ).hasMatch(title)) {
+    return true;
+  }
   var mentioned = false;
   for (final m in PortalRules.classToken.allMatches(title)) {
     final g = int.parse(m[1] ?? m[3]!);
@@ -578,7 +591,12 @@ bool forClass(String title, String className) {
       continue;
     }
     mentioned = true;
-    if (g == grade && (letters == null || l == letters)) return true;
+    // Kürzel und Name gelten als dieselbe Klasse („ah“ ↔ „Ahorn“), Ursache:
+    // Schule A kürzt die Klassennamen im Kalender und in den Kursen ab.
+    if (g == grade &&
+        (letters == null || letters.startsWith(l) || l.startsWith(letters))) {
+      return true;
+    }
   }
   if (mentioned) return false;
   if (grade <= 9 && PortalRules.upperSchool.hasMatch(title)) return false;

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'class_choice.dart' show classSetting;
 import 'absences.dart' show absenceSentSetting, decodeSent, encodeSent;
 import 'homework_ledger.dart';
 import 'ui/live/live_data.dart'
@@ -27,6 +28,7 @@ const transferKeys = [
   'fork/$mensaUrlSetting', // Mensa (alte Form)
   homeworkLedgerSetting, // abgehakte Hausaufgaben
   absenceSentSetting, // gesendete Entschuldigungen
+  classSetting, // eingetragene Klasse
 ];
 
 /// Konto über Geräte hinweg: Schulnummer und Benutzername. Ursache: Die

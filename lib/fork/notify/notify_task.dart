@@ -18,6 +18,7 @@ import '../ui/live/live_data.dart';
 import '../ui/courses/courses_model.dart';
 import '../ui/plan/plan_from_lanis.dart' show subjectFullName;
 import '../ui/plan/plan_model.dart';
+import '../class_choice.dart';
 import '../ui/today/today_from_lanis.dart' show classFromCourses;
 import 'notices.dart';
 
@@ -161,9 +162,10 @@ Future<void> _run(
     now: now,
     t: t,
     parent: accountType == AccountType.parent,
-    // Nur aus den Kursnamen: Die Anmeldung im Hintergrund lädt keine
-    // Benutzerdaten (authenticate(withoutData: true), background_service).
-    className: classFromCourses(courses),
+    // Eigener Eintrag (class_choice.dart), sonst nur aus den Kursnamen: Die
+    // Anmeldung im Hintergrund lädt keine Benutzerdaten
+    // (authenticate(withoutData: true), background_service).
+    className: storedClass(s)?.name ?? classFromCourses(courses),
     sent: sent.toSet(),
     subjectName: (c) => subjectFullName(c, courses),
   );

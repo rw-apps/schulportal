@@ -12,6 +12,8 @@ import '../plan/plan_from_lanis.dart' show subjectFullName;
 import '../plan/plan_model.dart';
 import 'today_from_lanis.dart';
 import 'today_model.dart';
+import '../settings/class_sheet.dart';
+import 'class_prompt_card.dart';
 import 'login_failure_card.dart';
 import 'today_page.dart';
 import '../nav.dart';
@@ -179,6 +181,25 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
                     ? null
                     : () => scope!.onRetry!(f.account.localId),
               ),
+            for (final (m, kid) in shown)
+              if (m.snapshot.classExpired &&
+                  m.snapshot.classChoice == null &&
+                  detectedClassName(m.snapshot).isEmpty)
+                ClassPromptCard(
+                  kidName: kid.firstName,
+                  onEnter: m.snapshot.setClass == null
+                      ? null
+                      : () async {
+                          final r = await showClassSheet(
+                            context,
+                            kidName: kid.firstName,
+                            school: shortSchoolName(m.snapshot.schoolName),
+                            colorIndex: m.colorIndex,
+                            hasEntry: true,
+                          );
+                          if (r != null) m.snapshot.setClass!(r.name);
+                        },
+                ),
           ],
           data: FamilyToday(
             now: now,

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../class_choice.dart' show classLabel;
 import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/l10n.dart';
@@ -86,16 +88,68 @@ class ForkWelcomePage extends StatelessWidget {
 
 /// 3 – Konto eingerichtet: bisherige Konten und „Weiteres Konto
 /// hinzufügen“ (ersetzt das Dialogfenster). Gibt true zurück = weiteres.
-class AccountAddedPage extends StatelessWidget {
-  const AccountAddedPage({super.key, required this.accounts});
+class AccountAddedPage extends StatefulWidget {
+  const AccountAddedPage({
+    super.key,
+    required this.accounts,
+    this.classes = const [],
+    this.onEditClass,
+  });
 
   /// „Schule · Benutzer“ je eingerichtetem Konto.
   final List<String> accounts;
 
+  /// Klasse je Konto (Entwurf 20.10.26 k3): (Klasse, erkannt?); null = ohne
+  /// Zeile (Lehrkraft). Leer = keine Zeilen (z. B. ältere Aufrufer).
+  final List<({String value, bool detected})?> classes;
+
+  /// Klasse ändern; liefert den neuen Stand oder null (abgebrochen).
+  final Future<({String value, bool detected})?> Function(int index)?
+  onEditClass;
+
+  @override
+  State<AccountAddedPage> createState() => _AccountAddedPageState();
+}
+
+class _AccountAddedPageState extends State<AccountAddedPage> {
+  late final _classes = List.of(widget.classes);
+
   @override
   Widget build(BuildContext context) {
+    final accounts = widget.accounts;
     final k = Kit.of(context);
     final t = context.t;
+    Widget classLine(int i) {
+      final c = i < _classes.length ? _classes[i] : null;
+      if (c == null) return const SizedBox.shrink();
+      final known = c.value.isNotEmpty;
+      final text = !known
+          ? t.classUnknown
+          : '${t.classLine(classLabel(c.value))} · '
+                '${c.detected ? t.classDetectedShort : t.classManualShort}';
+      return Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: Sp.s,
+        children: [
+          Text(text, style: k.planMeta(known ? k.p.muted : k.p.change.ink)),
+          if (widget.onEditClass != null)
+            InkWell(
+              onTap: () async {
+                final r = await widget.onEditClass!(i);
+                if (r != null && mounted) setState(() => _classes[i] = r);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: Sp.xs),
+                child: Text(
+                  known ? t.changeAction : t.classEnter,
+                  style: k.link,
+                ),
+              ),
+            ),
+        ],
+      );
+    }
+
     return PopScope(
       canPop: false,
       child: OnbPage(
@@ -123,6 +177,7 @@ class AccountAddedPage extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: Sp.s),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(
                           Icons.check_circle,
@@ -130,13 +185,25 @@ class AccountAddedPage extends StatelessWidget {
                           size: Sz.navIcon,
                         ),
                         const SizedBox(width: Sp.m),
-                        Expanded(child: Text(a, style: k.body)),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(a, style: k.body),
+                              classLine(i),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
               ],
             ),
           ),
+          if (_classes.any((c) => c != null)) ...[
+            const SizedBox(height: Sp.m),
+            Text(t.classOnbHint, style: k.meta),
+          ],
           const SizedBox(height: Sp.xl),
           Container(
             padding: const EdgeInsets.all(Sp.l),
