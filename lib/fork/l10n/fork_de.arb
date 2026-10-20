@@ -1398,5 +1398,13 @@
   "devAlready": "schon auf diesem Gerät",
   "devFromOther": "Von anderem Gerät übernehmen",
   "devNoAccounts": "Auf diesem Gerät ist noch kein Konto eingerichtet.",
-  "devPrivacy": "Ich habe die Datenschutzerklärung gelesen und stimme ihr zu."
+  "devPrivacy": "Ich habe die Datenschutzerklärung gelesen und stimme ihr zu.",
+  "devNoPassword": "Ohne gespeichertes Passwort, wird nicht übertragen: {names}",
+  "@devNoPassword": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  }
 }

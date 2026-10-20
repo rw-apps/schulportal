@@ -14,6 +14,8 @@ import 'package:lanis/widgets/reset_account_page.dart';
 import 'package:lanis/utils/safe_launch.dart';
 import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:lanis/fork/onboarding/onboarding_kit.dart';
+import 'package:lanis/fork/onboarding/onboarding_pages.dart'
+    show notifyAskedDuringSetup;
 import 'package:lanis/fork/ui/kit.dart';
 import 'package:lanis/fork/ui/login_errors.dart';
 
@@ -35,7 +37,9 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
       // Fork: Bei der Erstanmeldung fragt NotifyIntroPage (erst erklären,
       // dann fragen); hier nur, wenn schon Konten da sind.
       final hasAccounts = (await ref.read(accountsProvider.future)).isNotEmpty;
-      if (hasAccounts && mounted) requestPermissions();
+      if (hasAccounts && !notifyAskedDuringSetup && mounted) {
+        requestPermissions();
+      }
       if (!mounted) return;
       final auth = ref.read(authControllerProvider);
       // In-app login failure may land here already in error (no phase transition).

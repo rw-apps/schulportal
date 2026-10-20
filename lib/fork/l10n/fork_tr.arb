@@ -541,5 +541,6 @@
   "devAlready": "bu cihazda zaten var",
   "devFromOther": "Başka bir cihazdan aktar",
   "devNoAccounts": "Bu cihazda henüz hesap yok.",
-  "devPrivacy": "Gizlilik politikasını okudum ve kabul ediyorum."
+  "devPrivacy": "Gizlilik politikasını okudum ve kabul ediyorum.",
+  "devNoPassword": "Kayıtlı şifre yok, gönderilmeyecek: {names}"
 }

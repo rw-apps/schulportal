@@ -4,14 +4,13 @@ import 'dart:typed_data';
 import 'package:cryptography/cryptography.dart' show SimpleKeyPair;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 
 import 'package:lanis/features/auth/auth_controller.dart';
-import 'package:lanis/fork/start.dart' show firstSupportedHomePath;
+import 'package:permission_handler/permission_handler.dart';
 import 'package:lanis/fork_identity.dart';
 import 'package:lanis/utils/privacy_policy.dart';
 import 'package:lanis/utils/safe_launch.dart';
@@ -20,6 +19,8 @@ import '../../device_transfer.dart';
 import '../../error_log.dart';
 import '../../l10n/l10n.dart';
 import '../../onboarding/onboarding_kit.dart';
+import '../../onboarding/onboarding_pages.dart'
+    show NotifyIntroPage, notifyAskedDuringSetup;
 import '../../settings_transfer.dart';
 import '../kit.dart';
 import '../live/live_data.dart' show settingsRevision;
@@ -138,24 +139,18 @@ class _CheckCode extends StatelessWidget {
 Widget Function(void Function(String code) onCode)? debugTransferScanner;
 
 /// Kamera mit Rahmen; [onCode] für jeden gelesenen QR-Code.
-class _Scanner extends StatefulWidget {
+///
+/// Ohne eigenen MobileScannerController. Ursache (Prüfung 20.10.26): Mit
+/// eigenem Controller schaltet MobileScanner seine Behandlung des
+/// App-Lebenszyklus ab (mobile_scanner.dart: `if (widget.controller ==
+/// null) addObserver`) – die Kamera liefe dann im Hintergrund weiter. Grenze:
+/// Der eingebaute Controller erkennt alle Codearten; fremde Codes verwerfen
+/// parseOffer bzw. ChunkCollector.add am Präfix.
+class _Scanner extends StatelessWidget {
   const _Scanner({required this.onCode, this.status});
 
   final void Function(String code) onCode;
   final String? status;
-
-  @override
-  State<_Scanner> createState() => _ScannerState();
-}
-
-class _ScannerState extends State<_Scanner> {
-  MobileScannerController? _controller;
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -169,15 +164,12 @@ class _ScannerState extends State<_Scanner> {
           child: AspectRatio(
             aspectRatio: 1,
             child:
-                debugTransferScanner?.call(widget.onCode) ??
+                debugTransferScanner?.call(onCode) ??
                 MobileScanner(
-                  controller: _controller ??= MobileScannerController(
-                    formats: const [BarcodeFormat.qrCode],
-                  ),
                   onDetect: (capture) {
                     for (final b in capture.barcodes) {
                       final raw = b.rawValue;
-                      if (raw != null) widget.onCode(raw);
+                      if (raw != null) onCode(raw);
                     }
                   },
                   errorBuilder: (c, e) => Container(
@@ -195,7 +187,7 @@ class _ScannerState extends State<_Scanner> {
         ),
         const SizedBox(height: Sp.m),
         Text(
-          widget.status ?? t.devScanning,
+          status ?? t.devScanning,
           style: k.meta,
           textAlign: TextAlign.center,
         ),
@@ -231,6 +223,10 @@ class _DeviceReceivePageState extends ConsumerState<DeviceReceivePage> {
   bool _privacy = false;
   bool _busy = false;
 
+  /// Konten, die schon auf diesem Gerät sind (transferAccountKey); sie
+  /// werden übersprungen, ihre Eingaben aber zusammengeführt.
+  Set<String> _existing = const {};
+
   @override
   void initState() {
     super.initState();
@@ -238,76 +234,102 @@ class _DeviceReceivePageState extends ConsumerState<DeviceReceivePage> {
   }
 
   Future<void> _start() async {
-    final key = await newTransferKey();
-    final offer = await offerCode(key);
-    final check = await checkCode(parseOffer(offer)!);
-    if (!mounted) return;
-    setState(() {
-      _key = key;
-      _offer = offer;
-      _check = check;
-    });
+    try {
+      final key = await newTransferKey();
+      final offer = await offerCode(key);
+      final check = await checkCode(parseOffer(offer)!);
+      if (!mounted) return;
+      setState(() {
+        _key = key;
+        _offer = offer;
+        _check = check;
+      });
+    } catch (e, st) {
+      // Ursache: Ohne Fang drehte sich der Ladekreis endlos.
+      ErrorLog.instance.record('fork/geraet-schluessel', e, st);
+      if (mounted) setState(() => _error = context.t.transferFailed);
+    }
   }
 
   Future<void> _onCode(String code) async {
     if (_opening || _data != null) return;
     if (!_chunks.add(code)) return;
-    setState(() {});
+    setState(() => _error = null);
     if (!_chunks.complete) return;
     _opening = true;
     final p = await openPayload(_chunks.blob, _key!);
     final parsed = p == null ? null : parseDevicePayload(p);
+    final existing = parsed == null
+        ? const <String>{}
+        : {
+            for (final a in await ref.read(accountsProvider.future))
+              transferAccountKey(a.schoolID, a.username),
+          };
     if (!mounted) return;
     setState(() {
       _opening = false;
       if (parsed == null) {
+        // Neu sammeln, sonst lehnte ChunkCollector.add dieselben Codes ab.
+        _chunks.reset();
         _error = context.t.devWrongKey;
       } else {
         _data = parsed;
+        _existing = existing;
         _scanning = false;
       }
     });
   }
 
+  bool _known(TransferAccount a) =>
+      _existing.contains(transferAccountKey(a.schoolId, a.username));
+
   Future<void> _apply() async {
+    if (_busy) return;
     final data = _data!;
-    setState(() => _busy = true);
+    // Alles aus ref VOR dem ersten await lesen. Ursache: Während der
+    // Ersteinrichtung baut der Router (router.dart, _AuthListenable) bei
+    // jeder Kontoänderung neu auf; diese Seite liegt per Navigator.push über
+    // /welcome und kann dabei verschwinden – danach wäre ref ungültig.
+    final db = ref.read(lanisDatabaseProvider);
+    final accounts = ref.read(accountsProvider.notifier);
+    final auth = ref.read(authControllerProvider.notifier);
+    final shared = ref.read(sharedOverAccountSettingsProvider);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
-      final notifier = ref.read(accountsProvider.notifier);
-      final before = await ref.read(accountsProvider.future);
-      bool known(TransferAccount a) => before.any(
-        (b) =>
-            b.schoolID == a.schoolId &&
-            b.username.toLowerCase() == a.username.toLowerCase(),
-      );
+      // Erst zustimmen, dann Konten anlegen – wie das Anmeldeformular
+      // (auth.dart). Ursache (Prüfung 20.10.26): resolveAuthRedirect leitet
+      // Konten ohne Zustimmung nach /privacy-policy um; dabei verschwand
+      // diese Seite mitten in der Übernahme (Konten angelegt, Eingaben und
+      // Anmeldung fehlten, erneutes Anmelden meldete „Konto existiert“).
+      if (widget.firstSetup) acceptPrivacyPolicy(shared);
       final added = <int>[];
       for (final a in data.accounts) {
-        if (known(a)) continue;
+        if (_known(a)) continue;
         added.add(
-          await notifier.add(
+          await accounts.add(
             schoolId: a.schoolId,
             schoolName: a.schoolName,
             username: a.username,
             password: a.password,
+            accountType: a.accountType,
           ),
         );
       }
-      final all = await ref.read(accountsProvider.future);
-      applyTransferValues(ref.read(lanisDatabaseProvider), data.settings, all);
+      applyTransferValues(db, data.settings, await db.listAccounts());
       settingsRevision.value++;
-      if (!mounted) return;
-      if (widget.firstSetup) {
-        acceptPrivacyPolicy(ref.read(sharedOverAccountSettingsProvider));
-        final first = added.isNotEmpty ? added.first : all.first.localId;
-        final ok = await ref
-            .read(authControllerProvider.notifier)
-            .loginWithAccount(first);
-        if (!mounted) return;
-        if (ok) {
-          context.go(firstSupportedHomePath(ref));
-          return;
-        }
+      if (widget.firstSetup && added.isNotEmpty) {
+        await _askNotifications();
+        // Ab hier führt der Router: loginWithAccount setzt „authenticating“,
+        // resolveAuthRedirect schickt /welcome nach /startup und von dort
+        // zur Startseite oder zum Fehlerblatt (StartupScreen). Diese Seite
+        // wird dabei entfernt – deshalb danach nichts mehr.
+        await auth.loginWithAccount(added.first);
+        return;
       }
+      if (!mounted) return;
       ScaffoldMessenger.maybeOf(
         context,
       )?.showSnackBar(SnackBar(content: Text(context.t.devApplied)));
@@ -318,6 +340,24 @@ class _DeviceReceivePageState extends ConsumerState<DeviceReceivePage> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Benachrichtigungen erklären, dann fragen (NotifyIntroPage) – wie nach
+  /// dem Anmeldeformular. Ursache: Sonst fragte StartupScreen ohne
+  /// Erklärung, weil der Weg nach dem Anmelden über /startup führt.
+  Future<void> _askNotifications() async {
+    notifyAskedDuringSetup = true;
+    try {
+      if (await Permission.notification.isGranted || !mounted) return;
+    } catch (_) {
+      return; // Kein Plattformkanal (Tests).
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (page) =>
+            NotifyIntroPage(onDone: () => Navigator.of(page).pop()),
+      ),
+    );
   }
 
   @override
@@ -337,7 +377,9 @@ class _DeviceReceivePageState extends ConsumerState<DeviceReceivePage> {
               SettingsRow(
                 icon: Icons.person_outline,
                 label: a.schoolName.isEmpty ? '${a.schoolId}' : a.schoolName,
-                detail: a.username,
+                detail: _known(a)
+                    ? '${a.username} · ${t.devAlready}'
+                    : a.username,
               ),
             SettingsRow(icon: Icons.tune, label: t.devWhatSettings),
           ],
@@ -371,7 +413,12 @@ class _DeviceReceivePageState extends ConsumerState<DeviceReceivePage> {
         const SizedBox(height: Sp.l),
         OnbButton(
           label: t.devApply,
-          onPressed: _busy || (widget.firstSetup && !_privacy) ? null : _apply,
+          onPressed:
+              _busy ||
+                  (widget.firstSetup &&
+                      (!_privacy || data.accounts.every(_known)))
+              ? null
+              : _apply,
         ),
       ]);
     } else if (_scanning) {
@@ -386,6 +433,14 @@ class _DeviceReceivePageState extends ConsumerState<DeviceReceivePage> {
               ? t.devScanProgress(_chunks.received, _chunks.total)
               : null,
         ),
+        // Prüfcode auch hier: Wer zu früh auf „scannen“ tippt, braucht ihn
+        // noch zum Vergleich auf dem alten Gerät.
+        if (_check != null)
+          Text(
+            '${t.devCheck} $_check',
+            style: k.meta,
+            textAlign: TextAlign.center,
+          ),
       ]);
     } else {
       children.addAll([
@@ -442,7 +497,13 @@ class DeviceSendPage extends ConsumerStatefulWidget {
 class _DeviceSendPageState extends ConsumerState<DeviceSendPage> {
   Uint8List? _receiver;
   String? _check;
+  bool _reading = false;
+
+  /// Zum Senden vorbereitet: alle Konten (für die Eingaben), davon die mit
+  /// gespeichertem Passwort, und die Namen der übrigen.
   List<AccountSummary> _accounts = const [];
+  List<TransferAccount> _sendable = const [];
+  List<String> _noPassword = const [];
   List<String>? _codes;
   int _shown = 0;
   Timer? _cycle;
@@ -456,36 +517,58 @@ class _DeviceSendPageState extends ConsumerState<DeviceSendPage> {
   }
 
   Future<void> _onCode(String code) async {
-    if (_receiver != null) return;
+    // _reading: onDetect meldet denselben Code mehrmals je Sekunde.
+    if (_receiver != null || _reading) return;
     final pub = parseOffer(code);
     if (pub == null) return;
-    final check = await checkCode(pub);
-    final accounts = await ref.read(accountsProvider.future);
-    if (!mounted) return;
-    setState(() {
-      _receiver = pub;
-      _check = check;
-      _accounts = accounts;
-    });
-  }
-
-  Future<void> _send() async {
-    setState(() => _busy = true);
+    _reading = true;
     try {
       final db = ref.read(lanisDatabaseProvider);
-      final accounts = <TransferAccount>[];
-      for (final a in _accounts) {
+      final check = await checkCode(pub);
+      final accounts = await ref.read(accountsProvider.future);
+      final sendable = <TransferAccount>[];
+      final noPassword = <String>[];
+      for (final a in accounts) {
         final full = await db.getAccount(a.localId);
-        if (full == null) continue;
-        accounts.add(
+        // Ursache: getAccount liefert '' (database.dart _rowToClearText),
+        // wenn der sichere Speicher nichts hat – das neue Gerät hätte sonst
+        // ein Konto ohne Passwort gespeichert.
+        if (full == null || full.password.isEmpty) {
+          noPassword.add(a.username);
+          continue;
+        }
+        sendable.add(
           TransferAccount(
             schoolId: full.schoolID,
             schoolName: full.schoolName,
             username: full.username,
             password: full.password,
+            accountType: full.accountType,
           ),
         );
       }
+      if (!mounted) return;
+      setState(() {
+        _receiver = pub;
+        _check = check;
+        _accounts = accounts;
+        _sendable = sendable;
+        _noPassword = noPassword;
+      });
+    } catch (e, st) {
+      ErrorLog.instance.record('fork/geraet-lesen', e, st);
+      if (mounted) setState(() => _error = context.t.transferFailed);
+    } finally {
+      _reading = false;
+    }
+  }
+
+  Future<void> _send() async {
+    if (_busy || _codes != null) return;
+    setState(() => _busy = true);
+    try {
+      final db = ref.read(lanisDatabaseProvider);
+      final accounts = _sendable;
       final values = collectTransferValues(db, _accounts);
       final settings = {
         for (final e in values.entries)
@@ -504,6 +587,7 @@ class _DeviceSendPageState extends ConsumerState<DeviceSendPage> {
         _shown = 0;
       });
       if (codes.length > 1) {
+        _cycle?.cancel();
         _cycle = Timer.periodic(const Duration(milliseconds: 1600), (_) {
           if (mounted) setState(() => _shown = (_shown + 1) % codes.length);
         });
@@ -555,8 +639,8 @@ class _DeviceSendPageState extends ConsumerState<DeviceSendPage> {
           children: [
             SettingsRow(
               icon: Icons.key_outlined,
-              label: t.devWhatAccounts(_accounts.length),
-              detail: _accounts.map((a) => a.username).join(', '),
+              label: t.devWhatAccounts(_sendable.length),
+              detail: _sendable.map((a) => a.username).join(', '),
             ),
             SettingsRow(icon: Icons.tune, label: t.devWhatSettings),
           ],
@@ -564,8 +648,16 @@ class _DeviceSendPageState extends ConsumerState<DeviceSendPage> {
         const SizedBox(height: Sp.l),
         OnbButton(
           label: t.devSend,
-          onPressed: _busy || _accounts.isEmpty ? null : _send,
+          onPressed: _busy || _sendable.isEmpty ? null : _send,
         ),
+        if (_noPassword.isNotEmpty) ...[
+          const SizedBox(height: Sp.s),
+          Text(
+            t.devNoPassword(_noPassword.join(', ')),
+            style: k.meta,
+            textAlign: TextAlign.center,
+          ),
+        ],
         if (_accounts.isEmpty) ...[
           const SizedBox(height: Sp.s),
           Text(t.devNoAccounts, style: k.meta, textAlign: TextAlign.center),

@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/device_transfer.dart';
+import 'package:liblanis/liblanis.dart' show AccountType;
 
 void main() {
   const account = TransferAccount(
@@ -72,5 +73,63 @@ void main() {
     expect(await checkCode(pub), matches(RegExp(r'^\d{3} \d{3}$')));
     expect(parseOffer('SPT1K:kurz'), isNull);
     expect(parseOffer('https://example.org'), isNull);
+  });
+
+  test('Kontoart reist mit, leeres Passwort wird verworfen', () {
+    const parent = TransferAccount(
+      schoolId: 1234,
+      schoolName: 'Muster-Gymnasium',
+      username: 'eltern.muster',
+      password: 'geheim',
+      accountType: AccountType.parent,
+    );
+    final back = parseDevicePayload(buildDevicePayload([parent, account], {}))!;
+    expect(back.accounts.first.accountType, AccountType.parent);
+    // Ohne Angabe (älterer Sender): unbekannt, nicht „Schüler“.
+    expect(back.accounts.last.accountType, isNull);
+    expect(
+      TransferAccount.fromJson({'i': 1, 'n': '', 'u': 'x', 'p': ''}),
+      isNull,
+    );
+  });
+
+  test(
+    'nach misslungenem Öffnen lassen sich dieselben Codes neu lesen',
+    () async {
+      final receiver = await newTransferKey();
+      final codes = await sealPayload(
+        buildDevicePayload([account], {}),
+        parseOffer(await offerCode(receiver))!,
+      );
+      final c = ChunkCollector();
+      for (final code in codes) {
+        c.add(code);
+      }
+      expect(c.add(codes.first), isFalse); // schon gelesen
+      c.reset();
+      expect(c.complete, isFalse);
+      expect(c.add(codes.first), isTrue);
+    },
+  );
+
+  test('zu viele Daten: Fehler statt still gekürzt', () async {
+    final receiver = await newTransferKey();
+    final rnd = Random(1);
+    final big = String.fromCharCodes([
+      for (var i = 0; i < 120000; i++) 33 + rnd.nextInt(90),
+    ]);
+    final pub = parseOffer(await offerCode(receiver))!;
+    await expectLater(
+      sealPayload(
+        buildDevicePayload(
+          [account],
+          {
+            'x': {'y': big},
+          },
+        ),
+        pub,
+      ),
+      throwsStateError,
+    );
   });
 }

@@ -4,6 +4,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:liblanis/liblanis.dart' show AccountType, AccountTypeX;
 
 /// Übertragung von Zugangsdaten und Eingaben auf ein neues Gerät per
 /// QR-Code in zwei Schritten (Wunsch 20.10.26).
@@ -102,7 +103,11 @@ Future<List<String>> sealPayload(
   ]);
   final r = random ?? Random.secure();
   final id = r.nextInt(0xFFFF).toRadixString(16).padLeft(4, '0');
-  final n = (blob.length / transferChunkSize).ceil().clamp(1, 99);
+  final n = max(1, (blob.length / transferChunkSize).ceil());
+  // Ursache: Teilnummern sind höchstens zweistellig (ChunkCollector.add).
+  // Bisher kürzte clamp(1, 99) still, und der Empfänger meldete dann
+  // „anderes Gerät“. Grenze praktisch unerreichbar (99 × 700 Zeichen).
+  if (n > 99) throw StateError('Zu viele Daten für QR-Codes: $n Teile');
   return [
     for (var i = 0; i < n; i++)
       '$_dataPrefix$id:${i + 1}/$n:'
@@ -142,6 +147,15 @@ class ChunkCollector {
   }
 
   String get blob => [for (var i = 1; i <= _total; i++) _parts[i]!].join();
+
+  /// Nach misslungenem Entschlüsseln: Ursache – sonst lehnte [add] dieselben
+  /// Codes als schon gelesen ab, und ein zweiter Versuch mit derselben
+  /// Anzeige des alten Geräts wäre unmöglich.
+  void reset() {
+    _id = null;
+    _total = 0;
+    _parts.clear();
+  }
 }
 
 /// Entschlüsseln; null = falscher Schlüssel oder beschädigt.
@@ -183,6 +197,7 @@ class TransferAccount {
     required this.schoolName,
     required this.username,
     required this.password,
+    this.accountType,
   });
 
   final int schoolId;
@@ -190,11 +205,18 @@ class TransferAccount {
   final String username;
   final String password;
 
+  /// Kontoart. Ursache: Die normale Einrichtung meldet jedes Konto an und
+  /// erfährt sie dabei; hier wird nur das erste angemeldet, und ohne Art
+  /// prüfte background_service.dart Elternkonten als Schülerkonten
+  /// (`accountType ?? AccountType.student`) bis zum ersten Wechsel.
+  final AccountType? accountType;
+
   Map<String, dynamic> toJson() => {
     'i': schoolId,
     'n': schoolName,
     'u': username,
     'p': password,
+    if (accountType != null) 't': accountType!.name,
   };
 
   static TransferAccount? fromJson(Object? j) {
@@ -203,11 +225,14 @@ class TransferAccount {
     final u = j['u'];
     final p = j['p'];
     if (id is! int || u is! String || p is! String || u.isEmpty) return null;
+    if (p.isEmpty) return null;
+    final type = j['t'];
     return TransferAccount(
       schoolId: id,
       schoolName: '${j['n'] ?? ''}',
       username: u,
       password: p,
+      accountType: type is String ? AccountTypeX.fromString(type) : null,
     );
   }
 }

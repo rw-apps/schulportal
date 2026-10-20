@@ -257,6 +257,12 @@ class _AccountAddedPageState extends State<AccountAddedPage> {
 /// (StartupScreen.requestPermissions), bevor man wusste, wofür. Grenze: Sagt
 /// man hier „Später“, fragt die App nicht von selbst wieder; einschalten geht
 /// in den Einstellungen unter „Benachrichtigungen“.
+/// true, sobald die Einrichtung per QR-Code (device_transfer_page.dart)
+/// selbst nach Benachrichtigungen gefragt hat. Ursache: Ihr Weg nach dem
+/// Anmelden führt über StartupScreen, der sonst ein zweites Mal – ohne
+/// Erklärung – fragte. Grenze: gilt nur bis zum Neustart der App.
+bool notifyAskedDuringSetup = false;
+
 class NotifyIntroPage extends StatelessWidget {
   const NotifyIntroPage({super.key, required this.onDone});
 
