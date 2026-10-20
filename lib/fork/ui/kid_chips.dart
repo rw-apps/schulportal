@@ -25,39 +25,55 @@ class KidChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
+    // Gewählt: volle Farbe (Kind) bzw. dunkel („Alle“) mit Haken; nicht
+    // gewählt: weiß mit Rand und Farbpunkt. Ursache (Rückmeldung 20.10.26,
+    // Bildschirmfoto Nachrichten: „schwer erkennbar, welches Profil
+    // ausgewählt ist“): Vorher war „Alle“ gewählt grau auf grauem Grund und
+    // die NICHT gewählten Kinder weiß – die Hervorhebung wirkte verkehrt.
     Widget chip({
       required bool sel,
       required VoidCallback onTap,
       required String label,
-      required Color tint,
-      required Color ink,
+      required Color fill,
+      required Color onFill,
       Color? dot,
     }) => Semantics(
       selected: sel,
       button: true,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(Rad.pill),
-        onTap: onTap,
-        child: Container(
-          height: Sz.buttonSmall,
-          padding: const EdgeInsets.symmetric(horizontal: Sp.l),
-          decoration: BoxDecoration(
-            color: sel ? tint : k.p.card,
-            borderRadius: BorderRadius.circular(Rad.pill),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (dot != null) ...[
-                Container(
-                  width: Sz.dot + Sp.xxs,
-                  height: Sz.dot + Sp.xxs,
-                  decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
-                ),
-                const SizedBox(width: Sp.s),
+      child: Material(
+        color: sel ? fill : k.p.card,
+        shape: StadiumBorder(
+          side: sel ? BorderSide.none : BorderSide(color: k.p.line),
+        ),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: Container(
+            height: Sz.buttonSmall,
+            padding: const EdgeInsets.symmetric(horizontal: Sp.l),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (sel)
+                  Padding(
+                    padding: const EdgeInsets.only(right: Sp.s),
+                    child: Icon(Icons.check, size: Sz.icon, color: onFill),
+                  )
+                else if (dot != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: Sp.s),
+                    child: Container(
+                      width: Sz.dot + Sp.xxs,
+                      height: Sz.dot + Sp.xxs,
+                      decoration: BoxDecoration(
+                        color: dot,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                Text(label, style: k.chipLabel(sel, onFill)),
               ],
-              Text(label, style: k.chipLabel(sel, ink)),
-            ],
+            ),
           ),
         ),
       ),
@@ -72,16 +88,16 @@ class KidChips extends StatelessWidget {
             sel: selected < 0,
             onTap: () => onSelect(-1),
             label: allLabel!,
-            tint: k.p.inset,
-            ink: k.p.ink,
+            fill: k.p.strong,
+            onFill: k.p.onStrong,
           ),
         for (final (i, kid) in kids.indexed)
           chip(
             sel: i == selected,
             onTap: () => onSelect(i),
             label: kid.name,
-            tint: k.kid(kid.color).tint,
-            ink: k.kid(kid.color).onTint,
+            fill: k.kid(kid.color).accent,
+            onFill: k.p.card,
             dot: k.kid(kid.color).accent,
           ),
       ],
