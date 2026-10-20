@@ -330,13 +330,23 @@ class _PreviewShellState extends State<PreviewShell> {
     ];
   }
 
+  Widget _today(int? only) => LiveTodayPage(
+    onlyAccount: only,
+    onOpenCalendar: _openEvents,
+    onOpenDay: _openDay,
+    onOpenHomework: () => _select(ShellTab.courses),
+    onOpenMessages: () => _select(ShellTab.messages),
+  );
+
   Widget _liveBody(BuildContext context, ShellTab tab) {
     return switch (tab) {
-      ShellTab.today => LiveTodayPage(
-        onOpenCalendar: _openEvents,
-        onOpenDay: _openDay,
-        onOpenHomework: () => _select(ShellTab.courses),
-        onOpenMessages: () => _select(ShellTab.messages),
+      // „Alle“ vorn wie in Unterricht und Nachrichten (Rückmeldung
+      // 20.10.26); ein Kind gewählt: nur dessen Karte und Termine.
+      ShellTab.today => FamilySwitch(
+        all: (_, _) => _today(null),
+        child: Builder(
+          builder: (c) => _today(FamilyMember.around(c)?.accountId),
+        ),
       ),
       ShellTab.calendar => LiveCalendarPage(viewRequest: _calendarView),
       // Je Kind getrennt; bei mehreren Konten mit Auswahl oben (family.dart).

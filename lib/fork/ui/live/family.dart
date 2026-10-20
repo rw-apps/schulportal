@@ -423,56 +423,41 @@ class _FamilySwitchState extends State<FamilySwitch> {
     final sel =
         members.where((m) => m.accountId == wanted).firstOrNull ??
         members.first;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(Sp.page, Sp.m, Sp.page, 0),
-            child: KidChips(
-              allLabel: widget.all == null ? null : context.t.forEveryone,
-              kids: [
-                for (final m in members)
-                  (
-                    name: widget.kidName?.call(m) ?? kidLabel(m.snapshot),
-                    color: m.colorIndex,
-                  ),
-              ],
-              selected: _all ? -1 : members.indexOf(sel),
-              onSelect: (i) {
-                if (i < 0) {
-                  setState(() => _all = true);
-                  return;
-                }
-                if (_all) setState(() => _all = false);
-                final id = members[i].accountId;
-                final pick = scope?.onSelect;
-                if (pick != null) {
-                  pick(id);
-                } else {
-                  setState(() => _account = id);
-                }
-              },
+    return PinnedKidChips(
+      chips: KidChips(
+        allLabel: widget.all == null ? null : context.t.forEveryone,
+        kids: [
+          for (final m in members)
+            (
+              name: widget.kidName?.call(m) ?? kidLabel(m.snapshot),
+              color: m.colorIndex,
             ),
-          ),
-        ),
-        Expanded(
-          child: MediaQuery.removePadding(
-            context: context,
-            removeTop: true,
-            child: _all
-                ? KeyedSubtree(
-                    key: const ValueKey('family-all'),
-                    child: widget.all!(context, members),
-                  )
-                : KeyedSubtree(
-                    key: ValueKey('family-${sel.accountId}'),
-                    child: sel.scope(widget.child),
-                  ),
-          ),
-        ),
-      ],
+        ],
+        selected: _all ? -1 : members.indexOf(sel),
+        onSelect: (i) {
+          if (i < 0) {
+            setState(() => _all = true);
+            return;
+          }
+          if (_all) setState(() => _all = false);
+          final id = members[i].accountId;
+          final pick = scope?.onSelect;
+          if (pick != null) {
+            pick(id);
+          } else {
+            setState(() => _account = id);
+          }
+        },
+      ),
+      child: _all
+          ? KeyedSubtree(
+              key: const ValueKey('family-all'),
+              child: widget.all!(context, members),
+            )
+          : KeyedSubtree(
+              key: ValueKey('family-${sel.accountId}'),
+              child: sel.scope(widget.child),
+            ),
     );
   }
 }

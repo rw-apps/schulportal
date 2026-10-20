@@ -54,7 +54,13 @@ class LiveTodayPage extends StatefulWidget {
     this.onOpenHomework,
     this.onOpenMessages,
     this.onOpenDay,
+    this.onlyAccount,
   });
+
+  /// Nur dieses Konto zeigen (Kind oben gewählt, FamilySwitch); null =
+  /// alle Kinder. Ursache (Rückmeldung 20.10.26): Heute hatte als einziger
+  /// Reiter keine Auswahl „Alle | Kind“.
+  final int? onlyAccount;
 
   /// Kalender in der Ansicht „Tag“ (Tagesleiste angetippt); das Kind ist
   /// dann schon gewählt (FamilyData.onSelect).
@@ -127,7 +133,12 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
         final family = FamilyData.of(context);
         final members = family.isEmpty
             ? [FamilyMember(accountId: -1, snapshot: active, colorIndex: 0)]
-            : family;
+            : [
+                for (final m in family)
+                  if (widget.onlyAccount == null ||
+                      m.accountId == widget.onlyAccount)
+                    m,
+              ];
         final shown = <(FamilyMember, ChildToday)>[
           for (final m in members)
             if (_kidOf(m, now) case final kid?) (m, kid),

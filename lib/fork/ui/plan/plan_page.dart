@@ -277,8 +277,34 @@ class _PlanPageState extends State<PlanPage> {
     );
   }
 
+  /// Kind-Pillen fest oben, an derselben Stelle wie in Unterricht,
+  /// Nachrichten und Mehr (FamilySwitch, family.dart). Ursache
+  /// (Rückmeldung 20.10.26): Im Kalender standen sie unter der Überschrift
+  /// und scrollten mit. In „Termine“ mit „Alle“ vorn.
   @override
   Widget build(BuildContext context) {
+    if (widget.plans.length < 2) return _body(context);
+    final events = _view == PlanView.events;
+    return PinnedKidChips(
+      chips: KidChips(
+        allLabel: events ? context.t.forEveryone : null,
+        kids: [
+          for (final p in widget.plans)
+            (name: p.firstName, color: p.colorIndex),
+        ],
+        selected: events ? _eventsKid : _kid,
+        onSelect: events
+            ? (i) => setState(() => _eventsKid = i)
+            : (i) {
+                setState(() => _kid = i);
+                widget.onSelectKid?.call(i);
+              },
+      ),
+      child: _body(context),
+    );
+  }
+
+  Widget _body(BuildContext context) {
     final k = Kit.of(context);
     final bottom = MediaQuery.paddingOf(context).bottom;
     final open = openGroupSubjects(_plan, _choice).toList()..sort();
@@ -320,20 +346,6 @@ class _PlanPageState extends State<PlanPage> {
               ),
             ),
           ],
-        ),
-      ),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
-        child: KidChips(
-          kids: [
-            for (final p in widget.plans)
-              (name: p.firstName, color: p.colorIndex),
-          ],
-          selected: _kid,
-          onSelect: (i) {
-            setState(() => _kid = i);
-            widget.onSelectKid?.call(i);
-          },
         ),
       ),
       if (_view != PlanView.events)
@@ -415,27 +427,7 @@ class _PlanPageState extends State<PlanPage> {
             sliver: SliverToBoxAdapter(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  head.first,
-                  if (many)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        Sp.page,
-                        Sp.ml,
-                        Sp.page,
-                        0,
-                      ),
-                      child: KidChips(
-                        allLabel: context.t.forEveryone,
-                        kids: [
-                          for (final p in widget.plans)
-                            (name: p.firstName, color: p.colorIndex),
-                        ],
-                        selected: _eventsKid,
-                        onSelect: (i) => setState(() => _eventsKid = i),
-                      ),
-                    ),
-                ],
+                children: [head.first],
               ),
             ),
           ),

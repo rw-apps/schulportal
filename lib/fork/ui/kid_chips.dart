@@ -104,3 +104,40 @@ class KidChips extends StatelessWidget {
     );
   }
 }
+
+/// Kind-Pillen fest oben über einer Seite – EIN Baustein für alle Reiter
+/// (Heute, Kalender, Unterricht, Nachrichten, Mehr).
+///
+/// Ursache (Rückmeldung 20.10.26, „zentrale Logik für identisches
+/// Aussehen“): Der Kalender setzte die Pillen selbst unter die Überschrift
+/// und ließ sie mitscrollen; die übrigen Reiter (FamilySwitch) oben fest.
+/// Abstand oben [Sp.m] unter der Statusleiste, seitlich [Sp.page]; die
+/// Seite darunter bekommt keinen oberen Rand mehr (sie liegt schon unter
+/// der Statusleiste).
+class PinnedKidChips extends StatelessWidget {
+  const PinnedKidChips({super.key, required this.chips, required this.child});
+
+  final KidChips chips;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(Sp.page, Sp.m, Sp.page, 0),
+          child: chips,
+        ),
+      ),
+      Expanded(
+        child: MediaQuery.removePadding(
+          context: context,
+          removeTop: true,
+          child: child,
+        ),
+      ),
+    ],
+  );
+}
