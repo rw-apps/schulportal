@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -30,124 +31,166 @@ void main() {
     debugTransferScanner = null;
   });
 
-  testWidgets('Ersteinrichtung mit zwei Konten endet angemeldet', (t) async {
-    installFakeSessionAuth();
-    t.view.physicalSize = const Size(1080, 2424);
-    t.view.devicePixelRatio = 2.625;
-    addTearDown(t.view.reset);
-    void Function(String)? scan;
-    debugTransferScanner = (onCode) {
-      scan = onCode;
-      return const SizedBox();
-    };
-
-    late ProviderContainer c;
-    await t.pumpWidget(
-      ProviderScope(
-        overrides: testLanisOverrides(),
-        child: Consumer(
-          builder: (context, ref, _) {
-            c = ProviderScope.containerOf(context);
-            return MaterialApp.router(
-              locale: const Locale('de'),
-              localizationsDelegates: testLocalizationsDelegates,
-              supportedLocales: ForkL10n.supportedLocales,
-              routerConfig: _router(c),
-            );
-          },
-        ),
-      ),
+  for (final granted in [true, false]) {
+    testWidgets(
+      'Ersteinrichtung mit zwei Konten endet angemeldet '
+      '(Benachrichtigungen ${granted ? 'erlaubt' : 'noch nicht erlaubt'})',
+      (t) => _firstSetup(t, notificationsGranted: granted),
     );
-    Future<void> tap(String text) async {
-      await t.ensureVisible(find.text(text));
-      await t.pump();
-      await t.tap(find.text(text));
-    }
+  }
+}
 
-    Future<void> settle() async {
-      for (var i = 0; i < 20; i++) {
-        await t.runAsync(() => Future<void>.delayed(Duration.zero));
-        await t.pump(const Duration(milliseconds: 50));
-      }
-    }
+Future<void> _firstSetup(
+  WidgetTester t, {
+  required bool notificationsGranted,
+}) async {
+  // Kanal von permission_handler beantworten. Ursache (CI 9379 rot, hier
+  // grün): Ohne Antwort ging die Frage an die Test-Engine und kam in
+  // echter Zeit zurück – mal rechtzeitig, mal nicht.
+  final permissions = const MethodChannel(
+    'flutter.baseflow.com/permissions/methods',
+  );
+  t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+    permissions,
+    (call) async => switch (call.method) {
+      'checkPermissionStatus' => notificationsGranted ? 1 : 0,
+      _ => null,
+    },
+  );
+  addTearDown(
+    () => t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      permissions,
+      null,
+    ),
+  );
+  installFakeSessionAuth();
+  t.view.physicalSize = const Size(1080, 2424);
+  t.view.devicePixelRatio = 2.625;
+  addTearDown(t.view.reset);
+  void Function(String)? scan;
+  debugTransferScanner = (onCode) {
+    scan = onCode;
+    return const SizedBox();
+  };
 
-    // Wie StartupScreen beim Kaltstart: ohne Konten → /welcome.
-    await t.runAsync(
-      () => c.read(authControllerProvider.notifier).bootstrapIfNeeded(),
-    );
-    await settle();
-    expect(find.text('startup-marker'), findsNothing);
-    final de = forkL10nFor('de');
-    await tap(de.devFromOther);
-    await settle();
-
-    // Das alte Gerät (hier der Test) verschlüsselt für den gezeigten Code.
-    final offer = t.widget<TransferQr>(find.byType(TransferQr)).data;
-    final codes = (await t.runAsync(
-      () => sealPayload(
-        buildDevicePayload(
-          const [
-            TransferAccount(
-              schoolId: 1234,
-              schoolName: 'Muster-Gymnasium',
-              username: 'eltern.muster',
-              password: 'geheim-1',
-              accountType: AccountType.parent,
-            ),
-            TransferAccount(
-              schoolId: 1234,
-              schoolName: 'Muster-Gymnasium',
-              username: 'lena.muster',
-              password: 'geheim-2',
-              accountType: AccountType.student,
-            ),
-          ],
-          {
-            transferAccountKey(1234, 'lena.muster'): {
-              kidColorSetting: LanisDatabase.encodeValue('3'),
-            },
-          },
-        ),
-        parseOffer(offer)!,
+  late ProviderContainer c;
+  await t.pumpWidget(
+    ProviderScope(
+      overrides: testLanisOverrides(),
+      child: Consumer(
+        builder: (context, ref, _) {
+          c = ProviderScope.containerOf(context);
+          return MaterialApp.router(
+            locale: const Locale('de'),
+            localizationsDelegates: testLocalizationsDelegates,
+            supportedLocales: ForkL10n.supportedLocales,
+            routerConfig: _router(c),
+          );
+        },
       ),
-    ))!;
-    await tap(de.devScanData);
-    await settle();
-    for (final code in codes) {
-      scan!(code);
-    }
-    await settle();
-    await tap(de.devPrivacy);
+    ),
+  );
+  Future<void> tap(String text) async {
+    await t.ensureVisible(find.text(text));
     await t.pump();
-    await tap(de.devApply);
-    await settle();
+    await t.tap(find.text(text));
+  }
 
-    expect(find.text('home-marker'), findsOneWidget);
-    expect(c.read(authControllerProvider).phase, AuthPhase.authenticated);
-    expect(
-      isPrivacyPolicyAccepted(c.read(sharedOverAccountSettingsProvider)),
-      isTrue,
-    );
-    final db = c.read(lanisDatabaseProvider);
-    final accounts = await db.listAccounts();
-    expect(accounts.map((a) => a.username).toSet(), {
-      'eltern.muster',
-      'lena.muster',
-    });
-    final parent = accounts.firstWhere((a) => a.username == 'eltern.muster');
-    final lena = accounts.firstWhere((a) => a.username == 'lena.muster');
-    expect(
-      (await db.getAccount(parent.localId))!.accountType,
-      AccountType.parent,
-    );
-    expect((await db.getAccount(lena.localId))!.password, 'geheim-2');
-    expect(
-      LanisDatabase.decodeValue(
-        db.getAccountSetting(lena.localId, kidColorSetting),
+  // Warten, bis [f] etwas findet – höchstens ~10 s echte Zeit. Ursache
+  // (CI 9379 rot, hier grün): Eine feste Zahl Takte reichte auf dem
+  // langsameren CI-Rechner nicht für Schlüssel, sicheren Speicher und
+  // Anmeldung. Echte Zeit über runAsync, weil die Kryptografie und der
+  // Speicher außerhalb der Testuhr warten.
+  Future<void> until(Finder f) async {
+    for (var i = 0; i < 500 && f.evaluate().isEmpty; i++) {
+      await t.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await t.pump(const Duration(milliseconds: 50));
+    }
+  }
+
+  // Wie StartupScreen beim Kaltstart: ohne Konten → /welcome.
+  await t.runAsync(
+    () => c.read(authControllerProvider.notifier).bootstrapIfNeeded(),
+  );
+  final de = forkL10nFor('de');
+  await until(find.text(de.devFromOther));
+  await tap(de.devFromOther);
+  await until(find.byType(TransferQr));
+
+  // Das alte Gerät (hier der Test) verschlüsselt für den gezeigten Code.
+  final offer = t.widget<TransferQr>(find.byType(TransferQr)).data;
+  final codes = (await t.runAsync(
+    () => sealPayload(
+      buildDevicePayload(
+        const [
+          TransferAccount(
+            schoolId: 1234,
+            schoolName: 'Muster-Gymnasium',
+            username: 'eltern.muster',
+            password: 'geheim-1',
+            accountType: AccountType.parent,
+          ),
+          TransferAccount(
+            schoolId: 1234,
+            schoolName: 'Muster-Gymnasium',
+            username: 'lena.muster',
+            password: 'geheim-2',
+            accountType: AccountType.student,
+          ),
+        ],
+        {
+          transferAccountKey(1234, 'lena.muster'): {
+            kidColorSetting: LanisDatabase.encodeValue('3'),
+          },
+        },
       ),
-      '3',
-    );
+      parseOffer(offer)!,
+    ),
+  ))!;
+  await tap(de.devScanData);
+  await until(find.text(de.devScanning));
+  for (final code in codes) {
+    scan!(code);
+  }
+  await until(find.text(de.devPrivacy));
+  await tap(de.devPrivacy);
+  await t.pump();
+  await tap(de.devApply);
+  if (!notificationsGranted) {
+    // Wie nach dem Anmeldeformular: erst erklären (NotifyIntroPage).
+    await until(find.text(de.onbNotifyAllow));
+    expect(find.text(de.onbNotifyAllow), findsOneWidget);
+    await tap(de.later);
+  }
+  await until(find.text('home-marker'));
+
+  expect(find.text('home-marker'), findsOneWidget);
+  expect(c.read(authControllerProvider).phase, AuthPhase.authenticated);
+  expect(
+    isPrivacyPolicyAccepted(c.read(sharedOverAccountSettingsProvider)),
+    isTrue,
+  );
+  final db = c.read(lanisDatabaseProvider);
+  final accounts = await db.listAccounts();
+  expect(accounts.map((a) => a.username).toSet(), {
+    'eltern.muster',
+    'lena.muster',
   });
+  final parent = accounts.firstWhere((a) => a.username == 'eltern.muster');
+  final lena = accounts.firstWhere((a) => a.username == 'lena.muster');
+  expect(
+    (await db.getAccount(parent.localId))!.accountType,
+    AccountType.parent,
+  );
+  expect((await db.getAccount(lena.localId))!.password, 'geheim-2');
+  expect(
+    LanisDatabase.decodeValue(
+      db.getAccountSetting(lena.localId, kidColorSetting),
+    ),
+    '3',
+  );
 }
 
 GoRouter _router(ProviderContainer c) {
