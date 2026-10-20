@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/courses_scan.dart';
 import 'package:lanis/fork/exams.dart';
 import 'package:lanis/fork/notify/notify_task.dart';
-import 'package:lanis/fork/ui/live/live_data.dart' show shortFirstName;
+import 'package:lanis/fork/kid_name.dart';
 
 /// Hinweise auf neue Arbeiten (notify_task.dart, examNews) – synthetisch.
 void main() {

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
+import 'package:lanis/fork/kid_name.dart';
 import 'package:lanis/fork/login_guard.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:lanis/applets/definitions.dart';
@@ -304,7 +305,12 @@ class BackgroundTaskToolkit {
       throw ArgumentError('id must be between 0 and 10000');
     }
     id = _seedId(id);
-    message = multiAccount
+    // Fork: Ist der Vorname des Kindes bekannt (kid_name.dart), steht er
+    // schon im Titel jedes Hinweises – dann ohne die Zeile „name@Schule“.
+    // Ursache (Wunsch 20.10.26): Die Zeile nannte bei Elternkonten den
+    // Benutzernamen der Eltern, nicht das Kind. Grenze: Ohne bekannten
+    // Namen bleibt sie, damit mehrere Konten unterscheidbar sind.
+    message = multiAccount && storedKidName(settings).isEmpty
         ? '${username.toLowerCase()}@$schoolName\n$message'
         : message;
     if (avoidDuplicateSending) {

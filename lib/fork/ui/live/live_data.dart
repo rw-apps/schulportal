@@ -19,6 +19,8 @@ import '../../mensa.dart';
 import '../plan/lesson_times.dart';
 import '../plan/plan_from_lanis.dart';
 import '../plan/plan_model.dart';
+import '../../kid_name.dart';
+export '../../kid_name.dart' show shortFirstName;
 import '../../class_choice.dart';
 import '../../portal_extras.dart';
 import '../today/today_from_lanis.dart' show classFromCourses;
@@ -55,13 +57,6 @@ const _settingsApplet = 'stundenplan.php';
 /// Ursache: _readSettings liest nur einmal je Konto; ohne Anstoß zeigte die
 /// App die übernommenen Stundenzeiten erst nach einem Neustart.
 final settingsRevision = ValueNotifier<int>(0);
-
-/// Nur der erste Vorname („Lena Marie“ → „Lena“) – für die App
-/// (LiveSnapshot.firstName) und die Hinweise (notify_task.dart) gleich.
-/// Ursache (Prüfung 20.10.26): Die Hinweise nannten den vollen Vornamen.
-/// Grenze: Doppelnamen mit Leerzeichen („Anna Lena“) werden gekürzt, mit
-/// Bindestrich bleiben sie ganz.
-String shortFirstName(String full) => full.trim().split(RegExp(r'\s+')).first;
 
 /// Alte Adresse der Mensa-Bestellseite je Konto (bis 9341); gilt weiter für
 /// Kinder ohne eigene Adresse (MensaAddresses.legacy).
@@ -571,82 +566,87 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
         ? lessonsParser.lastKids
         : const <ChildLessons>[];
 
-    return LiveData(
-      snapshot: LiveSnapshot(
-        session: session,
-        supported: supported,
-        timetable: _tt.feed,
-        lessons: _lessons.feed,
-        substitutions: _subs.feed,
-        calendar: _cal.feed,
-        conversations: _conv.feed,
-        userChoice: _choice,
-        ownNames: _names,
-        setUserChoice: (c) {
-          setState(() => _choice = {...c});
-          _write(groupChoiceSetting, c);
-        },
-        setOwnNames: (n) {
-          setState(() => _names = {...n});
-          _write(teacherNamesSetting, n);
-        },
-        refresh: () {
-          _rereadScan();
-          return _loader.run(force: true);
-        },
-        mensa: _mensa,
-        lessonTimes: _times,
-        setLessonTimes: (v) {
-          setState(() => _times = v);
-          _write(lessonTimesSetting, v?.toMap() ?? const {});
-        },
-        courseScan: _scan,
-        // Die Notenübersicht ruft das am Ende ihres Ladens auf – dann kann
-        // diese Seite schon abgebaut sein (Kontowechsel); ohne die Prüfung
-        // käme ref nach dem Abbau (Absturz 9349).
-        homework: _homework,
-        setHomework: (update) {
-          if (!mounted) return;
-          final v = update(_homework);
-          setState(() => _homework = v);
-          ref
-              .read(accountSpecificSettingsProvider)
-              ?.setString(homeworkLedgerSetting, v.encode());
-        },
-        setCourseScan: (v) {
-          if (!mounted) return;
-          setState(() => _scan = v);
-          final st = ref.read(accountSpecificSettingsProvider);
-          if (st != null) storeCourseScan(st, v);
-        },
-        accountKey: '${account.localId}',
-        setMensaUrl: (kid, u) {
-          final next = _mensa.withUrl(kid, u);
-          setState(() => _mensa = next);
-          final s = ref.read(accountSpecificSettingsProvider);
-          s?.setString('fork/$mensaUrlsSetting', next.encode());
-          // Alte Kontoadresse nur löschen, wenn MensaAddresses sie verwirft.
-          if (next.legacy == null) s?.setString('fork/$mensaUrlSetting', null);
-        },
-        refreshMessages: () =>
-            _loader.run(force: true, only: const {'nachrichten.php'}),
-        kids: kids,
-        classChoice: _class,
-        classExpired: _classExpired,
-        photo: _photo,
-        electionOpen: _electionOpen,
-        setClass: (name) {
-          final s = ref.read(accountSpecificSettingsProvider);
-          if (s == null || !mounted) return;
-          final c = storeClass(s, name);
-          setState(() {
-            _class = c;
-            _classExpired = false;
-          });
-        },
-      ),
-      child: widget.child,
+    final snapshot = LiveSnapshot(
+      session: session,
+      supported: supported,
+      timetable: _tt.feed,
+      lessons: _lessons.feed,
+      substitutions: _subs.feed,
+      calendar: _cal.feed,
+      conversations: _conv.feed,
+      userChoice: _choice,
+      ownNames: _names,
+      setUserChoice: (c) {
+        setState(() => _choice = {...c});
+        _write(groupChoiceSetting, c);
+      },
+      setOwnNames: (n) {
+        setState(() => _names = {...n});
+        _write(teacherNamesSetting, n);
+      },
+      refresh: () {
+        _rereadScan();
+        return _loader.run(force: true);
+      },
+      mensa: _mensa,
+      lessonTimes: _times,
+      setLessonTimes: (v) {
+        setState(() => _times = v);
+        _write(lessonTimesSetting, v?.toMap() ?? const {});
+      },
+      courseScan: _scan,
+      // Die Notenübersicht ruft das am Ende ihres Ladens auf – dann kann
+      // diese Seite schon abgebaut sein (Kontowechsel); ohne die Prüfung
+      // käme ref nach dem Abbau (Absturz 9349).
+      homework: _homework,
+      setHomework: (update) {
+        if (!mounted) return;
+        final v = update(_homework);
+        setState(() => _homework = v);
+        ref
+            .read(accountSpecificSettingsProvider)
+            ?.setString(homeworkLedgerSetting, v.encode());
+      },
+      setCourseScan: (v) {
+        if (!mounted) return;
+        setState(() => _scan = v);
+        final st = ref.read(accountSpecificSettingsProvider);
+        if (st != null) storeCourseScan(st, v);
+      },
+      accountKey: '${account.localId}',
+      setMensaUrl: (kid, u) {
+        final next = _mensa.withUrl(kid, u);
+        setState(() => _mensa = next);
+        final s = ref.read(accountSpecificSettingsProvider);
+        s?.setString('fork/$mensaUrlsSetting', next.encode());
+        // Alte Kontoadresse nur löschen, wenn MensaAddresses sie verwirft.
+        if (next.legacy == null) s?.setString('fork/$mensaUrlSetting', null);
+      },
+      refreshMessages: () =>
+          _loader.run(force: true, only: const {'nachrichten.php'}),
+      kids: kids,
+      classChoice: _class,
+      classExpired: _classExpired,
+      photo: _photo,
+      electionOpen: _electionOpen,
+      setClass: (name) {
+        final s = ref.read(accountSpecificSettingsProvider);
+        if (s == null || !mounted) return;
+        final c = storeClass(s, name);
+        setState(() {
+          _class = c;
+          _classExpired = false;
+        });
+      },
     );
+    // Vorname für die Hinweise im Hintergrund merken (kid_name.dart);
+    // schreibt nur bei Änderung.
+    final name = snapshot.firstName;
+    if (name.isNotEmpty) {
+      final st = ref.read(accountSpecificSettingsProvider);
+      if (st != null) rememberKidName(st, name);
+    }
+    return LiveData(snapshot: snapshot, child: widget.child);
   }
 }
 

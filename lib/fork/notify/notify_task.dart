@@ -10,6 +10,7 @@ import 'package:lanis/utils/applet_settings.dart';
 import 'package:lanis/utils/logger.dart';
 
 import '../courses_scan.dart';
+import '../kid_name.dart';
 import '../exams.dart';
 import '../l10n/l10n.dart';
 import '../lessons_parent.dart';
@@ -104,8 +105,19 @@ Future<void> _run(
   // Ohne Namen: Schülerkonto „Heute in der Schule“, Elternkonto ohne
   // geladene Kinder (Unterricht fehlgeschlagen) „bei deinem Kind“
   // (buildNotices, parent).
-  // Nur der erste Vorname, wie in der App (shortFirstName, live_data.dart).
-  final firstName = kids.isNotEmpty ? shortFirstName(kids.first.firstName) : '';
+  // Nur der erste Vorname, wie in der App (kid_name.dart). Ohne geladene
+  // Kinder (Schülerkonto, Unterricht fehlgeschlagen) der gemerkte Name –
+  // beim Schülerkonto nur, wenn mehrere Konten auf dem Gerät sind; allein
+  // auf dem eigenen Handy bleibt „Heute in der Schule“.
+  final loadedName = kids.isNotEmpty
+      ? shortFirstName(kids.first.firstName)
+      : '';
+  rememberKidName(tools.settings, loadedName);
+  final firstName = loadedName.isNotEmpty
+      ? loadedName
+      : (accountType == AccountType.parent || tools.multiAccount)
+      ? storedKidName(tools.settings)
+      : '';
   // Sprache wie in der App (Einstellungen → Darstellung → Sprache); im
   // Hintergrund gibt es keinen Widget-Baum, daher direkt aus der Einstellung.
   String? chosen;
