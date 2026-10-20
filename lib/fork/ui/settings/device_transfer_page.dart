@@ -140,20 +140,67 @@ Widget Function(void Function(String code) onCode)? debugTransferScanner;
 
 /// Kamera mit Rahmen; [onCode] für jeden gelesenen QR-Code.
 ///
-/// Ohne eigenen MobileScannerController. Ursache (Prüfung 20.10.26): Mit
-/// eigenem Controller schaltet MobileScanner seine Behandlung des
-/// App-Lebenszyklus ab (mobile_scanner.dart: `if (widget.controller ==
-/// null) addObserver`) – die Kamera liefe dann im Hintergrund weiter. Grenze:
-/// Der eingebaute Controller erkennt alle Codearten; fremde Codes verwerfen
-/// parseOffer bzw. ChunkCollector.add am Präfix.
-class _Scanner extends StatelessWidget {
+/// Eigener Controller mit höherer Auflösung (1920 × 1080). Ursache
+/// (Rückmeldung 20.10.26): Ohne Angabe wertet Android nur 640 × 480 aus
+/// (mobile_scanner_controller.dart, cameraResolution) – zu wenig für einen
+/// vom Bildschirm abgelesenen Daten-Code. Weil MobileScanner mit eigenem
+/// Controller den App-Lebenszyklus nicht mehr selbst behandelt
+/// (mobile_scanner.dart: `if (widget.controller == null) addObserver`),
+/// hält und startet [_ScannerState] die Kamera selbst – sonst liefe sie im
+/// Hintergrund weiter. Grenze: Nur QR-Codes; die Auflösung gilt nur auf
+/// Android, sonst wählt das Gerät.
+class _Scanner extends StatefulWidget {
   const _Scanner({required this.onCode, this.status});
 
   final void Function(String code) onCode;
   final String? status;
 
   @override
+  State<_Scanner> createState() => _ScannerState();
+}
+
+class _ScannerState extends State<_Scanner> with WidgetsBindingObserver {
+  MobileScannerController? _controller;
+
+  MobileScannerController get _camera =>
+      _controller ??= MobileScannerController(
+        formats: const [BarcodeFormat.qrCode],
+        cameraResolution: const Size(1920, 1080),
+      );
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final c = _controller;
+    if (c == null || !c.value.hasCameraPermission) return;
+    switch (state) {
+      case AppLifecycleState.resumed:
+        unawaited(c.start());
+      case AppLifecycleState.inactive:
+        unawaited(c.stop());
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+        return;
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final onCode = widget.onCode;
+    final status = widget.status;
     final k = Kit.of(context);
     final t = context.t;
     return Column(
@@ -166,6 +213,7 @@ class _Scanner extends StatelessWidget {
             child:
                 debugTransferScanner?.call(onCode) ??
                 MobileScanner(
+                  controller: _camera,
                   onDetect: (capture) {
                     for (final b in capture.barcodes) {
                       final raw = b.rawValue;
@@ -588,7 +636,9 @@ class _DeviceSendPageState extends ConsumerState<DeviceSendPage> {
       });
       if (codes.length > 1) {
         _cycle?.cancel();
-        _cycle = Timer.periodic(const Duration(milliseconds: 1600), (_) {
+        // 1,3 s je Code: kleine Codes (transferChunkSize) liest die Kamera
+        // in Bruchteilen einer Sekunde; mehr Codes sollen nicht ewig dauern.
+        _cycle = Timer.periodic(const Duration(milliseconds: 1300), (_) {
           if (mounted) setState(() => _shown = (_shown + 1) % codes.length);
         });
       }

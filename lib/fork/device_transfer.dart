@@ -30,9 +30,15 @@ const _offerPrefix = 'SPT1K:';
 const _dataPrefix = 'SPT1D:';
 const _info = 'schulportal-geraet-v1';
 
-/// Zeichen je Daten-QR-Code. Ursache: Größere Codes lassen sich von einem
-/// Bildschirm schlecht abscannen; ab mehr Daten folgen mehrere Codes.
-const transferChunkSize = 700;
+/// Zeichen je Daten-QR-Code; ab mehr Daten folgen mehrere Codes.
+///
+/// Ursache (Rückmeldung 20.10.26: „der zweite Code wird nicht erkannt“):
+/// 700 Zeichen ergaben QR-Version 18 (89 × 89 Punkte). Messung mit zxing
+/// auf verkleinerten, leicht unscharfen Bildern (Code 260 px breit, wie im
+/// Kamerabild): 700 Zeichen 3 von 6 gelesen, 250 Zeichen (Version 10,
+/// 57 × 57) 6 von 6. Grenze: Mehr Codes – sie wechseln von selbst; bei
+/// vielen Eingaben dauert ein Durchlauf entsprechend länger.
+const transferChunkSize = 250;
 
 final _x25519 = X25519();
 final _aes = AesGcm.with256bits();
