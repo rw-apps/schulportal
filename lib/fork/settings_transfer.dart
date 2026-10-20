@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:liblanis/liblanis.dart';
+
 import 'class_choice.dart' show classSetting;
 import 'kid_colors.dart' show kidColorSetting;
 import 'absences.dart' show absenceSentSetting, decodeSent, encodeSent;
@@ -119,3 +121,46 @@ String mergeValue(
   }
   return incoming;
 }
+
+/// Übernommene Eingaben in die Konten dieses Geräts schreiben (Zuordnung
+/// über Schulnummer und Benutzername, nur [transferKeys]). Rückgabe: Konten,
+/// für die etwas übernommen wurde. Gemeinsam für Datei (transfer_page.dart)
+/// und QR-Code (device_transfer_page.dart).
+List<AccountSummary> applyTransferValues(
+  LanisDatabase db,
+  Map<String, Map<String, String>> data,
+  List<AccountSummary> accounts,
+) {
+  final out = <AccountSummary>[];
+  for (final a in accounts) {
+    final incoming = data[transferAccountKey(a.schoolID, a.username)];
+    if (incoming == null || incoming.isEmpty) continue;
+    for (final e in incoming.entries) {
+      if (!transferKeys.contains(e.key)) continue;
+      db.setAccountSetting(
+        a.localId,
+        e.key,
+        mergeValue(
+          e.key,
+          e.value,
+          db.getAccountSetting(a.localId, e.key),
+          decode: (raw) => LanisDatabase.decodeValue(raw)?.toString(),
+          encode: LanisDatabase.encodeValue,
+        ),
+      );
+    }
+    out.add(a);
+  }
+  return out;
+}
+
+/// Rohwerte der übertragbaren Eingaben aller [accounts].
+Map<String, Map<String, String?>> collectTransferValues(
+  LanisDatabase db,
+  List<AccountSummary> accounts,
+) => {
+  for (final a in accounts)
+    transferAccountKey(a.schoolID, a.username): {
+      for (final k in transferKeys) k: db.getAccountSetting(a.localId, k),
+    },
+};

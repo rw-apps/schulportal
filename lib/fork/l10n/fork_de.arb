@@ -1337,5 +1337,66 @@
         "type": "int"
       }
     }
-  }
+  },
+  "devTitle": "Auf neues Gerät übertragen",
+  "devDetail": "Zugangsdaten und Eingaben per QR-Code",
+  "devIntro": "Beide Geräte liegen nebeneinander. Das neue Gerät zeigt zuerst einen Code, das alte scannt ihn und zeigt dann die verschlüsselten Daten, die das neue Gerät scannt.",
+  "devIsNew": "Dieses Gerät ist das neue",
+  "devIsNewDetail": "Zeigt einen Code für das alte Gerät",
+  "devIsOld": "Daten an ein neues Gerät senden",
+  "devIsOldDetail": "Scannt den Code des neuen Geräts",
+  "devFileOnly": "Nur Eingaben per Datei",
+  "devStep1": "Schritt 1 von 2",
+  "devStep2": "Schritt 2 von 2",
+  "devShowTitle": "Diesen Code mit dem alten Gerät scannen",
+  "devShowHint": "Auf dem alten Gerät: Einstellungen → Daten → Auf neues Gerät übertragen → Daten an ein neues Gerät senden.",
+  "devCheck": "Prüfcode",
+  "devScanData": "Code des alten Geräts scannen",
+  "devScanOffer": "Code des neuen Geräts scannen",
+  "devScanning": "Kamera auf den Code richten",
+  "devScanProgress": "{n} von {total} Codes gelesen",
+  "@devScanProgress": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "devCameraError": "Die Kamera ließ sich nicht öffnen. Bitte den Kamerazugriff für die App erlauben.",
+  "devCompare": "Zeigt das neue Gerät denselben Prüfcode?",
+  "devCompareHint": "Nur wenn er übereinstimmt, ist es wirklich dein neues Gerät.",
+  "devWhatAccounts": "{count, plural, =1{Zugangsdaten für 1 Konto} other{Zugangsdaten für {count} Konten}}",
+  "@devWhatAccounts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "devWhatSettings": "Eingaben wie Klasse, Farben, Stundenzeiten, Mensa und abgehakte Hausaufgaben",
+  "devSend": "Ja, Daten senden",
+  "devShowData": "Diesen Code mit dem neuen Gerät scannen",
+  "devShowDataMany": "Code {n} von {total} – wechselt von selbst",
+  "@devShowDataMany": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "devDone": "Fertig",
+  "devWrongKey": "Diese Daten sind für ein anderes Gerät verschlüsselt. Bitte auf dem alten Gerät neu beginnen.",
+  "devReceived": "Übernehmen?",
+  "devApply": "Übernehmen",
+  "devApplied": "Übernommen",
+  "devAlready": "schon auf diesem Gerät",
+  "devFromOther": "Von anderem Gerät übernehmen",
+  "devNoAccounts": "Auf diesem Gerät ist noch kein Konto eingerichtet.",
+  "devPrivacy": "Ich habe die Datenschutzerklärung gelesen und stimme ihr zu."
 }

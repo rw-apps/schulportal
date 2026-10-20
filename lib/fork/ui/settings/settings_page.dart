@@ -36,7 +36,7 @@ import '../today/today_from_lanis.dart' show shortSchoolName;
 import 'about_page.dart';
 import 'notify_settings_page.dart';
 import 'settings_widgets.dart';
-import 'transfer_page.dart';
+import 'device_transfer_page.dart';
 
 /// Einstellungen im Stil der neuen Oberfläche (Entscheidung 17.10.26).
 ///
@@ -674,11 +674,13 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
           title: t.sectionData,
           children: [
             SettingsRow(
-              icon: Icons.sync_alt,
-              label: t.transferTitle,
-              detail: t.transferDetail,
+              icon: Icons.qr_code_2,
+              label: t.devTitle,
+              detail: t.devDetail,
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const TransferPage()),
+                MaterialPageRoute<void>(
+                  builder: (_) => const DeviceTransferPage(),
+                ),
               ),
             ),
             if (supported.contains('kalender.php'))

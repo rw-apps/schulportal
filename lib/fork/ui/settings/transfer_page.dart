@@ -35,13 +35,10 @@ class _TransferPageState extends ConsumerState<TransferPage> {
     final t = context.t;
     setState(() => _busy = true);
     try {
-      final db = ref.read(lanisDatabaseProvider);
-      final values = {
-        for (final a in await _accounts())
-          transferAccountKey(a.schoolID, a.username): {
-            for (final k in transferKeys) k: db.getAccountSetting(a.localId, k),
-          },
-      };
+      final values = collectTransferValues(
+        ref.read(lanisDatabaseProvider),
+        await _accounts(),
+      );
       final dir = await getTemporaryDirectory();
       final f = File('${dir.path}/schulportal-eingaben.json');
       await f.writeAsString(buildTransfer(values, now: DateTime.now()));
@@ -122,23 +119,7 @@ class _TransferPageState extends ConsumerState<TransferPage> {
       ),
     );
     if (ok != true) return;
-    final db = ref.read(lanisDatabaseProvider);
-    for (final a in matched) {
-      final incoming = data[transferAccountKey(a.schoolID, a.username)]!;
-      for (final e in incoming.entries) {
-        db.setAccountSetting(
-          a.localId,
-          e.key,
-          mergeValue(
-            e.key,
-            e.value,
-            db.getAccountSetting(a.localId, e.key),
-            decode: (raw) => LanisDatabase.decodeValue(raw)?.toString(),
-            encode: LanisDatabase.encodeValue,
-          ),
-        );
-      }
-    }
+    applyTransferValues(ref.read(lanisDatabaseProvider), data, matched);
     settingsRevision.value++;
     _snack(t.transferDone);
   }
