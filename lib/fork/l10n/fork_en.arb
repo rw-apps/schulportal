@@ -468,5 +468,16 @@
   "classPromptTitle": "New school year: which class is {name} in?",
   "classPromptText": "Until then the app shows all of the school's events.",
   "classPromptAction": "Enter class",
-  "classManualShort": "entered"
+  "classManualShort": "entered",
+  "storageTitle": "School files",
+  "storageDetail": "Letters, forms and documents from the file storage",
+  "storageNew": "New",
+  "storageFolders": "Folders",
+  "storageFiles": "Files",
+  "storageEmpty": "There are no files here right now.",
+  "storageNoFiles": "No files",
+  "storageFileCount": "{count, plural, =1{1 file} other{{count} files}}",
+  "storageLoadError": "The files couldn't be loaded.",
+  "storageNoticeTitle": "New school file",
+  "storageNoticeTitleFor": "New school file for {name}"
 }

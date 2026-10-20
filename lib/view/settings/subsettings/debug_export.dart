@@ -538,6 +538,9 @@ Future<String> runDebugExportPresets({
       if (preset.id == DebugExportPresetId.lessonsStudent) {
         ctx.lessonsHtml = body;
       }
+      if (preset.id == DebugExportPresetId.dataStorage) {
+        ctx.dataStorageHtml = body;
+      }
     }
   }
 

@@ -1,3 +1,6 @@
+import '../../data_storage.dart' show offersStorage;
+import '../storage/storage_page.dart';
+import '../nav.dart' show pushFullScreen;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemNavigator;
 import 'package:go_router/go_router.dart';
@@ -20,7 +23,8 @@ import '../more/more_page.dart';
 import '../plan/live_plan_page.dart';
 import '../settings/settings_page.dart';
 import '../plan/plan_model.dart' show GroupChoice, effectiveChoice;
-import '../today/today_from_lanis.dart' show applySubstitutions;
+import '../today/today_from_lanis.dart'
+    show applySubstitutions, shortSchoolName;
 import '../plan/plan_page.dart';
 import '../today/live_today_page.dart';
 import '../today/today_model.dart';
@@ -289,6 +293,18 @@ class _PreviewShellState extends State<PreviewShell> {
             );
             if (url != null && mounted) _saveMensa(s, pick.$1, url);
           },
+        ),
+      // Dateispeicher der Schule (data_storage.dart); öffnet im Rahmen des
+      // gewählten Kontos (pushFullScreen), also auch für weitere Kinder.
+      if (offersStorage(s.session.travelMenu))
+        MoreEntry(
+          icon: Icons.folder_copy_outlined,
+          label: t.storageTitle,
+          detail: t.storageDetail,
+          onTap: () => pushFullScreen<void>(
+            context,
+            (_) => LiveStoragePage(subtitle: shortSchoolName(s.schoolName)),
+          ),
         ),
       // Moodle öffnet über den Router, also immer im aktiven Konto.
       if (offersMoodle(s.session.travelMenu) &&

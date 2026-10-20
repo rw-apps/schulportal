@@ -1249,5 +1249,30 @@
   },
   "classPromptText": "Bis zum Eintrag zeigt die App alle Termine der Schule.",
   "classPromptAction": "Klasse eintragen",
-  "classManualShort": "eingetragen"
+  "classManualShort": "eingetragen",
+  "storageTitle": "Dateien der Schule",
+  "storageDetail": "Elternbriefe, Formulare und Unterlagen aus dem Dateispeicher",
+  "storageNew": "Neu",
+  "storageFolders": "Ordner",
+  "storageFiles": "Dateien",
+  "storageEmpty": "Hier liegen gerade keine Dateien.",
+  "storageNoFiles": "Keine Dateien",
+  "storageFileCount": "{count, plural, =1{1 Datei} other{{count} Dateien}}",
+  "@storageFileCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "storageLoadError": "Die Dateien ließen sich nicht laden.",
+  "storageNoticeTitle": "Neue Datei der Schule",
+  "storageNoticeTitleFor": "Neue Datei der Schule für {name}",
+  "@storageNoticeTitleFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }

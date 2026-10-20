@@ -18,23 +18,29 @@ void main() {
     {'link': 'videokonferenz.php'},
   ];
 
-  test('Schule A: Dateispeicher und Lerngruppen werden übersprungen', () {
-    final r = filterPresetsForSchool(
-      selected: DebugExportPresetId.values.toSet(),
-      travelMenu: jtsMenu,
-    );
-    expect(
-      r.skipped.map((p) => p.id),
-      unorderedEquals([
-        DebugExportPresetId.dataStorage,
-        DebugExportPresetId.studyGroups,
-      ]),
-    );
-    final kept = r.kept.map((p) => p.id).toSet();
-    expect(kept, contains(DebugExportPresetId.absences));
-    expect(kept, contains(DebugExportPresetId.conversations));
-    expect(kept, contains(DebugExportPresetId.appOverview));
-  });
+  test(
+    'Schule A: Dateispeicher, Lerngruppen und Wahltool werden übersprungen',
+    () {
+      final r = filterPresetsForSchool(
+        selected: DebugExportPresetId.values.toSet(),
+        travelMenu: jtsMenu,
+      );
+      expect(
+        r.skipped.map((p) => p.id),
+        unorderedEquals([
+          DebugExportPresetId.dataStorage,
+          DebugExportPresetId.dataStorageFolders,
+          DebugExportPresetId.studyGroups,
+          DebugExportPresetId.elections,
+        ]),
+      );
+      final kept = r.kept.map((p) => p.id).toSet();
+      expect(kept, contains(DebugExportPresetId.absences));
+      expect(kept, contains(DebugExportPresetId.conversations));
+      expect(kept, contains(DebugExportPresetId.appOverview));
+      expect(kept, contains(DebugExportPresetId.profile));
+    },
+  );
 
   test('ohne App-Liste wird nichts gefiltert', () {
     final r = filterPresetsForSchool(
@@ -57,5 +63,12 @@ void main() {
       'meinunterricht.php?a=sus_view&id=22&p=7',
     ]);
     expect(parseCourseDetailLinks(''), isEmpty);
+  });
+
+  test('Dateispeicher-Ordner aus dem Startordner', () {
+    const html =
+        '<a href="#" data-dir="0">Start</a><a data-dir="6"></a>'
+        '<a data-dir="6"></a><a data-dir="2"></a>';
+    expect(parseDataStorageFolders(html), [6, 2]);
   });
 }

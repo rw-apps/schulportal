@@ -28,10 +28,13 @@ enum DebugExportPresetId {
   lessonsCourseDetail,
   lessonsTeacher,
   dataStorage,
+  dataStorageFolders,
   studyGroups,
   substitutionsAjax,
   calendarEvents,
   conversations,
+  elections,
+  profile,
 }
 
 /// Built request ready for [Dio.request].
@@ -91,6 +94,26 @@ class DebugExportPresetContext {
   /// Fork: Antwort von meinunterricht.php (gesetzt im Runner nach dem Preset
   /// lessonsStudent), Quelle der Kurs-Links für [parseCourseDetailLinks].
   String? lessonsHtml;
+
+  /// Fork: Antwort von dateispeicher.php (Startordner), Quelle der Ordner für
+  /// [parseDataStorageFolders].
+  String? dataStorageHtml;
+}
+
+/// Fork: bis zu [max] Ordnernummern aus dem Startordner des Dateispeichers
+/// (`data-dir="6"`). Ursache (Wunsch 20.10.26, Dateispeicher in der App):
+/// Der Export enthielt nur den Startordner; wie ein Ordner mit Dateien
+/// aussieht (table#files, liblanis DataStorageParser.getNode), war an
+/// echten Daten nicht prüfbar.
+List<int> parseDataStorageFolders(String html, {int max = 3}) {
+  final ids = <int>[];
+  for (final m in RegExp(r'data-dir="(\d+)"').allMatches(html)) {
+    final id = int.parse(m.group(1)!);
+    if (id == 0 || ids.contains(id)) continue;
+    ids.add(id);
+    if (ids.length >= max) break;
+  }
+  return ids;
 }
 
 /// Fork: bis zu [max] verschiedene Kurs-Detail-Links aus meinunterricht.php.
@@ -349,6 +372,19 @@ final debugExportPresets = <DebugExportPreset>[
       _get('dateispeicher.php?a=view&folder=0'),
     ),
   ),
+  // Fork: Ordner des Dateispeichers (nur GET), braucht dataStorage davor.
+  DebugExportPreset(
+    id: DebugExportPresetId.dataStorageFolders,
+    modulePhp: 'dateispeicher.php',
+    label: (l) => l.debugExportPresetDataStorageFolders,
+    buildSections: (ctx) => [
+      for (final id in parseDataStorageFolders(ctx.dataStorageHtml ?? ''))
+        DebugExportSection(
+          name: '${DebugExportPresetId.dataStorageFolders.name}#$id',
+          request: _get('dateispeicher.php?a=view&folder=$id'),
+        ),
+    ],
+  ),
   DebugExportPreset(
     id: DebugExportPresetId.studyGroups,
     modulePhp: 'lerngruppen.php',
@@ -383,5 +419,30 @@ final debugExportPresets = <DebugExportPreset>[
         contentType: Headers.formUrlEncodedContentType,
       ),
     ),
+  ),
+  // Fork (Wunsch 20.10.26): Wahltool und Profilseiten, nur GET. Ursache:
+  // Für den Hinweis auf offene Wahlen und das Kinderfoto fehlte die echte
+  // Seitenstruktur. Grenze: Eine Wahl, die gerade nicht läuft, zeigt nur die
+  // leere Seite; das Foto steht als Bildadresse darin, nicht als Bild.
+  DebugExportPreset(
+    id: DebugExportPresetId.elections,
+    modulePhp: 'wahl.php',
+    label: (l) => l.debugExportPresetElections,
+    buildSections: (_) =>
+        _single(DebugExportPresetId.elections, _get('wahl.php')),
+  ),
+  DebugExportPreset(
+    id: DebugExportPresetId.profile,
+    label: (l) => l.debugExportPresetProfile,
+    buildSections: (_) => [
+      DebugExportSection(
+        name: '${DebugExportPresetId.profile.name}Foto',
+        request: _get('benutzerverwaltung.php?a=userFoto'),
+      ),
+      DebugExportSection(
+        name: '${DebugExportPresetId.profile.name}Autologins',
+        request: _get('benutzerverwaltung.php?a=userAutologins'),
+      ),
+    ],
   ),
 ];

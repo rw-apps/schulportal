@@ -472,5 +472,8 @@
     }
   },
   "unknownUploadError": "Unknown upload error",
-  "addFile": "Add file"
+  "addFile": "Add file",
+  "debugExportPresetElections": "Elections (voting tool, view only)",
+  "debugExportPresetProfile": "Profile (photo, automatic sign-ins, view only)",
+  "debugExportPresetDataStorageFolders": "File storage: folders (view only)"
 }

@@ -19,6 +19,7 @@ import '../ui/courses/courses_model.dart';
 import '../ui/plan/plan_from_lanis.dart' show subjectFullName;
 import '../ui/plan/plan_model.dart';
 import '../class_choice.dart';
+import '../data_storage.dart';
 import '../ui/today/today_from_lanis.dart' show classFromCourses;
 import 'notices.dart';
 
@@ -181,6 +182,17 @@ Future<void> _run(
   }
   if (notices.isNotEmpty) s.setJsonList(sentNoticesSetting, remembered);
 
+  if (offersStorage(session.travelMenu)) {
+    await _storageNews(
+      session: session,
+      s: s,
+      firstName: firstName,
+      t: t,
+      tools: tools,
+      now: now,
+    );
+  }
+
   if (offers(Applets.byPhpUrl('meinunterricht.php')) && lessons.isNotEmpty) {
     await _courseNews(
       container: container,
@@ -203,6 +215,53 @@ const courseScanHour = 15;
 /// Kennung der Meldung „Neu im Unterricht“ (notices.dart nutzt 1 und 2;
 /// sendMessage verlangt 0–10000).
 const courseNewsId = 3;
+
+/// Kennung der Meldung „Neue Datei der Schule“.
+const storageNewsId = 4;
+
+/// Neue Dateien im Dateispeicher melden (data_storage.dart, Wunsch
+/// 20.10.26) – höchstens alle [storageCheckEvery].
+///
+/// Ursache für das Merken der Kennungen: Der Kasten „Neue Dateien“ zeigt
+/// eine Datei, bis sie heruntergeladen ist; ohne Merken käme dieselbe
+/// Meldung bei jedem Lauf. Beim ersten Lauf wird nur gemerkt
+/// (unseenFiles). Grenze: Dateien, die nur in Unterordnern liegen und nicht
+/// im Kasten erscheinen, meldet die App nicht.
+Future<void> _storageNews({
+  required LanisSession session,
+  required TypedSettings s,
+  required String firstName,
+  required ForkL10n t,
+  required BackgroundTaskToolkit tools,
+  required DateTime now,
+}) async {
+  final last = DateTime.tryParse(s.getString(storageCheckedSetting) ?? '');
+  if (last != null && now.difference(last) < storageCheckEvery) return;
+  final StorageView home;
+  try {
+    home = await loadStorage(session, 0);
+  } catch (e) {
+    backgroundLogger.w('Dateispeicher übersprungen: ${e.runtimeType}');
+    return;
+  }
+  s.setString(storageCheckedSetting, now.toIso8601String());
+  final raw = s.getString(storageSeenSetting);
+  final seen = raw == null ? null : decodeSeen(raw);
+  final fresh = unseenFiles(home, seen);
+  s.setString(
+    storageSeenSetting,
+    encodeSeen({...?seen, for (final f in home.newFiles) f.id}),
+  );
+  if (fresh.isEmpty) return;
+  await tools.sendMessage(
+    title: firstName.isEmpty
+        ? t.storageNoticeTitle
+        : t.storageNoticeTitleFor(firstName),
+    message: [for (final f in fresh) f.name].join('\n'),
+    id: storageNewsId,
+    importance: Importance.defaultImportance,
+  );
+}
 
 /// Neue Noten und Arbeitstermine melden – höchstens einmal am Tag.
 ///

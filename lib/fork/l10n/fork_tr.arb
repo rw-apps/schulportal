@@ -468,5 +468,16 @@
   "classPromptTitle": "Yeni okul yılı: {name} hangi sınıfta?",
   "classPromptText": "Girilene kadar uygulama okulun tüm etkinliklerini gösterir.",
   "classPromptAction": "Sınıfı gir",
-  "classManualShort": "girildi"
+  "classManualShort": "girildi",
+  "storageTitle": "Okul dosyaları",
+  "storageDetail": "Dosya deposundan mektuplar, formlar ve belgeler",
+  "storageNew": "Yeni",
+  "storageFolders": "Klasörler",
+  "storageFiles": "Dosyalar",
+  "storageEmpty": "Şu anda burada dosya yok.",
+  "storageNoFiles": "Dosya yok",
+  "storageFileCount": "{count, plural, =1{1 dosya} other{{count} dosya}}",
+  "storageLoadError": "Dosyalar yüklenemedi.",
+  "storageNoticeTitle": "Yeni okul dosyası",
+  "storageNoticeTitleFor": "{name} için yeni okul dosyası"
 }
