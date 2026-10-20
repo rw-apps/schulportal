@@ -25,4 +25,15 @@ void main() {
     expect(r.colors.values.toSet().length, kidColorCount);
     expect(r.colors.length, 5);
   });
+
+  test('doppelte gespeicherte Farbe wird aufgelöst', () {
+    final r = assignKidColors([1, 2], {1: 0, 2: 0});
+    expect(r.colors, {1: 0, 2: 1});
+    expect(r.fresh, {2: 1});
+  });
+
+  test('Wahl einer belegten Farbe tauscht', () {
+    expect(pickKidColor({1: 0, 2: 1}, 2, 0), {2: 0, 1: 1});
+    expect(pickKidColor({1: 0, 2: 1}, 2, 3), {2: 3});
+  });
 }

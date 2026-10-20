@@ -22,6 +22,19 @@ int? storedKidColor(TypedSettings s) {
 void storeKidColor(TypedSettings s, int color) =>
     s.setString(kidColorSetting, '$color');
 
+/// Farbe für Konto [id] wählen; hat ein anderes Konto sie schon, bekommt
+/// es die bisherige Farbe von [id] (Tausch). Rückgabe: zu speichernde
+/// Farben je Konto. Ursache (Rückfrage 20.10.26): Ohne Tausch hätten zwei
+/// Kinder dieselbe Farbe wählen können.
+Map<int, int> pickKidColor(Map<int, int> current, int id, int color) {
+  final old = current[id];
+  final out = <int, int>{id: color};
+  for (final e in current.entries) {
+    if (e.key != id && e.value == color && old != null) out[e.key] = old;
+  }
+  return out;
+}
+
 /// Farbe je Konto: gespeicherte gelten, die übrigen bekommen in
 /// Anlage-Reihenfolge die erste noch freie Farbe. [stored] null = keine.
 /// Rückgabe: alle Farben und die neu vergebenen (zum Speichern).
@@ -33,7 +46,13 @@ void storeKidColor(TypedSettings s, int color) =>
   final colors = <int, int>{};
   for (final id in ids) {
     final c = stored[id];
-    if (c != null) colors[id] = c;
+    // Doppelte Farbe (z. B. aus einer Übertragung von einem anderen Gerät,
+    // settings_transfer.dart): das zuerst angelegte Konto behält sie, das
+    // spätere bekommt unten eine freie. Nur solange Farben frei sind.
+    final taken = colors.values.contains(c);
+    if (c != null && (!taken || colors.length >= kidColorCount)) {
+      colors[id] = c;
+    }
   }
   final fresh = <int, int>{};
   for (final id in ids) {

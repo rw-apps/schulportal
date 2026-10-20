@@ -418,14 +418,20 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
                   KidColorRow(
                     name: kidLabel(m.snapshot),
                     selected: m.colorIndex,
+                    // Belegte Farbe: die beiden Kinder tauschen (pickKidColor).
                     onPick: (c) {
-                      storeKidColor(
-                        TypedSettings.account(
-                          ref.read(lanisDatabaseProvider),
-                          m.accountId,
-                        ),
+                      final db = ref.read(lanisDatabaseProvider);
+                      final next = pickKidColor(
+                        {for (final x in members) x.accountId: x.colorIndex},
+                        m.accountId,
                         c,
                       );
+                      for (final e in next.entries) {
+                        storeKidColor(
+                          TypedSettings.account(db, e.key),
+                          e.value,
+                        );
+                      }
                       settingsRevision.value++;
                     },
                   ),
