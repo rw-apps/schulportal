@@ -241,11 +241,19 @@ class LiveSnapshot {
   /// „Mein Unterricht“ geladen war (bei Ladefehler dauerhaft). Nur das
   /// Schülerkonto ist selbst das Kind. Die Oberfläche setzt für leer
   /// „Dein Kind“ in der Sprache ein ([livePlanOf] fallbackName).
+  ///
+  /// Nur der erste Vorname („Lena Marie“ → „Lena“). Ursache
+  /// (Bildschirmfoto 20.10.26): Mit Zweitnamen wurde der Kopf der Karte zu
+  /// lang und die Schule abgeschnitten. Grenze: Doppelnamen mit Leerzeichen
+  /// („Anna Lena“) werden gekürzt, mit Bindestrich bleiben sie ganz.
   String get firstName {
     final k = kids;
-    if (k.isNotEmpty) return k.first.firstName;
-    if (session.accountTypeOrNull == AccountType.parent) return '';
-    return (session.userData['vorname'] ?? '').trim();
+    final full = k.isNotEmpty
+        ? k.first.firstName
+        : session.accountTypeOrNull == AccountType.parent
+        ? ''
+        : (session.userData['vorname'] ?? '');
+    return full.trim().split(RegExp(r'\s+')).first;
   }
 
   /// Kind der Karte in „Heute“ (ein Kind je Konto, siehe LiveTodayPage).

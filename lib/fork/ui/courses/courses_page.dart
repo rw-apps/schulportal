@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../class_choice.dart' show classLabel;
 import '../../homework_ledger.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
@@ -137,7 +138,7 @@ class _CoursesPageState extends State<CoursesPage> {
     final meta = [
       ?widget.firstName,
       if (widget.className != null && widget.className!.isNotEmpty)
-        widget.className!,
+        classLabel(widget.className!),
       if (subjects.isNotEmpty) t.subjectsCount(subjects.length),
     ].join(' · ');
 

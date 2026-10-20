@@ -1,3 +1,7 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/portal_extras.dart';
 
@@ -35,5 +39,24 @@ void main() {
       isTrue,
     );
     expect(offersModule(const [], electionModule), isFalse);
+  });
+
+  testWidgets('Platzhalter (grau) erkannt, farbiges Bild nicht', (t) async {
+    Future<Uint8List> png(Color a, Color b) async {
+      final rec = ui.PictureRecorder();
+      final c = Canvas(rec);
+      c.drawRect(const Rect.fromLTWH(0, 0, 40, 40), Paint()..color = a);
+      c.drawCircle(const Offset(20, 16), 9, Paint()..color = b);
+      final img = await rec.endRecording().toImage(40, 40);
+      final d = await img.toByteData(format: ui.ImageByteFormat.png);
+      return d!.buffer.asUint8List();
+    }
+
+    await t.runAsync(() async {
+      final grey = await png(const Color(0xFFE0E0E0), const Color(0xFF9E9E9E));
+      final photo = await png(const Color(0xFFC4D6E8), const Color(0xFFF0CDB4));
+      expect(await looksLikePlaceholder(grey), isTrue);
+      expect(await looksLikePlaceholder(photo), isFalse);
+    });
   });
 }

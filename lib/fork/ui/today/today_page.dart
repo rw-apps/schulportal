@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import '../../class_choice.dart' show classLabel;
 import 'kind_icons.dart';
 import 'today_model.dart';
 
@@ -358,7 +359,7 @@ class KidCard extends StatelessWidget {
     final status = dayStatus(kid.lessons, now);
     final meta = [
       kid.school,
-      kid.className,
+      classLabel(kid.className),
     ].where((s) => s.isNotEmpty).join(' · ');
     final changes = _changesLeft();
 
@@ -372,13 +373,15 @@ class KidCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Kopf in einer Zeile: Punkt mit Anfangsbuchstabe, Name, Schule.
+          // Kopf: Bild bzw. Anfangsbuchstabe, daneben Name und darunter
+          // Schule · Klasse. Ursache (Bildschirmfoto 20.10.26): In einer
+          // Zeile wurde die Schule bei großer Schrift abgeschnitten.
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: Sz.avatarSmall,
-                height: Sz.avatarSmall,
+                width: Sz.avatar,
+                height: Sz.avatar,
                 alignment: Alignment.center,
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
@@ -389,8 +392,8 @@ class KidCard extends StatelessWidget {
                 child: kid.photo != null
                     ? Image.memory(
                         kid.photo!,
-                        width: Sz.avatarSmall,
-                        height: Sz.avatarSmall,
+                        width: Sz.avatar,
+                        height: Sz.avatar,
                         fit: BoxFit.cover,
                         gaplessPlayback: true,
                         errorBuilder: (_, _, _) => const SizedBox.shrink(),
@@ -403,22 +406,25 @@ class KidCard extends StatelessWidget {
                         style: k.avatarLetter.copyWith(color: k.p.card),
                       ),
               ),
-              const SizedBox(width: Sp.s + Sp.xxs),
-              Flexible(
-                child: Text(
-                  kid.firstName,
-                  style: k.cardName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: Sp.s),
+              const SizedBox(width: Sp.m),
               Expanded(
-                child: Text(
-                  meta,
-                  style: k.cardMeta,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      kid.firstName,
+                      style: k.cardName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (meta.isNotEmpty)
+                      Text(
+                        meta,
+                        style: k.cardMeta,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -489,11 +495,24 @@ class KidCard extends StatelessWidget {
         ),
     ];
     if (items.isEmpty) return const [];
-    // Pillen in einer Reihe, bei Platzmangel umbrechend (Entwurf 18.10.26:
-    // statt zwei großer Knöpfe je Zeile).
+    // Zwei Knöpfe je Zeile, gleich breit; die Beschriftung schrumpft eher,
+    // als umzubrechen. Ursache (Bildschirmfoto 20.10.26): Als umbrechende
+    // Pillen stand bei großer Schrift jeder Knopf in einer eigenen Zeile.
+    // Ein einzelner letzter Knopf nimmt die ganze Breite.
     return [
       const SizedBox(height: Sp.m),
-      Wrap(spacing: Sp.s, runSpacing: Sp.s, children: items),
+      for (var i = 0; i < items.length; i += 2) ...[
+        if (i > 0) const SizedBox(height: Sp.s),
+        Row(
+          children: [
+            Expanded(child: items[i]),
+            if (i + 1 < items.length) ...[
+              const SizedBox(width: Sp.s),
+              Expanded(child: items[i + 1]),
+            ],
+          ],
+        ),
+      ],
     ];
   }
 }
@@ -658,7 +677,24 @@ class _DayBar extends StatelessWidget {
       return tone.barRest;
     }
 
-    final next = status.next == null ? null : l[status.next!];
+    // „Danach“ an der Leiste: die Stunde nach der, die oben steht. Ursache
+    // (Bildschirmfoto 20.10.26): Vor Schulbeginn und in Pausen zeigt die
+    // Fläche oben schon die nächste Stunde („Gleich … Englisch 11:30“);
+    // die Leiste wiederholte sie („Danach 11:30 Englisch“).
+    int? afterShown() {
+      final n = status.next;
+      if (n == null) return null;
+      if (status.phase != DayPhase.before && status.phase != DayPhase.gap) {
+        return n;
+      }
+      for (var i = n + 1; i < l.length; i++) {
+        if (!l[i].cancelled) return i;
+      }
+      return null;
+    }
+
+    final after = afterShown();
+    final next = after == null ? null : l[after];
     final t = context.t;
     // Ohne Uhrzeiten (DayPhase.untimed): Leiste ohne Zeitbeschriftung.
     final timed = status.phase != DayPhase.untimed;
@@ -744,14 +780,20 @@ class _ActionButton extends StatelessWidget {
         onTap: onTap,
         child: Container(
           height: Sz.buttonSmall,
-          padding: const EdgeInsets.symmetric(horizontal: Sp.l),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: Sz.icon, color: fg),
-              const SizedBox(width: Sp.s),
-              Text(label, style: k.button(fg)),
-            ],
+          padding: const EdgeInsets.symmetric(horizontal: Sp.m),
+          alignment: Alignment.center,
+          // Volle Breite der Spalte (Kinderkarte: zwei je Zeile); passt die
+          // Beschriftung nicht, wird sie kleiner statt abgeschnitten.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: Sz.icon, color: fg),
+                const SizedBox(width: Sp.s),
+                Text(label, style: k.button(fg)),
+              ],
+            ),
           ),
         ),
       ),

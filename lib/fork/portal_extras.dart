@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
 import 'package:html/parser.dart' show parse;
@@ -79,10 +80,19 @@ Future<Uint8List?> loadProfilePhoto(
 }) async {
   final file = File('${cache.path}/$_photoFile');
   final t = now ?? DateTime.now();
+  // Leere Datei = „kein echtes Foto“ (Platzhalter), ebenfalls zwischen-
+  // gespeichert, damit nicht jeder Start neu lädt.
+  Future<Uint8List?> cached() async {
+    if (!file.existsSync()) return null;
+    final b = file.readAsBytesSync();
+    if (b.isEmpty || await looksLikePlaceholder(b)) return null;
+    return b;
+  }
+
   if (!force &&
       file.existsSync() &&
       t.difference(file.lastModifiedSync()) < photoMaxAge) {
-    return file.readAsBytesSync();
+    return cached();
   }
   try {
     final page = await session.dio.get(
@@ -90,7 +100,7 @@ Future<Uint8List?> loadProfilePhoto(
     );
     final url = photoUrlFrom(page.data.toString());
     if (url == null) {
-      if (file.existsSync()) file.deleteSync();
+      file.writeAsBytesSync(const [], flush: true);
       return null;
     }
     final img = await session.dio.get<List<int>>(
@@ -101,10 +111,51 @@ Future<Uint8List?> loadProfilePhoto(
     // Nur echte Bilder (JPG/PNG) – eine Fehlerseite wäre HTML.
     final jpg = bytes.length > 3 && bytes[0] == 0xFF && bytes[1] == 0xD8;
     final png = bytes.length > 8 && bytes[0] == 0x89 && bytes[1] == 0x50;
-    if (!jpg && !png) return file.existsSync() ? file.readAsBytesSync() : null;
+    if (!jpg && !png) return await cached();
+    if (await looksLikePlaceholder(bytes)) {
+      file.writeAsBytesSync(const [], flush: true);
+      return null;
+    }
     file.writeAsBytesSync(bytes, flush: true);
     return bytes;
   } catch (_) {
-    return file.existsSync() ? file.readAsBytesSync() : null;
+    return cached();
+  }
+}
+
+/// Ist das Bild der graue Platzhalter des Portals statt eines Fotos?
+///
+/// Ursache (Bildschirmfoto 20.10.26): Ohne hochgeladenes Foto liefert das
+/// Portal ein graues Schattenbild; in der Karte sah das wie ein fehlendes
+/// Bild aus. Prüfung: verkleinert auf 24 × 24, wie viele Bildpunkte farbig
+/// sind (Abstand der Farbkanäle > 24). Unter 3 % gilt als Platzhalter.
+/// Grenze: Ein echtes Schwarzweißfoto gilt ebenfalls als Platzhalter – dann
+/// erscheint der Anfangsbuchstabe.
+Future<bool> looksLikePlaceholder(Uint8List bytes) async {
+  try {
+    final codec = await ui.instantiateImageCodec(
+      bytes,
+      targetWidth: 24,
+      targetHeight: 24,
+    );
+    final frame = await codec.getNextFrame();
+    final data = await frame.image.toByteData(
+      format: ui.ImageByteFormat.rawRgba,
+    );
+    frame.image.dispose();
+    if (data == null) return false;
+    final px = data.lengthInBytes ~/ 4;
+    var colored = 0;
+    for (var i = 0; i < px; i++) {
+      final r = data.getUint8(i * 4);
+      final g = data.getUint8(i * 4 + 1);
+      final b = data.getUint8(i * 4 + 2);
+      final hi = [r, g, b].reduce((a, c) => a > c ? a : c);
+      final lo = [r, g, b].reduce((a, c) => a < c ? a : c);
+      if (hi - lo > 24) colored++;
+    }
+    return colored < px * 0.03;
+  } catch (_) {
+    return false;
   }
 }
