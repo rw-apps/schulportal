@@ -18,6 +18,7 @@ class CourseContext {
     required this.fullName,
     required this.teachers,
     this.colorSlot = 0,
+    this.kidColor = 0,
     this.nextLesson,
     this.calendarExams = const [],
     this.openHomework,
@@ -34,6 +35,11 @@ class CourseContext {
 
   /// Fachfarbe wie im Wochenraster (subjectColorSlots).
   final int colorSlot;
+
+  /// Farbe des Kindes (kid_colors.dart) für „Als Nächstes“ und die
+  /// Anwesenheit. Ursache (Prüfung 20.10.26): Fest k.kid(0) – die Seite
+  /// eines zweiten Kindes trug die Farbe des ersten.
+  final int kidColor;
   final ({DateTime day, String slot, String start, String end, String? room})?
   nextLesson;
 
@@ -242,7 +248,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
         lines.add(
           _Line(
             icon: Icons.schedule,
-            color: k.kid(0).accent,
+            color: k.kid(c.kidColor).accent,
             title: '${relativeDay(t, n.day, now)} · ${n.slot}',
             meta: [
               if (n.start.isNotEmpty) '${n.start}–${n.end}',
@@ -297,8 +303,8 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
       out.add(
         _Block(
           icon: Icons.upcoming_outlined,
-          tint: k.kid(0).tint,
-          ink: k.kid(0).onTint,
+          tint: k.kid(c.kidColor).tint,
+          ink: k.kid(c.kidColor).onTint,
           title: t.blockNext,
           children: lines.isEmpty
               ? [Text(t.nothingNext, style: k.meta)]
@@ -357,7 +363,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
               : null,
           children: [
             if (counts != null) ...[
-              _AttendanceBar(counts: counts),
+              _AttendanceBar(counts: counts, kidColor: c.kidColor),
               const SizedBox(height: Sp.s),
               Text(
                 t.attendanceLine(
@@ -820,15 +826,16 @@ class _TeacherRow extends StatelessWidget {
 }
 
 class _AttendanceBar extends StatelessWidget {
-  const _AttendanceBar({required this.counts});
+  const _AttendanceBar({required this.counts, required this.kidColor});
 
   final AttendanceCounts counts;
+  final int kidColor;
 
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final parts = [
-      (counts.present, k.kid(0).accent),
+      (counts.present, k.kid(kidColor).accent),
       (counts.excused, k.p.change.dot),
       (counts.missing, k.p.cancel.dot),
     ].where((p) => p.$1 > 0).toList();

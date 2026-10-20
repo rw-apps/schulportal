@@ -171,8 +171,19 @@ Widget liveCourseDetail(
     s.homework,
     subjectOf: (_) => i.title,
   );
+  // Farbe des Kindes: Rahmen des Kontos (Ansicht „Alle“), sonst das
+  // aktive Konto in der Familie.
+  final account = s.session.account.localId;
+  final kidColor =
+      FamilyMember.around(context)?.colorIndex ??
+      FamilyData.of(context)
+          .where((m) => m.snapshot.session.account.localId == account)
+          .firstOrNull
+          ?.colorIndex ??
+      0;
   return CourseDetailPage(
     course: CourseContext(
+      kidColor: kidColor,
       openHomework: {
         for (final h in hw.open)
           if (h.course == i.id) h.entry,

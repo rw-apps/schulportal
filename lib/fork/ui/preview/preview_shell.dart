@@ -669,12 +669,16 @@ NavBadges navBadgesOf(LiveSnapshot? s, ForkL10n t) {
       now: now,
       t: t,
     );
+    // Wie Heute: heute nur Ausfälle von Stunden, die noch kommen oder
+    // laufen (Karte des Kindes, lessonDone), morgen alle (Kasten „Morgen“).
+    // Ursache (Prüfung 20.10.26): Das „!“ zählte auch heutige Ausfälle, die
+    // schon vorbei waren – auf Heute war dann nichts zu sehen.
     final today = DateTime(now.year, now.month, now.day);
-    alert = r.changes.any(
-      (c) =>
-          c.kind == ChangeKind.cancelled &&
-          (dayDiff(today, c.day) == 0 || dayDiff(today, c.day) == 1),
-    );
+    alert =
+        r.today.any((l) => l.cancelled && !lessonDone(l, now)) ||
+        r.changes.any(
+          (c) => c.kind == ChangeKind.cancelled && dayDiff(today, c.day) == 1,
+        );
   }
   return NavBadges(
     homework: liveOpenHomework(s),

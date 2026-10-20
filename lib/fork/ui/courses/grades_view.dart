@@ -200,8 +200,18 @@ class GradesViewState extends State<GradesView> {
     }
 
     final pages = GradesCache.instance.pagesFor(_key);
-    final absent = absenceTotals([for (final c in courses) ?pages[c.id]]);
-    if (absent != null) {
+    // Erst nach dem Laden aller Seiten. Ursache (Prüfung 20.10.26): Die
+    // Summe stammt aus den Kursseiten; während des Ladens stand schon „Keine
+    // Fehlstunden“, obwohl die Fächerliste Fehlstunden zeigte. Fehlen Seiten
+    // (Ladefehler), steht „keine“ nicht da – die Summe wäre unvollständig.
+    final absent = _loading
+        ? null
+        : absenceTotals([for (final c in courses) ?pages[c.id]]);
+    final incomplete =
+        absent != null &&
+        absent.excused + absent.missing == 0 &&
+        courses.any((c) => !pages.containsKey(c.id));
+    if (absent != null && !incomplete) {
       final line = Text(
         absent.excused + absent.missing == 0
             ? t.absenceNone

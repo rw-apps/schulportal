@@ -10,6 +10,7 @@ import 'package:lanis/utils/applet_settings.dart';
 import 'package:lanis/utils/logger.dart';
 
 import '../courses_scan.dart';
+import '../exams.dart';
 import '../l10n/l10n.dart';
 import '../lessons_parent.dart';
 import '../parent_support.dart';
@@ -21,7 +22,8 @@ import '../ui/plan/plan_model.dart';
 import '../class_choice.dart';
 import '../data_storage.dart';
 import '../portal_extras.dart';
-import '../ui/today/today_from_lanis.dart' show classFromCourses;
+import '../ui/today/today_from_lanis.dart'
+    show classFromCourses, weekItemsFromCalendar;
 import 'notices.dart';
 
 /// Schlüssel der schon gemeldeten Einträge (je Konto).
@@ -102,7 +104,8 @@ Future<void> _run(
   // Ohne Namen: Schülerkonto „Heute in der Schule“, Elternkonto ohne
   // geladene Kinder (Unterricht fehlgeschlagen) „bei deinem Kind“
   // (buildNotices, parent).
-  final firstName = kids.isNotEmpty ? kids.first.firstName : '';
+  // Nur der erste Vorname, wie in der App (shortFirstName, live_data.dart).
+  final firstName = kids.isNotEmpty ? shortFirstName(kids.first.firstName) : '';
   // Sprache wie in der App (Einstellungen → Darstellung → Sprache); im
   // Hintergrund gibt es keinen Widget-Baum, daher direkt aus der Einstellung.
   String? chosen;
@@ -214,6 +217,8 @@ Future<void> _run(
       t: t,
       tools: tools,
       now: now,
+      withCalendar: offers(Applets.byPhpUrl('kalender.php')),
+      className: storedClass(s)?.name ?? classFromCourses(courses),
     );
   }
 }
@@ -332,6 +337,8 @@ Future<void> _courseNews({
   required ForkL10n t,
   required BackgroundTaskToolkit tools,
   required DateTime now,
+  bool withCalendar = false,
+  String className = '',
 }) async {
   final old = storedCourseScan(s);
   final today = DateTime(now.year, now.month, now.day);
@@ -353,9 +360,47 @@ Future<void> _courseNews({
   final fresh = scanFrom(items, pages, now, old: old);
   final news = newsSince(old, fresh, {for (final c in items) c.id: c.title});
   storeCourseScan(s, fresh);
+
+  // Arbeiten, die nur im Schulkalender stehen (exams.dart, gemeinsame
+  // Regel). Ursache (Prüfung 20.10.26): Gemeldet wurden bisher nur
+  // Kursmappen-Arbeiten. Gemerkt wird, was schon gemeldet ist; der erste
+  // Lauf merkt nur (sonst käme jede vorhandene Arbeit als „neu“). Eine schon
+  // gemeldete Kalender-Arbeit, die später in der Kursmappe auftaucht, gilt
+  // dort nicht noch einmal als neu.
+  var calendarExams = const <UpcomingExam>[];
+  if (withCalendar) {
+    try {
+      final events = await container
+          .read(calendarParserProvider)
+          .getCalendar(startDate: now, endDate: halfYearEnd(now));
+      calendarExams = upcomingExamsOf(
+        scan: fresh.upcoming(now),
+        calendar: weekItemsFromCalendar(
+          events,
+          now,
+          className: className,
+          days: daysUntil(now, halfYearEnd(now)),
+        ),
+        now: now,
+        until: halfYearEnd(now),
+      ).where((e) => e.fromCalendar).toList();
+    } catch (e) {
+      backgroundLogger.w('Kalender für Arbeiten: ${e.runtimeType}');
+    }
+  }
+  final known = s.getJsonList(calendarExamsSeenSetting);
+  final ex = examNews(
+    scanNews: news.exams,
+    calendarOnly: calendarExams,
+    known: known == null ? null : [for (final k in known) '$k'],
+    now: now,
+  );
+  if (withCalendar) s.setJsonList(calendarExamsSeenSetting, ex.remember);
   final lines = [
     for (final subject in news.marks) t.noticeNewMark(subject),
-    for (final e in news.exams)
+    for (final e in ex.scan)
+      t.noticeNewExam(e.subject, e.kind, formatDate(t, t.dateShort, e.day)),
+    for (final e in ex.calendar)
       t.noticeNewExam(e.subject, e.kind, formatDate(t, t.dateShort, e.day)),
   ];
   if (lines.isEmpty) return;
@@ -367,4 +412,58 @@ Future<void> _courseNews({
     id: courseNewsId,
     importance: Importance.defaultImportance,
   );
+}
+
+/// Gemeldete Kalender-Arbeiten (Schlüssel [calendarExamKey]), je Konto.
+const calendarExamsSeenSetting = 'fork-notify/calendar-exams';
+
+/// „2026-11-02|Physik“ – Tag und Fach; die Art zählt nicht (sie ändert sich
+/// eher als das Fach, etwa „Test“ → „Lernkontrolle“).
+String calendarExamKey(UpcomingExam e) =>
+    '${e.day.year.toString().padLeft(4, '0')}-'
+    '${e.day.month.toString().padLeft(2, '0')}-'
+    '${e.day.day.toString().padLeft(2, '0')}|${e.subject}';
+
+/// Welche Arbeiten melden? [scanNews]: neu in der Kursmappe (newsSince);
+/// [calendarOnly]: Kalender-Arbeiten ohne Kursmappen-Eintrag; [known]:
+/// schon gemeldete Kalender-Arbeiten (null = erster Lauf, nur merken).
+/// Kursmappen-Arbeiten, die schon als Kalender-Arbeit gemeldet wurden,
+/// entfallen. [remember]: neuer Merkzettel ohne vergangene Tage.
+({List<ScanExam> scan, List<UpcomingExam> calendar, List<String> remember})
+examNews({
+  required List<ScanExam> scanNews,
+  required List<UpcomingExam> calendarOnly,
+  required List<String>? known,
+  required DateTime now,
+}) {
+  final seen = {...?known};
+  final announced = [
+    for (final k in seen)
+      UpcomingExam(day: _keyDay(k), subject: _keySubject(k), kind: ''),
+  ];
+  final today = DateTime(now.year, now.month, now.day);
+  return (
+    scan: [
+      for (final e in scanNews)
+        if (!announced.any((c) => sameExam(e, c))) e,
+    ],
+    calendar: known == null
+        ? const []
+        : [
+            for (final e in calendarOnly)
+              if (!seen.contains(calendarExamKey(e))) e,
+          ],
+    remember: [
+      for (final k in {...seen, ...calendarOnly.map(calendarExamKey)})
+        if (!_keyDay(k).isBefore(today)) k,
+    ],
+  );
+}
+
+DateTime _keyDay(String k) =>
+    DateTime.tryParse(k.split('|').first) ?? DateTime(2000);
+
+String _keySubject(String k) {
+  final i = k.indexOf('|');
+  return i < 0 ? '' : k.substring(i + 1);
 }

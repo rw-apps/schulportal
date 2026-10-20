@@ -10,7 +10,10 @@ Future<void> conversationsBackgroundTask(
   BackgroundTaskToolkit toolkit,
 ) async {
   final data = await container.read(conversationsParserProvider).getHome();
-  final unreadMessages = data.where((e) => e.unread).toList();
+  // Fork: ausgeblendete Unterhaltungen nicht melden – wie Liste, Zähler am
+  // Reiter und Heute (unread && !hidden). Ursache (Prüfung 20.10.26): Der
+  // Hinweis kam auch für ausgeblendete Unterhaltungen.
+  final unreadMessages = data.where((e) => e.unread && !e.hidden).toList();
   for (final unreadMessage in unreadMessages) {
     await toolkit.sendMessage(
       id: (unreadMessage.id.hashCode & 0x7fffffff) % 10000,

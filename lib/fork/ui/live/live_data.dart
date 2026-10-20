@@ -56,6 +56,13 @@ const _settingsApplet = 'stundenplan.php';
 /// App die übernommenen Stundenzeiten erst nach einem Neustart.
 final settingsRevision = ValueNotifier<int>(0);
 
+/// Nur der erste Vorname („Lena Marie“ → „Lena“) – für die App
+/// (LiveSnapshot.firstName) und die Hinweise (notify_task.dart) gleich.
+/// Ursache (Prüfung 20.10.26): Die Hinweise nannten den vollen Vornamen.
+/// Grenze: Doppelnamen mit Leerzeichen („Anna Lena“) werden gekürzt, mit
+/// Bindestrich bleiben sie ganz.
+String shortFirstName(String full) => full.trim().split(RegExp(r'\s+')).first;
+
 /// Alte Adresse der Mensa-Bestellseite je Konto (bis 9341); gilt weiter für
 /// Kinder ohne eigene Adresse (MensaAddresses.legacy).
 const mensaUrlSetting = 'fork-mensa-url';
@@ -254,7 +261,7 @@ class LiveSnapshot {
         : session.accountTypeOrNull == AccountType.parent
         ? ''
         : (session.userData['vorname'] ?? '');
-    return full.trim().split(RegExp(r'\s+')).first;
+    return shortFirstName(full);
   }
 
   /// Kind der Karte in „Heute“ (ein Kind je Konto, siehe LiveTodayPage).
