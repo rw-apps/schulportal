@@ -18,7 +18,7 @@ import 'settings_widgets.dart';
 ///
 /// Ursache für die Unterseite statt fünf Zeilen auf der Hauptseite: Das
 /// braucht man selten. Quellcode und Lizenz bleiben aber erreichbar –
-/// GPL-3.0 (Grundlage Lanis-Mobile) verlangt in Programmen mit Oberfläche
+/// GPL-3.0 (Grundlage: die Vorlage) verlangt in Programmen mit Oberfläche
 /// einen Hinweis auf Lizenz, Gewährleistungsausschluss und Quellcode; die
 /// Bibliotheken (MIT, BSD, Apache) verlangen, ihre Lizenztexte mitzuliefern
 /// (showLicensePage).
