@@ -1274,5 +1274,18 @@
         "type": "String"
       }
     }
-  }
+  },
+  "electionTitle": "Für {name} ist eine Wahl offen",
+  "@electionTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "electionTitlePlain": "Im Schulportal ist eine Wahl offen",
+  "electionText": "Gewählt wird im Wahltool des Schulportals – am besten bald, solange die Wahl läuft.",
+  "electionAction": "Im Schulportal öffnen",
+  "showPhotos": "Fotos aus dem Portal",
+  "showPhotosDetail": "Profilfoto des Kindes statt Anfangsbuchstabe (nur Schülerkonten)"
 }

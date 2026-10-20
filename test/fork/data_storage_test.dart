@@ -26,7 +26,7 @@ const _home = '''
 const _folder = '''
 <table id="files"><thead><tr><th></th><th>Name</th><th>Änderung</th><th>Größe</th></tr></thead>
 <tbody>
-<tr data-id="333"><td><i></i></td><td>Elternbrief 1.pdf <small>Bitte lesen</small></td><td>12.10.2026</td><td>120 KB</td></tr>
+<tr data-id="333"><td><i></i></td><td>Elternbrief 1.pdf <small>Bitte lesen</small></td><td>12.10.2026 16:51:07</td><td>120 KB</td></tr>
 </tbody></table>
 ''';
 
@@ -34,7 +34,7 @@ void main() {
   test('Startordner: Ordner und neue Dateien', () {
     final v = parseStorage(_home);
     expect(v.folders.map((f) => f.name), ['Formulare', 'Elternbriefe']);
-    expect(v.folders.first.files, 0);
+    expect(v.folders.first.files, isNull);
     expect(v.folders.last.files, 3);
     expect(v.folders.first.desc, 'Für Eltern');
     expect(v.newFiles.map((f) => f.id), [111, 222]);
@@ -47,7 +47,7 @@ void main() {
     final v = parseStorage(_folder);
     expect(v.files.single.name, 'Elternbrief 1.pdf');
     expect(v.files.single.note, 'Bitte lesen');
-    expect(v.files.single.changed, '12.10.2026');
+    expect(v.files.single.changedDay, '12.10.2026');
     expect(v.files.single.size, '120 KB');
     expect(v.files.single.url, endsWith('a=download&f=333'));
   });

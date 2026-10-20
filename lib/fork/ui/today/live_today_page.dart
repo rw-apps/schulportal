@@ -14,6 +14,8 @@ import 'today_from_lanis.dart';
 import 'today_model.dart';
 import '../settings/class_sheet.dart';
 import 'class_prompt_card.dart';
+import 'hint_card.dart';
+import '../portal_link.dart';
 import 'login_failure_card.dart';
 import 'today_page.dart';
 import '../nav.dart';
@@ -111,6 +113,7 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
       mensaUrl: s.mensaUrl,
       openHomework: liveOpenHomework(s),
       unreadMessages: liveUnreadMessages(s),
+      photo: s.photo,
     );
   }
 
@@ -199,6 +202,18 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
                           );
                           if (r != null) m.snapshot.setClass!(r.name);
                         },
+                ),
+            // Offene Wahl im Wahltool (portal_extras.dart, Wunsch 20.10.26).
+            for (final (m, kid) in shown)
+              if (m.snapshot.electionOpen)
+                HintCard(
+                  icon: Icons.how_to_vote_outlined,
+                  title: kid.firstName.isEmpty
+                      ? context.t.electionTitlePlain
+                      : context.t.electionTitle(kid.firstName),
+                  text: context.t.electionText,
+                  action: context.t.electionAction,
+                  onAction: () => openPortalFor(context, m.snapshot.session),
                 ),
           ],
           data: FamilyToday(

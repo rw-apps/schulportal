@@ -479,5 +479,11 @@
   "storageFileCount": "{count, plural, =1{1 file} other{{count} files}}",
   "storageLoadError": "The files couldn't be loaded.",
   "storageNoticeTitle": "New school file",
-  "storageNoticeTitleFor": "New school file for {name}"
+  "storageNoticeTitleFor": "New school file for {name}",
+  "electionTitle": "There's an open vote for {name}",
+  "electionTitlePlain": "There's an open vote in the school portal",
+  "electionText": "Voting happens in the school portal's voting tool – best do it soon while it's open.",
+  "electionAction": "Open in school portal",
+  "showPhotos": "Photos from the portal",
+  "showPhotosDetail": "The child's profile photo instead of the initial (student accounts only)"
 }

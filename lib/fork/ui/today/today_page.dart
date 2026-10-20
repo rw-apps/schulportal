@@ -379,15 +379,28 @@ class KidCard extends StatelessWidget {
                 width: Sz.avatarSmall,
                 height: Sz.avatarSmall,
                 alignment: Alignment.center,
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   color: tone.accent,
                   shape: BoxShape.circle,
                 ),
-                child: Text(
-                  // Leerer Name (offline, unbekannt) darf nicht abstürzen.
-                  kid.firstName.isEmpty ? '?' : kid.firstName.characters.first,
-                  style: k.avatarLetter.copyWith(color: k.p.card),
-                ),
+                // Foto aus dem Portal statt Buchstabe (Wunsch 20.10.26).
+                child: kid.photo != null
+                    ? Image.memory(
+                        kid.photo!,
+                        width: Sz.avatarSmall,
+                        height: Sz.avatarSmall,
+                        fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                      )
+                    : Text(
+                        // Leerer Name (offline, unbekannt) darf nicht abstürzen.
+                        kid.firstName.isEmpty
+                            ? '?'
+                            : kid.firstName.characters.first,
+                        style: k.avatarLetter.copyWith(color: k.p.card),
+                      ),
               ),
               const SizedBox(width: Sp.s + Sp.xxs),
               Flexible(

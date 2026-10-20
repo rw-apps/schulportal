@@ -27,7 +27,8 @@ class StorageFolder {
   final String name;
   final String desc;
 
-  /// Anzahl Dateien laut Kachel; null = unbekannt, 0 = „Keine Dateien“.
+  /// Anzahl Dateien laut Kachel; null = unbekannt, 0 = sichtbares „Keine
+  /// Dateien“.
   final int? files;
 }
 
@@ -45,6 +46,9 @@ class StorageFile {
   final String changed;
   final String size;
   final String note;
+
+  /// Datum ohne Uhrzeit („27.08.2026 16:51:07“ → „27.08.2026“).
+  String get changedDay => changed.split(' ').first;
 
   String get extension =>
       name.contains('.') ? name.split('.').last.toLowerCase() : '';
@@ -86,11 +90,14 @@ StorageView parseStorage(String html) {
             .trim();
     final label = f.querySelector('.label-info');
     final hidden = (label?.attributes['style'] ?? '').contains('hidden');
-    final count = label == null
+    // Unsichtbares „Keine Dateien“ ist nur ein Platzhalter, keine Anzahl.
+    // Ursache: Export Schule B 20.10.26 – beide Ordner trugen es und
+    // enthielten je eine Datei.
+    final count = label == null || hidden
         ? null
-        : hidden
-        ? 0
-        : int.tryParse(RegExp(r'\d+').stringMatch(label.text) ?? '');
+        : label.text.contains(RegExp(r'\d'))
+        ? int.tryParse(RegExp(r'\d+').stringMatch(label.text)!)
+        : 0;
     folders.add(
       StorageFolder(
         id: id,

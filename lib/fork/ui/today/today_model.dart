@@ -8,6 +8,8 @@
 /// geliefert — so stimmen sie auch, wenn die Daten eine Stunde alt sind.
 library;
 
+import 'dart:typed_data';
+
 enum ChangeKind { substitution, roomChange, cancelled }
 
 /// Ein Abschnitt des heutigen Plans. Doppelstunden desselben Fachs sind
@@ -76,7 +78,11 @@ class ChildToday {
     this.canReportAbsence = false,
     this.mealHint,
     this.mensaUrl,
+    this.photo,
   });
+
+  /// Profilfoto aus dem Portal (nur Schülerkonten, portal_extras.dart).
+  final Uint8List? photo;
 
   final String firstName;
   final String school;

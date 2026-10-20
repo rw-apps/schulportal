@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:liblanis/liblanis.dart';
 
 import '../../courses_scan.dart';
@@ -374,6 +376,7 @@ ChildToday childTodayFromLanis({
   String? mensaUrl,
   int openHomework = 0,
   int unreadMessages = 0,
+  Uint8List? photo,
 }) {
   final r = applySubstitutions(
     plan: plan,
@@ -396,6 +399,7 @@ ChildToday childTodayFromLanis({
     mensaUrl: mensaUrl,
     openHomework: openHomework,
     unreadMessages: unreadMessages,
+    photo: photo,
   );
 }
 

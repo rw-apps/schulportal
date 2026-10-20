@@ -20,6 +20,7 @@ import '../ui/plan/plan_from_lanis.dart' show subjectFullName;
 import '../ui/plan/plan_model.dart';
 import '../class_choice.dart';
 import '../data_storage.dart';
+import '../portal_extras.dart';
 import '../ui/today/today_from_lanis.dart' show classFromCourses;
 import 'notices.dart';
 
@@ -193,6 +194,17 @@ Future<void> _run(
     );
   }
 
+  if (offersModule(session.travelMenu, electionModule)) {
+    await _electionNews(
+      session: session,
+      s: s,
+      firstName: firstName,
+      t: t,
+      tools: tools,
+      now: now,
+    );
+  }
+
   if (offers(Applets.byPhpUrl('meinunterricht.php')) && lessons.isNotEmpty) {
     await _courseNews(
       container: container,
@@ -215,6 +227,46 @@ const courseScanHour = 15;
 /// Kennung der Meldung „Neu im Unterricht“ (notices.dart nutzt 1 und 2;
 /// sendMessage verlangt 0–10000).
 const courseNewsId = 3;
+
+/// Kennung der Meldung „Wahl offen“.
+const electionNewsId = 5;
+
+/// Eine neu geöffnete Wahl im Wahltool melden (portal_extras.dart, Wunsch
+/// 20.10.26) – höchstens alle [electionCheckEvery], einmal je Wahl.
+///
+/// Ursache für das Merken des Stands: Eine Wahl läuft oft Tage; gemeldet
+/// wird nur der Wechsel von „keine“ zu „offen“. Grenze: Folgen zwei Wahlen
+/// ohne Pause aufeinander, meldet die App nur die erste.
+Future<void> _electionNews({
+  required LanisSession session,
+  required TypedSettings s,
+  required String firstName,
+  required ForkL10n t,
+  required BackgroundTaskToolkit tools,
+  required DateTime now,
+}) async {
+  final last = DateTime.tryParse(s.getString(electionCheckedSetting) ?? '');
+  if (last != null && now.difference(last) < electionCheckEvery) return;
+  final bool open;
+  try {
+    open = await loadElectionOpen(session);
+  } catch (e) {
+    backgroundLogger.w('Wahltool übersprungen: ${e.runtimeType}');
+    return;
+  }
+  s.setString(electionCheckedSetting, now.toIso8601String());
+  final before = s.getBool(electionOpenSetting) ?? false;
+  s.setBool(electionOpenSetting, open);
+  if (!open || before) return;
+  await tools.sendMessage(
+    title: firstName.isEmpty
+        ? t.electionTitlePlain
+        : t.electionTitle(firstName),
+    message: t.electionText,
+    id: electionNewsId,
+    importance: Importance.defaultImportance,
+  );
+}
 
 /// Kennung der Meldung „Neue Datei der Schule“.
 const storageNewsId = 4;

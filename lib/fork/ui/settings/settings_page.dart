@@ -23,7 +23,13 @@ import '../font_step.dart';
 import '../language.dart';
 import '../kit.dart';
 import '../live/family.dart';
-import '../live/live_data.dart' show LiveData, LiveSnapshot, detectedClassName;
+import '../live/live_data.dart'
+    show
+        LiveData,
+        LiveSnapshot,
+        detectedClassName,
+        settingsRevision,
+        showPhotosSetting;
 import 'class_sheet.dart';
 import '../today/today_from_lanis.dart' show shortSchoolName;
 import 'error_report_page.dart';
@@ -513,6 +519,19 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
               Padding(
                 padding: const EdgeInsets.only(left: Sp.xs, top: Sp.xs),
                 child: Text(t.languageNote, style: k.planMeta(k.p.muted)),
+              ),
+              const SizedBox(height: Sp.s),
+              // Profilfoto statt Anfangsbuchstabe (portal_extras.dart);
+              // wirkt sofort über settingsRevision (live_data.dart).
+              _Switch(
+                label: t.showPhotos,
+                detail: t.showPhotosDetail,
+                value: shared.getBool(showPhotosSetting) ?? true,
+                onChanged: (v) {
+                  shared.setBool(showPhotosSetting, v);
+                  settingsRevision.value++;
+                  setState(() {});
+                },
               ),
             ]),
 

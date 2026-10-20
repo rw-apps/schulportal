@@ -90,7 +90,7 @@ FamilyToday demoFamily() {
       ChildToday(
         firstName: 'Jonas',
         school: 'Schule A',
-        className: '6 NI',
+        className: '6 XY',
         colorIndex: 1,
         lessons: const [
           DayLesson(
@@ -145,7 +145,7 @@ FamilyToday demoFamily() {
       ),
       WeekItem(
         day: d(22),
-        title: 'Elternabend 6 NI',
+        title: 'Elternabend 6 XY',
         kind: WeekKind.event,
         childIndex: 1,
         time: '19:30',

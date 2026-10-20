@@ -187,7 +187,7 @@ class _FileTile extends StatelessWidget {
       title: file.name,
       detail: [
         if (file.note.isNotEmpty) file.note,
-        if (file.changed.isNotEmpty) file.changed,
+        if (file.changed.isNotEmpty) file.changedDay,
         if (file.size.isNotEmpty) file.size,
       ].join(' · '),
       fresh: fresh,

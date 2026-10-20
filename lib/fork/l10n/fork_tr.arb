@@ -479,5 +479,11 @@
   "storageFileCount": "{count, plural, =1{1 dosya} other{{count} dosya}}",
   "storageLoadError": "Dosyalar yüklenemedi.",
   "storageNoticeTitle": "Yeni okul dosyası",
-  "storageNoticeTitleFor": "{name} için yeni okul dosyası"
+  "storageNoticeTitleFor": "{name} için yeni okul dosyası",
+  "electionTitle": "{name} için açık bir seçim var",
+  "electionTitlePlain": "Okul portalında açık bir seçim var",
+  "electionText": "Oylama okul portalının oylama aracında yapılır – açıkken bir an önce yapın.",
+  "electionAction": "Okul portalında aç",
+  "showPhotos": "Portaldaki fotoğraflar",
+  "showPhotosDetail": "Baş harf yerine çocuğun profil fotoğrafı (yalnızca öğrenci hesapları)"
 }

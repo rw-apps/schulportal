@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +19,7 @@ import '../plan/lesson_times.dart';
 import '../plan/plan_from_lanis.dart';
 import '../plan/plan_model.dart';
 import '../../class_choice.dart';
+import '../../portal_extras.dart';
 import '../today/today_from_lanis.dart' show classFromCourses;
 
 /// Schlüssel der Gruppenwahl in den Einstellungen des Kontos (unter
@@ -158,7 +161,15 @@ class LiveSnapshot {
     this.classChoice,
     this.classExpired = false,
     this.setClass,
+    this.photo,
+    this.electionOpen = false,
   });
+
+  /// Profilfoto des Schülerkontos (portal_extras.dart), null = keins.
+  final Uint8List? photo;
+
+  /// Im Wahltool ist eine Wahl offen (portal_extras.dart).
+  final bool electionOpen;
 
   /// Von Hand eingetragene Klasse (class_choice.dart), null = keine gültige.
   final ClassChoice? classChoice;
@@ -315,6 +326,9 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
   HomeworkLedger _homework = HomeworkLedger.empty;
   ClassChoice? _class;
   bool _classExpired = false;
+  Uint8List? _photo;
+  bool _electionOpen = false;
+  DateTime? _electionChecked;
   MensaAddresses _mensa = const MensaAddresses({});
   int? _settingsFor;
   late final _loader = SerialLoader(
@@ -386,6 +400,8 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
       _settingsFor = null;
       _readSettings(id);
     });
+    // Fotos an/aus (Einstellungen) gilt sofort; das Wahltool bleibt getaktet.
+    _loadExtras(false);
   }
 
   void _readSettings(int accountId) {
@@ -445,7 +461,49 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
       }
       if (!mounted) return;
     }
-    if (only == null) _lastLoad = DateTime.now();
+    if (only == null) {
+      _lastLoad = DateTime.now();
+      await _loadExtras(force);
+    }
+  }
+
+  /// Wahltool und Profilfoto (portal_extras.dart), nach den Hauptquellen.
+  /// Ursache für die Taktung: Beides ändert sich selten; das Wahltool wird
+  /// höchstens alle [electionCheckEvery] gefragt, das Foto liegt
+  /// [photoMaxAge] im Cache des Kontos.
+  Future<void> _loadExtras(bool force) async {
+    final session = ref.read(sessionProvider).asData?.value;
+    if (session == null || !mounted) return;
+    final last = _electionChecked;
+    if (offersModule(session.travelMenu, electionModule) &&
+        (last == null ||
+            DateTime.now().difference(last) > electionCheckEvery)) {
+      try {
+        final open = await loadElectionOpen(session);
+        _electionChecked = DateTime.now();
+        if (mounted) setState(() => _electionOpen = open);
+      } catch (_) {}
+    }
+    final showPhotos =
+        ref
+            .read(sharedOverAccountSettingsProvider)
+            .getBool(showPhotosSetting) ??
+        true;
+    if (!showPhotos) {
+      if (_photo != null && mounted) setState(() => _photo = null);
+      return;
+    }
+    if (session.accountTypeOrNull != AccountType.student) return;
+    final Directory cache;
+    try {
+      final dir = ref.read(storageManagerProvider)?.getDocumentCacheDirectory();
+      if (dir == null) return;
+      cache = dir;
+    } catch (_) {
+      return;
+    }
+    final bytes = await loadProfilePhoto(session, cache, force: force);
+    if (mounted) setState(() => _photo = bytes);
   }
 
   @override
@@ -536,6 +594,8 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
         kids: kids,
         classChoice: _class,
         classExpired: _classExpired,
+        photo: _photo,
+        electionOpen: _electionOpen,
         setClass: (name) {
           final s = ref.read(accountSpecificSettingsProvider);
           if (s == null || !mounted) return;
@@ -570,6 +630,9 @@ class LiveData extends InheritedWidget {
 /// erkannte ([detectedClassName]).
 String liveClassName(LiveSnapshot s) =>
     s.classChoice?.name ?? detectedClassName(s);
+
+/// Fotos aus dem Portal zeigen (Einstellungen → Darstellung), Standard an.
+const showPhotosSetting = 'fork/show-photos';
 
 /// Von der App erkannte Klasse: aus den Benutzerdaten, sonst aus den
 /// Kursnamen (classFromCourses, Ursache dort); '' = unbekannt.
