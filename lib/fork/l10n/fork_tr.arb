@@ -495,5 +495,15 @@
   "archiveForWhom": "Tamamlanan ödevler …",
   "kidColorsTitle": "Çocukların renkleri",
   "kidColorsHint": "Renk uygulamanın her yerinde geçerlidir ve girişler aktarılırken birlikte taşınır.",
-  "kidColorPick": "Renk {n}"
+  "kidColorPick": "Renk {n}",
+  "sectionKids": "Çocuklar",
+  "notifyWhatWhen": "Ne ve ne zaman",
+  "notifyShortSubs": "Ders değişiklikleri",
+  "notifyShortMessages": "Mesajlar",
+  "notifyOff": "Kapalı",
+  "themeLabel": "Tema",
+  "themeSystemShort": "Cihaz",
+  "aboutSummary": "Yenilikler, gizlilik, lisanslar, sorun giderme",
+  "logoutRemove": "Çıkış yap ve kaldır",
+  "kidColor": "Renk"
 }

@@ -56,12 +56,12 @@ void main() {
         expect(t.takeException(), isNull);
       }
       for (final s in [
-        'Konto',
+        'Kinder',
         'Benachrichtigungen',
+        'Was und wann',
         'Darstellung',
         'Daten',
         'Über die App',
-        'Fehlersuche',
       ]) {
         expect(seen, contains(s));
       }
@@ -74,9 +74,8 @@ void main() {
       ]) {
         expect(all, isNot(contains(gone)));
       }
-      // Schriftgröße wirkt über den Provider (für alle Seiten). Auslösen
-      // direkt über onTap: Die Trefferprüfung von tap() lag im Test neben
-      // dem Eintrag (Rand der Liste), die Bedienung selbst ist dieselbe.
+      // Schriftgröße wirkt über den Provider (für alle Seiten); seit dem
+      // verdichteten Entwurf (20.10.26) ein Umschalter statt drei Zeilen.
       await t.drag(find.byType(Scrollable).first, const Offset(0, 20000));
       await t.pumpAndSettle();
       final large = find.text('Groß');
@@ -84,11 +83,9 @@ void main() {
         await t.drag(find.byType(Scrollable).first, const Offset(0, -150));
         await t.pumpAndSettle();
       }
-      t
-          .widget<InkWell>(
-            find.ancestor(of: large, matching: find.byType(InkWell)).first,
-          )
-          .onTap!();
+      await t.ensureVisible(large);
+      await t.pumpAndSettle();
+      await t.tap(large);
       await t.pumpAndSettle();
       final c = ProviderScope.containerOf(
         t.element(find.byType(ForkSettingsPage)),

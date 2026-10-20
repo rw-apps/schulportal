@@ -1,9 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 import 'package:webview_flutter/webview_flutter.dart' show WebViewCookieManager;
@@ -13,7 +14,6 @@ import 'package:lanis/fork_identity.dart';
 import 'package:lanis/fork/start.dart' show firstSupportedHomePath;
 import 'package:lanis/utils/safe_launch.dart';
 import 'package:lanis/utils/theme_settings.dart';
-import 'package:lanis/view/settings/subsettings/debug_export.dart';
 
 import '../../calendar_subscribe.dart';
 import '../../class_choice.dart';
@@ -33,7 +33,9 @@ import '../live/live_data.dart'
         showPhotosSetting;
 import 'class_sheet.dart';
 import '../today/today_from_lanis.dart' show shortSchoolName;
-import 'error_report_page.dart';
+import 'about_page.dart';
+import 'notify_settings_page.dart';
+import 'settings_widgets.dart';
 import 'transfer_page.dart';
 
 /// Einstellungen im Stil der neuen Oberfläche (Entscheidung 17.10.26).
@@ -53,38 +55,18 @@ class ForkSettingsPage extends ConsumerStatefulWidget {
 
 class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
   PermissionStatus? _permission;
-  String? _version;
-
-  /// Debug-Export erst nach 7× Antippen der Version (Entscheidung 17.10.26):
-  /// Er enthält echte Portalseiten und ist ein Werkzeug für Rückfragen.
-  /// Grenze: gilt bis zum Verlassen der Seite.
-  int _versionTaps = 0;
-  bool get _debugUnlocked => _versionTaps >= 7;
 
   @override
   void initState() {
     super.initState();
-    // Ohne Plattform (Tests) werfen beide; die Seite zeigt dann eben keine
-    // Version und nimmt die Erlaubnis als erteilt an.
+    // Ohne Plattform (Tests) wirft das; die Seite nimmt die Erlaubnis dann
+    // als erteilt an.
     Permission.notification.status
         .then((s) {
           if (mounted) setState(() => _permission = s);
         })
         .catchError((Object _) {});
-    PackageInfo.fromPlatform()
-        .then((i) {
-          if (mounted) {
-            setState(() => _version = '${i.version}+${i.buildNumber}');
-          }
-        })
-        .catchError((Object _) {});
   }
-
-  static String _nameOf(LanisSession session) =>
-      [session.userData['vorname'], session.userData['nachname']].nonNulls
-          .where((s) => s.isNotEmpty)
-          .join(' ')
-          .ifEmpty(session.account.username);
 
   static String? _typeOf(ForkL10n t, AccountType? type) => switch (type) {
     AccountType.parent => t.parentAccount,
@@ -93,33 +75,7 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
     _ => null,
   };
 
-  void _tapVersion() {
-    if (_debugUnlocked) return;
-    setState(() => _versionTaps++);
-    if (_debugUnlocked) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(context.t.debugUnlocked)));
-    }
-  }
-
   // ---- Konto ---------------------------------------------------------------
-
-  /// „Klasse 9C · automatisch erkannt“ (class_choice.dart); null für
-  /// Lehrkräfte und solange keine Daten da sind.
-  static String? _classDetail(ForkL10n t, LiveSnapshot? s) {
-    if (s == null || s.session.accountTypeOrNull == AccountType.teacher) {
-      return null;
-    }
-    final own = s.classChoice;
-    if (own != null) {
-      return '${t.classLine(classLabel(own.name))} · '
-          '${t.classManualUntil(classUntilLabel(own.until))}';
-    }
-    final found = detectedClassName(s);
-    if (found.isEmpty) return t.classUnknown;
-    return '${t.classLine(classLabel(found))} · ${t.classDetected}';
-  }
 
   /// Klasse ändern (class_sheet.dart); null ohne Daten oder für Lehrkräfte.
   VoidCallback? _classTap(FamilyMember? m) {
@@ -146,9 +102,11 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
     };
   }
 
-  Future<void> _logout(ClearTextAccount account) async {
+  /// Konto des Kindes [m] abmelden und vom Gerät entfernen.
+  Future<void> _logout(FamilyMember m) async {
     final k = Kit.of(context);
     final t = context.t;
+    final account = m.snapshot.session.account;
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -172,8 +130,17 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
     // Fork (Sicherheitsprüfung 17.10.26): Auf geteilten Familiengeräten
     // sollen nach dem Abmelden keine Dateien und keine Moodle-Anmeldung
     // dieses Kontos zurückbleiben. Grenze: Die WebView-Cookies gelten für
-    // alle Konten – andere Konten melden sich in Moodle neu an.
-    final cache = ref.read(storageManagerProvider)?.getDocumentCacheDirectory();
+    // alle Konten – andere Konten melden sich in Moodle neu an. Der
+    // Dateicache gehört zum Konto (Container des Kindes, family.dart).
+    Directory? cache;
+    try {
+      final c = m.container;
+      cache =
+          (c == null
+                  ? ref.read(storageManagerProvider)
+                  : c.read(storageManagerProvider))
+              ?.getDocumentCacheDirectory();
+    } catch (_) {}
     await ref
         .read(authControllerProvider.notifier)
         .removeAccountAndContinue(account.localId);
@@ -207,20 +174,6 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
     if (s.isPermanentlyDenied) await openAppSettings();
     final now = await Permission.notification.status;
     if (mounted) setState(() => _permission = now);
-  }
-
-  Future<void> _pickTime(
-    TypedSettings shared,
-    String key,
-    List<int> cur,
-  ) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: cur[0], minute: cur[1]),
-    );
-    if (picked == null || !mounted) return;
-    shared.setJsonList(key, [picked.hour, picked.minute]);
-    setState(() {});
   }
 
   // ---- Termine abonnieren -----------------------------------------------------
@@ -288,542 +241,478 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
     );
   }
 
+  // ---- Kind -----------------------------------------------------------------
+
+  Widget _avatar(Kit k, FamilyMember m, double size) {
+    final photo = m.snapshot.photo;
+    final name = kidLabel(m.snapshot);
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: k.kid(m.colorIndex).accent,
+        shape: BoxShape.circle,
+      ),
+      child: photo != null
+          ? Image.memory(
+              photo,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+            )
+          : Text(
+              name.isEmpty ? '?' : name.characters.first,
+              style: k.avatarLetter.copyWith(color: k.p.card),
+            ),
+    );
+  }
+
+  /// Blatt je Kind (Entwurf 20.10.26 s2): Farbe, Klasse, Benutzerdaten,
+  /// Abmelden. Ursache: Konto, Klasse und Farbe standen vorher in drei
+  /// getrennten Bereichen und galten teils nur für das aktive Konto.
+  Future<void> _openKid(FamilyMember m, List<FamilyMember> kids) async {
+    final s = m.snapshot;
+    final teacher = s.session.accountTypeOrNull == AccountType.teacher;
+    final classTap = _classTap(m);
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Kit.of(context).p.card,
+      builder: (sheet) {
+        var color = m.colorIndex;
+        return StatefulBuilder(
+          builder: (sheet, setSheet) {
+            final k = Kit.of(sheet);
+            final t = sheet.t;
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, Sp.l),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: Sp.l),
+                      child: Row(
+                        children: [
+                          _avatar(
+                            k,
+                            FamilyMember(
+                              accountId: m.accountId,
+                              snapshot: s,
+                              colorIndex: color,
+                            ),
+                            Sz.avatar,
+                          ),
+                          const SizedBox(width: Sp.m),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(kidLabel(s), style: k.sheetTitle),
+                                Text(
+                                  [
+                                    ?_typeOf(t, s.session.accountTypeOrNull),
+                                    shortSchoolName(s.schoolName),
+                                  ].join(' · '),
+                                  style: k.cardMeta,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (kids.length > 1) ...[
+                      const SizedBox(height: Sp.l),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: Sp.l),
+                        child: Text(t.kidColor, style: k.planMeta(k.p.muted)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          Sp.l - Sp.xs,
+                          Sp.xs,
+                          Sp.l,
+                          Sp.xs,
+                        ),
+                        child: Row(
+                          children: [
+                            for (var c = 0; c < kidColorCount; c++)
+                              Semantics(
+                                selected: c == color,
+                                button: true,
+                                label: t.kidColorPick('${c + 1}'),
+                                child: InkWell(
+                                  customBorder: const CircleBorder(),
+                                  // Belegte Farbe: beide Kinder tauschen.
+                                  onTap: () {
+                                    final db = ref.read(lanisDatabaseProvider);
+                                    final next = pickKidColor(
+                                      {
+                                        for (final x in kids)
+                                          x.accountId:
+                                              x.accountId == m.accountId
+                                              ? color
+                                              : x.colorIndex,
+                                      },
+                                      m.accountId,
+                                      c,
+                                    );
+                                    for (final e in next.entries) {
+                                      storeKidColor(
+                                        TypedSettings.account(db, e.key),
+                                        e.value,
+                                      );
+                                    }
+                                    settingsRevision.value++;
+                                    setSheet(() => color = c);
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(Sp.xs),
+                                    child: Container(
+                                      width: Sz.buttonSmall,
+                                      height: Sz.buttonSmall,
+                                      decoration: BoxDecoration(
+                                        color: k.kid(c).accent,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: c == color
+                                          ? Icon(Icons.check, color: k.p.card)
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: Sp.s),
+                    if (!teacher)
+                      SettingsRow(
+                        icon: Icons.school_outlined,
+                        label: _classLabel(t, s),
+                        detail: _classSource(t, s),
+                        onTap: classTap == null
+                            ? null
+                            : () => Navigator.of(sheet).pop('class'),
+                      ),
+                    if (s.session.userData.isNotEmpty)
+                      SettingsRow(
+                        icon: Icons.badge_outlined,
+                        label: t.userData,
+                        detail: t.userDataDetail,
+                        onTap: () => Navigator.of(sheet).pop('data'),
+                      ),
+                    SettingsRow(
+                      icon: Icons.logout,
+                      label: t.logoutRemove,
+                      detail: t.logoutDetail,
+                      ink: k.p.cancel.ink,
+                      chevron: false,
+                      onTap: () => Navigator.of(sheet).pop('logout'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+    if (!mounted) return;
+    switch (action) {
+      case 'class':
+        classTap?.call();
+      case 'data':
+        _openUserData(s.session);
+      case 'logout':
+        await _logout(m);
+    }
+  }
+
+  static String _classLabel(ForkL10n t, LiveSnapshot s) {
+    final c = s.classChoice?.name ?? detectedClassName(s);
+    return c.isEmpty ? t.classUnknown : t.classLine(classLabel(c));
+  }
+
+  static String? _classSource(ForkL10n t, LiveSnapshot s) {
+    final own = s.classChoice;
+    if (own != null) return t.classManualUntil(classUntilLabel(own.until));
+    return detectedClassName(s).isEmpty ? null : t.classDetected;
+  }
+
+  // ---- Sprache ----------------------------------------------------------------
+
+  Future<void> _pickLanguage(String current) => showModalBottomSheet<void>(
+    context: context,
+    useRootNavigator: true,
+    showDragHandle: true,
+    backgroundColor: Kit.of(context).p.card,
+    builder: (sheet) {
+      final k = Kit.of(sheet);
+      final t = sheet.t;
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Sp.l, 0, Sp.l, Sp.s),
+              child: Text(t.language, style: k.sheetTitle),
+            ),
+            // Sprachnamen stehen in ihrer eigenen Sprache (so findet man die
+            // eigene auch in einer fremden Oberfläche); nur „Wie das Gerät“
+            // wird übersetzt.
+            for (final (v, l) in _languages(t))
+              SettingsChoiceRow(
+                label: l,
+                selected: current == v,
+                onTap: () {
+                  ref.read(languageProvider.notifier).set(v);
+                  Navigator.of(sheet).pop();
+                },
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Sp.l, Sp.s, Sp.l, Sp.l),
+              child: Text(t.languageNote, style: k.planMeta(k.p.muted)),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+
+  static List<(String, String)> _languages(ForkL10n t) => [
+    (languageSystem, t.likePhone),
+    ('de', 'Deutsch'),
+    ('en', 'English'),
+    ('tr', 'Türkçe'),
+  ];
+
+  // ---- Seite ------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final t = context.t;
-    final bottom = MediaQuery.paddingOf(context).bottom;
-    final session = ref.watch(sessionProvider).asData?.value;
     final account = ref.watch(activeAccountProvider);
-    final accountSettings = ref.watch(accountSpecificSettingsProvider);
     final shared = ref.watch(sharedOverAccountSettingsProvider);
     final supported = ref.watch(supportedAppletPhpUrlsProvider);
     final errors = ErrorLog.instance.records.length;
     final theme = ref.watch(themeSettingsProvider)['theme'] as String;
     final font = ref.watch(fontStepProvider);
     final language = ref.watch(languageProvider);
-
-    final name = session == null ? '' : _nameOf(session);
-    final type = _typeOf(t, account?.accountType ?? session?.accountTypeOrNull);
-    final allow = accountSettings?.getBool('notifications-allow') ?? true;
+    final db = ref.read(lanisDatabaseProvider);
     final granted = _permission?.isGranted ?? true;
-    final start = [
-      for (final v in shared.getJsonList('notifications-start-time') ?? [6, 0])
-        v as int,
-    ];
-    final end = [
-      for (final v in shared.getJsonList('notifications-end-time') ?? [21, 0])
-        v as int,
-    ];
-    String hm(List<int> v) => '${v[0]}:${v[1].toString().padLeft(2, '0')}';
-    bool area(String php) =>
-        accountSettings?.getBool('notification-$php') ?? true;
-    void setArea(String php, bool v) {
-      accountSettings?.setBool('notification-$php', v);
-      setState(() {});
-    }
 
+    // Kinder: die Familie (family.dart), ohne sie das aktive Konto.
     final members = FamilyData.of(context);
-    FamilyMember? activeMember;
-    for (final m in members) {
-      if (m.active) activeMember = m;
-    }
     final live = LiveData.of(context);
-    if (activeMember == null && live != null) {
-      activeMember = FamilyMember(
-        accountId: live.session.account.localId,
-        snapshot: live,
-        colorIndex: 0,
-      );
-    }
+    final kids = members.isNotEmpty
+        ? members
+        : [
+            if (live != null)
+              FamilyMember(
+                accountId: live.session.account.localId,
+                snapshot: live,
+                colorIndex: 0,
+              ),
+          ];
 
-    return Scaffold(
-      backgroundColor: k.p.bg,
-      body: SafeArea(
-        bottom: false,
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(Sp.page, Sp.m, Sp.page, bottom + Sp.xl),
+    // Benachrichtigungen: Schalter für alle Konten, Zusammenfassung.
+    final accounts = notifyAccounts(context, ref);
+    final allowed = [
+      for (final a in accounts)
+        if (TypedSettings.account(db, a.$1).getBool(notifyAllowKey) ?? true) a,
+    ];
+    bool anyArea(String php) => allowed.any(
+      (a) =>
+          a.$4.contains(php) &&
+          (TypedSettings.account(db, a.$1).getBool(notifyAreaKey(php)) ?? true),
+    );
+    final start = notifyTime(shared, notifyStartKey, const [6, 0]);
+    final end = notifyTime(shared, notifyEndKey, const [21, 0]);
+    final on = granted && allowed.isNotEmpty;
+    final summary = !on
+        ? t.notifyOff
+        : [
+            [
+              if (anyArea('vertretungsplan.php')) t.notifyShortSubs,
+              if (anyArea('nachrichten.php')) t.notifyShortMessages,
+            ].join(', '),
+            '${hourMinute(start)}–${hourMinute(end)}',
+          ].where((x) => x.isNotEmpty).join(' · ');
+
+    final langName =
+        {for (final (v, l) in _languages(t)) v: l}[language] ?? t.likePhone;
+
+    return SettingsScaffold(
+      title: t.settings,
+      children: [
+        SettingsSection(
+          title: t.sectionKids,
           children: [
-            Row(
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  icon: Icon(Icons.arrow_back, color: k.p.ink),
-                  tooltip: t.back,
-                ),
-                const SizedBox(width: Sp.xs),
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(t.settings, style: k.pageTitle),
-                  ),
-                ),
-              ],
-            ),
-
-            _Section(t.sectionAccount, [
-              if (account != null)
-                _Item(
-                  icon: Icons.person_outline,
-                  label: name.isEmpty ? account.username : name,
-                  detail: [
-                    ?type,
-                    shortSchoolName(account.schoolName),
-                  ].join(' · '),
-                  extra: _classDetail(t, activeMember?.snapshot),
-                  onTap: _classTap(activeMember),
-                ),
-              // Weitere Konten der Familienansicht (family.dart) – angemeldet
-              // und in Heute/Kalender sichtbar; Einstellungen hier gelten
-              // aber nur für das obere, aktive Konto.
-              for (final m in FamilyData.of(context))
-                if (!m.active)
-                  _Item(
-                    icon: Icons.person_outline,
-                    label: _nameOf(m.snapshot.session),
-                    detail: [
-                      ?_typeOf(t, m.snapshot.session.accountTypeOrNull),
-                      shortSchoolName(m.snapshot.schoolName),
-                    ].join(' · '),
-                    extra: _classDetail(t, m.snapshot),
-                    onTap: _classTap(m),
-                  ),
-              if (session != null && session.userData.isNotEmpty)
-                _Item(
-                  icon: Icons.badge_outlined,
-                  label: t.userData,
-                  detail: t.userDataDetail,
-                  onTap: () => _openUserData(session),
-                ),
-              _Item(
-                icon: Icons.switch_account_outlined,
-                label: t.switchAccount,
-                onTap: () => GoRouter.of(context).push('/accounts'),
-              ),
-              if (account != null)
-                _Item(
-                  icon: Icons.logout,
-                  label: t.logout,
-                  detail: t.logoutDetail,
-                  onTap: () => _logout(account),
-                ),
-            ]),
-
-            // Feste Farbe je Kind (kid_colors.dart, Wunsch 20.10.26); nur
-            // mit mehreren Kindern sinnvoll.
-            if (members.length > 1)
-              _Section(t.kidColorsTitle, [
-                for (final m in members)
-                  KidColorRow(
-                    name: kidLabel(m.snapshot),
-                    selected: m.colorIndex,
-                    // Belegte Farbe: die beiden Kinder tauschen (pickKidColor).
-                    onPick: (c) {
-                      final db = ref.read(lanisDatabaseProvider);
-                      final next = pickKidColor(
-                        {for (final x in members) x.accountId: x.colorIndex},
-                        m.accountId,
-                        c,
-                      );
-                      for (final e in next.entries) {
-                        storeKidColor(
-                          TypedSettings.account(db, e.key),
-                          e.value,
-                        );
-                      }
-                      settingsRevision.value++;
-                    },
-                  ),
-                Padding(
-                  padding: const EdgeInsets.only(left: Sp.xs),
-                  child: Text(t.kidColorsHint, style: k.planMeta(k.p.muted)),
-                ),
-              ]),
-
-            _Section(t.sectionNotifications, [
-              if (!granted)
-                _Item(
-                  icon: Icons.notifications_off_outlined,
-                  label: t.allowNotifications,
-                  detail: t.notificationsBlocked,
-                  onTap: _askPermission,
-                ),
-              _Switch(
-                label: t.sectionNotifications,
-                detail: t.forThisAccount,
-                value: allow && granted,
-                onChanged: granted
-                    ? (v) {
-                        accountSettings?.setBool('notifications-allow', v);
-                        setState(() {});
-                      }
-                    : null,
-              ),
-              if (supported.contains('vertretungsplan.php'))
-                _Switch(
-                  label: t.notifySubstitutions,
-                  detail: t.notifySubstitutionsDetail,
-                  value: area('vertretungsplan.php'),
-                  onChanged: allow && granted
-                      ? (v) => setArea('vertretungsplan.php', v)
-                      : null,
-                ),
-              if (supported.contains('nachrichten.php'))
-                _Switch(
-                  label: t.notifyMessages,
-                  value: area('nachrichten.php'),
-                  onChanged: allow && granted
-                      ? (v) => setArea('nachrichten.php', v)
-                      : null,
-                ),
-              _Item(
-                icon: Icons.schedule,
-                label: t.timeWindow,
-                detail: t.timeWindowDetail,
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextButton(
-                      onPressed: () =>
-                          _pickTime(shared, 'notifications-start-time', start),
-                      child: Text(hm(start), style: k.link),
-                    ),
-                    Text('–', style: k.meta),
-                    TextButton(
-                      onPressed: () =>
-                          _pickTime(shared, 'notifications-end-time', end),
-                      child: Text(hm(end), style: k.link),
-                    ),
-                  ],
-                ),
-              ),
-            ]),
-
-            _Section(t.sectionAppearance, [
-              for (final (v, l) in [
-                ('system', t.likePhone),
-                ('light', t.themeLight),
-                ('dark', t.themeDark),
-              ])
-                _Choice(
-                  label: l,
-                  selected: theme == v,
-                  onTap: () {
-                    shared.setString('theme', v);
-                    notifyThemeChanged(ref);
-                  },
-                ),
-              const SizedBox(height: Sp.s),
-              Padding(
-                padding: const EdgeInsets.only(left: Sp.xs, bottom: Sp.xs),
-                child: Text(t.fontSize, style: k.planMeta(k.p.muted)),
-              ),
-              for (final step in KitFontStep.values)
-                _Choice(
-                  label: switch (step) {
-                    KitFontStep.small => t.fontSmall,
-                    KitFontStep.normal => t.fontNormal,
-                    KitFontStep.large => t.fontLarge,
-                  },
-                  selected: step == font,
-                  onTap: () => ref.read(fontStepProvider.notifier).set(step),
-                ),
-              const SizedBox(height: Sp.s),
-              Padding(
-                padding: const EdgeInsets.only(left: Sp.xs, bottom: Sp.xs),
-                child: Text(t.language, style: k.planMeta(k.p.muted)),
-              ),
-              // Sprachnamen stehen in ihrer eigenen Sprache (so findet man
-              // die eigene auch in einer fremden Oberfläche); nur „Wie das
-              // Handy“ wird übersetzt.
-              for (final (v, l) in [
-                (languageSystem, t.likePhone),
-                ('de', 'Deutsch'),
-                ('en', 'English'),
-                ('tr', 'Türkçe'),
-              ])
-                _Choice(
-                  label: l,
-                  selected: language == v,
-                  onTap: () => ref.read(languageProvider.notifier).set(v),
-                ),
-              Padding(
-                padding: const EdgeInsets.only(left: Sp.xs, top: Sp.xs),
-                child: Text(t.languageNote, style: k.planMeta(k.p.muted)),
-              ),
-              const SizedBox(height: Sp.s),
-              // Profilfoto statt Anfangsbuchstabe (portal_extras.dart);
-              // wirkt sofort über settingsRevision (live_data.dart).
-              _Switch(
-                label: t.showPhotos,
-                detail: t.showPhotosDetail,
-                value: shared.getBool(showPhotosSetting) ?? true,
-                onChanged: (v) {
-                  shared.setBool(showPhotosSetting, v);
-                  settingsRevision.value++;
-                  setState(() {});
-                },
-              ),
-            ]),
-
-            _Section(t.sectionData, [
-              _Item(
-                icon: Icons.sync_alt,
-                label: t.transferTitle,
-                detail: t.transferDetail,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const TransferPage()),
-                ),
-              ),
-              if (supported.contains('kalender.php'))
-                _Item(
-                  icon: Icons.event_available_outlined,
-                  label: t.subscribeEvents,
-                  detail: t.subscribeEventsDetail,
-                  onTap: _calendarLink,
-                ),
-            ]),
-
-            _Section(t.sectionAbout, [
-              _Item(
-                icon: Icons.info_outline,
-                label: forkAppName,
+            for (final m in kids)
+              SettingsRow(
+                lead: _avatar(k, m, Sz.avatarSmall),
+                label: kidLabel(m.snapshot),
                 detail: [
-                  if (_version != null) t.versionValue(_version!),
-                  t.unofficial,
+                  ?_typeOf(t, m.snapshot.session.accountTypeOrNull),
+                  shortSchoolName(m.snapshot.schoolName),
+                  if (m.snapshot.session.accountTypeOrNull !=
+                      AccountType.teacher)
+                    _classLabel(t, m.snapshot),
                 ].join(' · '),
-                onTap: _tapVersion,
-                trailing: const SizedBox.shrink(),
+                onTap: () => _openKid(m, kids),
               ),
-              _Item(
-                icon: Icons.new_releases_outlined,
-                label: t.whatsNew,
-                onTap: () => _open(forkLatestReleaseUrl),
+            if (kids.isEmpty && account != null)
+              SettingsRow(
+                icon: Icons.person_outline,
+                label: account.username,
+                detail: shortSchoolName(account.schoolName),
               ),
-              _Item(
-                icon: Icons.privacy_tip_outlined,
-                label: t.privacy,
-                detail: t.privacyDetail,
-                onTap: () => _open(forkPrivacyPolicyUrl),
-              ),
-              _Item(
-                icon: Icons.code,
-                label: t.sourceLicense,
-                detail: t.sourceLicenseDetail(upstreamName),
-                onTap: () => _open(forkRepoUrl),
-              ),
-              _Item(
-                icon: Icons.article_outlined,
-                label: t.libraries,
-                onTap: () => showLicensePage(
-                  context: context,
-                  applicationName: forkAppName,
-                  applicationVersion: _version,
-                ),
-              ),
-            ]),
-
-            _Section(t.sectionDebug, [
-              if (errors > 0)
-                _Item(
-                  icon: Icons.error_outline,
-                  label: t.errorsFound(errors),
-                  detail: t.errorsFoundDetail,
-                  onTap: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const ErrorReportPage(),
-                      ),
-                    );
-                    if (mounted) setState(() {});
-                  },
-                )
-              else
-                _Item(
-                  icon: Icons.check_circle_outline,
-                  label: t.noErrors,
-                  detail: t.noErrorsDetail,
-                ),
-              if (_debugUnlocked)
-                _Item(
-                  icon: Icons.bug_report_outlined,
-                  label: t.debugExport,
-                  detail: t.debugExportWarning,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const DebugExport(),
-                    ),
-                  ),
-                ),
-            ]),
+            SettingsRow(
+              icon: Icons.person_add_alt,
+              label: t.switchAccount,
+              onTap: () => GoRouter.of(context).push('/accounts'),
+            ),
           ],
         ),
-      ),
-    );
-  }
-
-  Future<void> _open(String url) => safeLaunchUrl(
-    Uri.parse(url),
-    context: context,
-    mode: LaunchMode.externalApplication,
-  );
-}
-
-class _Section extends StatelessWidget {
-  const _Section(this.title, this.children);
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: Sp.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: Sp.xs, bottom: Sp.s),
-            child: Text(title, style: k.section),
-          ),
-          for (final c in children)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Sp.s),
-              child: c,
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Item extends StatelessWidget {
-  const _Item({
-    required this.icon,
-    required this.label,
-    this.detail,
-    this.extra,
-    this.onTap,
-    this.trailing,
-  });
-
-  final IconData icon;
-  final String label;
-  final String? detail;
-
-  /// Dritte Zeile (Klasse des Kindes).
-  final String? extra;
-  final VoidCallback? onTap;
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    return Material(
-      color: k.p.card,
-      borderRadius: BorderRadius.circular(Rad.signal),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(Rad.signal),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Sp.l, vertical: Sp.m),
-          child: Row(
-            children: [
-              Icon(icon, size: Sz.navIcon, color: k.p.ink),
-              const SizedBox(width: Sp.m),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(label, style: k.planSubject(k.p.ink)),
-                    if (detail != null && detail!.isNotEmpty)
-                      Text(detail!, style: k.planMeta(k.p.muted)),
-                    if (extra != null && extra!.isNotEmpty)
-                      Text(extra!, style: k.planMeta(k.p.muted)),
-                  ],
-                ),
+        SettingsSection(
+          title: t.sectionNotifications,
+          children: [
+            if (!granted)
+              SettingsRow(
+                icon: Icons.notifications_off_outlined,
+                label: t.allowNotifications,
+                detail: t.notificationsBlocked,
+                onTap: _askPermission,
               ),
-              ?trailing,
-              if (trailing == null && onTap != null)
-                Icon(Icons.chevron_right, size: Sz.icon, color: k.p.muted),
-            ],
-          ),
+            SettingsSwitchRow(
+              icon: Icons.notifications_outlined,
+              label: t.sectionNotifications,
+              detail: summary,
+              value: on,
+              onChanged: granted && accounts.isNotEmpty
+                  ? (v) => setState(() {
+                      for (final a in accounts) {
+                        TypedSettings.account(
+                          db,
+                          a.$1,
+                        ).setBool(notifyAllowKey, v);
+                      }
+                    })
+                  : null,
+            ),
+            SettingsRow(
+              icon: Icons.tune,
+              label: t.notifyWhatWhen,
+              onTap: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const NotifySettingsPage(),
+                  ),
+                );
+                if (mounted) setState(() {});
+              },
+            ),
+          ],
         ),
-      ),
-    );
-  }
-}
-
-class _Switch extends StatelessWidget {
-  const _Switch({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-    this.detail,
-  });
-
-  final String label;
-  final String? detail;
-  final bool value;
-  final ValueChanged<bool>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    return Material(
-      color: k.p.card,
-      borderRadius: BorderRadius.circular(Rad.signal),
-      child: SwitchListTile(
-        value: value,
-        onChanged: onChanged,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Rad.signal),
+        SettingsSection(
+          title: t.sectionAppearance,
+          children: [
+            SettingsSegmentsRow(
+              label: t.themeLabel,
+              labels: [t.themeSystemShort, t.themeLight, t.themeDark],
+              selected: const [
+                'system',
+                'light',
+                'dark',
+              ].indexOf(theme).clamp(0, 2),
+              onChanged: (i) {
+                shared.setString('theme', const ['system', 'light', 'dark'][i]);
+                notifyThemeChanged(ref);
+              },
+            ),
+            SettingsSegmentsRow(
+              label: t.fontSize,
+              labels: [t.fontSmall, t.fontNormal, t.fontLarge],
+              selected: KitFontStep.values.indexOf(font),
+              onChanged: (i) => ref
+                  .read(fontStepProvider.notifier)
+                  .set(KitFontStep.values[i]),
+            ),
+            SettingsRow(
+              icon: Icons.translate,
+              label: t.language,
+              detail: langName,
+              onTap: () => _pickLanguage(language),
+            ),
+            // Profilfoto statt Anfangsbuchstabe (portal_extras.dart); wirkt
+            // sofort über settingsRevision (live_data.dart).
+            SettingsSwitchRow(
+              icon: Icons.portrait_outlined,
+              label: t.showPhotos,
+              detail: t.showPhotosDetail,
+              value: shared.getBool(showPhotosSetting) ?? true,
+              onChanged: (v) {
+                shared.setBool(showPhotosSetting, v);
+                settingsRevision.value++;
+                setState(() {});
+              },
+            ),
+          ],
         ),
-        title: Text(
-          label,
-          style: k.planSubject(onChanged == null ? k.p.muted : k.p.ink),
+        SettingsSection(
+          title: t.sectionData,
+          children: [
+            SettingsRow(
+              icon: Icons.sync_alt,
+              label: t.transferTitle,
+              detail: t.transferDetail,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const TransferPage()),
+              ),
+            ),
+            if (supported.contains('kalender.php'))
+              SettingsRow(
+                icon: Icons.event_available_outlined,
+                label: t.subscribeEvents,
+                detail: t.subscribeEventsDetail,
+                onTap: _calendarLink,
+              ),
+          ],
         ),
-        subtitle: detail == null
-            ? null
-            : Text(detail!, style: k.planMeta(k.p.muted)),
-      ),
-    );
-  }
-}
-
-class _Choice extends StatelessWidget {
-  const _Choice({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    return Material(
-      color: selected ? k.kid(0).tint : k.p.card,
-      borderRadius: BorderRadius.circular(Rad.signal),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(Rad.signal),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Sp.l, vertical: Sp.m),
-          child: Row(
-            children: [
-              Expanded(child: Text(label, style: k.planSubject(k.p.ink))),
-              if (selected)
-                Icon(Icons.check, size: Sz.icon, color: k.kid(0).label),
-            ],
-          ),
+        SettingsSection(
+          title: t.sectionAbout,
+          children: [
+            if (errors > 0)
+              errorsRow(context, errors, () {
+                if (mounted) setState(() {});
+              }),
+            SettingsRow(
+              icon: Icons.info_outline,
+              label: forkAppName,
+              detail: t.aboutSummary,
+              onTap: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AboutSettingsPage(),
+                  ),
+                );
+                if (mounted) setState(() {});
+              },
+            ),
+          ],
         ),
-      ),
+      ],
     );
   }
 }
@@ -886,65 +775,6 @@ class _UserDataPage extends StatelessWidget {
                       Text(label(e.key), style: k.planMeta(k.p.muted)),
                       SelectableText(e.value, style: k.body),
                     ],
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-extension on String {
-  String ifEmpty(String other) => isEmpty ? other : this;
-}
-
-/// Kind mit den vier Farben zum Antippen; die gewählte mit Haken.
-class KidColorRow extends StatelessWidget {
-  const KidColorRow({
-    required this.name,
-    required this.selected,
-    required this.onPick,
-  });
-
-  final String name;
-  final int selected;
-  final ValueChanged<int> onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    final t = context.t;
-    return Material(
-      color: k.p.card,
-      borderRadius: BorderRadius.circular(Rad.signal),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Sp.l, vertical: Sp.s),
-        child: Row(
-          children: [
-            Expanded(child: Text(name, style: k.planSubject(k.p.ink))),
-            for (var c = 0; c < kidColorCount; c++)
-              Semantics(
-                selected: c == selected,
-                button: true,
-                label: t.kidColorPick('${c + 1}'),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: () => onPick(c),
-                  child: Padding(
-                    padding: const EdgeInsets.all(Sp.xs),
-                    child: Container(
-                      width: Sz.avatarSmall,
-                      height: Sz.avatarSmall,
-                      decoration: BoxDecoration(
-                        color: k.kid(c).accent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: c == selected
-                          ? Icon(Icons.check, size: Sz.icon, color: k.p.card)
-                          : null,
-                    ),
                   ),
                 ),
               ),

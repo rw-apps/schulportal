@@ -495,5 +495,15 @@
   "archiveForWhom": "Completed homework of …",
   "kidColorsTitle": "Children's colours",
   "kidColorsHint": "The colour applies throughout the app and is included when transferring your entries.",
-  "kidColorPick": "Colour {n}"
+  "kidColorPick": "Colour {n}",
+  "sectionKids": "Children",
+  "notifyWhatWhen": "What and when",
+  "notifyShortSubs": "Substitutions",
+  "notifyShortMessages": "Messages",
+  "notifyOff": "Off",
+  "themeLabel": "Theme",
+  "themeSystemShort": "Device",
+  "aboutSummary": "News, privacy, licences, troubleshooting",
+  "logoutRemove": "Sign out and remove",
+  "kidColor": "Colour"
 }

@@ -1318,5 +1318,15 @@
         "type": "String"
       }
     }
-  }
+  },
+  "sectionKids": "Kinder",
+  "notifyWhatWhen": "Was und wann",
+  "notifyShortSubs": "Vertretungen",
+  "notifyShortMessages": "Nachrichten",
+  "notifyOff": "Aus",
+  "themeLabel": "Design",
+  "themeSystemShort": "Wie Gerät",
+  "aboutSummary": "Neuigkeiten, Datenschutz, Lizenzen, Fehlersuche",
+  "logoutRemove": "Abmelden und entfernen",
+  "kidColor": "Farbe"
 }
