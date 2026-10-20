@@ -19,7 +19,7 @@ import '../plan/plan_model.dart';
 import '../live/family.dart';
 import '../../exams.dart';
 import '../today/today_from_lanis.dart' show weekItemsFromCalendar;
-import '../today/today_model.dart' show WeekItem, WeekKind;
+import '../today/today_model.dart' show WeekItem;
 import 'course_detail_model.dart';
 import 'course_detail_page.dart';
 import 'courses_model.dart';

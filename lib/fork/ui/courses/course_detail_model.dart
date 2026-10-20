@@ -3,7 +3,6 @@ import 'package:liblanis/liblanis.dart';
 
 import '../../data/course_rules.dart';
 import '../plan/plan_model.dart';
-import '../today/today_model.dart' show WeekItem, WeekKind;
 
 /// Auswertung der Kursseite (meinunterricht.php?a=sus_view) für die neue
 /// Ansicht (Entwurf 3, abgenommen 17.10.26). Reine Funktionen, damit sie
