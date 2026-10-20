@@ -583,10 +583,15 @@ class _NowPanel extends StatelessWidget {
     String title;
     String? meta;
 
+    // Innerhalb einer Angabe geschützte Leerzeichen: umbrochen wird nur
+    // zwischen Uhrzeit, Raum und Lehrkraft, nie mitten im Namen. Ursache
+    // (Rückmeldung 20.10.26): „Jan / Wolf“ stand auf zwei Zeilen. Grenze:
+    // Ist ein Name allein breiter als die Fläche, bricht Flutter ihn doch.
+    String keep(String v) => v.replaceAll(' ', '\u00A0');
     String details(DayLesson x) => [
-      hasTime(x) ? '${x.start}–${x.end}' : x.slot,
-      ?x.room,
-      ?x.teacher,
+      keep(hasTime(x) ? '${x.start}–${x.end}' : x.slot),
+      if (x.room != null) keep(x.room!),
+      if (x.teacher != null) keep(x.teacher!),
     ].join(' · ');
 
     switch (status.phase) {
@@ -772,9 +777,13 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final fg = strong ? k.p.onStrong : k.p.ink;
+    // Feiner Rahmen um die hellen Knöpfe (Rückmeldung 20.10.26: „Felder
+    // umrahmen“) – Grau auf Weiß hob sich bei Sonnenlicht kaum ab.
     return Material(
       color: strong ? k.p.strong : k.p.inset,
-      borderRadius: BorderRadius.circular(Rad.pill),
+      shape: StadiumBorder(
+        side: strong ? BorderSide.none : BorderSide(color: k.p.line),
+      ),
       child: InkWell(
         borderRadius: BorderRadius.circular(Rad.pill),
         onTap: onTap,
