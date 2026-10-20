@@ -43,6 +43,24 @@ abstract final class PortalRules {
   static const freeCategories = ['ferien', 'frei'];
   static final freeTitle = RegExp(r'ferien|unterrichtsfrei');
 
+  /// Titel, die NUR einen freien Tag benennen – für das Leeren des
+  /// Stundenplans (today_from_lanis.dart, freeDaysFrom), strenger als
+  /// [freeTitle]. Ursache: „Ferienbetreuung“ oder „Ferienspiele“ träfen
+  /// [freeTitle], sind aber kein schulfreier Tag. Real gesehen (Exporte
+  /// 16./17.10.26): „Ferien“, „Schöne Ferien“.
+  static final freeDayTitle = RegExp(
+    r'^\s*(schöne\s+)?([a-zäöü]*ferien|beweglicher ferientag|brückentag|'
+    r'unterrichtsfrei(er tag)?|schulfrei(er tag)?)\s*[!.]*\s*(\(.*\))?\s*$',
+    caseSensitive: false,
+  );
+
+  /// Nur ein Teil des Tages frei („Unterrichtsfrei ab 11:30 Uhr“, „nach
+  /// der 4. Stunde“): Der Stundenplan bleibt.
+  static final partialDay = RegExp(
+    r'\bab\s+\d|\bnach der\b|\bstunde\b|\buhr\b',
+    caseSensitive: false,
+  );
+
   /// Allgemeine Feier- und Gedenktage, die viele Schulkalender eintragen
   /// („Reformationstag“, „Allerheiligen“, „1. Advent“). Unter „Demnächst“
   /// ausgeblendet, im Kalender bleiben sie.

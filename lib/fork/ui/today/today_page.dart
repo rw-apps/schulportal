@@ -618,9 +618,11 @@ class _NowPanel extends StatelessWidget {
         title = t.schoolOverTitle;
         meta = t.lastLessonEnded(last.end);
       case DayPhase.noLessons:
+        // Schulfrei laut Kalender (ChildToday.freeLabel): „Schulfrei ·
+        // Herbstferien“ statt nur „Kein Unterricht“.
         label = upperFor(t, t.dayToday);
-        title = t.noLessons;
-        meta = null;
+        title = kid.freeLabel == null ? t.noLessons : t.kindFree;
+        meta = kid.freeLabel;
       case DayPhase.untimed:
         final x = l[status.next!];
         label = upperFor(t, t.todayFromSlot(x.slot));

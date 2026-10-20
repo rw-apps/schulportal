@@ -20,6 +20,7 @@ class CourseContext {
     this.colorSlot = 0,
     this.nextLesson,
     this.calendarExams = const [],
+    this.openHomework,
     this.lastMessages = const {},
     this.extraOffer = false,
   });
@@ -39,6 +40,23 @@ class CourseContext {
   /// Arbeiten aus dem Schulkalender (weekItemsFromCalendar); welche zu
   /// diesem Fach gehören, entscheidet nextExamOfSubject (exams.dart).
   final List<WeekItem> calendarExams;
+
+  /// Einträge (CurrentEntry.entryID) mit offener Hausaufgabe nach
+  /// homeworkLists (homework_ledger.dart) – dieselbe Einteilung wie die
+  /// Hausaufgabenliste, das Zeichen am Reiter und Heute. Null (Tests,
+  /// Vorschau): nur die Marke des Portals.
+  ///
+  /// Ursache (Prüfung 20.10.26): Die Kursseite las nur die Marke des
+  /// Portals. In der App Abgehaktes (bei Elternkonten immer so) blieb hier
+  /// offen, und ältere Einträge zählten als offen, obwohl die Liste nur den
+  /// neuesten je Kurs führt.
+  final Set<String>? openHomework;
+
+  bool homeworkOpen(CurrentEntry e) {
+    final h = e.homework;
+    if (h == null) return false;
+    return openHomework?.contains(e.entryID) ?? !h.homeWorkDone;
+  }
 
   /// Kürzel → neueste Unterhaltung mit dieser Lehrkraft (Datum wie im
   /// Portal, Öffnen).
@@ -401,6 +419,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                 for (final (i, g) in groups.indexed)
                   _TopicGroupView(
                     group: g,
+                    isOpen: widget.course.homeworkOpen,
                     tone: f,
                     first: i == 0,
                     open: _open.contains(i),
@@ -838,6 +857,7 @@ class _AttendanceBar extends StatelessWidget {
 class _TopicGroupView extends StatelessWidget {
   const _TopicGroupView({
     required this.group,
+    required this.isOpen,
     required this.tone,
     required this.first,
     required this.open,
@@ -846,6 +866,7 @@ class _TopicGroupView extends StatelessWidget {
   });
 
   final TopicGroup group;
+  final bool Function(CurrentEntry e) isOpen;
   final FachTone tone;
   final bool first;
   final bool open;
@@ -858,6 +879,7 @@ class _TopicGroupView extends StatelessWidget {
     final t = context.t;
     final from = group.from;
     final to = group.to;
+    final openCount = group.entries.where(isOpen).length;
     // Zeitraum kurz ohne Wochentag („13.10.–15.10.“), sonst brach die Zeile.
     final range = from == null
         ? null
@@ -897,10 +919,10 @@ class _TopicGroupView extends StatelessWidget {
                   ],
                 ),
               ),
-              if (group.openHomework > 0) ...[
+              if (openCount > 0) ...[
                 _Chip(
                   icon: Icons.menu_book_outlined,
-                  text: t.openCount(group.openHomework),
+                  text: t.openCount(openCount),
                   tone: k.p.change,
                 ),
                 const SizedBox(width: Sp.xs),
@@ -916,7 +938,11 @@ class _TopicGroupView extends StatelessWidget {
         if (open) ...[
           const SizedBox(height: Sp.m),
           for (final e in group.entries)
-            _EntryCard(entry: e, onOpenFile: onOpenFile),
+            _EntryCard(
+              entry: e,
+              homeworkOpen: isOpen(e),
+              onOpenFile: onOpenFile,
+            ),
         ],
       ],
     );
@@ -924,9 +950,16 @@ class _TopicGroupView extends StatelessWidget {
 }
 
 class _EntryCard extends StatelessWidget {
-  const _EntryCard({required this.entry, this.onOpenFile});
+  const _EntryCard({
+    required this.entry,
+    required this.homeworkOpen,
+    this.onOpenFile,
+  });
 
   final CurrentEntry entry;
+
+  /// Offen nach CourseContext.homeworkOpen; sonst als erledigt gezeigt.
+  final bool homeworkOpen;
   final void Function(FileInfo)? onOpenFile;
 
   @override
@@ -964,11 +997,9 @@ class _EntryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  hw.homeWorkDone
-                      ? Icons.check_circle
-                      : Icons.menu_book_outlined,
+                  homeworkOpen ? Icons.menu_book_outlined : Icons.check_circle,
                   size: Sz.icon,
-                  color: hw.homeWorkDone ? k.p.faint : k.p.change.ink,
+                  color: homeworkOpen ? k.p.change.ink : k.p.faint,
                 ),
                 const SizedBox(width: Sp.s),
                 Expanded(
@@ -976,9 +1007,9 @@ class _EntryCard extends StatelessWidget {
                     hw.description.trim().isEmpty
                         ? t.homeworkEntered
                         : hw.description.trim(),
-                    style: hw.homeWorkDone
-                        ? k.planMeta(k.p.faint)
-                        : k.boxStrong(k.p.change),
+                    style: homeworkOpen
+                        ? k.boxStrong(k.p.change)
+                        : k.planMeta(k.p.faint),
                   ),
                 ),
               ],

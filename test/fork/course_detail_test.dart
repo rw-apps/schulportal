@@ -68,7 +68,16 @@ void main() {
     final g = groupHistory(_lesson().history, noTopic: 'Ohne Thema');
     expect(g.map((x) => x.title), ['Unit 2', 'Unit 1', 'Ohne Thema']);
     expect(g.first.entries.length, 2);
-    expect(g.first.openHomework, 1);
+    // Offen nach der Hausaufgabenliste (homeworkLists), sonst Portal-Marke.
+    const portalOnly = CourseContext(title: 'E', fullName: 'E', teachers: []);
+    expect(g.first.entries.where(portalOnly.homeworkOpen).length, 1);
+    const ticked = CourseContext(
+      title: 'E',
+      fullName: 'E',
+      teachers: [],
+      openHomework: {},
+    );
+    expect(g.first.entries.where(ticked.homeworkOpen), isEmpty);
     expect(g.first.from, DateTime(2026, 10, 13));
     expect(g.first.to, DateTime(2026, 10, 15));
   });

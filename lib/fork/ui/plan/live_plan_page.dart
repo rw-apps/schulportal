@@ -4,7 +4,11 @@ import '../../l10n/l10n.dart';
 import '../live/family.dart';
 import '../live/live_data.dart';
 import '../today/today_from_lanis.dart'
-    show planWithSubstitutions, weekItemsFromCalendar, withCourseExams;
+    show
+        freeDaysFrom,
+        planWithSubstitutions,
+        weekItemsFromCalendar,
+        withCourseExams;
 import '../today/today_page.dart' show schoolWeek;
 import 'lesson_times_dialog.dart';
 import 'plan_page.dart';
@@ -43,13 +47,26 @@ class LiveCalendarPage extends StatelessWidget {
                   case final live?)
                 (m, live),
         ];
+        // Schulfreie Tage ab Montag dieser Woche (freeDaysFrom): Plan an
+        // diesen Tagen leer, Tagesansicht nennt den Grund.
+        final free = [
+          for (final (m, _) in shown)
+            m.snapshot.offers('kalender.php')
+                ? freeDaysFrom(
+                    m.snapshot.calendar.content ?? const [],
+                    schoolWeek(now).first,
+                    className: liveClassName(m.snapshot),
+                  )
+                : const <DateTime, String>{},
+        ];
         final plans = [
-          for (final (m, live) in shown)
+          for (final (i, (m, live)) in shown.indexed)
             planWithSubstitutions(
               plan: live.plan,
               days: m.snapshot.substitutions.content?.days ?? const [],
               week: schoolWeek(now),
               t: context.t,
+              free: free[i],
             ),
         ];
         final anyEvents = shown.any(
@@ -88,14 +105,16 @@ class LiveCalendarPage extends StatelessWidget {
           plans: plans,
           // Andere Wochen: derselbe Plan mit den Vertretungen jener Tage.
           plansForWeek: (w) => [
-            for (final (m, live) in shown)
+            for (final (i, (m, live)) in shown.indexed)
               planWithSubstitutions(
                 plan: live.plan,
                 days: m.snapshot.substitutions.content?.days ?? const [],
                 week: w,
                 t: context.t,
+                free: free[i],
               ),
           ],
+          freeDays: {for (var i = 0; i < free.length; i++) i: free[i]},
           now: now,
           // Gemeinsame Kindwahl aller Reiter (FamilyData.selectedAccount).
           selectedKid: () {

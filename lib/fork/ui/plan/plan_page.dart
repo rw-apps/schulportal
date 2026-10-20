@@ -33,6 +33,7 @@ class PlanPage extends StatefulWidget {
     this.selectedKid,
     this.onSelectKid,
     this.viewRequest,
+    this.freeDays = const {},
   });
 
   /// Ansicht, die von außen verlangt wird (Heute → „Alle Termine“ setzt
@@ -40,6 +41,11 @@ class PlanPage extends StatefulWidget {
   /// auf null. Ursache (Rückmeldung 18.10.26): Der Knopf öffnete den
   /// Kalender in der zuletzt gewählten Ansicht, oft „Tag“.
   final ValueNotifier<PlanView?>? viewRequest;
+
+  /// Schulfreie Tage je Kind (Index in [plans]) → Titel (freeDaysFrom);
+  /// die Tagesansicht nennt dann den Grund statt „kein Unterricht“. Die
+  /// Pläne selbst sind an diesen Tagen schon leer (planWithSubstitutions).
+  final Map<int, Map<DateTime, String>> freeDays;
 
   /// Von außen gewähltes Kind (Index in [plans], FamilyData); null = eigene
   /// Wahl der Seite.
@@ -493,6 +499,7 @@ class _PlanPageState extends State<PlanPage> {
               plan: _plan,
               day: _day,
               choice: _choice,
+              freeLabel: widget.freeDays[_kid]?[_week[_day]],
               now: _day == _todayIndex ? widget.now : null,
               onOpenGroup: _openGroupSheet,
               onOpenLesson: _openLesson,
@@ -782,10 +789,14 @@ class DayPlan extends StatelessWidget {
     this.onOpenLesson,
     this.now,
     this.onEditTimes,
+    this.freeLabel,
   });
 
   final KidPlan plan;
   final int day;
+
+  /// Schulfrei an diesem Tag („Herbstferien“), sonst null.
+  final String? freeLabel;
 
   /// Stundenzeiten eintragen/ändern (nur Schulen ohne Uhrzeiten); null =
   /// ohne Knopf.
@@ -809,7 +820,9 @@ class DayPlan extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.all(Sp.xl),
         child: Text(
-          context.t.noLessonsThisDay,
+          freeLabel == null
+              ? context.t.noLessonsThisDay
+              : '${context.t.kindFree} · $freeLabel',
           style: k.meta,
           textAlign: TextAlign.center,
         ),

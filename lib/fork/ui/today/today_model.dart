@@ -79,10 +79,15 @@ class ChildToday {
     this.mealHint,
     this.mensaUrl,
     this.photo,
+    this.freeLabel,
   });
 
   /// Profilfoto aus dem Portal (nur Schülerkonten, portal_extras.dart).
   final Uint8List? photo;
+
+  /// Heute schulfrei laut Kalender: Titel des Eintrags („Herbstferien“),
+  /// sonst null (freeDaysFrom in today_from_lanis.dart).
+  final String? freeLabel;
 
   final String firstName;
   final String school;

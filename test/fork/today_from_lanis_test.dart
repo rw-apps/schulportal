@@ -73,6 +73,7 @@ Substitution _sub(
   String stunde, {
   String? art,
   String? fach,
+  String? fachAlt,
   String? raum,
   String? raumAlt,
   String? lehrer,
@@ -84,6 +85,7 @@ Substitution _sub(
   stunde: stunde,
   art: art,
   fach: fach,
+  fach_alt: fachAlt,
   raum: raum,
   raum_alt: raumAlt,
   Lehrerkuerzel: lehrer,
@@ -226,6 +228,88 @@ void main() {
     );
     expect(r.today[0].change, ChangeKind.substitution);
     expect(r.today[0].changeDetail, 'Anna Alt fehlt');
+  });
+
+  test('Ausfall nur einer Stunde teilt die Doppelstunde (wie Kalender)', () {
+    final tuesday = DateTime(2026, 10, 20, 8);
+    final r = applySubstitutions(
+      t: de,
+      plan: plan,
+      choice: const {},
+      now: tuesday,
+      days: [
+        _day('20.10.2026', [
+          _sub('20.10.2026', '2', art: 'Entfall', fach: 'SP', lehrer: 'EEE'),
+        ]),
+      ],
+    );
+    expect(
+      [for (final l in r.today) l.slot],
+      ['1. Block', '2. Block', '3. Block'],
+    );
+    expect(r.today[0].change, isNull);
+    expect(r.today[1].cancelled, isTrue);
+    expect(r.changes.single.slot, '2. Block');
+    expect(r.changes.single.kind, ChangeKind.cancelled);
+  });
+
+  test('Fachwechsel: altes Fach trifft auch parallele Gruppen', () {
+    final week = [for (var i = 0; i < 5; i++) DateTime(2026, 10, 19 + i)];
+    final p = planWithSubstitutions(
+      t: de,
+      plan: plan,
+      week: week,
+      days: [
+        _day('19.10.2026', [
+          _sub(
+            '19.10.2026',
+            '2',
+            art: 'Vertretung',
+            fach: 'D',
+            fachAlt: 'TXT',
+            lehrer: 'CCC',
+            vertreter: 'FFF',
+          ),
+        ]),
+      ],
+    );
+    final mo2 = p.days[0][1].options;
+    expect(
+      mo2.firstWhere((o) => o.teacher == 'CCC').change,
+      ChangeKind.substitution,
+    );
+    expect(mo2.firstWhere((o) => o.teacher == 'DDD').change, isNull);
+  });
+
+  test('Zeilen ohne Stunde des Kindes: Zusatzstunde ja, fremder Ausfall '
+      'nein', () {
+    final r = applySubstitutions(
+      t: de,
+      plan: plan,
+      choice: const {'TXT': 'CCC'},
+      now: monday,
+      days: [
+        _day('19.10.2026', [
+          // 3. Block ist im Klassenplan leer: Ausfall von nichts entfällt,
+          // eine Zusatzstunde bleibt.
+          _sub('19.10.2026', '3', art: 'Entfall', fach: 'M'),
+          _sub(
+            '19.10.2026',
+            '3',
+            art: 'Vertretung',
+            fach: 'M',
+            vertreter: 'FFF',
+          ),
+          // Stunde passt zu keiner Zeile des Plans: bleibt (Zählweise
+          // unbekannt).
+          _sub('19.10.2026', '7', art: 'Entfall', fach: 'M'),
+        ]),
+      ],
+    );
+    expect(
+      [for (final c in r.changes) (c.slot, c.kind)],
+      [('3. Block', ChangeKind.substitution), ('7.', ChangeKind.cancelled)],
+    );
   });
 
   test('unbekannte Art gilt als Vertretung, nie als Ausfall', () {
@@ -460,6 +544,133 @@ void main() {
     );
     expect(normalizeMensaUrl('https://nutzer@bestellung.example.de'), isNull);
     expect(normalizeMensaUrl(''), isNull);
+  });
+
+  group('Schulfreie Tage (freeDaysFrom)', () {
+    final ferienCat = CalendarEventCategory(
+      id: 4,
+      colorArgb: 0,
+      name: 'Ferien/Schulfreie Tage',
+    );
+    final elternCat = CalendarEventCategory(
+      id: 15,
+      colorArgb: 0,
+      name: 'Eltern',
+    );
+    CalendarEvent ev(
+      String title,
+      DateTime a,
+      DateTime b, {
+      CalendarEventCategory? cat,
+      bool allDay = false,
+    }) => CalendarEvent(
+      startTime: a,
+      endTime: b,
+      secret: false,
+      id: title,
+      isNew: false,
+      public: true,
+      private: false,
+      allDay: allDay,
+      category: cat,
+      description: '',
+      title: title,
+    );
+    final now = DateTime(2026, 10, 1, 8);
+
+    test('Muster aus den Exporten: Ferien mit Uhrzeit, ganztägig mit '
+        'Kategorie', () {
+      final free = freeDaysFrom([
+        // Schule A: Titel „Ferien“, falsche Kategorie, Uhrzeiten.
+        ev(
+          'Ferien',
+          DateTime(2026, 10, 5, 11),
+          DateTime(2026, 10, 16, 12),
+          cat: elternCat,
+        ),
+      ], now);
+      expect(
+        free.length,
+        10,
+        reason: 'Mo 5.10. bis Fr 16.10., ohne Wochenende',
+      );
+      expect(free[DateTime(2026, 10, 5)], 'Ferien');
+      expect(free[DateTime(2026, 10, 16)], 'Ferien');
+      expect(free.containsKey(DateTime(2026, 10, 10)), isFalse);
+
+      final b = freeDaysFrom([
+        // Schule B: ganztägig, Ende 0 Uhr des Folgetags.
+        ev(
+          'Schöne Ferien',
+          DateTime(2026, 10, 5),
+          DateTime(2026, 10, 17),
+          cat: ferienCat,
+          allDay: true,
+        ),
+      ], now);
+      expect(b.keys.last, DateTime(2026, 10, 16));
+    });
+
+    test('kein freier Tag: Betreuung, halber Tag, Feiertag, andere Klasse', () {
+      final d = DateTime(2026, 10, 7);
+      final free = freeDaysFrom(
+        [
+          ev('Ferienbetreuung', d, d, allDay: true),
+          ev(
+            'Unterrichtsende nach der 3. Stunde',
+            d,
+            d,
+            cat: ferienCat,
+            allDay: true,
+          ),
+          ev('Unterrichtsfrei ab 11:30 Uhr', d, d, allDay: true),
+          ev('Reformationstag', d, d, cat: ferienCat, allDay: true),
+          ev('Unterrichtsfrei (10a)', d, d, allDay: true),
+          // Nur eine Stunde im Kalender, nicht ganztägig.
+          ev(
+            'Unterrichtsfrei',
+            DateTime(2026, 10, 8, 9),
+            DateTime(2026, 10, 8, 10),
+          ),
+        ],
+        now,
+        className: '9C',
+      );
+      expect(free, isEmpty);
+      expect(
+        freeDaysFrom([ev('Beweglicher Ferientag', d, d, allDay: true)], now),
+        {d: 'Beweglicher Ferientag'},
+      );
+    });
+
+    test('Heute und Kalender: am freien Tag kein Unterricht', () {
+      final mo = DateTime(2026, 10, 19);
+      final free = {mo: 'Herbstferien'};
+      final kid = childTodayFromLanis(
+        plan: plan,
+        choice: const {},
+        substitutions: [
+          _day('19.10.2026', [_sub('19.10.2026', '1', art: 'Entfall')]),
+        ],
+        now: monday,
+        school: 'S',
+        t: de,
+        free: free,
+      );
+      expect(kid.lessons, isEmpty);
+      expect(kid.changes, isEmpty);
+      expect(kid.freeLabel, 'Herbstferien');
+      final week = [for (var i = 0; i < 5; i++) DateTime(2026, 10, 19 + i)];
+      final p = planWithSubstitutions(
+        plan: plan,
+        days: const [],
+        week: week,
+        t: de,
+        free: free,
+      );
+      expect(p.days[0].every((c) => c.isEmpty), isTrue);
+      expect(p.days[1].any((c) => !c.isEmpty), isTrue);
+    });
   });
 
   group('forClass: nur sicher fremde Klassen ausblenden', () {

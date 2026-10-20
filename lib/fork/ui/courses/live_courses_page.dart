@@ -18,7 +18,8 @@ import '../messages/compose_page.dart';
 import '../plan/plan_model.dart';
 import '../live/family.dart';
 import '../../exams.dart';
-import '../today/today_from_lanis.dart' show weekItemsFromCalendar;
+import '../today/today_from_lanis.dart'
+    show freeDaysFrom, weekItemsFromCalendar;
 import '../today/today_model.dart' show WeekItem;
 import 'course_detail_model.dart';
 import 'course_detail_page.dart';
@@ -164,8 +165,18 @@ Widget liveCourseDetail(
   }
   final student = s.session.account.accountType == AccountType.student;
   final parser = ref.read(lessonsStudentParserProvider);
+  // Offene Hausaufgaben wie in der Liste (homeworkLists), nur dieses Kurses.
+  final hw = homeworkLists(
+    s.lessons.content ?? const <Lesson>[],
+    s.homework,
+    subjectOf: (_) => i.title,
+  );
   return CourseDetailPage(
     course: CourseContext(
+      openHomework: {
+        for (final h in hw.open)
+          if (h.course == i.id) h.entry,
+      },
       title: i.title,
       fullName: i.fullName,
       teachers: teachers,
@@ -178,6 +189,14 @@ Widget liveCourseDetail(
               i.title,
               codes,
               now,
+              free: s.offers('kalender.php')
+                  ? freeDaysFrom(
+                      s.calendar.content ?? const [],
+                      now,
+                      className: liveClassName(s),
+                      days: 22,
+                    )
+                  : const {},
             ),
       calendarExams: examCalendarOf(s, now),
       lastMessages: last,

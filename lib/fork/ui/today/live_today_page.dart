@@ -120,6 +120,9 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
       openHomework: liveOpenHomework(s),
       unreadMessages: liveUnreadMessages(s),
       photo: s.photo,
+      free: s.offers('kalender.php')
+          ? freeDaysFrom(events, now, className: className, days: 1)
+          : const {},
     );
   }
 

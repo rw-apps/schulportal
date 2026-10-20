@@ -51,9 +51,6 @@ class TopicGroup {
       .map((e) => e.topicDate)
       .nonNulls
       .fold<DateTime?>(null, (a, b) => a == null || b.isAfter(a) ? b : a);
-  int get openHomework => entries
-      .where((e) => e.homework != null && !e.homework!.homeWorkDone)
-      .length;
 }
 
 /// Verlauf nach Themen: aufeinanderfolgende Einträge mit gleichem
@@ -179,7 +176,9 @@ bool isExtraOffer(String fullName, {required bool inPlan}) =>
     CourseRules.extraOfferMarkers.any(fullName.toLowerCase().contains);
 
 /// Nächste Stunde des Kurses ab [now] (heute später oder an den folgenden
-/// sieben Tagen) laut Wochenplan mit Gruppenwahl.
+/// Tagen) laut Wochenplan mit Gruppenwahl; schulfreie Tage ([free],
+/// freeDaysFrom) zählen nicht. Gesucht wird drei Wochen voraus, damit nach
+/// zwei Wochen Ferien die erste Stunde danach erscheint.
 ///
 /// Grenze: Vertretungen und Ausfälle bleiben hier unberücksichtigt; die
 /// stehen in „Heute“ und im Kalender.
@@ -189,13 +188,14 @@ nextLessonOf(
   GroupChoice choice,
   String courseTitle,
   Set<String> teachers,
-  DateTime now,
-) {
+  DateTime now, {
+  Map<DateTime, String> free = const {},
+}) {
   final nowMin = now.hour * 60 + now.minute;
-  for (var add = 0; add < 8; add++) {
+  for (var add = 0; add < 22; add++) {
     final day = DateTime(now.year, now.month, now.day + add);
     final wd = day.weekday - 1;
-    if (wd > 4 || wd >= plan.days.length) continue;
+    if (wd > 4 || wd >= plan.days.length || free.containsKey(day)) continue;
     for (final b in dayBlocks(plan, wd, choice)) {
       final content = b.content;
       if (content is! ResolvedLesson) continue;

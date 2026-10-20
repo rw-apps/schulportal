@@ -48,6 +48,8 @@ DayLesson? _lessonOfBlock(ForkL10n t, KidPlan plan, DayBlock b) {
       end: end,
       room: lesson.room,
       teacher: plan.teacherFull(lesson.teacher),
+      change: lesson.change,
+      changeDetail: lesson.changeDetail,
     ),
     final ResolvedOpen open => DayLesson(
       slot: slot,
@@ -175,42 +177,87 @@ bool _concerns(Substitution s, PlanLesson? lesson) {
 }
 
 /// Der Plan mit den Vertretungen der angezeigten Woche ([week], Mo–Fr) –
-/// für Tag und Woche im Kalender.
+/// für Tag und Woche im Kalender, und (über [applySubstitutions]) für
+/// Heute, den Kasten „Morgen“, das „!“ am Reiter und die Hinweise.
 ///
 /// Ursache: Mit dem Wegfall der bisherigen Ansicht (Entscheidung 17.10.26)
-/// gab es den Vertretungsplan sonst nur noch auszugsweise in „Heute“. Die
-/// Zuordnung ist dieselbe wie dort (Stundennummer, Lehrkraft der Gruppe,
-/// classifySubstitution). Grenze: Bei offener Gruppenwahl („2 Gruppen –
-/// wählen“) wird die Zeile jeder passenden Gruppe angehängt; Tage außerhalb
-/// von [week] bleiben unberührt.
+/// gab es den Vertretungsplan sonst nur noch auszugsweise in „Heute“.
+/// Zuordnung je Stunde über die Stundennummer und die Lehrkraft der Gruppe
+/// (_concerns), Art über classifySubstitution. Grenze: Bei offener
+/// Gruppenwahl („2 Gruppen – wählen“) wird die Zeile jeder passenden Gruppe
+/// angehängt; Tage außerhalb von [week] bleiben unberührt.
+///
+/// [free]: schulfreie Tage (freeDaysFrom) – an ihnen bleibt der Tag leer.
 KidPlan planWithSubstitutions({
   required KidPlan plan,
   required List<SubstitutionDay> days,
   required List<DateTime> week,
   required ForkL10n t,
+  Map<DateTime, String> free = const {},
+}) => _overlay(plan: plan, days: days, week: week, t: t, free: free).plan;
+
+/// [planWithSubstitutions] samt den Zeilen, die keine Stunde des Plans
+/// trafen (für [applySubstitutions]).
+///
+/// Fach der Zeile: Es entscheidet nur zwischen parallelen Gruppen
+/// verschiedener Fächer (Religion/Ethik), und zwar Fach ODER altes Fach
+/// (Fachwechsel: „Fach“ ist das neue). Ursache (Prüfung 20.10.26): Bisher
+/// verlangte der Kalender, dass „Fach“ dem Kürzel im Plan gleicht – ein
+/// Fachwechsel fiel so durch, Heute zeigte ihn. Eine einzelne Stunde wird
+/// nie wegen des Fachs verworfen, weil unbelegt ist, ob Vertretungs- und
+/// Stundenplan dieselben Kürzel nutzen (Exporte 16./17.10.26 ohne Zeilen).
+({KidPlan plan, List<(DateTime, Substitution)> unmatched}) _overlay({
+  required KidPlan plan,
+  required List<SubstitutionDay> days,
+  required List<DateTime> week,
+  required ForkL10n t,
+  Map<DateTime, String> free = const {},
 }) {
-  if (days.isEmpty) return plan;
+  final unmatched = <(DateTime, Substitution)>[];
+  final freeIdx = [
+    for (var i = 0; i < week.length && i < plan.days.length; i++)
+      if (free.containsKey(DateTime(week[i].year, week[i].month, week[i].day)))
+        i,
+  ];
+  if (days.isEmpty && freeIdx.isEmpty) {
+    return (plan: plan, unmatched: unmatched);
+  }
   final out = [
     for (final d in plan.days) [for (final c in d) List.of(c.options)],
   ];
   String nameOf(String k) => plan.teacherFull(k) ?? k;
   var changed = false;
+  for (final i in freeIdx) {
+    for (final c in out[i]) {
+      c.clear();
+    }
+    changed = true;
+  }
   for (final d in days) {
     final date = DateTime(d.dateTime.year, d.dateTime.month, d.dateTime.day);
     final wd = week.indexWhere(
       (w) => w.year == date.year && w.month == date.month && w.day == date.day,
     );
-    if (wd < 0 || wd >= out.length) continue;
+    if (wd < 0 || wd >= out.length || freeIdx.contains(wd)) continue;
     for (final s in d.substitutions) {
       final hours = hoursOf(s.stunde);
-      final code = (_plain(s.fach) ?? _plain(s.fach_alt))?.toUpperCase();
+      final codes = {
+        for (final c in [_plain(s.fach), _plain(s.fach_alt)])
+          if (c != null) c.toUpperCase(),
+      };
+      var hit = false;
       for (var i = 0; i < plan.slots.length && i < out[wd].length; i++) {
         if (!hours.contains(slotNumber(plan.slots[i].label))) continue;
         final opts = out[wd][i];
         for (var j = 0; j < opts.length; j++) {
           final o = opts[j];
-          if (code != null && o.short.toUpperCase() != code) continue;
+          if (opts.length > 1 &&
+              codes.isNotEmpty &&
+              !codes.contains(o.short.toUpperCase())) {
+            continue;
+          }
           if (!_concerns(s, o)) continue;
+          hit = true;
           final c = classifySubstitution(
             s,
             t: t,
@@ -233,29 +280,48 @@ KidPlan planWithSubstitutions({
           changed = true;
         }
       }
+      if (!hit) unmatched.add((date, s));
     }
   }
-  if (!changed) return plan;
-  return KidPlan(
-    firstName: plan.firstName,
-    colorIndex: plan.colorIndex,
-    slots: plan.slots,
-    days: [
-      for (final d in out) [for (final o in d) PlanCell(o)],
-    ],
-    teacherNames: plan.teacherNames,
-    timed: plan.timed,
-    customTimes: plan.customTimes,
+  if (!changed) return (plan: plan, unmatched: unmatched);
+  return (
+    plan: KidPlan(
+      firstName: plan.firstName,
+      colorIndex: plan.colorIndex,
+      slots: plan.slots,
+      days: [
+        for (final d in out) [for (final o in d) PlanCell(o)],
+      ],
+      teacherNames: plan.teacherNames,
+      timed: plan.timed,
+      customTimes: plan.customTimes,
+    ),
+    unmatched: unmatched,
   );
 }
 
-/// Vertretungen eines Kindes: als [ChangeItem]s (Kasten, Wochenleiste) und
-/// für [today] eingearbeitet in die Abschnitte des Tages.
+/// Vertretungen eines Kindes: als [ChangeItem]s (Kasten, Wochenleiste,
+/// „!“, Hinweise) und für [today] eingearbeitet in die Abschnitte des Tages
+/// – beides aus dem überlagerten Plan wie im Kalender ([_overlay]).
 ///
-/// Zuordnung über die Stundennummer: „Stunde 2“ im Vertretungsplan = Zeile
-/// „2. Block“ im Stundenplan. Grenze: Zählt eine Schule im Vertretungsplan
-/// Einzelstunden, im Stundenplan aber Blöcke, verschiebt sich das – noch
-/// ungeprüft, an Schule A standen am 16.10.26 keine Vertretungen im Plan.
+/// Ursache (Prüfung 20.10.26): Bisher ordnete Heute eine Zeile dem ganzen
+/// Abschnitt zu, in dem ihre erste Stunde liegt. Fiel nur die 6. Stunde
+/// einer Doppelstunde 5–6 aus, galt auf Heute die ganze Doppelstunde als
+/// ausgefallen und das Schulende lag eine Stunde zu früh; der Kalender
+/// zeigte richtig nur die 6. Jetzt teilt dayBlocks die Doppelstunde
+/// (PlanLesson.sameAs vergleicht die Änderung mit).
+///
+/// Zeilen ohne passende Stunde des Kindes: Trifft die Stundennummer keine
+/// Zeile des Plans (Zählweise unbekannt), bleiben sie im Kasten – sonst
+/// ginge ein echter Ausfall verloren. Ist die Stunde im Klassenplan leer
+/// (Zusatz- oder verlegte Stunde), bleiben sie ohne Ausfall. Hat die
+/// Klasse dort Unterricht, aber nicht in der Gruppe des Kindes, betreffen
+/// sie ein anderes Kind und entfallen – bisher erschienen sie als Ausfall
+/// im Kasten, im „!“ und als Hinweis.
+///
+/// Grenze: Zählt eine Schule im Vertretungsplan Einzelstunden, im
+/// Stundenplan aber Blöcke, verschiebt sich die Zuordnung – noch
+/// ungeprüft, an Schule A standen bisher keine Vertretungen im Plan.
 ({List<ChangeItem> changes, List<DayLesson> today}) applySubstitutions({
   required KidPlan plan,
   required GroupChoice choice,
@@ -263,103 +329,99 @@ KidPlan planWithSubstitutions({
   required DateTime now,
   required ForkL10n t,
   String Function(String code)? subjectName,
+  Map<DateTime, String> free = const {},
 }) {
   final todayWd = now.weekday - 1;
   final todayDate = DateTime(now.year, now.month, now.day);
-  final todayBlocks = todayWd <= 4
-      ? dayBlocks(plan, todayWd, choice)
-      : <DayBlock>[];
-  final today = dayLessonsFor(plan, todayWd, choice, t: t);
-  // Abschnitt der Tagesliste je Block (ResolvedNone hat keinen Eintrag).
-  final todayIndex = <int, int>{};
-  var li = 0;
-  for (var b = 0; b < todayBlocks.length; b++) {
-    if (todayBlocks[b].content is ResolvedNone) continue;
-    todayIndex[b] = li++;
-  }
+  // Schulfrei (freeDaysFrom): kein Unterricht, keine Vertretungen.
+  var today = free.containsKey(todayDate)
+      ? const <DayLesson>[]
+      : dayLessonsFor(plan, todayWd, choice, t: t);
 
   final subjects = <String, String>{
     for (final d in plan.days)
       for (final c in d)
         for (final o in c.options) o.short.toUpperCase(): o.subject,
   };
-  String nameOf(String k) => plan.teacherFull(k) ?? k;
 
-  final changes = <ChangeItem>[];
+  final changes = <(DateTime, int, ChangeItem)>[];
   final seen = <String>{};
+  void add(int order, ChangeItem c) {
+    if (!seen.add('${c.day}|${c.slot}|${c.kind}|${c.detail}')) return;
+    changes.add((c.day, order, c));
+  }
+
   for (final d in days) {
     final date = DateTime(d.dateTime.year, d.dateTime.month, d.dateTime.day);
     final wd = date.weekday - 1;
-    final blocks = wd <= 4 ? dayBlocks(plan, wd, choice) : <DayBlock>[];
-    for (final s in d.substitutions) {
+    if (wd > 4 || wd >= plan.days.length || free.containsKey(date)) continue;
+    final week = [
+      for (var i = 0; i < 5; i++)
+        DateTime(date.year, date.month, date.day - wd + i),
+    ];
+    final o = _overlay(plan: plan, days: [d], week: week, t: t);
+    for (final b in dayBlocks(o.plan, wd, choice)) {
+      final changed = switch (b.content) {
+        ResolvedLesson(:final lesson) => [lesson],
+        ResolvedOpen(:final options) => options,
+        ResolvedNone() => const <PlanLesson>[],
+      }.where((l) => l.change != null);
+      for (final l in changed) {
+        add(
+          b.firstSlot,
+          ChangeItem(
+            day: date,
+            slot: blockLabel(o.plan, b),
+            subject: l.subject,
+            kind: l.change!,
+            detail: l.changeDetail,
+          ),
+        );
+      }
+    }
+    if (date == todayDate) today = dayLessonsFor(o.plan, wd, choice, t: t);
+
+    for (final (_, s) in o.unmatched) {
       final hours = hoursOf(s.stunde);
       final slotIdx = [
         for (var i = 0; i < plan.slots.length; i++)
           if (hours.contains(slotNumber(plan.slots[i].label))) i,
       ];
-      final bIdx = slotIdx.isEmpty
-          ? -1
-          : blocks.indexWhere(
-              (b) =>
-                  b.firstSlot <= slotIdx.first && slotIdx.first <= b.lastSlot,
-            );
-      final block = bIdx < 0 ? null : blocks[bIdx];
-      final lesson = switch (block?.content) {
-        ResolvedLesson(:final lesson) => lesson,
-        _ => null,
-      };
-      if (!_concerns(s, lesson)) continue;
       final c = classifySubstitution(
         s,
         t: t,
-        lessonRoom: lesson?.room,
-        lessonTeachers: KidPlan.kuerzelOf(lesson?.teacher),
-        nameOf: nameOf,
+        nameOf: (k) => plan.teacherFull(k) ?? k,
       );
+      if (slotIdx.isNotEmpty) {
+        final classHasLesson = slotIdx.any(
+          (i) => i < plan.days[wd].length && !plan.days[wd][i].isEmpty,
+        );
+        if (classHasLesson || c.kind == ChangeKind.cancelled) continue;
+      }
       final code = _plain(s.fach) ?? _plain(s.fach_alt) ?? '';
-      final subject =
-          lesson?.subject ??
-          subjects[code.toUpperCase()] ??
-          (code.isEmpty ? t.lessonFallback : (subjectName?.call(code) ?? code));
-      final slot = block != null
-          ? blockLabel(plan, block)
-          : (slotIdx.isNotEmpty
-                ? plan.slots[slotIdx.first].label
-                : '${s.stunde.trim()}.');
-      final key = '$date|$slot|${c.kind}|${c.detail}';
-      if (!seen.add(key)) continue;
-      changes.add(
+      add(
+        slotIdx.isEmpty ? 99 : slotIdx.first,
         ChangeItem(
           day: date,
-          slot: slot,
-          subject: subject,
+          slot: slotIdx.isNotEmpty
+              ? plan.slots[slotIdx.first].label
+              : '${s.stunde.trim()}.',
+          subject:
+              subjects[code.toUpperCase()] ??
+              (code.isEmpty
+                  ? t.lessonFallback
+                  : (subjectName?.call(code) ?? code)),
           kind: c.kind,
           detail: c.detail,
         ),
       );
-
-      if (date == todayDate && bIdx >= 0 && todayIndex[bIdx] != null) {
-        final i = todayIndex[bIdx]!;
-        final x = today[i];
-        // Ausfall schlägt alles; sonst gewinnt die erste Angabe.
-        if (x.change != null && c.kind != ChangeKind.cancelled) continue;
-        today[i] = DayLesson(
-          slot: x.slot,
-          subject: x.subject,
-          start: x.start,
-          end: x.end,
-          room: c.kind == ChangeKind.roomChange
-              ? (_plain(s.raum) ?? x.room)
-              : x.room,
-          teacher: x.teacher,
-          change: c.kind,
-          changeDetail: c.detail,
-        );
-      }
     }
   }
-  changes.sort((a, b) => a.day.compareTo(b.day));
-  return (changes: changes, today: today);
+  changes.sort((a, b) {
+    final d = a.$1.compareTo(b.$1);
+    return d != 0 ? d : a.$2.compareTo(b.$2);
+  });
+  return (changes: [for (final c in changes) c.$3], today: today);
 }
 
 /// Ein Kind für „Heute“.
@@ -378,6 +440,7 @@ ChildToday childTodayFromLanis({
   int openHomework = 0,
   int unreadMessages = 0,
   Uint8List? photo,
+  Map<DateTime, String> free = const {},
 }) {
   final r = applySubstitutions(
     plan: plan,
@@ -386,21 +449,26 @@ ChildToday childTodayFromLanis({
     now: now,
     t: t,
     subjectName: subjectName,
+    free: free,
   );
+  final freeLabel = free[DateTime(now.year, now.month, now.day)];
   return ChildToday(
     firstName: plan.firstName,
     school: school,
     className: className,
     colorIndex: plan.colorIndex,
     lessons: r.today,
-    periodsLabel: periodsLabelFor(plan, now.weekday - 1, choice, t: t),
+    periodsLabel: freeLabel != null
+        ? null
+        : periodsLabelFor(plan, now.weekday - 1, choice, t: t),
     changes: r.changes,
     canReportAbsence: canReportAbsence,
-    mealHint: mealHint,
+    mealHint: freeLabel != null ? null : mealHint,
     mensaUrl: mensaUrl,
     openHomework: openHomework,
     unreadMessages: unreadMessages,
     photo: photo,
+    freeLabel: freeLabel,
   );
 }
 
@@ -441,6 +509,67 @@ bool isMealNote(String title) => PortalRules.meal.hasMatch(title);
 bool isPlainHoliday(String title) => PortalRules.plainHoliday.hasMatch(
   title.toLowerCase().trim().replaceAll(RegExp(r'[\s!.:]+$'), ''),
 );
+
+/// Schulfreie Schultage (Mo–Fr) ab heute laut Schulkalender: Tag → Titel
+/// des Eintrags („Herbstferien“). Heute, Kalender und Kursseite leeren an
+/// diesen Tagen den Stundenplan (planWithSubstitutions, applySubstitutions,
+/// nextLessonOf).
+///
+/// Ursache (Prüfung 20.10.26): Freie Tage wirkten nirgends auf den Plan –
+/// in den Ferien zeigte Heute „Jetzt Mathe“, während „Demnächst“ schon
+/// „Schulfrei“ sagte.
+///
+/// Was zählt: Kategorie der Schule für Ferien/freie Tage
+/// (PortalRules.freeCategories) oder ein Titel, der nur den freien Tag
+/// nennt (PortalRules.freeDayTitle – „Ferienbetreuung“ zählt nicht);
+/// ganztägig oder über mehrere Tage; nicht nur für einen Teil des Tages
+/// (PortalRules.partialDay); für die eigene Klasse ([forClass]). Grenzen:
+/// Allgemeine Feiertage in der Ferien-Kategorie („Reformationstag“, an
+/// Schule B so eingetragen) zählen nicht – manche sind Schultage. Ein
+/// Ferieneintrag mit Uhrzeit über mehrere Tage (Schule A: 05.10. 11:00 bis
+/// 16.10. 12:00) gilt an allen seinen Tagen ganz.
+Map<DateTime, String> freeDaysFrom(
+  List<CalendarEvent> events,
+  DateTime now, {
+  String className = '',
+  int days = 400,
+}) {
+  DateTime dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
+  final today = dayOf(now);
+  final last = DateTime(today.year, today.month, today.day + days);
+  final out = <DateTime, String>{};
+  for (final e in events) {
+    final title = e.title.trim();
+    if (title.isEmpty) continue;
+    final cat = (e.category?.name ?? '').toLowerCase();
+    final named = PortalRules.freeDayTitle.hasMatch(title);
+    if (!named && !PortalRules.freeCategories.any(cat.contains)) continue;
+    if (!named && isPlainHoliday(title)) continue;
+    if (PortalRules.partialDay.hasMatch(title)) continue;
+    if (!forClass(title, className)) continue;
+    final a = dayOf(e.startTime);
+    var b = dayOf(e.endTime);
+    final endsAtMidnight = e.endTime.hour == 0 && e.endTime.minute == 0;
+    // Ganztägige Einträge enden oft um 0 Uhr des Folgetags (exklusiv).
+    if (endsAtMidnight && b.isAfter(a)) {
+      b = DateTime(b.year, b.month, b.day - 1);
+    }
+    final startsAtMidnight = e.startTime.hour == 0 && e.startTime.minute == 0;
+    final whole =
+        e.allDay ||
+        b.isAfter(a) ||
+        (startsAtMidnight && (endsAtMidnight || e.endTime.hour >= 23));
+    if (!whole) continue;
+    for (
+      var d = a.isBefore(today) ? today : a;
+      !d.isAfter(b) && !d.isAfter(last);
+      d = DateTime(d.year, d.month, d.day + 1)
+    ) {
+      if (d.weekday <= DateTime.friday) out.putIfAbsent(d, () => title);
+    }
+  }
+  return out;
+}
 
 /// Termine ab jetzt für die nächsten [days] Tage.
 ///
