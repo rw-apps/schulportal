@@ -485,5 +485,15 @@
   "electionText": "Voting happens in the school portal's voting tool.",
   "electionAction": "Open",
   "showPhotos": "Photos from the portal",
-  "showPhotosDetail": "The child's profile photo instead of the initial (student accounts only)"
+  "showPhotosDetail": "The child's profile photo instead of the initial (student accounts only)",
+  "allKids": "All children",
+  "openHomeworkCount": "{count, plural, =1{1 open homework} other{{count} open homework}}",
+  "examCount": "{count, plural, =1{1 test} other{{count} tests}}",
+  "upcomingExamsTitle": "Upcoming tests",
+  "noUpcomingExams": "No tests known for the coming weeks.",
+  "coursesAllHint": "Subjects, grades and course folders are shown per child – tap a name above.",
+  "archiveForWhom": "Completed homework of …",
+  "kidColorsTitle": "Children's colours",
+  "kidColorsHint": "The colour applies throughout the app and is included when transferring your entries.",
+  "kidColorPick": "Colour {n}"
 }

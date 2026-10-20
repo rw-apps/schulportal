@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'class_choice.dart' show classSetting;
+import 'kid_colors.dart' show kidColorSetting;
 import 'absences.dart' show absenceSentSetting, decodeSent, encodeSent;
 import 'homework_ledger.dart';
 import 'ui/live/live_data.dart'
@@ -29,6 +30,7 @@ const transferKeys = [
   homeworkLedgerSetting, // abgehakte Hausaufgaben
   absenceSentSetting, // gesendete Entschuldigungen
   classSetting, // eingetragene Klasse
+  kidColorSetting, // Farbe des Kindes
 ];
 
 /// Konto über Geräte hinweg: Schulnummer und Benutzername. Ursache: Die

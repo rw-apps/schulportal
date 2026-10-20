@@ -340,7 +340,12 @@ class _PreviewShellState extends State<PreviewShell> {
       ),
       ShellTab.calendar => LiveCalendarPage(viewRequest: _calendarView),
       // Je Kind getrennt; bei mehreren Konten mit Auswahl oben (family.dart).
-      ShellTab.courses => const FamilySwitch(child: LiveCoursesPage()),
+      // „Alle“ vorn (Entwurf 20.10.26): Hausaufgaben, Arbeiten, Fehlstunden
+      // aller Kinder; Fächer und Noten je Kind.
+      ShellTab.courses => FamilySwitch(
+        all: (context, members) => LiveAllCoursesPage(members: members),
+        child: const LiveCoursesPage(),
+      ),
       // „Alle“ vorn: Nachrichten aller Kinder in einer Liste (Wunsch 18.10.26).
       ShellTab.messages => FamilySwitch(
         all: (_, members) => LiveAllMessagesPage(members: members),

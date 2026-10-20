@@ -8,7 +8,6 @@ import 'package:lanis/applets/conversations/chat_pages.dart'
 import '../../l10n/l10n.dart';
 import '../kit.dart';
 import '../nav.dart';
-import '../kid_chips.dart';
 import '../live/family.dart';
 import '../live/live_data.dart';
 import 'compose_model.dart';
@@ -175,7 +174,11 @@ class LiveAllMessagesPage extends StatelessWidget {
           : () async {
               final m = withMessages.length == 1
                   ? withMessages.single
-                  : await _pickKid(context, withMessages);
+                  : await pickFamilyMember(
+                      context,
+                      withMessages,
+                      title: context.t.writeForWhom,
+                    );
               if (m == null || !context.mounted) return;
               await pushFullScreen<bool>(
                 context,
@@ -195,34 +198,4 @@ class LiveAllMessagesPage extends StatelessWidget {
   }
 
   /// Für welches Kind schreiben? Pillen wie oben in der Leiste.
-  static Future<FamilyMember?> _pickKid(
-    BuildContext context,
-    List<FamilyMember> members,
-  ) => showModalBottomSheet<FamilyMember>(
-    context: context,
-    useRootNavigator: true,
-    showDragHandle: true,
-    backgroundColor: Kit.of(context).p.card,
-    builder: (sheet) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(Sp.page, 0, Sp.page, Sp.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(sheet.t.writeForWhom, style: Kit.of(sheet).sheetTitle),
-            const SizedBox(height: Sp.m),
-            KidChips(
-              kids: [
-                for (final m in members)
-                  (name: kidLabel(m.snapshot), color: m.colorIndex),
-              ],
-              selected: -1,
-              onSelect: (i) => Navigator.of(sheet).pop(members[i]),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }

@@ -16,7 +16,10 @@ import '../live/live_data.dart';
 import '../messages/compose_model.dart';
 import '../messages/compose_page.dart';
 import '../plan/plan_model.dart';
-import '../today/today_from_lanis.dart' show weekItemsFromCalendar;
+import '../live/family.dart';
+import '../today/today_from_lanis.dart'
+    show weekItemsFromCalendar, withCourseExams;
+import '../today/today_model.dart' show WeekItem, WeekKind;
 import 'course_detail_model.dart';
 import 'course_detail_page.dart';
 import 'courses_model.dart';
@@ -117,7 +120,7 @@ class LiveCoursesPage extends ConsumerWidget {
           onRefresh: s.refresh,
           onOpen: (i) => pushInTab<void>(
             context,
-            (_) => _detail(context, ref, s, i, live, items),
+            (_) => liveCourseDetail(context, ref, s, i, live, items),
           ),
           onOpenAbsences: (id) => pushInTab<void>(
             context,
@@ -127,103 +130,252 @@ class LiveCoursesPage extends ConsumerWidget {
       },
     );
   }
+}
 
-  Widget _detail(
-    BuildContext context,
-    WidgetRef ref,
-    LiveSnapshot s,
-    CourseItem i,
-    ({KidPlan plan, GroupChoice auto})? live,
-    List<CourseItem> items,
-  ) {
-    final now = DateTime.now();
-    final codes = {...i.teacherCodes}..remove('');
-    final teachers = [
-      for (var n = 0; n < i.teachers.length; n++)
-        (n < i.teacherCodes.length ? i.teacherCodes[n] : '', i.teachers[n]),
-    ];
-    // Neueste Unterhaltung je Lehrkraft (Übersicht ist neueste zuerst).
-    final last = <String, (String, VoidCallback)>{};
-    for (final e in s.conversations.content ?? const <OverviewEntry>[]) {
-      final kz = e.shortName ?? '';
-      if (!codes.contains(kz) || last.containsKey(kz) || e.hidden) continue;
-      last[kz] = (
-        e.date,
-        () => pushInTab<void>(
-          context,
-          (_) => ConversationChatPage(id: e.id, title: e.title),
-        ),
-      );
-    }
-    final calendar = s.offers('kalender.php')
-        ? weekItemsFromCalendar(
-            s.calendar.content ?? const [],
-            now,
-            className: liveClassName(s),
-            days: 60,
+/// Kursseite eines Kurses mit Lehrkräften, Nachrichten und Terminen des
+/// Kontos [s] (auch aus der Ansicht „Alle“, im Rahmen des Kontos).
+Widget liveCourseDetail(
+  BuildContext context,
+  WidgetRef ref,
+  LiveSnapshot s,
+  CourseItem i,
+  ({KidPlan plan, GroupChoice auto})? live,
+  List<CourseItem> items,
+) {
+  final now = DateTime.now();
+  final codes = {...i.teacherCodes}..remove('');
+  final teachers = [
+    for (var n = 0; n < i.teachers.length; n++)
+      (n < i.teacherCodes.length ? i.teacherCodes[n] : '', i.teachers[n]),
+  ];
+  // Neueste Unterhaltung je Lehrkraft (Übersicht ist neueste zuerst).
+  final last = <String, (String, VoidCallback)>{};
+  for (final e in s.conversations.content ?? const <OverviewEntry>[]) {
+    final kz = e.shortName ?? '';
+    if (!codes.contains(kz) || last.containsKey(kz) || e.hidden) continue;
+    last[kz] = (
+      e.date,
+      () => pushInTab<void>(
+        context,
+        (_) => ConversationChatPage(id: e.id, title: e.title),
+      ),
+    );
+  }
+  final calendar = s.offers('kalender.php')
+      ? weekItemsFromCalendar(
+          s.calendar.content ?? const [],
+          now,
+          className: liveClassName(s),
+          days: 60,
+        )
+      : const [];
+  final student = s.session.account.accountType == AccountType.student;
+  final parser = ref.read(lessonsStudentParserProvider);
+  return CourseDetailPage(
+    course: CourseContext(
+      title: i.title,
+      fullName: i.fullName,
+      teachers: teachers,
+      colorSlot: i.colorSlot ?? 0,
+      nextLesson: live == null
+          ? null
+          : nextLessonOf(
+              live.plan,
+              effectiveChoice(live.auto, s.userChoice),
+              i.title,
+              codes,
+              now,
+            ),
+      exam: upcomingExamOf([...calendar], i.title, now),
+      lastMessages: last,
+      extraOffer: i.extra,
+    ),
+    load: ({required bool firstHalf}) => parser.getDetailedCourseView(
+      courseUrl(i.id, firstHalf: firstHalf),
+      force: true,
+    ),
+    onOpenAbsences: () => pushInTab<void>(
+      context,
+      (_) => LiveAbsencesPage(courses: items, focus: i.id),
+    ),
+    onWrite: s.offers('nachrichten.php')
+        // Eingabe-Seiten über der ganzen App (nav.dart, pushFullScreen).
+        ? (kz) => pushFullScreen<bool>(
+            context,
+            (_) => ComposePage(
+              candidates: candidatesFrom(s.lessons.content ?? const []),
+              backend: portalBackend(ref),
+              initialKuerzel: kz,
+            ),
           )
-        : const [];
-    final student = s.session.account.accountType == AccountType.student;
-    final parser = ref.read(lessonsStudentParserProvider);
-    return CourseDetailPage(
-      course: CourseContext(
-        title: i.title,
-        fullName: i.fullName,
-        teachers: teachers,
-        colorSlot: i.colorSlot ?? 0,
-        nextLesson: live == null
-            ? null
-            : nextLessonOf(
-                live.plan,
-                effectiveChoice(live.auto, s.userChoice),
-                i.title,
-                codes,
-                now,
-              ),
-        exam: upcomingExamOf([...calendar], i.title, now),
-        lastMessages: last,
-        extraOffer: i.extra,
-      ),
-      load: ({required bool firstHalf}) => parser.getDetailedCourseView(
-        courseUrl(i.id, firstHalf: firstHalf),
-        force: true,
-      ),
-      onOpenAbsences: () => pushInTab<void>(
-        context,
-        (_) => LiveAbsencesPage(courses: items, focus: i.id),
-      ),
-      onWrite: s.offers('nachrichten.php')
-          // Eingabe-Seiten über der ganzen App (nav.dart, pushFullScreen).
-          ? (kz) => pushFullScreen<bool>(
+        : null,
+    onOpenFile: (f) => fo.launchFile(
+      context,
+      fo.DownloadableFile(name: f.name, size: f.size, url: f.url),
+      () {},
+    ),
+    // Abgaben nur aus dem Schülerkonto und nur Adressen aus „Mein
+    // Unterricht“ (isLessonsUploadUrl, Sicherheitsprüfung 17.10.26) – die
+    // Seite lädt sie mit der Portal-Sitzung.
+    onOpenUpload: student
+        ? (u) {
+            if (!isLessonsUploadUrl(u.url.toString())) return;
+            pushFullScreen<void>(
               context,
-              (_) => ComposePage(
-                candidates: candidatesFrom(s.lessons.content ?? const []),
-                backend: portalBackend(ref),
-                initialKuerzel: kz,
+              (_) => UploadScreen(
+                url: u.url.toString(),
+                name: u.name,
+                status: u.status,
               ),
+            );
+          }
+        : null,
+  );
+}
+
+/// „Unterricht · Alle“ mit echten Daten aller Kinder (AllCoursesView).
+///
+/// Jede Aktion läuft im Rahmen des jeweiligen Kontos: Abhaken über dessen
+/// Parser und Stand, Kursseite und Abwesenheiten über FamilyMember.scope.
+/// Arbeiten wie in „Demnächst“ (Kalender und Kursmappen, withCourseExams),
+/// 60 Tage voraus. Grenze: Kursmappen-Arbeiten sind so aktuell wie die
+/// letzte Auswertung des Kontos (CourseScan).
+class LiveAllCoursesPage extends ConsumerWidget {
+  const LiveAllCoursesPage({super.key, required this.members});
+
+  final List<FamilyMember> members;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.t;
+    final now = DateTime.now();
+    final homework = <(DateTime, AllHomework)>[];
+    final exams = <AllExam>[];
+    final missing = <AllMissing>[];
+    final withDone = <FamilyMember>[];
+    var done = 0;
+    var loading = false;
+    final shown = [
+      for (final m in members)
+        if (m.snapshot.offers('meinunterricht.php')) m,
+    ];
+    for (final m in shown) {
+      final s = m.snapshot;
+      if (s.lessons.content == null && !s.lessons.failed) loading = true;
+      final kid = (name: kidLabel(s), color: m.colorIndex);
+      final live = s.offers('stundenplan.php') && s.timetable.content != null
+          ? livePlanOf(s)
+          : null;
+      final raw = courseItemsFrom(
+        s.lessons.content ?? const [],
+        ownNames: s.ownNames,
+        plan: live?.plan,
+      );
+      final byId = {for (final i in raw) i.id: i};
+      final hw = homeworkLists(
+        s.lessons.content ?? const <Lesson>[],
+        s.homework,
+        subjectOf: (l) => byId[l.courseID]?.title ?? courseTitle(l.name),
+      );
+      // Parser des Kontos lesen, solange die Seite steht (nav.dart, _once).
+      final c = m.container;
+      final parser = c == null
+          ? ref.read(lessonsStudentParserProvider)
+          : c.read(lessonsStudentParserProvider);
+      void toggle(HomeworkItem h, bool d) => setHomeworkDone(
+        s: s,
+        parser: parser,
+        item: h,
+        done: d,
+        t: t,
+        messenger: ScaffoldMessenger.maybeOf(context),
+      );
+      for (final h in hw.open) {
+        final course = byId[h.course];
+        homework.add((
+          h.given ?? DateTime(2000),
+          AllHomework(
+            item: h,
+            kid: kid,
+            onDone: () => toggle(h, true),
+            onReopen: () => toggle(h, false),
+            onOpen: course == null
+                ? null
+                : () => pushInTab<void>(
+                    context,
+                    (_) => m.scope(
+                      Consumer(
+                        builder: (c, r, _) =>
+                            liveCourseDetail(c, r, s, course, live, raw),
+                      ),
+                    ),
+                  ),
+          ),
+        ));
+      }
+      if (hw.done.isNotEmpty) {
+        done += hw.done.length;
+        withDone.add(m);
+      }
+      final calendar = s.offers('kalender.php')
+          ? weekItemsFromCalendar(
+              s.calendar.content ?? const [],
+              now,
+              className: liveClassName(s),
+              days: 60,
             )
-          : null,
-      onOpenFile: (f) => fo.launchFile(
-        context,
-        fo.DownloadableFile(name: f.name, size: f.size, url: f.url),
-        () {},
-      ),
-      // Abgaben nur aus dem Schülerkonto und nur Adressen aus „Mein
-      // Unterricht“ (isLessonsUploadUrl, Sicherheitsprüfung 17.10.26) – die
-      // Seite lädt sie mit der Portal-Sitzung.
-      onOpenUpload: student
-          ? (u) {
-              if (!isLessonsUploadUrl(u.url.toString())) return;
-              pushFullScreen<void>(
+          : const <WeekItem>[];
+      for (final w in withCourseExams(calendar, s.courseScan, now, days: 60)) {
+        if (w.kind != WeekKind.exam) continue;
+        exams.add(
+          AllExam(day: w.day, title: w.title, detail: w.time, kid: kid),
+        );
+      }
+      for (final i in raw.where((i) => i.missing > 0)) {
+        missing.add(
+          AllMissing(
+            item: i,
+            kid: kid,
+            onTap: () => pushInTab<void>(
+              context,
+              (_) => m.scope(LiveAbsencesPage(courses: raw, focus: i.id)),
+            ),
+          ),
+        );
+      }
+    }
+    homework.sort((a, b) => b.$1.compareTo(a.$1));
+    exams.sort((a, b) => a.day.compareTo(b.day));
+    Future<void> refreshAll() async {
+      for (final m in shown) {
+        await m.snapshot.refresh();
+      }
+    }
+
+    return AllCoursesView(
+      now: now,
+      homework: [for (final h in homework) h.$2],
+      exams: exams,
+      missing: missing,
+      doneCount: done,
+      loading: loading,
+      onRefresh: refreshAll,
+      onOpenArchive: withDone.isEmpty
+          ? null
+          : () async {
+              final m = withDone.length == 1
+                  ? withDone.single
+                  : await pickFamilyMember(
+                      context,
+                      withDone,
+                      title: t.archiveForWhom,
+                    );
+              if (m == null || !context.mounted) return;
+              await pushInTab<void>(
                 context,
-                (_) => UploadScreen(
-                  url: u.url.toString(),
-                  name: u.name,
-                  status: u.status,
-                ),
+                (_) => m.scope(const LiveHomeworkArchive()),
               );
-            }
-          : null,
+            },
     );
   }
 }

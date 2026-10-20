@@ -4,6 +4,9 @@ import '../../homework_ledger.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
 import '../segments.dart';
+import '../today/kind_icons.dart';
+import '../today/today_model.dart' show WeekKind;
+import '../today/today_page.dart' show relativeDay;
 import 'courses_model.dart';
 import 'grades_view.dart';
 
@@ -325,9 +328,12 @@ class _Section extends StatelessWidget {
 }
 
 class _HomeworkCard extends StatelessWidget {
-  const _HomeworkCard({required this.item, this.onTap, this.onDone});
+  const _HomeworkCard({required this.item, this.onTap, this.onDone, this.kid});
 
   final HomeworkItem item;
+
+  /// Kind (Ansicht „Alle“), null = ohne Zeile.
+  final KidTag? kid;
   final VoidCallback? onTap;
 
   /// Kreis links hakt ab; null = nur Anzeige.
@@ -375,6 +381,10 @@ class _HomeworkCard extends StatelessWidget {
                     children: [
                       Text(text, style: k.boxStrong(tone)),
                       Text(meta, style: k.planMeta(tone.ink)),
+                      if (kid != null) ...[
+                        const SizedBox(height: Sp.xxs),
+                        _KidLine(kid: kid!),
+                      ],
                     ],
                   ),
                 ),
@@ -389,9 +399,10 @@ class _HomeworkCard extends StatelessWidget {
 
 /// Fach mit unentschuldigten Fehlstunden; Antippen öffnet die Tage.
 class _MissingCard extends StatelessWidget {
-  const _MissingCard({required this.item, required this.onTap});
+  const _MissingCard({required this.item, required this.onTap, this.kid});
 
   final CourseItem item;
+  final KidTag? kid;
   final VoidCallback onTap;
 
   @override
@@ -420,6 +431,10 @@ class _MissingCard extends StatelessWidget {
                       t.absenceOpenHint(item.missing),
                       style: k.planMeta(tone.ink),
                     ),
+                    if (kid != null) ...[
+                      const SizedBox(height: Sp.xxs),
+                      _KidLine(kid: kid!),
+                    ],
                   ],
                 ),
               ),
@@ -580,6 +595,264 @@ class _Chip extends StatelessWidget {
           Icon(icon, size: Sz.icon - Sp.xs, color: tone.ink),
           const SizedBox(width: Sp.xs),
           Flexible(child: Text(text, style: k.planMeta(tone.ink))),
+        ],
+      ),
+    );
+  }
+}
+
+// ---- Ansicht „Alle“ ---------------------------------------------------------
+
+/// Kind an einem Eintrag der Ansicht „Alle“ (Name, Farbplatz).
+typedef KidTag = ({String name, int color});
+
+/// Punkt und Name in der Farbe des Kindes (wie bei Nachrichten).
+class _KidLine extends StatelessWidget {
+  const _KidLine({required this.kid});
+
+  final KidTag kid;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final c = k.kid(kid.color).accent;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: Sz.dot,
+          height: Sz.dot,
+          decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: Sp.xs + Sp.xxs),
+        Text(kid.name, style: k.tileKid(c)),
+      ],
+    );
+  }
+}
+
+class AllHomework {
+  const AllHomework({
+    required this.item,
+    required this.kid,
+    required this.onDone,
+    required this.onReopen,
+    this.onOpen,
+  });
+
+  final HomeworkItem item;
+  final KidTag kid;
+  final VoidCallback onDone;
+  final VoidCallback onReopen;
+  final VoidCallback? onOpen;
+}
+
+class AllExam {
+  const AllExam({
+    required this.day,
+    required this.title,
+    required this.kid,
+    this.detail,
+  });
+
+  final DateTime day;
+  final String title;
+  final String? detail;
+  final KidTag kid;
+}
+
+class AllMissing {
+  const AllMissing({
+    required this.item,
+    required this.kid,
+    required this.onTap,
+  });
+
+  final CourseItem item;
+  final KidTag kid;
+  final VoidCallback onTap;
+}
+
+/// „Unterricht“ über alle Kinder (Entwurf 20.10.26, abgenommen): offene
+/// Hausaufgaben, anstehende Arbeiten und unentschuldigte Fehlstunden, je
+/// Eintrag mit dem Kind. Fächer und Noten bleiben beim einzelnen Kind.
+///
+/// Ursache: Wer mehrere Kinder hat, will wissen, was diese Woche ansteht,
+/// ohne zwischen ihnen zu wechseln (Rückmeldung 20.10.26).
+class AllCoursesView extends StatelessWidget {
+  const AllCoursesView({
+    super.key,
+    required this.homework,
+    required this.exams,
+    required this.missing,
+    required this.now,
+    this.doneCount = 0,
+    this.onOpenArchive,
+    this.loading = false,
+    this.onRefresh,
+  });
+
+  final List<AllHomework> homework;
+  final List<AllExam> exams;
+  final List<AllMissing> missing;
+  final DateTime now;
+  final int doneCount;
+  final VoidCallback? onOpenArchive;
+  final bool loading;
+  final Future<void> Function()? onRefresh;
+
+  void _done(BuildContext context, AllHomework h) {
+    h.onDone();
+    final t = context.t;
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(t.homeworkMarkedDone),
+          action: SnackBarAction(label: t.undo, onPressed: h.onReopen),
+        ),
+      );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final t = context.t;
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    final meta = [
+      t.allKids,
+      t.openHomeworkCount(homework.length),
+      if (exams.isNotEmpty) t.examCount(exams.length),
+    ].join(' · ');
+    final view = ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(
+        Sp.page,
+        MediaQuery.paddingOf(context).top + Sp.xl,
+        Sp.page,
+        bottom + Sp.xl,
+      ),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: Sp.xs),
+          child: Text(t.navCourses, style: k.pageTitle),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: Sp.xs),
+          child: Text(meta, style: k.meta),
+        ),
+        _Section(
+          title: t.openHomeworkTitle,
+          trailing: doneCount > 0 && onOpenArchive != null
+              ? t.homeworkArchive(doneCount)
+              : null,
+          onTap: doneCount > 0 ? onOpenArchive : null,
+        ),
+        if (homework.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: Sp.xs),
+            child: Text(loading ? t.loading : t.noOpenHomework, style: k.meta),
+          ),
+        for (final h in homework)
+          Padding(
+            padding: const EdgeInsets.only(bottom: Sp.s),
+            child: _HomeworkCard(
+              item: h.item,
+              kid: h.kid,
+              onTap: h.onOpen,
+              onDone: () => _done(context, h),
+            ),
+          ),
+        _Section(title: t.upcomingExamsTitle),
+        if (exams.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: Sp.xs),
+            child: Text(t.noUpcomingExams, style: k.meta),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Sp.l,
+              vertical: Sp.xs,
+            ),
+            decoration: BoxDecoration(
+              color: k.p.card,
+              borderRadius: BorderRadius.circular(Rad.box),
+              boxShadow: k.cardShadow,
+            ),
+            child: Column(
+              children: [
+                for (final (i, e) in exams.indexed) ...[
+                  if (i > 0) Divider(height: 1, color: k.p.line),
+                  _ExamRow(exam: e, now: now),
+                ],
+              ],
+            ),
+          ),
+        if (missing.isNotEmpty) ...[
+          _Section(title: t.absencesTitle),
+          for (final m in missing)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Sp.s),
+              child: _MissingCard(item: m.item, kid: m.kid, onTap: m.onTap),
+            ),
+        ],
+        const SizedBox(height: Sp.xl),
+        Padding(
+          padding: const EdgeInsets.only(left: Sp.xs),
+          child: Text(t.coursesAllHint, style: k.meta),
+        ),
+      ],
+    );
+    final r = onRefresh;
+    return r == null ? view : RefreshIndicator(onRefresh: r, child: view);
+  }
+}
+
+/// Zeile wie in „Demnächst“ (today_page.dart, _UpcomingRow): Tag, Symbol,
+/// Fach und Art, rechts das Kind.
+class _ExamRow extends StatelessWidget {
+  const _ExamRow({required this.exam, required this.now});
+
+  final AllExam exam;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final t = context.t;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Sp.s + Sp.xxs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: Sz.slotColumn + Sp.l,
+            child: Text(relativeDay(t, exam.day, now), style: k.tileCaption),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: Sp.xxs, right: Sp.s),
+            child: Icon(
+              weekIcon(WeekKind.exam),
+              size: Sz.icon,
+              color: k.p.cancel.ink,
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(exam.title, style: k.tileTitle),
+                if (exam.detail != null && exam.detail!.isNotEmpty)
+                  Text(exam.detail!, style: k.planMeta(k.p.cancel.ink)),
+              ],
+            ),
+          ),
+          const SizedBox(width: Sp.s),
+          Padding(
+            padding: const EdgeInsets.only(top: Sp.xxs),
+            child: _KidLine(kid: exam.kid),
+          ),
         ],
       ),
     );

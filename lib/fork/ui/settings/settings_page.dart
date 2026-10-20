@@ -17,6 +17,7 @@ import 'package:lanis/view/settings/subsettings/debug_export.dart';
 
 import '../../calendar_subscribe.dart';
 import '../../class_choice.dart';
+import '../../kid_colors.dart';
 import '../../error_log.dart';
 import '../../l10n/l10n.dart';
 import '../font_step.dart';
@@ -408,6 +409,31 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
                   onTap: () => _logout(account),
                 ),
             ]),
+
+            // Feste Farbe je Kind (kid_colors.dart, Wunsch 20.10.26); nur
+            // mit mehreren Kindern sinnvoll.
+            if (members.length > 1)
+              _Section(t.kidColorsTitle, [
+                for (final m in members)
+                  KidColorRow(
+                    name: kidLabel(m.snapshot),
+                    selected: m.colorIndex,
+                    onPick: (c) {
+                      storeKidColor(
+                        TypedSettings.account(
+                          ref.read(lanisDatabaseProvider),
+                          m.accountId,
+                        ),
+                        c,
+                      );
+                      settingsRevision.value++;
+                    },
+                  ),
+                Padding(
+                  padding: const EdgeInsets.only(left: Sp.xs),
+                  child: Text(t.kidColorsHint, style: k.planMeta(k.p.muted)),
+                ),
+              ]),
 
             _Section(t.sectionNotifications, [
               if (!granted)
@@ -866,4 +892,59 @@ class _UserDataPage extends StatelessWidget {
 
 extension on String {
   String ifEmpty(String other) => isEmpty ? other : this;
+}
+
+/// Kind mit den vier Farben zum Antippen; die gewählte mit Haken.
+class KidColorRow extends StatelessWidget {
+  const KidColorRow({
+    required this.name,
+    required this.selected,
+    required this.onPick,
+  });
+
+  final String name;
+  final int selected;
+  final ValueChanged<int> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final t = context.t;
+    return Material(
+      color: k.p.card,
+      borderRadius: BorderRadius.circular(Rad.signal),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: Sp.l, vertical: Sp.s),
+        child: Row(
+          children: [
+            Expanded(child: Text(name, style: k.planSubject(k.p.ink))),
+            for (var c = 0; c < kidColorCount; c++)
+              Semantics(
+                selected: c == selected,
+                button: true,
+                label: t.kidColorPick('${c + 1}'),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => onPick(c),
+                  child: Padding(
+                    padding: const EdgeInsets.all(Sp.xs),
+                    child: Container(
+                      width: Sz.avatarSmall,
+                      height: Sz.avatarSmall,
+                      decoration: BoxDecoration(
+                        color: k.kid(c).accent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: c == selected
+                          ? Icon(Icons.check, size: Sz.icon, color: k.p.card)
+                          : null,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -5,6 +5,7 @@ import 'package:liblanis/liblanis.dart';
 import 'package:lanis/bridge/lanis_bootstrap.dart' show bootstrapOverrides;
 
 import '../../error_log.dart';
+import '../../kid_colors.dart';
 import '../../login_guard.dart';
 import '../../l10n/l10n.dart';
 import '../kid_chips.dart';
@@ -156,7 +157,19 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
   int? _selected;
 
   @override
+  void initState() {
+    super.initState();
+    // Farbe in den Einstellungen gewählt oder Eingaben übernommen.
+    settingsRevision.addListener(_onSettings);
+  }
+
+  void _onSettings() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    settingsRevision.removeListener(_onSettings);
     for (final id in [..._containers.keys]) {
       _drop(id);
     }
@@ -291,8 +304,21 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
     // (Bildschirmfoto 17.10.26). Auch nicht nach Ladereihenfolge.
     final ordered = [...accounts]
       ..sort((a, b) => a.localId.compareTo(b.localId));
-    for (final (i, a) in ordered.indexed) {
-      final color = i;
+    // Feste Farbe je Konto (kid_colors.dart); neue Konten bekommen die erste
+    // freie und behalten sie.
+    final db = ref.read(lanisDatabaseProvider);
+    final assigned = assignKidColors(
+      [for (final a in ordered) a.localId],
+      {
+        for (final a in ordered)
+          a.localId: storedKidColor(TypedSettings.account(db, a.localId)),
+      },
+    );
+    for (final e in assigned.fresh.entries) {
+      storeKidColor(TypedSettings.account(db, e.key), e.value);
+    }
+    for (final a in ordered) {
+      final color = assigned.colors[a.localId]!;
       if (a.localId == activeId) {
         if (main != null) {
           members.add(
@@ -456,3 +482,38 @@ String kidLabel(LiveSnapshot s) {
   final n = s.firstName.trim();
   return n.isNotEmpty ? n : s.schoolName;
 }
+
+/// Kind wählen (Blatt von unten mit den Kind-Pillen), null = abgebrochen.
+/// Gemeinsam für „Alle“-Ansichten (Nachrichten: Schreiben, Unterricht:
+/// Archiv), die eine Aktion nur für ein Konto ausführen können.
+Future<FamilyMember?> pickFamilyMember(
+  BuildContext context,
+  List<FamilyMember> members, {
+  required String title,
+}) => showModalBottomSheet<FamilyMember>(
+  context: context,
+  useRootNavigator: true,
+  showDragHandle: true,
+  backgroundColor: Kit.of(context).p.card,
+  builder: (sheet) => SafeArea(
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(Sp.page, 0, Sp.page, Sp.xl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: Kit.of(sheet).sheetTitle),
+          const SizedBox(height: Sp.m),
+          KidChips(
+            kids: [
+              for (final m in members)
+                (name: kidLabel(m.snapshot), color: m.colorIndex),
+            ],
+            selected: -1,
+            onSelect: (i) => Navigator.of(sheet).pop(members[i]),
+          ),
+        ],
+      ),
+    ),
+  ),
+);

@@ -485,5 +485,15 @@
   "electionText": "Oylama okul portalının oylama aracında yapılır.",
   "electionAction": "Aç",
   "showPhotos": "Portaldaki fotoğraflar",
-  "showPhotosDetail": "Baş harf yerine çocuğun profil fotoğrafı (yalnızca öğrenci hesapları)"
+  "showPhotosDetail": "Baş harf yerine çocuğun profil fotoğrafı (yalnızca öğrenci hesapları)",
+  "allKids": "Tüm çocuklar",
+  "openHomeworkCount": "{count, plural, =1{1 açık ödev} other{{count} açık ödev}}",
+  "examCount": "{count, plural, =1{1 sınav} other{{count} sınav}}",
+  "upcomingExamsTitle": "Yaklaşan sınavlar",
+  "noUpcomingExams": "Önümüzdeki haftalar için bilinen sınav yok.",
+  "coursesAllHint": "Dersler, notlar ve ders dosyaları her çocukta ayrı gösterilir – yukarıdan seçin.",
+  "archiveForWhom": "Tamamlanan ödevler …",
+  "kidColorsTitle": "Çocukların renkleri",
+  "kidColorsHint": "Renk uygulamanın her yerinde geçerlidir ve girişler aktarılırken birlikte taşınır.",
+  "kidColorPick": "Renk {n}"
 }

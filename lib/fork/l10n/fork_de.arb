@@ -1287,5 +1287,36 @@
   "electionText": "Abstimmen geht im Wahltool des Schulportals.",
   "electionAction": "Öffnen",
   "showPhotos": "Fotos aus dem Portal",
-  "showPhotosDetail": "Profilfoto des Kindes statt Anfangsbuchstabe (nur Schülerkonten)"
+  "showPhotosDetail": "Profilfoto des Kindes statt Anfangsbuchstabe (nur Schülerkonten)",
+  "allKids": "Alle Kinder",
+  "openHomeworkCount": "{count, plural, =1{1 offene Hausaufgabe} other{{count} offene Hausaufgaben}}",
+  "@openHomeworkCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "examCount": "{count, plural, =1{1 Arbeit} other{{count} Arbeiten}}",
+  "@examCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "upcomingExamsTitle": "Anstehende Arbeiten",
+  "noUpcomingExams": "Keine Arbeiten in den nächsten Wochen bekannt.",
+  "coursesAllHint": "Fächer, Noten und Kursmappen stehen beim einzelnen Kind – oben antippen.",
+  "archiveForWhom": "Erledigte Hausaufgaben von …",
+  "kidColorsTitle": "Farben der Kinder",
+  "kidColorsHint": "Die Farbe gilt überall in der App und wird beim Übertragen der Eingaben mitgenommen.",
+  "kidColorPick": "Farbe {n}",
+  "@kidColorPick": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  }
 }
