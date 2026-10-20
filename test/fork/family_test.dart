@@ -144,4 +144,48 @@ void main() {
     expect(find.text('Seite'), findsOneWidget);
     expect(builds, 1);
   });
+
+  testWidgets('im Rahmen geöffnete Seite sieht den neuen Stand', (t) async {
+    // Ursache (Rückmeldung 20.10.26): Archiv blieb nach „Wieder offen“
+    // beim Stand vom Öffnen.
+    final a = _snap(1, 'Anna', 'Schule A');
+    final b1 = _snap(2, 'Ben', 'Schule B');
+    final b2 = _snap(2, 'Bernd', 'Schule B');
+    late BuildContext ctx;
+    Widget app(LiveSnapshot b) => MaterialApp(
+      home: LiveData(
+        snapshot: a,
+        child: FamilyData(
+          members: [
+            FamilyMember(accountId: 1, snapshot: a, colorIndex: 0),
+            FamilyMember(accountId: 2, snapshot: b, colorIndex: 1),
+          ],
+          // Wie in der App: Navigator des Reiters unter FamilyData
+          // (preview_shell.dart, FamilyScope über _TabNavigator).
+          child: Navigator(
+            onGenerateRoute: (_) => MaterialPageRoute<void>(
+              builder: (c) {
+                ctx = c;
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await t.pumpWidget(app(b1));
+    final member = FamilyData.of(ctx).last;
+    Navigator.of(ctx).push(
+      MaterialPageRoute<void>(
+        builder: (_) => member.scope(
+          Builder(builder: (c) => Text('Stand ${LiveData.of(c)!.firstName}')),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    expect(find.text('Stand Ben'), findsOneWidget);
+    await t.pumpWidget(app(b2));
+    await t.pumpAndSettle();
+    expect(find.text('Stand Bernd'), findsOneWidget);
+  });
 }

@@ -35,6 +35,7 @@ enum DebugExportPresetId {
   conversations,
   elections,
   profile,
+  submissions,
 }
 
 /// Built request ready for [Dio.request].
@@ -430,6 +431,20 @@ final debugExportPresets = <DebugExportPreset>[
     label: (l) => l.debugExportPresetElections,
     buildSections: (_) =>
         _single(DebugExportPresetId.elections, _get('wahl.php')),
+  ),
+  // Fork (Wunsch 20.10.26, Abgaben in der App): Seite „Abgaben“ von Mein
+  // Unterricht, nur GET. Ursache: Die Übersicht liefert keine Abgaben
+  // (liblanis: uploads: const []), die Kursseiten nur die an einzelnen
+  // Einträgen; der Aufbau der Sammelseite fehlte. Grenze: Ohne offene Abgabe
+  // zeigt sie nur die leere Liste.
+  DebugExportPreset(
+    id: DebugExportPresetId.submissions,
+    modulePhp: 'meinunterricht.php',
+    label: (l) => l.debugExportPresetSubmissions,
+    buildSections: (_) => _single(
+      DebugExportPresetId.submissions,
+      _get('meinunterricht.php?a=sus_abgaben'),
+    ),
   ),
   DebugExportPreset(
     id: DebugExportPresetId.profile,

@@ -474,6 +474,7 @@
   "unknownUploadError": "Bilinmeyen yükleme hatası",
   "addFile": "Dosya ekle",
   "debugExportPresetElections": "Seçimler (oylama aracı, yalnızca görüntüleme)",
+  "debugExportPresetSubmissions": "Teslimler (derslerim, yalnızca görüntüleme)",
   "debugExportPresetProfile": "Profil (fotoğraf, otomatik girişler, yalnızca görüntüleme)",
   "debugExportPresetDataStorageFolders": "Dosya deposu: klasörler (yalnızca görüntüleme)"
 }

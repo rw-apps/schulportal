@@ -431,6 +431,7 @@
   "unknownUploadError": "Unbekannter Fehler beim Hochladen",
   "addFile": "Datei hinzufügen",
   "debugExportPresetElections": "Wahlen (Wahltool, nur Ansicht)",
+  "debugExportPresetSubmissions": "Abgaben (Mein Unterricht, nur Ansicht)",
   "debugExportPresetProfile": "Profil (Foto, automatische Anmeldungen, nur Ansicht)",
   "debugExportPresetDataStorageFolders": "Dateispeicher: Ordner (nur Ansicht)"
 }

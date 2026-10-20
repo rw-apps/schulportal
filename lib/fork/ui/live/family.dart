@@ -35,10 +35,27 @@ class FamilyMember {
   /// Seiten (Unterricht, Nachrichten, Krankmeldung, Kursseite, Unterhaltung)
   /// lesen Parser und Sitzung über `ref` und den Stand über [LiveData]; mit
   /// diesem Rahmen arbeiten sie unverändert für jedes Konto.
+  ///
+  /// Der Stand kommt bei jedem Aufbau neu aus [FamilyData] (dasselbe Konto
+  /// über [accountId]), nicht der beim Öffnen. Ursache (Rückmeldung
+  /// 20.10.26): Eine so geöffnete Seite – Archiv „Erledigte Hausaufgaben“,
+  /// Kursseite – behielt den Stand vom Öffnen; nach „Wieder offen“ blieb die
+  /// Zeile stehen, obwohl gespeichert war. Grenze: Ohne [FamilyData] über
+  /// der Seite (Vollbild über dem Navigator der App) bleibt es beim Stand
+  /// vom Öffnen.
   Widget scope(Widget child) {
-    final data = LiveData(
-      snapshot: snapshot,
-      child: _MemberMarker(member: this, child: child),
+    final data = Builder(
+      builder: (context) {
+        final current =
+            FamilyData.of(
+              context,
+            ).where((m) => m.accountId == accountId).firstOrNull ??
+            this;
+        return LiveData(
+          snapshot: current.snapshot,
+          child: _MemberMarker(member: current, child: child),
+        );
+      },
     );
     final c = container;
     return c == null
