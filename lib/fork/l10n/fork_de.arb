@@ -1248,7 +1248,7 @@
     }
   },
   "classPromptText": "Bis zum Eintrag zeigt die App alle Termine der Schule.",
-  "classPromptAction": "Klasse eintragen",
+  "classPromptAction": "Eintragen",
   "classManualShort": "eingetragen",
   "storageTitle": "Dateien der Schule",
   "storageDetail": "Elternbriefe, Formulare und Unterlagen aus dem Dateispeicher",
@@ -1284,8 +1284,8 @@
     }
   },
   "electionTitlePlain": "Im Schulportal ist eine Wahl offen",
-  "electionText": "Gewählt wird im Wahltool des Schulportals – am besten bald, solange die Wahl läuft.",
-  "electionAction": "Im Schulportal öffnen",
+  "electionText": "Abstimmen geht im Wahltool des Schulportals.",
+  "electionAction": "Öffnen",
   "showPhotos": "Fotos aus dem Portal",
   "showPhotosDetail": "Profilfoto des Kindes statt Anfangsbuchstabe (nur Schülerkonten)"
 }

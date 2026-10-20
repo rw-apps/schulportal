@@ -467,7 +467,7 @@
   "classOnbHint": "Sınıf bilgisiyle uygulama yalnızca diğer sınıfları ilgilendiren etkinlikleri gizler.",
   "classPromptTitle": "Yeni okul yılı: {name} hangi sınıfta?",
   "classPromptText": "Girilene kadar uygulama okulun tüm etkinliklerini gösterir.",
-  "classPromptAction": "Sınıfı gir",
+  "classPromptAction": "Gir",
   "classManualShort": "girildi",
   "storageTitle": "Okul dosyaları",
   "storageDetail": "Dosya deposundan mektuplar, formlar ve belgeler",
@@ -482,8 +482,8 @@
   "storageNoticeTitleFor": "{name} için yeni okul dosyası",
   "electionTitle": "{name} için açık bir seçim var",
   "electionTitlePlain": "Okul portalında açık bir seçim var",
-  "electionText": "Oylama okul portalının oylama aracında yapılır – açıkken bir an önce yapın.",
-  "electionAction": "Okul portalında aç",
+  "electionText": "Oylama okul portalının oylama aracında yapılır.",
+  "electionAction": "Aç",
   "showPhotos": "Portaldaki fotoğraflar",
   "showPhotosDetail": "Baş harf yerine çocuğun profil fotoğrafı (yalnızca öğrenci hesapları)"
 }

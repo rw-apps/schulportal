@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import 'kind_icons.dart';
 import 'today_model.dart';
 
 DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
@@ -299,10 +300,10 @@ class _ImportantRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: Sp.xs + 1),
-          child: _Dot(color: k.kid(kid.colorIndex).accent),
+          padding: const EdgeInsets.only(top: Sp.xxs),
+          child: Icon(changeIcon(item.kind), size: Sz.icon, color: tone.ink),
         ),
-        const SizedBox(width: Sp.s + Sp.xxs),
+        const SizedBox(width: Sp.s),
         Expanded(
           child: Text.rich(
             TextSpan(
@@ -519,8 +520,8 @@ class _ChangeLine extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: Sp.xs + 1),
-          child: _Dot(color: tone.dot),
+          padding: const EdgeInsets.only(top: Sp.xxs),
+          child: Icon(changeIcon(x.change!), size: Sz.icon, color: tone.ink),
         ),
         const SizedBox(width: Sp.s),
         Expanded(
@@ -859,6 +860,14 @@ class _UpcomingRow extends StatelessWidget {
             child: Text(
               relativeDay(t, item.day, data.now),
               style: k.tileCaption,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: Sp.xxs, right: Sp.s),
+            child: Icon(
+              weekIcon(item.kind),
+              size: Sz.icon,
+              color: item.kind == WeekKind.exam ? k.p.cancel.ink : k.p.muted,
             ),
           ),
           Expanded(
