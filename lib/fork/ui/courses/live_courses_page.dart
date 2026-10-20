@@ -96,6 +96,7 @@ class LiveCoursesPage extends ConsumerWidget {
           items: items,
           homework: HomeworkBoard(
             open: hw.open,
+            done: hw.done,
             doneCount: hw.done.length,
             onDone: (h) => toggle(h, true),
             onReopen: (h) => toggle(h, false),
@@ -274,6 +275,7 @@ class LiveAllCoursesPage extends ConsumerWidget {
     final t = context.t;
     final now = DateTime.now();
     final homework = <(DateTime, AllHomework)>[];
+    final doneHomework = <(DateTime, AllHomework)>[];
     final exams = <AllExam>[];
     final missing = <AllMissing>[];
     final withDone = <FamilyMember>[];
@@ -314,28 +316,32 @@ class LiveAllCoursesPage extends ConsumerWidget {
         t: t,
         messenger: ScaffoldMessenger.maybeOf(context),
       );
-      for (final h in hw.open) {
+      AllHomework entry(HomeworkItem h) {
         final course = byId[h.course];
-        homework.add((
-          h.given ?? DateTime(2000),
-          AllHomework(
-            item: h,
-            kid: kid,
-            onDone: () => toggle(h, true),
-            onReopen: () => toggle(h, false),
-            onOpen: course == null
-                ? null
-                : () => pushInTab<void>(
-                    context,
-                    (_) => m.scope(
-                      Consumer(
-                        builder: (c, r, _) =>
-                            liveCourseDetail(c, r, s, course, live, raw),
-                      ),
+        return AllHomework(
+          item: h,
+          kid: kid,
+          onDone: () => toggle(h, true),
+          onReopen: () => toggle(h, false),
+          onOpen: course == null
+              ? null
+              : () => pushInTab<void>(
+                  context,
+                  (_) => m.scope(
+                    Consumer(
+                      builder: (c, r, _) =>
+                          liveCourseDetail(c, r, s, course, live, raw),
                     ),
                   ),
-          ),
-        ));
+                ),
+        );
+      }
+
+      for (final h in hw.open) {
+        homework.add((h.given ?? DateTime(2000), entry(h)));
+      }
+      for (final h in hw.done) {
+        doneHomework.add((h.done ?? h.given ?? DateTime(2000), entry(h)));
       }
       if (hw.done.isNotEmpty) {
         done += hw.done.length;
@@ -363,6 +369,7 @@ class LiveAllCoursesPage extends ConsumerWidget {
       }
     }
     homework.sort((a, b) => b.$1.compareTo(a.$1));
+    doneHomework.sort((a, b) => b.$1.compareTo(a.$1));
     exams.sort((a, b) => a.exam.day.compareTo(b.exam.day));
     Future<void> refreshAll() async {
       for (final m in shown) {
@@ -373,6 +380,7 @@ class LiveAllCoursesPage extends ConsumerWidget {
     return AllCoursesView(
       now: now,
       homework: [for (final h in homework) h.$2],
+      doneHomework: [for (final h in doneHomework) h.$2],
       exams: exams,
       missing: missing,
       doneCount: done,

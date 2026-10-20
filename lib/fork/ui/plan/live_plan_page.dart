@@ -125,6 +125,8 @@ class LiveCalendarPage extends StatelessWidget {
           onSelectKid: (i) => FamilyData.scopeOf(
             context,
           )?.onSelect?.call(shown[i].$1.accountId),
+          showAll: FamilyData.scopeOf(context)?.showAll ?? false,
+          onSelectAll: FamilyData.scopeOf(context)?.onSelectAll,
           onEditTimes: (i) async {
             final m = shown[i].$1.snapshot;
             final save = m.setLessonTimes;

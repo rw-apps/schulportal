@@ -53,6 +53,14 @@ void main() {
     expect(find.text('Jonas'), findsOneWidget);
     expect(find.text('Englisch: Arbeit'), findsOneWidget);
     await t.tap(find.byIcon(Icons.radio_button_unchecked));
+    // Übergang (homework_section.dart): erst Haken und gestrichen, dann
+    // zuklappen, erst danach gilt die Aufgabe als erledigt.
+    await t.pump();
+    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    expect(done, 0);
+    await t.pumpAndSettle();
     expect(done, 1);
+    expect(find.text('Buch S. 42'), findsNothing);
+    expect(find.text('Als erledigt abgehakt.'), findsOneWidget);
   });
 }

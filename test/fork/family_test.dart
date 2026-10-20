@@ -188,4 +188,67 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Stand Bernd'), findsOneWidget);
   });
+
+  testWidgets('Kindwahl samt „Alle“ gilt für alle Bereiche', (t) async {
+    // Ursache (Rückmeldung 20.10.26): „Alle“ merkte sich jeder Reiter
+    // selbst; beim Wechsel sprang die Wahl.
+    final a = _snap(1, 'Anna', 'Schule A');
+    final b = _snap(2, 'Ben', 'Schule B');
+    int? selected;
+    var all = true;
+    late StateSetter set;
+    Widget area(String name) => FamilySwitch(
+      all: (_, _) => Text('$name: alle'),
+      child: Builder(
+        builder: (c) => Text('$name: ${LiveData.of(c)!.firstName}'),
+      ),
+    );
+    await t.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: ForkL10n.localizationsDelegates,
+        supportedLocales: ForkL10n.supportedLocales,
+        locale: const Locale('de'),
+        home: StatefulBuilder(
+          builder: (c, s) {
+            set = s;
+            return Scaffold(
+              body: LiveData(
+                snapshot: a,
+                child: FamilyData(
+                  members: [
+                    FamilyMember(accountId: 1, snapshot: a, colorIndex: 0),
+                    FamilyMember(accountId: 2, snapshot: b, colorIndex: 1),
+                  ],
+                  selectedAccount: selected,
+                  onSelect: (id) => set(() {
+                    selected = id;
+                    all = false;
+                  }),
+                  showAll: all,
+                  onSelectAll: () => set(() => all = true),
+                  // Zwei Bereiche nebeneinander wie zwei Reiter.
+                  child: Row(
+                    children: [
+                      Expanded(child: area('Heute')),
+                      Expanded(child: area('Unterricht')),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    expect(find.text('Heute: alle'), findsOneWidget);
+    expect(find.text('Unterricht: alle'), findsOneWidget);
+    await t.tap(find.text('Ben').first);
+    await t.pumpAndSettle();
+    expect(find.text('Heute: Ben'), findsOneWidget);
+    expect(find.text('Unterricht: Ben'), findsOneWidget);
+    await t.tap(find.text('Alle').last);
+    await t.pumpAndSettle();
+    expect(find.text('Heute: alle'), findsOneWidget);
+    expect(find.text('Unterricht: alle'), findsOneWidget);
+  });
 }

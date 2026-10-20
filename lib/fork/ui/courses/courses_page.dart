@@ -7,6 +7,7 @@ import '../kit.dart';
 import '../segments.dart';
 import 'courses_model.dart';
 import 'exam_card.dart';
+import 'homework_section.dart';
 import 'grades_view.dart';
 
 export 'exam_card.dart' show AllExam, ExamCard, KidLine, KidTag;
@@ -32,9 +33,13 @@ class HomeworkBoard {
     required this.onDone,
     required this.onReopen,
     this.onOpenArchive,
+    this.done = const [],
   });
 
   final List<HomeworkItem> open;
+
+  /// Erledigte, neueste zuerst (unter „Erledigt (n)“, HomeworkSection).
+  final List<HomeworkItem> done;
   final int doneCount;
   final void Function(HomeworkItem item) onDone;
   final void Function(HomeworkItem item) onReopen;
@@ -192,24 +197,6 @@ class _CoursesPageState extends State<CoursesPage> {
     return r == null ? view : RefreshIndicator(onRefresh: r, child: view);
   }
 
-  /// Abhaken mit „Rückgängig“ – ein Fehlgriff auf dem kleinen Kreis soll
-  /// nicht erst über das Archiv zu reparieren sein.
-  void _done(HomeworkBoard hw, HomeworkItem i) {
-    hw.onDone(i);
-    final t = context.t;
-    ScaffoldMessenger.maybeOf(context)
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(t.homeworkMarkedDone),
-          action: SnackBarAction(
-            label: t.undo,
-            onPressed: () => hw.onReopen(i),
-          ),
-        ),
-      );
-  }
-
   List<Widget> _courseList(
     Kit k,
     ForkL10n t,
@@ -222,32 +209,38 @@ class _CoursesPageState extends State<CoursesPage> {
     CourseItem? courseOf(HomeworkItem h) =>
         items.where((i) => i.id == h.course).firstOrNull;
     return [
-      _Section(
-        title: t.openHomeworkTitle,
-        trailing: hw != null && hw.doneCount > 0 && hw.onOpenArchive != null
-            ? t.homeworkArchive(hw.doneCount)
-            : null,
-        onTap: hw != null && hw.doneCount > 0 ? hw.onOpenArchive : null,
+      _Section(title: t.openHomeworkTitle),
+      HomeworkSection(
+        // Ohne HomeworkBoard (Vorschau): nur Anzeige, kein Abhaken.
+        readOnly: hw == null,
+        open: [
+          for (final i in open)
+            HwEntry(
+              item: i,
+              onOpen: widget.onOpen == null || courseOf(i) == null
+                  ? null
+                  : () => widget.onOpen!(courseOf(i)!),
+              onDone: () => hw?.onDone(i),
+              onReopen: () => hw?.onReopen(i),
+            ),
+        ],
+        done: [
+          for (final i in hw?.done ?? const <HomeworkItem>[])
+            HwEntry(
+              item: i,
+              onOpen: widget.onOpen == null || courseOf(i) == null
+                  ? null
+                  : () => widget.onOpen!(courseOf(i)!),
+              onDone: () => hw?.onDone(i),
+              onReopen: () => hw?.onReopen(i),
+            ),
+        ],
+        doneTotal: hw?.doneCount,
+        emptyText: widget.loading && items.isEmpty
+            ? t.loading
+            : t.noOpenHomework,
+        onShowAll: hw?.onOpenArchive,
       ),
-      if (open.isEmpty)
-        Padding(
-          padding: const EdgeInsets.only(left: Sp.xs),
-          child: Text(
-            widget.loading && items.isEmpty ? t.loading : t.noOpenHomework,
-            style: k.meta,
-          ),
-        ),
-      for (final i in open)
-        Padding(
-          padding: const EdgeInsets.only(bottom: Sp.s),
-          child: _HomeworkCard(
-            item: i,
-            onTap: widget.onOpen == null || courseOf(i) == null
-                ? null
-                : () => widget.onOpen!(courseOf(i)!),
-            onDone: hw == null ? null : () => _done(hw, i),
-          ),
-        ),
       // Fächer mit unentschuldigten Fehlstunden (Übersicht des Portals,
       // CourseItem.missing) – Wunsch 18.10.26: Entschuldigen direkt von
       // hier. Die Tage stehen erst auf den Kursseiten, daher öffnet das
@@ -322,76 +315,6 @@ class _Section extends StatelessWidget {
             Expanded(child: Text(title, style: k.section)),
             if (trailing != null) Text(trailing!, style: k.link),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HomeworkCard extends StatelessWidget {
-  const _HomeworkCard({required this.item, this.onTap, this.onDone, this.kid});
-
-  final HomeworkItem item;
-
-  /// Kind (Ansicht „Alle“), null = ohne Zeile.
-  final KidTag? kid;
-  final VoidCallback? onTap;
-
-  /// Kreis links hakt ab; null = nur Anzeige.
-  final VoidCallback? onDone;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    final t = context.t;
-    final tone = k.p.change;
-    final text = item.text.isEmpty ? t.homeworkEntered : item.text;
-    final meta = item.given == null
-        ? item.subject
-        : t.givenOn(item.subject, formatDate(t, t.dateShort, item.given!));
-    final circle = Icon(
-      Icons.radio_button_unchecked,
-      size: Sz.navIcon,
-      color: tone.ink,
-    );
-    return Material(
-      color: tone.bg,
-      borderRadius: BorderRadius.circular(Rad.signal),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(Rad.signal),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(Sp.xs, Sp.xs, Sp.l, Sp.xs),
-          child: Row(
-            children: [
-              // Eigene Trefferfläche (48 dp), getrennt vom Öffnen des Kurses.
-              if (onDone != null)
-                IconButton(
-                  onPressed: onDone,
-                  tooltip: t.homeworkMarkDone,
-                  icon: circle,
-                )
-              else
-                Padding(padding: const EdgeInsets.all(Sp.m), child: circle),
-              const SizedBox(width: Sp.xs),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: Sp.s),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(text, style: k.boxStrong(tone)),
-                      Text(meta, style: k.planMeta(tone.ink)),
-                      if (kid != null) ...[
-                        const SizedBox(height: Sp.xxs),
-                        KidLine(kid: kid!),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -645,6 +568,7 @@ class AllCoursesView extends StatelessWidget {
     required this.exams,
     required this.missing,
     required this.now,
+    this.doneHomework = const [],
     this.doneCount = 0,
     this.onOpenArchive,
     this.loading = false,
@@ -652,6 +576,9 @@ class AllCoursesView extends StatelessWidget {
   });
 
   final List<AllHomework> homework;
+
+  /// Erledigte aller Kinder, neueste zuerst (HomeworkSection).
+  final List<AllHomework> doneHomework;
   final List<AllExam> exams;
   final List<AllMissing> missing;
   final DateTime now;
@@ -659,19 +586,6 @@ class AllCoursesView extends StatelessWidget {
   final VoidCallback? onOpenArchive;
   final bool loading;
   final Future<void> Function()? onRefresh;
-
-  void _done(BuildContext context, AllHomework h) {
-    h.onDone();
-    final t = context.t;
-    ScaffoldMessenger.maybeOf(context)
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(t.homeworkMarkedDone),
-          action: SnackBarAction(label: t.undo, onPressed: h.onReopen),
-        ),
-      );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -700,28 +614,32 @@ class AllCoursesView extends StatelessWidget {
           padding: const EdgeInsets.only(left: Sp.xs),
           child: Text(meta, style: k.meta),
         ),
-        _Section(
-          title: t.openHomeworkTitle,
-          trailing: doneCount > 0 && onOpenArchive != null
-              ? t.homeworkArchive(doneCount)
-              : null,
-          onTap: doneCount > 0 ? onOpenArchive : null,
+        _Section(title: t.openHomeworkTitle),
+        HomeworkSection(
+          open: [
+            for (final h in homework)
+              HwEntry(
+                item: h.item,
+                kid: h.kid,
+                onOpen: h.onOpen,
+                onDone: h.onDone,
+                onReopen: h.onReopen,
+              ),
+          ],
+          done: [
+            for (final h in doneHomework)
+              HwEntry(
+                item: h.item,
+                kid: h.kid,
+                onOpen: h.onOpen,
+                onDone: h.onDone,
+                onReopen: h.onReopen,
+              ),
+          ],
+          doneTotal: doneCount,
+          emptyText: loading ? t.loading : t.noOpenHomework,
+          onShowAll: onOpenArchive,
         ),
-        if (homework.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(left: Sp.xs),
-            child: Text(loading ? t.loading : t.noOpenHomework, style: k.meta),
-          ),
-        for (final h in homework)
-          Padding(
-            padding: const EdgeInsets.only(bottom: Sp.s),
-            child: _HomeworkCard(
-              item: h.item,
-              kid: h.kid,
-              onTap: h.onOpen,
-              onDone: () => _done(context, h),
-            ),
-          ),
         _Section(title: t.upcomingExamsTitle),
         if (exams.isEmpty)
           Padding(

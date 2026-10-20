@@ -32,6 +32,8 @@ class PlanPage extends StatefulWidget {
     this.onEditTimes,
     this.selectedKid,
     this.onSelectKid,
+    this.showAll = false,
+    this.onSelectAll,
     this.viewRequest,
     this.freeDays = const {},
   });
@@ -51,6 +53,12 @@ class PlanPage extends StatefulWidget {
   /// Wahl der Seite.
   final int? selectedKid;
   final ValueChanged<int>? onSelectKid;
+
+  /// Gemeinsame Wahl „Alle“ (FamilyData.showAll) für „Termine“; Tag und
+  /// Woche zeigen immer ein Kind ([selectedKid]). Ohne [onSelectAll]
+  /// (Tests, eine Familie ohne FamilyScope) eigene Wahl in „Termine“.
+  final bool showAll;
+  final VoidCallback? onSelectAll;
 
   /// Stundenzeiten des Kindes [kid] (Index in [plans]) eintragen; null =
   /// ohne Knopf (Vorschau, Tests).
@@ -93,10 +101,16 @@ class _PlanPageState extends State<PlanPage> {
   int _kid = 0;
   PlanView _view = PlanView.day;
 
-  /// Filter in „Termine“: -1 = alle Kinder, sonst Index in [PlanPage.plans].
-  /// Eigene Wahl statt der gemeinsamen Kindwahl: Die Liste aller Termine ist
-  /// hier der Normalfall, Tag und Woche zeigen dagegen immer ein Kind.
+  /// Filter in „Termine“ ohne gemeinsame Wahl: -1 = alle Kinder, sonst Index
+  /// in [PlanPage.plans].
   int _eventsKid = -1;
+
+  /// Filter in „Termine“: gemeinsame Wahl (Kind oder „Alle“), sonst die
+  /// eigene. Ursache (Rückmeldung 20.10.26): Die eigene Wahl sprang beim
+  /// Öffnen von „Termine“ auf „Alle“, während die anderen Reiter ein Kind
+  /// zeigten.
+  int get _eventsSel =>
+      widget.onSelectAll == null ? _eventsKid : (widget.showAll ? -1 : _kid);
   late int _day;
   late final Map<int, GroupChoice> _choices = {
     for (final e in widget.initialChoices.entries) e.key: {...e.value},
@@ -184,7 +198,7 @@ class _PlanPageState extends State<PlanPage> {
       _weekOffset = 0;
       _day = _todayIndex ?? 0;
     }
-    if (v == PlanView.events) _eventsKid = -1;
+    if (v == PlanView.events && widget.onSelectAll == null) _eventsKid = -1;
     r.value = null;
   }
 
@@ -298,13 +312,23 @@ class _PlanPageState extends State<PlanPage> {
           for (final p in widget.plans)
             (name: p.firstName, color: p.colorIndex),
         ],
-        selected: events ? _eventsKid : _kid,
-        onSelect: events
-            ? (i) => setState(() => _eventsKid = i)
-            : (i) {
-                setState(() => _kid = i);
-                widget.onSelectKid?.call(i);
-              },
+        selected: events ? _eventsSel : _kid,
+        onSelect: (i) {
+          if (i < 0) {
+            final all = widget.onSelectAll;
+            if (all != null) {
+              all();
+            } else {
+              setState(() => _eventsKid = -1);
+            }
+            return;
+          }
+          setState(() {
+            _kid = i;
+            _eventsKid = i;
+          });
+          widget.onSelectKid?.call(i);
+        },
       ),
       child: _body(context),
     );
@@ -420,9 +444,9 @@ class _PlanPageState extends State<PlanPage> {
       final many = widget.plans.length > 1;
       final events = [
         for (final e in widget.events ?? const <WeekItem>[])
-          if (_eventsKid < 0 ||
+          if (_eventsSel < 0 ||
               e.childIndex == null ||
-              e.childIndex == _eventsKid)
+              e.childIndex == _eventsSel)
             e,
       ];
       final view = CustomScrollView(
@@ -453,7 +477,7 @@ class _PlanPageState extends State<PlanPage> {
                   for (final p in widget.plans)
                     (name: p.firstName, color: p.colorIndex),
                 ],
-                showKid: many && _eventsKid < 0,
+                showKid: many && _eventsSel < 0,
               ),
             ),
           ),

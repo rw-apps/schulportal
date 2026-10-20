@@ -92,6 +92,8 @@ class FamilyData extends InheritedWidget {
     required super.child,
     this.selectedAccount,
     this.onSelect,
+    this.showAll = true,
+    this.onSelectAll,
     this.failures = const [],
     this.onRetry,
   });
@@ -111,6 +113,15 @@ class FamilyData extends InheritedWidget {
   /// wieder das erste Kind da. Grenze: gilt bis zum Neustart der App.
   final int? selectedAccount;
   final void Function(int accountId)? onSelect;
+
+  /// „Alle“ gewählt – gilt für jeden Bereich, der „Alle“ anbietet (Heute,
+  /// Unterricht, Nachrichten, Kalender-Termine); Bereiche ohne „Alle“
+  /// zeigen dann [selectedAccount] bzw. das erste Kind. Wer ein Kind wählt
+  /// ([onSelect]), beendet „Alle“ überall. Ursache (Rückmeldung 20.10.26):
+  /// „Alle“ merkte sich jeder Bereich selbst und begann neu mit „Alle“ –
+  /// beim Reiterwechsel sprang die Wahl zwischen „Alle“ und den Kindern.
+  final bool showAll;
+  final VoidCallback? onSelectAll;
 
   /// Leer, solange nichts geladen ist (oder in Tests ohne Familie).
   static List<FamilyMember> of(BuildContext context) =>
@@ -172,6 +183,9 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
   final _hosts = <int, Widget>{};
   final _snaps = <int, LiveSnapshot>{};
   int? _selected;
+
+  /// „Alle“ (FamilyData.showAll); zu Beginn an wie bisher je Bereich.
+  bool _all = true;
 
   @override
   void initState() {
@@ -364,7 +378,12 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
         FamilyData(
           members: members,
           selectedAccount: _selected,
-          onSelect: (id) => setState(() => _selected = id),
+          onSelect: (id) => setState(() {
+            _selected = id;
+            _all = false;
+          }),
+          showAll: _all,
+          onSelectAll: () => setState(() => _all = true),
           failures: [
             for (final a in ordered)
               if (_failed[a.localId] case final e?)
@@ -402,8 +421,9 @@ class _Report extends StatelessWidget {
 /// getrennt bleiben (Unterricht, Nachrichten, Mehr).
 ///
 /// Ursache: Kurse und Unterhaltungen zweier Schulen in einer Liste wären
-/// unübersichtlich, und Schreiben braucht ohnehin ein Konto. Grenze: Die
-/// Wahl gilt je Bereich und bis zum Neustart.
+/// unübersichtlich, und Schreiben braucht ohnehin ein Konto. Die Wahl
+/// (Kind oder „Alle“) gilt für alle Bereiche gemeinsam (FamilyData).
+/// Grenze: bis zum Neustart.
 class FamilySwitch extends StatefulWidget {
   const FamilySwitch({super.key, required this.child, this.kidName, this.all});
 
@@ -413,8 +433,7 @@ class FamilySwitch extends StatefulWidget {
   /// Ansicht über alle Kinder (Pille „Alle“ vorn, voreingestellt); null =
   /// nur einzelne Kinder. Ursache (Wunsch 18.10.26, Nachrichten): Wer
   /// mehrere Kinder hat, will neue Nachrichten an einer Stelle sehen. Die
-  /// Wahl „Alle“ gilt nur in diesem Bereich, nicht für die gemeinsame
-  /// Kindwahl.
+  /// Wahl „Alle“ ist Teil der gemeinsamen Kindwahl (FamilyData.showAll).
   final Widget Function(BuildContext context, List<FamilyMember> members)? all;
 
   /// Name eines Kontos für die Auswahl (Standard: Vorname aus dem Stand).
@@ -427,16 +446,20 @@ class FamilySwitch extends StatefulWidget {
 class _FamilySwitchState extends State<FamilySwitch> {
   /// Nur ohne FamilyScope (Tests): eigene Wahl.
   int? _account;
-
-  /// „Alle“ gewählt (nur mit [FamilySwitch.all]).
-  late bool _all = widget.all != null;
+  late bool _ownAll = widget.all != null;
 
   @override
   Widget build(BuildContext context) {
     final scope = FamilyData.scopeOf(context);
     final members = scope?.members ?? const <FamilyMember>[];
     if (members.length < 2) return widget.child;
-    final wanted = scope?.onSelect == null ? _account : scope?.selectedAccount;
+    final shared = scope?.onSelect != null;
+    // „Alle“ gemeinsam für alle Bereiche (FamilyData.showAll), nur hier
+    // angeboten, wenn der Bereich eine Ansicht dafür hat.
+    final all =
+        widget.all != null &&
+        (shared && scope?.onSelectAll != null ? scope!.showAll : _ownAll);
+    final wanted = shared ? scope?.selectedAccount : _account;
     final sel =
         members.where((m) => m.accountId == wanted).firstOrNull ??
         members.first;
@@ -450,23 +473,30 @@ class _FamilySwitchState extends State<FamilySwitch> {
               color: m.colorIndex,
             ),
         ],
-        selected: _all ? -1 : members.indexOf(sel),
+        selected: all ? -1 : members.indexOf(sel),
         onSelect: (i) {
           if (i < 0) {
-            setState(() => _all = true);
+            final pickAll = scope?.onSelectAll;
+            if (shared && pickAll != null) {
+              pickAll();
+            } else {
+              setState(() => _ownAll = true);
+            }
             return;
           }
-          if (_all) setState(() => _all = false);
           final id = members[i].accountId;
           final pick = scope?.onSelect;
           if (pick != null) {
             pick(id);
           } else {
-            setState(() => _account = id);
+            setState(() {
+              _ownAll = false;
+              _account = id;
+            });
           }
         },
       ),
-      child: _all
+      child: all
           ? KeyedSubtree(
               key: const ValueKey('family-all'),
               child: widget.all!(context, members),

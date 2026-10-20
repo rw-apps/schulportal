@@ -542,5 +542,6 @@
   "devFromOther": "Başka bir cihazdan aktar",
   "devNoAccounts": "Bu cihazda henüz hesap yok.",
   "devPrivacy": "Gizlilik politikasını okudum ve kabul ediyorum.",
-  "devNoPassword": "Kayıtlı şifre yok, gönderilmeyecek: {names}"
+  "devNoPassword": "Kayıtlı şifre yok, gönderilmeyecek: {names}",
+  "homeworkShowAll": "Tamamlanan {n} ödevin hepsini göster"
 }

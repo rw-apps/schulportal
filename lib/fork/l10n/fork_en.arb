@@ -542,5 +542,6 @@
   "devFromOther": "Take over from another device",
   "devNoAccounts": "No account is set up on this device yet.",
   "devPrivacy": "I have read and agree to the privacy policy.",
-  "devNoPassword": "No saved password, will not be sent: {names}"
+  "devNoPassword": "No saved password, will not be sent: {names}",
+  "homeworkShowAll": "Show all {n} completed"
 }
