@@ -17,8 +17,8 @@ import '../messages/compose_model.dart';
 import '../messages/compose_page.dart';
 import '../plan/plan_model.dart';
 import '../live/family.dart';
-import '../today/today_from_lanis.dart'
-    show weekItemsFromCalendar, withCourseExams;
+import '../../exams.dart';
+import '../today/today_from_lanis.dart' show weekItemsFromCalendar;
 import '../today/today_model.dart' show WeekItem, WeekKind;
 import 'course_detail_model.dart';
 import 'course_detail_page.dart';
@@ -113,6 +113,7 @@ class LiveCoursesPage extends ConsumerWidget {
               if (save == null) return;
               save(scanFrom(items, pages, DateTime.now(), old: s.courseScan));
             },
+            calendar: examCalendarOf(s, DateTime.now()),
           ),
           firstName: s.kids.isNotEmpty ? s.firstName : null,
           className: liveClassName(s),
@@ -161,14 +162,6 @@ Widget liveCourseDetail(
       ),
     );
   }
-  final calendar = s.offers('kalender.php')
-      ? weekItemsFromCalendar(
-          s.calendar.content ?? const [],
-          now,
-          className: liveClassName(s),
-          days: 60,
-        )
-      : const [];
   final student = s.session.account.accountType == AccountType.student;
   final parser = ref.read(lessonsStudentParserProvider);
   return CourseDetailPage(
@@ -186,7 +179,7 @@ Widget liveCourseDetail(
               codes,
               now,
             ),
-      exam: upcomingExamOf([...calendar], i.title, now),
+      calendarExams: examCalendarOf(s, now),
       lastMessages: last,
       extraOffer: i.extra,
     ),
@@ -237,9 +230,10 @@ Widget liveCourseDetail(
 ///
 /// Jede Aktion läuft im Rahmen des jeweiligen Kontos: Abhaken über dessen
 /// Parser und Stand, Kursseite und Abwesenheiten über FamilyMember.scope.
-/// Arbeiten wie in „Demnächst“ (Kalender und Kursmappen, withCourseExams),
-/// 60 Tage voraus. Grenze: Kursmappen-Arbeiten sind so aktuell wie die
-/// letzte Auswertung des Kontos (CourseScan).
+/// Arbeiten nach der gemeinsamen Regel (exams.dart, upcomingExamsOf) bis
+/// Halbjahresende – dieselben Zeilen wie beim einzelnen Kind. Grenze:
+/// Kursmappen-Arbeiten sind so aktuell wie die letzte Auswertung des Kontos
+/// (CourseScan).
 class LiveAllCoursesPage extends ConsumerWidget {
   const LiveAllCoursesPage({super.key, required this.members});
 
@@ -317,19 +311,13 @@ class LiveAllCoursesPage extends ConsumerWidget {
         done += hw.done.length;
         withDone.add(m);
       }
-      final calendar = s.offers('kalender.php')
-          ? weekItemsFromCalendar(
-              s.calendar.content ?? const [],
-              now,
-              className: liveClassName(s),
-              days: 60,
-            )
-          : const <WeekItem>[];
-      for (final w in withCourseExams(calendar, s.courseScan, now, days: 60)) {
-        if (w.kind != WeekKind.exam) continue;
-        exams.add(
-          AllExam(day: w.day, title: w.title, detail: w.time, kid: kid),
-        );
+      for (final e in upcomingExamsOf(
+        scan: s.courseScan?.upcoming(now) ?? const [],
+        calendar: examCalendarOf(s, now),
+        now: now,
+        until: halfYearEnd(now),
+      )) {
+        exams.add(AllExam(exam: e, kid: kid));
       }
       for (final i in raw.where((i) => i.missing > 0)) {
         missing.add(
@@ -345,7 +333,7 @@ class LiveAllCoursesPage extends ConsumerWidget {
       }
     }
     homework.sort((a, b) => b.$1.compareTo(a.$1));
-    exams.sort((a, b) => a.day.compareTo(b.day));
+    exams.sort((a, b) => a.exam.day.compareTo(b.exam.day));
     Future<void> refreshAll() async {
       for (final m in shown) {
         await m.snapshot.refresh();
@@ -379,3 +367,15 @@ class LiveAllCoursesPage extends ConsumerWidget {
     );
   }
 }
+
+/// Kalender des Kontos bis Halbjahresende, nach Klasse gefiltert – Quelle
+/// der Kalender-Arbeiten für Unterricht (Alle und Kind gleich).
+List<WeekItem> examCalendarOf(LiveSnapshot s, DateTime now) =>
+    s.offers('kalender.php')
+    ? weekItemsFromCalendar(
+        s.calendar.content ?? const [],
+        now,
+        className: liveClassName(s),
+        days: daysUntil(now, halfYearEnd(now)),
+      )
+    : const <WeekItem>[];

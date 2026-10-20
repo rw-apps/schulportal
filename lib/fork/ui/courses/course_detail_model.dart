@@ -226,27 +226,6 @@ int _minutes(String hm) {
   return int.parse(p[0]) * 60 + int.parse(p[1]);
 }
 
-/// Anstehende Arbeit des Fachs aus dem Schulkalender: Termin der Art
-/// „Arbeit“, dessen Titel den Fachnamen nennt, in den nächsten [days] Tagen.
-///
-/// Grenze: Nennt die Schule das Fach nicht im Titel („Klassenarbeit 7b“),
-/// gibt es keinen Treffer – lieber keine Zeile als eine falsche.
-WeekItem? upcomingExamOf(
-  List<WeekItem> items,
-  String courseTitle,
-  DateTime now, {
-  int days = 30,
-}) {
-  final title = courseTitle.toLowerCase();
-  if (title.length < 3) return null;
-  final until = DateTime(now.year, now.month, now.day + days);
-  for (final w in items) {
-    if (w.kind != WeekKind.exam || w.day.isAfter(until)) continue;
-    if (w.title.toLowerCase().contains(title)) return w;
-  }
-  return null;
-}
-
 /// Fachsymbol nach [CourseRules.subjectIcons].
 IconData subjectIconFor(String title) {
   final t = title.toLowerCase();
@@ -300,18 +279,4 @@ List<({String title, List<ExamLine> lines})> examSections(
     out.add((title: e.name.trim(), lines: lines));
   }
   return out;
-}
-
-/// Nächste Leistungskontrolle ab heute aus der Kursmappe.
-ExamLine? nextExamLine(List<LessonExam> exams, DateTime now) {
-  final today = DateTime(now.year, now.month, now.day);
-  ExamLine? best;
-  for (final s in examSections(exams)) {
-    for (final l in s.lines) {
-      final d = l.date;
-      if (d == null || d.isBefore(today)) continue;
-      if (best == null || d.isBefore(best.date!)) best = l;
-    }
-  }
-  return best;
 }

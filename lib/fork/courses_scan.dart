@@ -140,30 +140,44 @@ List<ScanExam> upcomingExams(
   Map<String, DetailedLesson> pages,
   DateTime now,
 ) {
-  final today = DateTime(now.year, now.month, now.day);
-  final byKey = <String, ScanExam>{};
+  final out = <ScanExam>[];
   for (final c in courses) {
     final d = pages[c.id];
     if (d == null) continue;
-    for (final s in examSections(d.exams)) {
-      for (final l in s.lines) {
-        final day = l.date;
-        if (day == null || day.isBefore(today)) continue;
-        final e = ScanExam(
-          course: c.id,
-          subject: c.title,
-          day: day,
-          text: l.text,
-        );
-        final old = byKey[e.key];
-        if (old == null || e.text.length > old.text.length) byKey[e.key] = e;
-      }
-    }
+    out.addAll(examsOfPage(c.id, c.title, d, now));
   }
-  return byKey.values.toList()..sort((a, b) {
+  return out..sort((a, b) {
     final d = a.day.compareTo(b.day);
     return d != 0 ? d : a.subject.compareTo(b.subject);
   });
+}
+
+/// Anstehende Leistungskontrollen EINER Kursseite; je Tag nur die
+/// ausführlichste Zeile (Ursache siehe [upcomingExams]). Auch für „Als
+/// Nächstes“ auf der Kursseite (course_detail_page.dart).
+List<ScanExam> examsOfPage(
+  String courseId,
+  String subject,
+  DetailedLesson d,
+  DateTime now,
+) {
+  final today = DateTime(now.year, now.month, now.day);
+  final byKey = <String, ScanExam>{};
+  for (final s in examSections(d.exams)) {
+    for (final l in s.lines) {
+      final day = l.date;
+      if (day == null || day.isBefore(today)) continue;
+      final e = ScanExam(
+        course: courseId,
+        subject: subject,
+        day: day,
+        text: l.text,
+      );
+      final old = byKey[e.key];
+      if (old == null || e.text.length > old.text.length) byKey[e.key] = e;
+    }
+  }
+  return byKey.values.toList()..sort((a, b) => a.day.compareTo(b.day));
 }
 
 /// Fehlzeiten aller geladenen Kursseiten zusammen; null, wenn keine Seite

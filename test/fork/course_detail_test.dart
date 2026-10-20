@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lanis/fork/courses_scan.dart' show ScanExam;
+import 'package:lanis/fork/exams.dart';
 import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:lanis/fork/ui/courses/course_detail_model.dart';
 import 'package:lanis/fork/ui/courses/course_detail_page.dart';
@@ -149,8 +151,16 @@ void main() {
         kind: WeekKind.exam,
       ),
     ];
-    expect(upcomingExamOf(items, 'Englisch', now)?.day, DateTime(2026, 10, 27));
-    expect(upcomingExamOf(items, 'Deutsch', now), isNull);
+    UpcomingExam? next(String subject) => nextExamOfSubject(
+      subject: subject,
+      folder: const [],
+      calendar: items,
+      now: now,
+    );
+    expect(next('Englisch')?.day, DateTime(2026, 10, 27));
+    expect(next('Englisch')?.title, 'Englisch: Klassenarbeit');
+    expect(next('Mathematik')?.day, DateTime(2026, 10, 28));
+    expect(next('Deutsch'), isNull);
   });
 
   test('Kursliste: Hausaufgabe ohne Text, Fehlstunden, Kürzel', () {
@@ -217,10 +227,29 @@ void main() {
       'Lernkontrolle, 1. Std. (60 Min.)',
     ]);
     expect(s.single.lines.first.date, DateTime(2026, 11, 2));
-    final next = nextExamLine([
-      LessonExam(name: 'x', value: '01.10.2026 alt\n02.11.2026 neu'),
-    ], DateTime(2026, 10, 17));
-    expect(next?.text, 'neu');
+    // Kursmappe vor Kalender, Vergangenes zählt nicht (exams.dart).
+    final next = nextExamOfSubject(
+      subject: 'Englisch',
+      folder: [
+        for (final (d, x) in [
+          (DateTime(2026, 10, 1), 'Arbeit, alt'),
+          (DateTime(2026, 11, 2), 'Lernkontrolle, 1. Std.'),
+        ])
+          ScanExam(course: 'e', subject: 'Englisch', day: d, text: x),
+      ],
+      calendar: [
+        WeekItem(
+          day: DateTime(2026, 11, 2),
+          title: 'Englisch 9b Lernkontrolle',
+          kind: WeekKind.exam,
+          time: '08:00',
+        ),
+      ],
+      now: DateTime(2026, 10, 17),
+    );
+    expect(next?.title, 'Englisch: Lernkontrolle');
+    expect(next?.detail, '1. Std.');
+    expect(next?.fromCalendar, isFalse);
   });
 
   for (final (lang, scale) in [('de', 1.0), ('tr', 1.26 * 1.3)]) {
@@ -245,11 +274,13 @@ void main() {
               fullName: 'Englisch 07 b',
               teachers: const [('WOL', 'Tim Wolf')],
               colorSlot: 2,
-              exam: WeekItem(
-                day: DateTime.now().add(const Duration(days: 9)),
-                title: 'Klassenarbeit Englisch',
-                kind: WeekKind.exam,
-              ),
+              calendarExams: [
+                WeekItem(
+                  day: DateTime.now().add(const Duration(days: 9)),
+                  title: 'Klassenarbeit Englisch',
+                  kind: WeekKind.exam,
+                ),
+              ],
             ),
             load: ({required bool firstHalf}) async => _lesson(),
             onWrite: (_) {},

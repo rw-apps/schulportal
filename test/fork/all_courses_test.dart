@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lanis/fork/exams.dart';
 import 'package:lanis/fork/homework_ledger.dart';
 import 'package:lanis/fork/ui/courses/courses_page.dart';
 import 'package:liblanis/liblanis.dart';
@@ -35,8 +36,11 @@ void main() {
           ],
           exams: [
             AllExam(
-              day: DateTime(2026, 10, 22),
-              title: 'Englisch: Arbeit',
+              exam: UpcomingExam(
+                day: DateTime(2026, 10, 22),
+                subject: 'Englisch',
+                kind: 'Arbeit',
+              ),
               kid: (name: 'Jonas', color: 0),
             ),
           ],

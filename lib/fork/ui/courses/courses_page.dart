@@ -9,7 +9,10 @@ import '../today/kind_icons.dart';
 import '../today/today_model.dart' show WeekKind;
 import '../today/today_page.dart' show relativeDay;
 import 'courses_model.dart';
+import 'exam_card.dart';
 import 'grades_view.dart';
+
+export 'exam_card.dart' show AllExam, ExamCard, KidLine, KidTag;
 
 /// Höchstens drei Namen, sonst zwei und „+n“. Ursache: Das Ganztagsangebot
 /// von Schule A nennt sechs Lehrkräfte; die Zeile lief über vier Zeilen.
@@ -384,7 +387,7 @@ class _HomeworkCard extends StatelessWidget {
                       Text(meta, style: k.planMeta(tone.ink)),
                       if (kid != null) ...[
                         const SizedBox(height: Sp.xxs),
-                        _KidLine(kid: kid!),
+                        KidLine(kid: kid!),
                       ],
                     ],
                   ),
@@ -434,7 +437,7 @@ class _MissingCard extends StatelessWidget {
                     ),
                     if (kid != null) ...[
                       const SizedBox(height: Sp.xxs),
-                      _KidLine(kid: kid!),
+                      KidLine(kid: kid!),
                     ],
                   ],
                 ),
@@ -604,34 +607,6 @@ class _Chip extends StatelessWidget {
 
 // ---- Ansicht „Alle“ ---------------------------------------------------------
 
-/// Kind an einem Eintrag der Ansicht „Alle“ (Name, Farbplatz).
-typedef KidTag = ({String name, int color});
-
-/// Punkt und Name in der Farbe des Kindes (wie bei Nachrichten).
-class _KidLine extends StatelessWidget {
-  const _KidLine({required this.kid});
-
-  final KidTag kid;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    final c = k.kid(kid.color).accent;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: Sz.dot,
-          height: Sz.dot,
-          decoration: BoxDecoration(color: c, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: Sp.xs + Sp.xxs),
-        Text(kid.name, style: k.tileKid(c)),
-      ],
-    );
-  }
-}
-
 class AllHomework {
   const AllHomework({
     required this.item,
@@ -646,20 +621,6 @@ class AllHomework {
   final VoidCallback onDone;
   final VoidCallback onReopen;
   final VoidCallback? onOpen;
-}
-
-class AllExam {
-  const AllExam({
-    required this.day,
-    required this.title,
-    required this.kid,
-    this.detail,
-  });
-
-  final DateTime day;
-  final String title;
-  final String? detail;
-  final KidTag kid;
 }
 
 class AllMissing {
@@ -771,25 +732,7 @@ class AllCoursesView extends StatelessWidget {
             child: Text(t.noUpcomingExams, style: k.meta),
           )
         else
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Sp.l,
-              vertical: Sp.xs,
-            ),
-            decoration: BoxDecoration(
-              color: k.p.card,
-              borderRadius: BorderRadius.circular(Rad.box),
-              boxShadow: k.cardShadow,
-            ),
-            child: Column(
-              children: [
-                for (final (i, e) in exams.indexed) ...[
-                  if (i > 0) Divider(height: 1, color: k.p.line),
-                  _ExamRow(exam: e, now: now),
-                ],
-              ],
-            ),
-          ),
+          ExamCard(exams: exams, now: now),
         if (missing.isNotEmpty) ...[
           _Section(title: t.absencesTitle),
           for (final m in missing)
@@ -807,55 +750,5 @@ class AllCoursesView extends StatelessWidget {
     );
     final r = onRefresh;
     return r == null ? view : RefreshIndicator(onRefresh: r, child: view);
-  }
-}
-
-/// Zeile wie in „Demnächst“ (today_page.dart, _UpcomingRow): Tag, Symbol,
-/// Fach und Art, rechts das Kind.
-class _ExamRow extends StatelessWidget {
-  const _ExamRow({required this.exam, required this.now});
-
-  final AllExam exam;
-  final DateTime now;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    final t = context.t;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: Sp.s + Sp.xxs),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: Sz.slotColumn + Sp.l,
-            child: Text(relativeDay(t, exam.day, now), style: k.tileCaption),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: Sp.xxs, right: Sp.s),
-            child: Icon(
-              weekIcon(WeekKind.exam),
-              size: Sz.icon,
-              color: k.p.cancel.ink,
-            ),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(exam.title, style: k.tileTitle),
-                if (exam.detail != null && exam.detail!.isNotEmpty)
-                  Text(exam.detail!, style: k.planMeta(k.p.cancel.ink)),
-              ],
-            ),
-          ),
-          const SizedBox(width: Sp.s),
-          Padding(
-            padding: const EdgeInsets.only(top: Sp.xxs),
-            child: _KidLine(kid: exam.kid),
-          ),
-        ],
-      ),
-    );
   }
 }

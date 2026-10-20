@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -380,6 +381,7 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
+    _rereadScan();
     final last = _lastLoad;
     if (last == null || DateTime.now().difference(last) > _period) {
       _loader.run(force: true);
@@ -410,6 +412,25 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
     });
     // Fotos an/aus (Einstellungen) gilt sofort; das Wahltool bleibt getaktet.
     _loadExtras(false);
+  }
+
+  /// Auswertung der Kursseiten neu aus dem Speicher lesen. Ursache
+  /// (Prüfung 20.10.26): _readSettings liest nur einmal je Konto; die
+  /// tägliche Auswertung im Hintergrund (notify_task.dart) kam so erst nach
+  /// einem Neustart in „Alle“, Heute und Kalender an, während die
+  /// Hinweise schon den neuen Stand kannten. Grenze: nur beim Zurückkehren
+  /// in die App und beim Ziehen zum Aktualisieren, nicht laufend.
+  void _rereadScan() {
+    if (!mounted || _settingsFor == null) return;
+    final s = ref.read(accountSpecificSettingsProvider);
+    if (s == null) return;
+    final fresh = storedCourseScan(s);
+    if (fresh == null) return;
+    final old = _scan;
+    if (old != null && jsonEncode(old.toJson()) == jsonEncode(fresh.toJson())) {
+      return;
+    }
+    setState(() => _scan = fresh);
   }
 
   void _readSettings(int accountId) {
@@ -562,7 +583,10 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
           setState(() => _names = {...n});
           _write(teacherNamesSetting, n);
         },
-        refresh: () => _loader.run(force: true),
+        refresh: () {
+          _rereadScan();
+          return _loader.run(force: true);
+        },
         mensa: _mensa,
         lessonTimes: _times,
         setLessonTimes: (v) {

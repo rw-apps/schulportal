@@ -3,11 +3,14 @@ import 'package:liblanis/liblanis.dart';
 
 import '../../courses_scan.dart';
 import '../../error_log.dart';
+import '../../exams.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
 import '../segments.dart';
 import 'course_detail_page.dart' show ValueRow;
+import '../today/today_model.dart' show WeekItem;
 import 'courses_model.dart';
+import 'exam_card.dart';
 import 'grades_model.dart';
 
 /// Woher die Übersicht ihre Kursseiten bekommt.
@@ -17,7 +20,13 @@ class GradesSource {
     required this.courses,
     required this.load,
     this.onCurrentLoaded,
+    this.calendar = const [],
   });
+
+  /// Termine des Schulkalenders bis Halbjahresende (weekItemsFromCalendar,
+  /// nach Klasse gefiltert): Arbeiten, die in keiner Kursmappe stehen,
+  /// kommen von hier dazu (exams.dart, upcomingExamsOf).
+  final List<WeekItem> calendar;
 
   /// Konto-Schlüssel für den Zwischenspeicher (LiveSnapshot.accountKey).
   final String account;
@@ -223,15 +232,26 @@ class GradesViewState extends State<GradesView> {
       );
     }
 
-    // Arbeiten nur im laufenden Halbjahr; die des 1. sind vorbei.
+    // Arbeiten nur im laufenden Halbjahr; die des 1. sind vorbei. Gleiche
+    // Regel wie „Alle“ und Heute (exams.dart).
     final now = widget.now ?? DateTime.now();
     final exams = _firstHalf
-        ? const <ScanExam>[]
-        : upcomingExams(courses, pages, now);
+        ? const <UpcomingExam>[]
+        : upcomingExamsOf(
+            scan: upcomingExams(courses, pages, now),
+            calendar: widget.source.calendar,
+            now: now,
+            until: halfYearEnd(now),
+          );
     if (exams.isNotEmpty) {
       out
         ..add(_Section(title: t.gradesExamsTitle))
-        ..add(_ExamCard(exams: exams));
+        ..add(
+          ExamCard(
+            exams: [for (final e in exams) AllExam(exam: e)],
+            now: now,
+          ),
+        );
     }
 
     if (_loading) {
@@ -433,33 +453,3 @@ class _SubjectCard extends StatelessWidget {
 /// Anstehende Arbeiten aller Fächer in einer Karte: Fach, Art und Stunden,
 /// rechts das Datum. Ursache: Auf der Kursseite steht jede nur im eigenen
 /// Fach – für die Wochenplanung zählt die Reihenfolge über alle Fächer.
-class _ExamCard extends StatelessWidget {
-  const _ExamCard({required this.exams});
-
-  final List<ScanExam> exams;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    final t = context.t;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(Sp.l, Sp.s, Sp.l, Sp.s),
-      decoration: BoxDecoration(
-        color: k.p.card,
-        borderRadius: BorderRadius.circular(Rad.box),
-        boxShadow: k.cardShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final e in exams)
-            ValueRow(
-              name: e.subject,
-              note: e.text,
-              value: formatDate(t, t.dateShort, e.day),
-            ),
-        ],
-      ),
-    );
-  }
-}

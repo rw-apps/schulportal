@@ -136,17 +136,22 @@ void main() {
       ),
     ];
     final w = withCourseExams(cal, scan, _now, childIndex: 0);
-    // Englisch am 20.10. steht schon im Kalender; 26.11. und 20.12. liegen
-    // hinter 14 Tagen.
-    expect(w.length, 1);
+    // Englisch am 20.10. steht in Kalender und Kursmappe: einmal, und zwar
+    // aus der Kursmappe (seit 20.10.26, exams.dart); 26.11. und 20.12.
+    // liegen hinter 14 Tagen.
+    expect([for (final x in w) x.title], ['Englisch: Vokabeltest']);
     final wide = withCourseExams(cal, scan, _now, childIndex: 1, days: 60);
     expect(
       [for (final x in wide) x.title],
-      ['Englisch-Vokabeltest 9b', 'Mathematik: Arbeit'],
+      ['Englisch: Vokabeltest', 'Mathematik: Arbeit'],
     );
     expect(wide.last.time, '3., 4. Std. (90 Min.)');
     expect(wide.last.childIndex, 1);
-    expect(withCourseExams(cal, null, _now), cal);
+    // Ohne Kursmappe: Kalender-Arbeit bereinigt (ohne Klassenangabe).
+    expect(
+      [for (final x in withCourseExams(cal, null, _now)) x.title],
+      ['Englisch-Vokabeltest'],
+    );
   });
 
   testWidgets('Noten: Nächste Arbeiten, Fehlstunden, Auswertung gemeldet', (
@@ -182,7 +187,8 @@ void main() {
     await t.pumpAndSettle();
     expect(t.takeException(), isNull);
     expect(find.text('Nächste Arbeiten'), findsOneWidget);
-    expect(find.text('Arbeit, 3., 4. Std. (90 Min.)'), findsOneWidget);
+    expect(find.text('Mathematik: Arbeit'), findsOneWidget);
+    expect(find.text('3., 4. Std. (90 Min.)'), findsOneWidget);
     expect(
       find.text('Fehlstunden im Halbjahr: 3 entschuldigt · 1 fehlend'),
       findsOneWidget,

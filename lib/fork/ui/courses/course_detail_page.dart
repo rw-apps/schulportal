@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:liblanis/liblanis.dart';
 
+import '../../courses_scan.dart' show examsOfPage;
+import '../../exams.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
 import '../segments.dart';
@@ -17,7 +19,7 @@ class CourseContext {
     required this.teachers,
     this.colorSlot = 0,
     this.nextLesson,
-    this.exam,
+    this.calendarExams = const [],
     this.lastMessages = const {},
     this.extraOffer = false,
   });
@@ -33,7 +35,10 @@ class CourseContext {
   final int colorSlot;
   final ({DateTime day, String slot, String start, String end, String? room})?
   nextLesson;
-  final WeekItem? exam;
+
+  /// Arbeiten aus dem Schulkalender (weekItemsFromCalendar); welche zu
+  /// diesem Fach gehören, entscheidet nextExamOfSubject (exams.dart).
+  final List<WeekItem> calendarExams;
 
   /// Kürzel → neueste Unterhaltung mit dieser Lehrkraft (Datum wie im
   /// Portal, Öffnen).
@@ -228,10 +233,14 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
           ),
         );
       }
-      final e = c.exam;
-      // Ohne Termin im Schulkalender: die nächste Leistungskontrolle aus der
-      // Kursmappe (Abschnitt „Leistungskontrollen“, examSections).
-      final x = e == null ? nextExamLine(d.exams, now) : null;
+      // Nächste Arbeit nach der gemeinsamen Regel (exams.dart): Kursmappe
+      // dieser Seite zuerst, sonst der Schulkalender.
+      final e = nextExamOfSubject(
+        subject: c.title,
+        folder: examsOfPage('', c.title, d, now),
+        calendar: c.calendarExams,
+        now: now,
+      );
       if (e != null) {
         lines.add(
           _Line(
@@ -242,21 +251,8 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
             meta: [
               formatDate(t, t.dateShort, e.day),
               t.inDays(dayDiff(now, e.day)),
-              t.fromSchoolCalendar,
-            ].join(' · '),
-          ),
-        );
-      } else if (x != null) {
-        lines.add(
-          _Line(
-            icon: Icons.edit_note,
-            color: k.p.cancel.ink,
-            title: x.text,
-            titleColor: k.p.cancel.ink,
-            meta: [
-              formatDate(t, t.dateShort, x.date!),
-              t.inDays(dayDiff(now, x.date!)),
-              t.fromCourseFolder,
+              ?e.detail,
+              e.fromCalendar ? t.fromSchoolCalendar : t.fromCourseFolder,
             ].join(' · '),
           ),
         );

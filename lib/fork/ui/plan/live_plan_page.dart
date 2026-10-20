@@ -4,7 +4,7 @@ import '../../l10n/l10n.dart';
 import '../live/family.dart';
 import '../live/live_data.dart';
 import '../today/today_from_lanis.dart'
-    show planWithSubstitutions, weekItemsFromCalendar;
+    show planWithSubstitutions, weekItemsFromCalendar, withCourseExams;
 import '../today/today_page.dart' show schoolWeek;
 import 'lesson_times_dialog.dart';
 import 'plan_page.dart';
@@ -58,14 +58,23 @@ class LiveCalendarPage extends StatelessWidget {
         final merged =
             [
               for (final (i, (m, _)) in shown.indexed)
+                // Arbeiten nach derselben Regel wie Heute und Unterricht
+                // (exams.dart): auch die nur in der Kursmappe stehen.
+                // Ursache (Prüfung 20.10.26): Hier fehlten sie bisher.
                 if (m.snapshot.offers('kalender.php'))
-                  ...weekItemsFromCalendar(
-                    m.snapshot.calendar.content ?? const [],
+                  ...withCourseExams(
+                    weekItemsFromCalendar(
+                      m.snapshot.calendar.content ?? const [],
+                      now,
+                      childIndex: i,
+                      className: liveClassName(m.snapshot),
+                      days: 120,
+                      includeMeals: true,
+                    ),
+                    m.snapshot.courseScan,
                     now,
                     childIndex: i,
-                    className: liveClassName(m.snapshot),
                     days: 120,
-                    includeMeals: true,
                   ),
             ].indexed.toList()..sort((a, b) {
               final d = a.$2.day.compareTo(b.$2.day);

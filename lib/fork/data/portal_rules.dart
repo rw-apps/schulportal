@@ -30,6 +30,15 @@ abstract final class PortalRules {
     r'lernkontrolle|klassenarbeit|klausur|\btest\b',
   );
 
+  /// Art-Wort einer Arbeit im Kalendertitel, für die Anzeige als „Fach:
+  /// Art“ (exams.dart, examFromCalendar). Längere Wörter zuerst, damit
+  /// „Klassenarbeit“ nicht als „Arbeit“ zählt.
+  static final examKind = RegExp(
+    r'\b(klassenarbeit|lernzielkontrolle|lernkontrolle|vergleichsarbeit|'
+    r'klausur|test|arbeit)\b',
+    caseSensitive: false,
+  );
+
   /// Kategorie bzw. Titel: Ferien, unterrichtsfreie Tage.
   static const freeCategories = ['ferien', 'frei'];
   static final freeTitle = RegExp(r'ferien|unterrichtsfrei');
