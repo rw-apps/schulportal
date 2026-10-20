@@ -132,7 +132,7 @@ void main() {
       ),
     );
     expect(find.text('Erledigt (2)'), findsOneWidget);
-    await t.tap(find.byTooltip('Als erledigt abhaken'));
+    await t.tap(find.text('Erledigt'));
     await t.pumpAndSettle(); // Meldung fährt ein
     expect(done, ['m|7']);
     expect(find.text('Als erledigt abgehakt.'), findsOneWidget);

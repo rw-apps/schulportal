@@ -94,6 +94,14 @@ abstract final class Sz {
   static const double button = 56;
   static const double buttonSmall = 44;
 
+  /// Kleiner Knopf in einer Karte („✓ Erledigt“, homework_section.dart):
+  /// sichtbare Höhe und Symbol. Ursache (Rückmeldung 20.10.26): Mit der
+  /// Standardgröße wirkte der Knopf neben dem Aufgabentext zu wuchtig.
+  /// Grenze: Trefferfläche 28 dp (shrinkWrap), damit die Zeile nicht höher
+  /// wird als der Text.
+  static const double buttonTiny = 28;
+  static const double iconSmall = 14;
+
   /// Schwebende untere Leiste: Höhe und Abstand zum Rand.
   // 64 statt 68 (Entwurf Leiste 17.10.26): Platz für Marken ohne mehr Höhe.
   static const double navHeight = 64;
@@ -480,6 +488,7 @@ class Kit {
   TextStyle get rowPause => _s(12, FontWeight.w600, p.faint);
 
   TextStyle button(Color c) => _s(14, FontWeight.w700, c);
+  TextStyle buttonTiny(Color c) => _s(12, FontWeight.w700, c);
 
   // ---- Demnächst --------------------------------------------------------
   TextStyle get section => _s(18, FontWeight.w800, p.ink);

@@ -543,5 +543,8 @@
   "devNoAccounts": "Bu cihazda henüz hesap yok.",
   "devPrivacy": "Gizlilik politikasını okudum ve kabul ediyorum.",
   "devNoPassword": "Kayıtlı şifre yok, gönderilmeyecek: {names}",
-  "homeworkShowAll": "Tamamlanan {n} ödevin hepsini göster"
+  "homeworkShowAll": "Tamamlanan {n} ödevin hepsini göster",
+  "homeworkDoneButton": "Tamamlandı",
+  "homeworkMarkOpen": "Yapılmadı olarak işaretle",
+  "homeworkMarkOpenShort": "Yapılmadı"
 }

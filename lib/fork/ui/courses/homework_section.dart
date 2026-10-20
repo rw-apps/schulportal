@@ -67,7 +67,10 @@ class HomeworkSection extends StatefulWidget {
   final String emptyText;
   final VoidCallback? onShowAll;
 
-  static const shownDone = 10;
+  /// Ursache für 5 (Rückmeldung 20.10.26, „nicht zu groß, nicht zu
+  /// unruhig“): Mit zehn erledigten wurde die Seite lang; ältere stehen auf
+  /// der eigenen Seite (onShowAll).
+  static const shownDone = 5;
 
   @override
   State<HomeworkSection> createState() => _HomeworkSectionState();
@@ -277,11 +280,6 @@ class _OpenCard extends StatelessWidget {
     final strike = ticked
         ? const TextStyle(decoration: TextDecoration.lineThrough)
         : null;
-    final circle = Icon(
-      ticked ? Icons.check_circle : Icons.radio_button_unchecked,
-      size: Sz.navIcon,
-      color: tone.ink,
-    );
     final card = Material(
       color: tone.bg,
       borderRadius: BorderRadius.circular(Rad.signal),
@@ -289,34 +287,41 @@ class _OpenCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(Rad.signal),
         onTap: entry.onOpen,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(Sp.xs, Sp.xs, Sp.l, Sp.xs),
-          child: Row(
+          padding: const EdgeInsets.fromLTRB(Sp.l, Sp.m, Sp.m, Sp.m),
+          // Knopf nur neben dem Aufgabentext; Fach und Kind darunter in
+          // voller Breite. Ursache (Bild 20.10.26): Neben dem Knopf brach
+          // die Fachzeile um („aufgegeben Di / 20.10.“) – unruhig.
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Eigene Trefferfläche (48 dp), getrennt vom Öffnen des Kurses.
-              if (onTick == null && !ticked)
-                Padding(padding: const EdgeInsets.all(Sp.m), child: circle)
-              else
-                IconButton(
-                  onPressed: ticked ? null : onTick,
-                  tooltip: t.homeworkMarkDone,
-                  icon: circle,
-                ),
-              const SizedBox(width: Sp.xs),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: Sp.s),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(text, style: k.boxStrong(tone).merge(strike)),
-                      Text(meta, style: k.planMeta(tone.ink)),
-                      if (entry.kid != null) ...[
-                        const SizedBox(height: Sp.xxs),
-                        KidLine(kid: entry.kid!),
-                      ],
-                    ],
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(text, style: k.boxStrong(tone).merge(strike)),
                   ),
-                ),
+                  if (onTick != null) ...[
+                    const SizedBox(width: Sp.s),
+                    _CardAction(
+                      icon: Icons.check,
+                      label: t.homeworkDoneButton,
+                      color: tone.ink,
+                      fill: tone.bg,
+                      active: ticked,
+                      onPressed: ticked ? null : onTick,
+                    ),
+                  ],
+                ],
+              ),
+              // Kind in der Fachzeile wie bei den erledigten (eine Zeile
+              // weniger in „Alle“).
+              Wrap(
+                spacing: Sp.s,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(meta, style: k.planMeta(tone.ink)),
+                  if (entry.kid != null) KidLine(kid: entry.kid!),
+                ],
               ),
             ],
           ),
@@ -364,11 +369,11 @@ class _DoneCard extends StatelessWidget {
     final t = context.t;
     final item = entry.item;
     final text = item.text.isEmpty ? t.homeworkEntered : item.text;
+    // Nur Fach und Erledigt-Tag – das Aufgabedatum steht auf der Seite
+    // „Erledigte Hausaufgaben“. Ursache: drei Zeilen je erledigter Karte
+    // machten die Liste lang und unruhig (Rückmeldung 20.10.26).
     final meta = [
-      if (item.given == null)
-        item.subject
-      else
-        t.givenOn(item.subject, formatDate(t, t.dateShort, item.given!)),
+      item.subject,
       if (item.done != null)
         t.homeworkDoneOn(formatDate(t, t.dateShort, item.done!)),
     ].join(' · ');
@@ -379,48 +384,116 @@ class _DoneCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(Rad.signal),
         onTap: entry.onOpen,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(Sp.xs, Sp.xs, Sp.l, Sp.xs),
-          child: Row(
+          padding: const EdgeInsets.fromLTRB(Sp.l, Sp.m, Sp.m, Sp.m),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(
-                onPressed: unticked ? null : onTick,
-                tooltip: t.homeworkReopen,
-                icon: Icon(
-                  unticked ? Icons.radio_button_unchecked : Icons.check_circle,
-                  size: Sz.navIcon,
-                  color: k.p.faint,
-                ),
-              ),
-              const SizedBox(width: Sp.xs),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: Sp.s),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        text,
-                        style: k.body.copyWith(
-                          color: k.p.muted,
-                          decoration: unticked
-                              ? null
-                              : TextDecoration.lineThrough,
-                        ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      text,
+                      style: k.body.copyWith(
+                        color: k.p.muted,
+                        decoration: unticked
+                            ? null
+                            : TextDecoration.lineThrough,
                       ),
-                      Text(meta, style: k.meta),
-                      if (entry.kid != null) ...[
-                        const SizedBox(height: Sp.xxs),
-                        KidLine(kid: entry.kid!),
-                      ],
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(width: Sp.s),
+                  _CardAction(
+                    icon: Icons.undo,
+                    // Kurz („Unerledigt“): Oben rechts ließ der lange Text
+                    // „Als unerledigt markieren“ der Aufgabe kaum Platz (Wörter
+                    // brachen mitten im Wort, Bild 20.10.26); der lange steht
+                    // für Bildschirmleser als Tooltip.
+                    label: t.homeworkMarkOpenShort,
+                    tooltip: t.homeworkMarkOpen,
+                    outlined: false,
+                    color: k.p.onNavSelected,
+                    fill: k.p.card,
+                    active: unticked,
+                    onPressed: unticked ? null : onTick,
+                  ),
+                ],
+              ),
+              // Kind in derselben Zeile wie Fach und Tag („Alle“), damit
+              // erledigte Karten zweizeilig bleiben; bricht nur bei
+              // Platzmangel um.
+              Wrap(
+                spacing: Sp.s,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(meta, style: k.meta),
+                  if (entry.kid != null) KidLine(kid: entry.kid!),
+                ],
               ),
             ],
           ),
         ),
       ),
     );
+  }
+}
+
+/// Knopf mit Klartext oben rechts in der Karte („✓ Erledigt“, „↺ Als
+/// unerledigt markieren“); [active] = gerade angetippt (gefüllt, während
+/// die Karte wandert). Ursache (Rückmeldung 20.10.26): Ein Kreis links als
+/// einziges Bedienelement war nicht selbsterklärend; er entfällt.
+class _CardAction extends StatelessWidget {
+  const _CardAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.fill,
+    required this.active,
+    required this.onPressed,
+    this.tooltip,
+    this.outlined = true,
+  });
+
+  final IconData icon;
+  final String label;
+  final String? tooltip;
+
+  /// Rahmen nur für die Hauptaktion („Erledigt“); „Unerledigt“ ohne.
+  /// Ursache (Bild der ganzen Seite, 20.10.26): Fünf gleiche Rahmen unter
+  /// „Erledigt“ wirkten unruhig.
+  final bool outlined;
+  final Color color;
+
+  /// Farbe der Schrift im gefüllten Zustand (Kartenfarbe).
+  final Color fill;
+  final bool active;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final fg = active ? fill : color;
+    final button = OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: Sz.iconSmall, color: fg),
+      label: Text(label, style: k.buttonTiny(fg)),
+      style: OutlinedButton.styleFrom(
+        backgroundColor: active ? color : null,
+        disabledBackgroundColor: active ? color : null,
+        // Klein (Sz.buttonTiny) und ohne unsichtbaren Rand, damit die Zeile
+        // so hoch bleibt wie der Aufgabentext. Grenze: Die Trefferfläche ist
+        // 28 dp statt 48 dp; ein Fehlgriff daneben öffnet die Kursseite.
+        minimumSize: const Size(0, Sz.buttonTiny),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: const EdgeInsets.symmetric(horizontal: Sp.s),
+        side: outlined ? BorderSide(color: color, width: 1.5) : BorderSide.none,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Rad.pill),
+        ),
+      ),
+    );
+    final tip = tooltip;
+    return tip == null ? button : Tooltip(message: tip, child: button);
   }
 }
 

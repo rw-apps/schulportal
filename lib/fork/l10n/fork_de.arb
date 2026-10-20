@@ -1414,5 +1414,8 @@
         "type": "int"
       }
     }
-  }
+  },
+  "homeworkDoneButton": "Erledigt",
+  "homeworkMarkOpen": "Als unerledigt markieren",
+  "homeworkMarkOpenShort": "Unerledigt"
 }

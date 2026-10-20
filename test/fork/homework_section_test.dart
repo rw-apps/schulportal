@@ -53,7 +53,7 @@ void main() {
       ),
     );
     expect(find.text('Erledigt (1)'), findsNothing);
-    await t.tap(find.byTooltip('Als erledigt abhaken').first);
+    await t.tap(find.text('Erledigt').first);
     await t.pumpAndSettle();
     expect(open.map((i) => i.text), ['Arbeitsblatt']);
     expect(find.text('Buch S. 42'), findsNothing, reason: 'zugeklappt');
@@ -62,7 +62,7 @@ void main() {
     await t.tap(find.text('Erledigt (1)'));
     await t.pumpAndSettle();
     expect(find.text('Buch S. 42'), findsOneWidget);
-    await t.tap(find.byTooltip('Wieder offen'));
+    await t.tap(find.text('Unerledigt'));
     await t.pumpAndSettle();
     expect(done, isEmpty);
     expect(open.first.text, 'Buch S. 42');
@@ -71,7 +71,7 @@ void main() {
     expect(find.text('Erledigt (1)'), findsNothing);
   });
 
-  testWidgets('mehr als zehn erledigte: Verweis auf alle', (t) async {
+  testWidgets('mehr als fünf erledigte: Verweis auf alle', (t) async {
     var all = 0;
     await t.pumpWidget(
       MaterialApp(
@@ -99,8 +99,10 @@ void main() {
     );
     await t.tap(find.text('Erledigt (12)'));
     await t.pumpAndSettle();
-    expect(find.text('Aufgabe 9'), findsOneWidget);
-    expect(find.text('Aufgabe 10'), findsNothing);
+    // Die fünf neuesten (HomeworkSection.shownDone), der Rest über den
+    // Verweis.
+    expect(find.text('Aufgabe 4'), findsOneWidget);
+    expect(find.text('Aufgabe 5'), findsNothing);
     await t.ensureVisible(find.text('Alle 12 erledigten anzeigen'));
     await t.pumpAndSettle();
     await t.tap(find.text('Alle 12 erledigten anzeigen'));
