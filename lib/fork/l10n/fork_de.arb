@@ -1328,5 +1328,14 @@
   "themeSystemShort": "Wie Gerät",
   "aboutSummary": "Neuigkeiten, Datenschutz, Lizenzen, Fehlersuche",
   "logoutRemove": "Abmelden und entfernen",
-  "kidColor": "Farbe"
+  "kidColor": "Farbe",
+  "orderMealShort": "Essen",
+  "homeworkShort": "{count, plural, =1{1 Aufgabe} other{{count} Aufgaben}}",
+  "@homeworkShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

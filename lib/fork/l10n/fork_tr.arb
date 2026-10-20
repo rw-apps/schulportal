@@ -505,5 +505,7 @@
   "themeSystemShort": "Cihaz",
   "aboutSummary": "Yenilikler, gizlilik, lisanslar, sorun giderme",
   "logoutRemove": "Çıkış yap ve kaldır",
-  "kidColor": "Renk"
+  "kidColor": "Renk",
+  "orderMealShort": "Yemek",
+  "homeworkShort": "{count, plural, =1{1 ödev} other{{count} ödev}}"
 }

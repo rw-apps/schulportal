@@ -471,7 +471,7 @@ class KidCard extends StatelessWidget {
       if (kid.openHomework > 0)
         _ActionButton(
           icon: Icons.menu_book_outlined,
-          label: t.homeworkCount(kid.openHomework),
+          label: t.homeworkShort(kid.openHomework),
           onTap: onOpenHomework == null ? null : () => onOpenHomework!(kid),
         ),
       if (kid.unreadMessages > 0)
@@ -483,36 +483,37 @@ class KidCard extends StatelessWidget {
       if (kid.mensaUrl != null)
         _ActionButton(
           icon: Icons.restaurant_menu,
-          label: t.orderMeal,
+          label: t.orderMealShort,
           onTap: onOrderMeal == null ? null : () => onOrderMeal!(kid),
         ),
       if (kid.canReportAbsence)
         _ActionButton(
           icon: Icons.thermostat,
           label: t.reportSick,
-          strong: true,
           onTap: onReportAbsence == null ? null : () => onReportAbsence!(kid),
         ),
     ];
     if (items.isEmpty) return const [];
-    // Zwei Knöpfe je Zeile, gleich breit; die Beschriftung schrumpft eher,
-    // als umzubrechen. Ursache (Bildschirmfoto 20.10.26): Als umbrechende
-    // Pillen stand bei großer Schrift jeder Knopf in einer eigenen Zeile.
-    // Ein einzelner letzter Knopf nimmt die ganze Breite.
+    // Eine ruhige Leiste: alle Knöpfe gleich breit in EINER Zeile, Symbol
+    // oben, Beschriftung darunter (höchstens zwei Zeilen). Ursache
+    // (Rückmeldung 20.10.26: „ruhiger, weniger Umbruch“): Als umbrechende
+    // Pillen stand bei großer Schrift fast jeder Knopf in einer eigenen
+    // Zeile; nebeneinander mit schrumpfender Schrift wurden lange
+    // Beschriftungen ungleich klein. Grenze: höchstens vier Aktionen.
     return [
       const SizedBox(height: Sp.m),
-      for (var i = 0; i < items.length; i += 2) ...[
-        if (i > 0) const SizedBox(height: Sp.s),
-        Row(
+      // Gleich hoch, auch wenn eine Beschriftung zweizeilig ist.
+      IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(child: items[i]),
-            if (i + 1 < items.length) ...[
-              const SizedBox(width: Sp.s),
-              Expanded(child: items[i + 1]),
+            for (final (j, b) in items.indexed) ...[
+              if (j > 0) const SizedBox(width: Sp.s),
+              Expanded(child: b),
             ],
           ],
         ),
-      ],
+      ),
     ];
   }
 }
@@ -761,48 +762,50 @@ class _DayBar extends StatelessWidget {
 
 /// Aktion als Pille (Höhe wie die Kinderwahl, Sz.buttonSmall).
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    this.onTap,
-    this.strong = false,
-  });
+  const _ActionButton({required this.icon, required this.label, this.onTap});
 
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
-  final bool strong;
 
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final fg = strong ? k.p.onStrong : k.p.ink;
-    // Feiner Rahmen um die hellen Knöpfe (Rückmeldung 20.10.26: „Felder
-    // umrahmen“) – Grau auf Weiß hob sich bei Sonnenlicht kaum ab.
+    final fg = k.p.ink;
+    // Hell mit feinem Rahmen (Rückmeldung 20.10.26: „Felder umrahmen“,
+    // „ruhiger“) – Grau auf Weiß hob sich bei Sonnenlicht kaum ab; alle
+    // Knöpfe gleich, keiner sticht hervor.
     return Material(
-      color: strong ? k.p.strong : k.p.inset,
-      shape: StadiumBorder(
-        side: strong ? BorderSide.none : BorderSide(color: k.p.line),
+      color: k.p.inset,
+      // Rahmen kräftiger (Rückmeldung 20.10.26): die Farbe der Nebenschrift
+      // und 1,5 px statt der feinen Trennlinie.
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Rad.buttonSmall),
+        side: BorderSide(color: k.p.faint, width: 1.5),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(Rad.pill),
+        customBorder: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Rad.buttonSmall),
+        ),
         onTap: onTap,
-        child: Container(
-          height: Sz.buttonSmall,
-          padding: const EdgeInsets.symmetric(horizontal: Sp.m),
-          alignment: Alignment.center,
-          // Volle Breite der Spalte (Kinderkarte: zwei je Zeile); passt die
-          // Beschriftung nicht, wird sie kleiner statt abgeschnitten.
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: Sz.icon, color: fg),
-                const SizedBox(width: Sp.s),
-                Text(label, style: k.button(fg)),
-              ],
-            ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Sp.xs,
+            vertical: Sp.s,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: Sz.navIcon, color: fg),
+              const SizedBox(height: Sp.xs),
+              Text(
+                label,
+                style: k.chipLabel(false, fg),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
       ),

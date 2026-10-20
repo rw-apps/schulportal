@@ -505,5 +505,7 @@
   "themeSystemShort": "Device",
   "aboutSummary": "News, privacy, licences, troubleshooting",
   "logoutRemove": "Sign out and remove",
-  "kidColor": "Colour"
+  "kidColor": "Colour",
+  "orderMealShort": "Lunch",
+  "homeworkShort": "{count, plural, =1{1 task} other{{count} tasks}}"
 }
