@@ -154,4 +154,73 @@ void main() {
     expect(find.text('Referat'), findsNWidgets(2));
     expect(asked, [false, false, true, true]);
   });
+
+  testWidgets(
+    'Noten: einmal neu anmelden, nach drei Fehlern in Folge Schluss',
+    (t) async {
+      // Fehlerbericht 21.10.26: Alle Kursseiten scheiterten nacheinander.
+      final many = [
+        for (var i = 0; i < 6; i++)
+          CourseItem(
+            id: 'k$i',
+            title: 'Fach $i',
+            fullName: 'F$i',
+            planOrder: i,
+          ),
+      ];
+      var loads = 0;
+      var reauths = 0;
+      await t.pumpWidget(
+        _app(
+          SingleChildScrollView(
+            child: GradesView(
+              source: GradesSource(
+                account: 'a-fail',
+                courses: many,
+                reauth: () async => reauths++,
+                load: (c, {required firstHalf}) async {
+                  loads++;
+                  throw Exception('Portal');
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      // Fach 0: Abruf, Neuanmeldung, Abruf; Fach 1 und 2: je ein Abruf.
+      expect(reauths, 1);
+      expect(loads, 4);
+      expect(
+        find.text('6 Kurse konnten nicht geladen werden.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('Noten: Neuanmeldung behebt den Fehler', (t) async {
+    var loads = 0;
+    var loggedIn = false;
+    await t.pumpWidget(
+      _app(
+        SingleChildScrollView(
+          child: GradesView(
+            source: GradesSource(
+              account: 'a-reauth',
+              courses: _courses.take(2).toList(),
+              reauth: () async => loggedIn = true,
+              load: (c, {required firstHalf}) async {
+                loads++;
+                if (!loggedIn) throw Exception('Sitzung abgelaufen');
+                return _page(c.id, [_m('Test', '2')]);
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    expect(loads, 3);
+    expect(find.textContaining('konnte'), findsNothing);
+  });
 }

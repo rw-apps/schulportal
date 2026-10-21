@@ -13,6 +13,7 @@ import '../../l10n/l10n.dart';
 import '../kit.dart';
 import '../nav.dart';
 import '../live/live_data.dart';
+import '../live/stale_notice.dart';
 import '../messages/compose_model.dart';
 import '../messages/compose_page.dart';
 import '../plan/plan_model.dart';
@@ -119,11 +120,21 @@ class LiveCoursesPage extends ConsumerWidget {
               save(scanFrom(items, pages, DateTime.now(), old: s.courseScan));
             },
             calendar: examCalendarOf(s, DateTime.now()),
+            reauth: () => s.session.authenticate(),
           ),
           firstName: s.kids.isNotEmpty ? s.firstName : null,
           className: liveClassName(s),
           loading: s.lessons.content == null && !s.lessons.failed,
           onRefresh: s.refresh,
+          // Alter Stand (stale_notice.dart) wie auf Heute.
+          notices: [
+            ?staleNotice(
+              context,
+              feeds: [s.lessons],
+              now: DateTime.now(),
+              onRetry: s.refresh,
+            ),
+          ],
           onOpen: (i) => pushInTab<void>(
             context,
             (_) => liveCourseDetail(context, ref, s, i, live, items),
@@ -393,6 +404,14 @@ class LiveAllCoursesPage extends ConsumerWidget {
       doneCount: done,
       loading: loading,
       onRefresh: refreshAll,
+      notices: [
+        ?staleNotice(
+          context,
+          feeds: [for (final m in shown) m.snapshot.lessons],
+          now: now,
+          onRetry: refreshAll,
+        ),
+      ],
       onOpenArchive: withDone.isEmpty
           ? null
           : () async {

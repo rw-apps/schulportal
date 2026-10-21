@@ -7,6 +7,7 @@ import 'package:lanis/fork/absence/absence_view.dart';
 import '../../l10n/l10n.dart';
 import '../live/family.dart';
 import '../live/live_data.dart';
+import '../live/stale_notice.dart';
 import '../mensa/mensa_page.dart';
 import '../plan/plan_from_lanis.dart' show subjectFullName;
 import '../plan/plan_model.dart';
@@ -189,29 +190,25 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
         void select(ChildToday c) =>
             FamilyData.scopeOf(context)?.onSelect?.call(memberOf(c).accountId);
         final scope = FamilyData.scopeOf(context);
-        // Gespeicherter Stand oder letzter Abruf fehlgeschlagen
-        // (live_data.dart, _Source): Hinweis oben mit dem Stand.
-        bool stale(Feed<Object?> f) =>
-            f.content != null && (f.offline || f.error != null);
-        final staleShown = shown.any(
-          (x) =>
-              stale(x.$1.snapshot.timetable) ||
-              stale(x.$1.snapshot.substitutions),
+        // Alter Stand (stale_notice.dart): Hinweis oben.
+        final stale = staleNotice(
+          context,
+          feeds: [
+            for (final (m, _) in shown) ...[
+              m.snapshot.timetable,
+              m.snapshot.substitutions,
+            ],
+          ],
+          now: now,
+          onRetry: () {
+            for (final (m, _) in shown) {
+              m.snapshot.refresh();
+            }
+          },
         );
         return TodayPage(
           notices: [
-            if (staleShown && updated != null)
-              HintCard(
-                icon: Icons.cloud_off_outlined,
-                title: context.t.staleTitle,
-                text: context.t.staleText(standLabel(context.t, updated, now)),
-                action: context.t.staleRetry,
-                onAction: () {
-                  for (final (m, _) in shown) {
-                    m.snapshot.refresh();
-                  }
-                },
-              ),
+            ?stale,
             for (final f in scope?.failures ?? const <FamilyFailure>[])
               LoginFailureCard(
                 failure: f,

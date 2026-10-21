@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../kit.dart';
 
-/// Gelber Hinweis oben auf „Heute“ mit einer Aktion (neues Schuljahr,
-/// offene Wahl). Ursache: Beide Hinweise sahen gleich aus; ein Baustein hält
-/// sie einheitlich (Entwurf 20.10.26 k4).
+/// Hinweis oben auf einer Seite mit einer Aktion (neues Schuljahr, offene
+/// Wahl, Portal nicht erreichbar). Ursache: Die Hinweise sahen verschieden
+/// aus; ein Baustein hält sie einheitlich (Entwurf 20.10.26 k4).
+///
+/// Grau (KitPalette.todo) statt Gelb seit 21.10.26: Gelb heißt Vertretung,
+/// Raumwechsel oder Essen; ein Hinweis zur App ist keine Abweichung vom
+/// Plan.
 ///
 /// Kompakt in einer Zeile: Symbol im runden Feld, Titel und kurze Zeile,
 /// Aktion als Pille rechts. Ursache (Rückmeldung 20.10.26: „Platz besser
@@ -29,7 +33,7 @@ class HintCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final tone = k.p.change;
+    final tone = k.p.todo;
     return Container(
       padding: const EdgeInsets.all(Sp.m),
       decoration: BoxDecoration(

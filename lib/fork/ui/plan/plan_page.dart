@@ -37,6 +37,7 @@ class PlanPage extends StatefulWidget {
     this.onSelectAll,
     this.viewRequest,
     this.freeDays = const {},
+    this.notices = const [],
   });
 
   /// Ansicht, die von außen verlangt wird (Heute → „Alle Termine“ setzt
@@ -49,6 +50,11 @@ class PlanPage extends StatefulWidget {
   /// die Tagesansicht nennt dann den Grund statt „kein Unterricht“. Die
   /// Pläne selbst sind an diesen Tagen schon leer (planWithSubstitutions).
   final Map<int, Map<DateTime, String>> freeDays;
+
+  /// Hinweise über dem Inhalt (z. B. „Portal nicht erreichbar“,
+  /// stale_notice.dart) – in Tag und Terminen oben in der Liste, in der
+  /// Woche zwischen Kopf und Raster.
+  final List<Widget> notices;
 
   /// Von außen gewähltes Kind (Index in [plans], FamilyData); null = eigene
   /// Wahl der Seite.
@@ -414,7 +420,14 @@ class _PlanPageState extends State<PlanPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ...head,
+            // Hinweise direkt unter der Titelzeile wie in der Tagesansicht.
+            head.first,
+            for (final n in widget.notices)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Sp.page, Sp.s, Sp.page, 0),
+                child: n,
+              ),
+            ...head.skip(1),
             Expanded(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(Sp.s, Sp.ml, Sp.s, bottom + Sp.s),
@@ -457,6 +470,11 @@ class _PlanPageState extends State<PlanPage> {
         onRefresh: widget.onRefresh,
         header: [head.first],
         children: [
+          for (final n in widget.notices)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Sp.m),
+              child: n,
+            ),
           EventList(
             items: events,
             now: widget.now,
@@ -481,6 +499,11 @@ class _PlanPageState extends State<PlanPage> {
       onRefresh: widget.onRefresh,
       header: [head.first],
       children: [
+        for (final n in widget.notices)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Sp.page, Sp.s, Sp.page, 0),
+            child: n,
+          ),
         ...head.skip(1),
         Padding(
           padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),

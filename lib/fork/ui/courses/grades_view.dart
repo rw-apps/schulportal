@@ -21,7 +21,11 @@ class GradesSource {
     required this.load,
     this.onCurrentLoaded,
     this.calendar = const [],
+    this.reauth,
   });
+
+  /// Neu anmelden (LanisSession.authenticate); null = ohne.
+  final Future<void> Function()? reauth;
 
   /// Termine des Schulkalenders bis Halbjahresende (weekItemsFromCalendar,
   /// nach Klasse gefiltert): Arbeiten, die in keiner Kursmappe stehen,
@@ -77,6 +81,10 @@ class GradesView extends StatefulWidget {
 
 class GradesViewState extends State<GradesView> {
   static const _halfId = 'grades-first-half';
+
+  /// Fehlgeschlagene Seiten in Folge (nach der Neuanmeldung), ab denen der
+  /// Durchgang den Rest nicht mehr anfragt.
+  static const giveUpAfter = 3;
 
   bool _firstHalf = false;
   bool _hasFirstHalf = false;
@@ -141,12 +149,39 @@ class GradesViewState extends State<GradesView> {
       _total = todo.length;
       _loading = todo.isNotEmpty;
     });
+    // Scheitert eine Seite, einmal je Durchgang neu anmelden und dieselbe
+    // Seite erneut holen; scheitern danach [giveUpAfter] Seiten in Folge,
+    // den Rest nicht mehr anfragen. Ursache (Fehlerbericht 21.10.26, 12:01):
+    // Bei abgelaufener Sitzung oder gestörtem Portal scheiterten alle rund
+    // 15 Kursseiten nacheinander – 15 Anfragen und 15 Protokolleinträge für
+    // dieselbe Ursache. Grenze: Die übersprungenen gelten als fehlgeschlagen
+    // („n Kurse konnten nicht geladen werden“ mit „Erneut versuchen“).
+    var reauthTried = false;
+    var inRow = 0;
     for (final c in todo) {
-      try {
+      if (inRow >= giveUpAfter) {
+        _failed.add(c.id);
+        continue;
+      }
+      Future<void> get() async {
         final d = await widget.source.load(c, firstHalf: firstHalf);
         pages[c.id] = d;
         if (!firstHalf && d.semester1URL != null) _hasFirstHalf = true;
+      }
+
+      try {
+        try {
+          await get();
+        } catch (_) {
+          final reauth = widget.source.reauth;
+          if (reauthTried || reauth == null) rethrow;
+          reauthTried = true;
+          await reauth();
+          await get();
+        }
+        inRow = 0;
       } catch (e, st) {
+        inRow++;
         ErrorLog.instance.record('meinunterricht.php/noten', e, st);
         if (mounted && run == _run) _failed.add(c.id);
       }

@@ -71,6 +71,7 @@ class CoursesPage extends StatefulWidget {
     this.grades,
     this.homework,
     this.onOpenAbsences,
+    this.notices = const [],
   });
 
   /// „Abwesenheiten“ öffnen; [course] = nur dieses Fach, null = alle.
@@ -89,6 +90,10 @@ class CoursesPage extends StatefulWidget {
   /// Quelle der Notenübersicht; null = kein Umschalter (Vorschau, kein
   /// „Mein Unterricht“).
   final GradesSource? grades;
+
+  /// Hinweise oben in der Liste (z. B. „Portal nicht erreichbar“,
+  /// stale_notice.dart).
+  final List<Widget> notices;
 
   @override
   State<CoursesPage> createState() => _CoursesPageState();
@@ -171,6 +176,11 @@ class _CoursesPageState extends State<CoursesPage> {
         ),
     ];
     final children = <Widget>[
+      for (final n in widget.notices)
+        Padding(
+          padding: const EdgeInsets.only(top: Sp.s),
+          child: n,
+        ),
       if (showGrades)
         GradesView(
           key: _gradesKey,
@@ -565,7 +575,11 @@ class AllCoursesView extends StatelessWidget {
     this.onOpenArchive,
     this.loading = false,
     this.onRefresh,
+    this.notices = const [],
   });
+
+  /// Wie [CoursesPage.notices].
+  final List<Widget> notices;
 
   final List<AllHomework> homework;
 
@@ -602,6 +616,11 @@ class AllCoursesView extends StatelessWidget {
         ),
       ],
       children: [
+        for (final n in notices)
+          Padding(
+            padding: const EdgeInsets.only(top: Sp.s),
+            child: n,
+          ),
         _Section(title: t.openHomeworkTitle),
         HomeworkSection(
           open: [

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/l10n.dart';
 import '../live/family.dart';
 import '../live/live_data.dart';
+import '../live/stale_notice.dart';
 import '../today/today_from_lanis.dart'
     show
         freeDaysFrom,
@@ -163,6 +164,25 @@ class LiveCalendarPage extends StatelessWidget {
           onRefresh: () async {
             await Future.wait([for (final m in members) m.snapshot.refresh()]);
           },
+          // Alter Stand (stale_notice.dart) wie auf Heute.
+          notices: [
+            ?staleNotice(
+              context,
+              feeds: [
+                for (final (m, _) in shown) ...[
+                  m.snapshot.timetable,
+                  m.snapshot.substitutions,
+                  m.snapshot.calendar,
+                ],
+              ],
+              now: now,
+              onRetry: () {
+                for (final m in members) {
+                  m.snapshot.refresh();
+                }
+              },
+            ),
+          ],
         );
       },
     );
