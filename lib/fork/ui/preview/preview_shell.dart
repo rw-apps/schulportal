@@ -1,6 +1,6 @@
 import '../../data_storage.dart' show offersStorage;
 import '../storage/storage_page.dart';
-import '../nav.dart' show pushFullScreen;
+import '../nav.dart' show pushInTab;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemNavigator;
 import 'package:go_router/go_router.dart';
@@ -295,15 +295,16 @@ class _PreviewShellState extends State<PreviewShell> {
           },
         ),
       // Dateispeicher der Schule (data_storage.dart); öffnet im Rahmen des
-      // gewählten Kontos (pushFullScreen), also auch für weitere Kinder.
+      // gewählten Kontos (pushInTab), also auch für weitere Kinder.
       if (offersStorage(s.session.travelMenu))
         MoreEntry(
           icon: Icons.folder_copy_outlined,
           label: t.storageTitle,
           detail: t.storageDetail,
-          onTap: () => pushFullScreen<void>(
+          onTap: () => pushInTab<void>(
             context,
             (_) => LiveStoragePage(subtitle: shortSchoolName(s.schoolName)),
+            kidChips: true,
           ),
         ),
       // Moodle öffnet über den Router, also immer im aktiven Konto.

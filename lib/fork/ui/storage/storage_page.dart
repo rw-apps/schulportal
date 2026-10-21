@@ -227,7 +227,9 @@ class _Tile extends StatelessWidget {
 }
 
 /// Mit der Sitzung des Kontos im Rahmen (FamilyMember.scope über
-/// pushFullScreen).
+/// pushInTab). Seit 21.10.26 im Reiter wie die übrigen Lese-Seiten, mit
+/// Kind-Pillen oben (SubpageKidChips): Über dem Navigator der App
+/// (pushFullScreen) fehlt FamilyData, dort gäbe es keine Kinderwahl.
 class LiveStoragePage extends ConsumerWidget {
   const LiveStoragePage({super.key, this.folder, this.subtitle = ''});
 
@@ -255,9 +257,10 @@ class LiveStoragePage extends ConsumerWidget {
         ),
         () {},
       ),
-      onOpenFolder: (f) => pushFullScreen<void>(
+      onOpenFolder: (f) => pushInTab<void>(
         context,
         (_) => LiveStoragePage(folder: f, subtitle: subtitle),
+        kidChips: true,
       ),
     );
   }

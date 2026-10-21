@@ -100,8 +100,11 @@ class LiveCoursesPage extends ConsumerWidget {
             doneCount: hw.done.length,
             onDone: (h) => toggle(h, true),
             onReopen: (h) => toggle(h, false),
-            onOpenArchive: () =>
-                pushInTab<void>(context, (_) => const LiveHomeworkArchive()),
+            onOpenArchive: () => pushInTab<void>(
+              context,
+              (_) => const LiveHomeworkArchive(),
+              kidChips: true,
+            ),
           ),
           grades: GradesSource(
             account: s.accountKey,
@@ -124,10 +127,12 @@ class LiveCoursesPage extends ConsumerWidget {
           onOpen: (i) => pushInTab<void>(
             context,
             (_) => liveCourseDetail(context, ref, s, i, live, items),
+            kidChips: true,
           ),
           onOpenAbsences: (id) => pushInTab<void>(
             context,
             (_) => LiveAbsencesPage(courses: items, focus: id),
+            kidChips: true,
           ),
         );
       },
@@ -220,6 +225,7 @@ Widget liveCourseDetail(
     onOpenAbsences: () => pushInTab<void>(
       context,
       (_) => LiveAbsencesPage(courses: items, focus: i.id),
+      kidChips: true,
     ),
     onWrite: s.offers('nachrichten.php')
         // Eingabe-Seiten über der ganzen App (nav.dart, pushFullScreen).
@@ -326,12 +332,12 @@ class LiveAllCoursesPage extends ConsumerWidget {
               ? null
               : () => pushInTab<void>(
                   context,
-                  (_) => m.scope(
-                    Consumer(
-                      builder: (c, r, _) =>
-                          liveCourseDetail(c, r, s, course, live, raw),
-                    ),
+                  (_) => Consumer(
+                    builder: (c, r, _) =>
+                        liveCourseDetail(c, r, s, course, live, raw),
                   ),
+                  kidChips: true,
+                  member: m,
                 ),
         );
       }
@@ -361,7 +367,9 @@ class LiveAllCoursesPage extends ConsumerWidget {
             kid: kid,
             onTap: () => pushInTab<void>(
               context,
-              (_) => m.scope(LiveAbsencesPage(courses: raw, focus: i.id)),
+              (_) => LiveAbsencesPage(courses: raw, focus: i.id),
+              kidChips: true,
+              member: m,
             ),
           ),
         );
@@ -398,7 +406,9 @@ class LiveAllCoursesPage extends ConsumerWidget {
               if (m == null || !context.mounted) return;
               await pushInTab<void>(
                 context,
-                (_) => m.scope(const LiveHomeworkArchive()),
+                (_) => const LiveHomeworkArchive(),
+                kidChips: true,
+                member: m,
               );
             },
     );

@@ -496,15 +496,89 @@ class _FamilySwitchState extends State<FamilySwitch> {
           }
         },
       ),
-      child: all
-          ? KeyedSubtree(
-              key: const ValueKey('family-all'),
-              child: widget.all!(context, members),
-            )
-          : KeyedSubtree(
-              key: ValueKey('family-${sel.accountId}'),
-              child: sel.scope(widget.child),
-            ),
+      child: FamilyArea(
+        withAll: widget.all != null,
+        child: all
+            ? KeyedSubtree(
+                key: const ValueKey('family-all'),
+                child: widget.all!(context, members),
+              )
+            : KeyedSubtree(
+                key: ValueKey('family-${sel.accountId}'),
+                child: sel.scope(widget.child),
+              ),
+      ),
+    );
+  }
+}
+
+/// Merkt sich unter einer [FamilySwitch], ob der Bereich „Alle“ anbietet –
+/// für die Kind-Pillen seiner Unterseiten ([SubpageKidChips], nav.dart
+/// liest es beim Öffnen).
+class FamilyArea extends InheritedWidget {
+  const FamilyArea({super.key, required this.withAll, required super.child});
+
+  final bool withAll;
+
+  /// false ohne [FamilySwitch] darüber (z. B. Tests, ein Konto).
+  static bool withAllOf(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<FamilyArea>()?.withAll ?? false;
+
+  @override
+  bool updateShouldNotify(FamilyArea old) => old.withAll != withAll;
+}
+
+/// Kind-Pillen auch auf Unterseiten eines Kindes (Fachseite, Abwesenheiten,
+/// Hausaufgaben-Archiv, Dateiablage) – an derselben Stelle wie auf der
+/// Übersicht (PinnedKidChips). Gewählt ist das Kind, dem die Seite gehört
+/// ([FamilyMember.around]). Ein anderes Kind (oder „Alle“) führt zurück zur
+/// Übersicht des Bereichs und wählt dort um.
+///
+/// Ursache (Rückmeldung 21.10.26, Entscheidung „B“): Auf der Fachseite
+/// fehlte oben die Kinderwahl, und nichts zeigte, wessen Fach es ist.
+/// Grenze: Eingabe-Seiten (Neue Nachricht, Krankmeldung, Unterhaltung mit
+/// Antwortfeld) und Einstellungen bekommen keine Pillen – ein Wechsel ließe
+/// dort Getipptes verloren gehen bzw. Einstellungen gehören keinem Kind.
+class SubpageKidChips extends StatelessWidget {
+  const SubpageKidChips({super.key, required this.child, this.withAll = false});
+
+  final Widget child;
+
+  /// Pille „Alle“ vorn wie auf der Übersicht des Bereichs.
+  final bool withAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = FamilyData.scopeOf(context);
+    final members = scope?.members ?? const <FamilyMember>[];
+    if (scope == null || members.length < 2) return child;
+    final me = FamilyMember.around(context);
+    final own = me == null
+        ? -2
+        : members.indexWhere((m) => m.accountId == me.accountId);
+    return PinnedKidChips(
+      chips: KidChips(
+        allLabel: withAll ? context.t.forEveryone : null,
+        kids: [
+          for (final m in members)
+            (name: kidLabel(m.snapshot), color: m.colorIndex),
+        ],
+        selected: own,
+        onSelect: (i) {
+          if (i == own) return;
+          final pickAll = scope.onSelectAll;
+          final pick = scope.onSelect;
+          // Erst zurück zur Übersicht, dann umwählen: Die Unterseite gehört
+          // dem bisherigen Kind und wird verworfen.
+          Navigator.of(context).popUntil((r) => r.isFirst);
+          if (i < 0) {
+            pickAll?.call();
+          } else {
+            pick?.call(members[i].accountId);
+          }
+        },
+      ),
+      child: child,
     );
   }
 }

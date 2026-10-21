@@ -251,4 +251,87 @@ void main() {
     expect(find.text('Heute: alle'), findsOneWidget);
     expect(find.text('Unterricht: alle'), findsOneWidget);
   });
+
+  testWidgets('Unterseite: Kind-Pillen, anderes Kind führt zurück', (t) async {
+    // Entscheidung 21.10.26 („B“): Kinderwahl auch auf der Fachseite usw.
+    final a = _snap(1, 'Anna', 'Schule A');
+    final b = _snap(2, 'Ben', 'Schule B');
+    int? selected;
+    var all = false;
+    late StateSetter set;
+    await t.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: ForkL10n.localizationsDelegates,
+        supportedLocales: ForkL10n.supportedLocales,
+        locale: const Locale('de'),
+        home: StatefulBuilder(
+          builder: (c, s) {
+            set = s;
+            return Scaffold(
+              body: LiveData(
+                snapshot: a,
+                child: FamilyData(
+                  members: [
+                    FamilyMember(accountId: 1, snapshot: a, colorIndex: 0),
+                    FamilyMember(accountId: 2, snapshot: b, colorIndex: 1),
+                  ],
+                  selectedAccount: selected,
+                  onSelect: (id) => set(() {
+                    selected = id;
+                    all = false;
+                  }),
+                  showAll: all,
+                  onSelectAll: () => set(() => all = true),
+                  // Navigator des Reiters unter FamilyData wie in der App.
+                  child: Navigator(
+                    onGenerateRoute: (_) => MaterialPageRoute<void>(
+                      builder: (_) => FamilySwitch(
+                        all: (_, _) => const Text('Übersicht: alle'),
+                        child: Builder(
+                          builder: (c) => Column(
+                            children: [
+                              Text('Übersicht: ${LiveData.of(c)!.firstName}'),
+                              TextButton(
+                                onPressed: () => pushInTab<void>(
+                                  c,
+                                  (_) => Builder(
+                                    builder: (p) => Text(
+                                      'Fach von ${LiveData.of(p)!.firstName}',
+                                    ),
+                                  ),
+                                  kidChips: true,
+                                ),
+                                child: const Text('Öffnen'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    expect(find.text('Übersicht: Anna'), findsOneWidget);
+    await t.tap(find.text('Öffnen'));
+    await t.pumpAndSettle();
+    expect(find.text('Fach von Anna'), findsOneWidget);
+    // Pillen auf der Unterseite, samt „Alle“ wie auf der Übersicht.
+    expect(find.text('Alle'), findsOneWidget);
+    await t.tap(find.text('Ben').last);
+    await t.pumpAndSettle();
+    expect(find.text('Fach von Anna'), findsNothing);
+    expect(find.text('Übersicht: Ben'), findsOneWidget);
+    await t.tap(find.text('Öffnen'));
+    await t.pumpAndSettle();
+    expect(find.text('Fach von Ben'), findsOneWidget);
+    await t.tap(find.text('Alle').last);
+    await t.pumpAndSettle();
+    expect(find.text('Übersicht: alle'), findsOneWidget);
+    _disposeCheckers();
+  });
 }

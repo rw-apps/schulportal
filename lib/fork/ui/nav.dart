@@ -8,10 +8,21 @@ import 'live/family.dart';
 /// Ursache: siehe FamilyMember.around – neue Routen erben den Rahmen des
 /// Navigators, nicht den der öffnenden Seite. Grenze: Einstellungen öffnen
 /// bewusst OHNE diesen Rahmen (sie gehören zum aktiven Konto, samt Abmelden).
-Future<T?> pushInTab<T>(BuildContext context, WidgetBuilder builder) {
-  return Navigator.of(
-    context,
-  ).push(MaterialPageRoute<T>(builder: _once(context, builder)));
+///
+/// [kidChips]: Kind-Pillen oben (SubpageKidChips) – für Lese-Seiten eines
+/// Kindes. [member]: Konto der Seite, wenn der Aufrufer nicht in dessen
+/// Rahmen liegt (Ansichten „Alle“).
+Future<T?> pushInTab<T>(
+  BuildContext context,
+  WidgetBuilder builder, {
+  bool kidChips = false,
+  FamilyMember? member,
+}) {
+  return Navigator.of(context).push(
+    MaterialPageRoute<T>(
+      builder: _once(context, builder, kidChips: kidChips, member: member),
+    ),
+  );
 }
 
 /// Seite zum Eingeben über der ganzen App öffnen – ohne Leiste unten, im
@@ -42,8 +53,21 @@ Future<T?> pushFullScreen<T>(BuildContext context, WidgetBuilder builder) {
 /// beim ersten Aufbau direkt nach dem Öffnen und bleibt dieselbe. Grenze:
 /// Was die Seite von außen bekam, aktualisiert sie nur über ihre eigenen
 /// Daten (Kursseite, Unterhaltung laden selbst).
-WidgetBuilder _once(BuildContext context, WidgetBuilder builder) {
-  final member = FamilyMember.around(context);
+///
+/// Die Kind-Pillen liegen INNERHALB des Rahmens, damit sie das Kind der
+/// Seite kennen; ob „Alle“ angeboten wird, gilt wie im öffnenden Bereich
+/// (FamilyArea, beim Öffnen gelesen).
+WidgetBuilder _once(
+  BuildContext context,
+  WidgetBuilder builder, {
+  bool kidChips = false,
+  FamilyMember? member,
+}) {
+  final scoped = member ?? FamilyMember.around(context);
+  final withAll = FamilyArea.withAllOf(context);
+  Widget page(BuildContext c) => kidChips
+      ? SubpageKidChips(withAll: withAll, child: builder(c))
+      : builder(c);
   Widget? built;
-  return (c) => built ??= member?.scope(builder(c)) ?? builder(c);
+  return (c) => built ??= scoped?.scope(page(c)) ?? page(c);
 }
