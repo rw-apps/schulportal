@@ -275,4 +275,25 @@ void main() {
     await t.pumpAndSettle();
     expect(find.textContaining('Jan Wolf'), findsOneWidget);
   });
+
+  testWidgets('Heute: Vergangenes normal, laufende Stunde kräftig umrandet', (
+    t,
+  ) async {
+    // Rückmeldung 21.10.26: am heutigen Tag nichts ausgegraut.
+    await _pixel(t);
+    await t.pumpWidget(_app());
+    await _openPlan(t);
+    final bio = t.widget<Text>(find.text('Biologie').first);
+    expect(bio.style!.color, isNot(KitPalette.light.faint));
+    final running = t.widget<Material>(
+      find
+          .ancestor(
+            of: find.text('läuft').first,
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    final side = (running.shape! as RoundedRectangleBorder).side;
+    expect(side.width, Sz.runningBorder);
+  });
 }

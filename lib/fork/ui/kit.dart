@@ -144,6 +144,12 @@ abstract final class Sz {
 
   /// Rahmen um geänderte bzw. laufende Zellen.
   static const double cellBorder = 2;
+
+  /// Rahmen der laufenden Stunde in der Tagesansicht – kräftiger als
+  /// [cellBorder] (Rückmeldung 21.10.26: „fette Umrandung“). Im
+  /// Wochenraster bleibt es bei [cellBorder]; die Zellen sind dort nur
+  /// etwa 60 dp breit.
+  static const double runningBorder = 3;
 }
 
 /// Eckenradien.

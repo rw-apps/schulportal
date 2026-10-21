@@ -63,7 +63,7 @@ class LiveCalendarPage extends StatelessWidget {
           for (final (i, (m, live)) in shown.indexed)
             planWithSubstitutions(
               plan: live.plan,
-              days: m.snapshot.substitutions.content?.days ?? const [],
+              days: m.snapshot.substitutionDaysWithPast(now),
               week: schoolWeek(now),
               t: context.t,
               free: free[i],
@@ -108,7 +108,7 @@ class LiveCalendarPage extends StatelessWidget {
             for (final (i, (m, live)) in shown.indexed)
               planWithSubstitutions(
                 plan: live.plan,
-                days: m.snapshot.substitutions.content?.days ?? const [],
+                days: m.snapshot.substitutionDaysWithPast(now),
                 week: w,
                 t: context.t,
                 free: free[i],

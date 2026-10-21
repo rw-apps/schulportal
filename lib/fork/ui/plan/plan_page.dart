@@ -928,7 +928,6 @@ class _DayRow extends StatelessWidget {
     final e = minutesOf(end).minutes;
     final t = now == null || !plan.timed ? null : now!.hour * 60 + now!.minute;
     final running = t != null && t >= s && t < e;
-    final done = t != null && t >= e;
     final label = blockLabel(plan, block);
 
     Color bg = k.p.card;
@@ -980,9 +979,11 @@ class _DayRow extends StatelessWidget {
               ? context.t.changeSubstitution
               : context.t.changeRoom;
           second = [what, ?x.changeDetail].join(': ');
-        } else if (done) {
-          ink = sub = k.p.faint;
         }
+        // Vorbei heißt nicht mehr grau: Heute sieht aus wie jeder andere
+        // Tag, nur die laufende Stunde ist umrandet. Ursache (Rückmeldung
+        // 21.10.26): An allen anderen Tagen stehen die Stunden normal da,
+        // am heutigen waren die vergangenen ausgegraut.
         if (_isParallelSubject(plan, x.short)) {
           trailing = IconButton(
             tooltip: context.t.otherGroup,
@@ -1005,7 +1006,7 @@ class _DayRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (plan.timed) ...[
-                  _FitTime(start, style: done ? k.timeEnd : k.timeStart),
+                  _FitTime(start, style: k.timeStart),
                   _FitTime(end, style: k.timeEnd),
                 ] else
                   Text(
@@ -1020,12 +1021,14 @@ class _DayRow extends StatelessWidget {
         Expanded(
           child: Material(
             color: bg,
-            // Laufende Stunde: dunkler Rahmen statt Kinderfarbe (Abnahme
-            // 21.10.26); geänderte Stunden behalten ihre Signalfläche.
+            // Laufende Stunde: kräftiger dunkler Rahmen (Sz.runningBorder),
+            // auch über der Signalfläche einer Vertretung. Ursache
+            // (Rückmeldung 21.10.26): Sie soll am heutigen Tag klar zu
+            // sehen sein, auch wenn sie gelb oder rot ist.
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(Rad.signal),
-              side: running && bg == k.p.card
-                  ? BorderSide(color: k.p.strong, width: Sz.cellBorder)
+              side: running
+                  ? BorderSide(color: k.p.strong, width: Sz.runningBorder)
                   : BorderSide.none,
             ),
             clipBehavior: Clip.antiAlias,

@@ -11,6 +11,7 @@ import 'package:lanis/utils/applet_settings.dart';
 
 import '../../courses_scan.dart';
 import '../../homework_ledger.dart';
+import '../../substitution_history.dart';
 import '../../lessons_parent.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
@@ -166,7 +167,20 @@ class LiveSnapshot {
     this.setClass,
     this.photo,
     this.electionOpen = false,
+    this.substitutionHistory = SubstitutionHistory.empty,
   });
+
+  /// Gespeicherte Vertretungen vergangener Tage (substitution_history.dart).
+  final SubstitutionHistory substitutionHistory;
+
+  /// Vertretungstage für den Kalender: gelieferte plus gespeicherte bis
+  /// heute. Nur für die Anzeige – Benachrichtigungen und „Heute“ arbeiten
+  /// mit dem gelieferten Plan, sonst meldeten sie alte Änderungen erneut.
+  List<SubstitutionDay> substitutionDaysWithPast(DateTime now) =>
+      substitutionHistory.withPast(
+        substitutions.content?.days ?? const [],
+        now,
+      );
 
   /// Profilfoto des Schülerkontos (portal_extras.dart), null = keins.
   final Uint8List? photo;
@@ -335,6 +349,8 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
   LessonTimes? _times;
   CourseScan? _scan;
   HomeworkLedger _homework = HomeworkLedger.empty;
+  SubstitutionHistory _subsHistory = SubstitutionHistory.empty;
+  SubstitutionPlan? _subsRecorded;
   ClassChoice? _class;
   bool _classExpired = false;
   Uint8List? _photo;
@@ -457,12 +473,32 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
     _times = storedLessonTimes(s);
     _scan = storedCourseScan(s);
     _homework = HomeworkLedger.decode(s.getString(homeworkLedgerSetting));
+    _subsHistory = SubstitutionHistory.decode(
+      s.getString(substitutionHistorySetting),
+    );
+    _subsRecorded = null;
     _class = storedClass(s);
     _classExpired = classExpired(s);
     _mensa = MensaAddresses.decode(
       s.getString('fork/$mensaUrlsSetting'),
       legacy: s.getString('fork/$mensaUrlSetting'),
     );
+  }
+
+  /// Jeden gelieferten Vertretungsplan in die Ablage übernehmen
+  /// (substitution_history.dart). Nur einmal je Plan-Objekt: Der Aufruf
+  /// steht im Aufbau und läuft sonst bei jedem setState.
+  void _recordSubstitutions() {
+    final plan = _subs.feed.content;
+    if (plan == null || identical(plan, _subsRecorded)) return;
+    _subsRecorded = plan;
+    final next = _subsHistory.record(plan.days, DateTime.now());
+    final raw = next.encode();
+    if (raw == _subsHistory.encode()) return;
+    _subsHistory = next;
+    ref
+        .read(accountSpecificSettingsProvider)
+        ?.setString(substitutionHistorySetting, raw);
   }
 
   void _write(String key, Map<String, String> value) {
@@ -549,6 +585,7 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
     _tt.attach(ref.watch(timetableParserProvider), _changed);
     _lessons.attach(ref.watch(lessonsStudentParserProvider), _changed);
     _subs.attach(ref.watch(substitutionsParserProvider), _changed);
+    _recordSubstitutions();
     _cal.attach(ref.watch(calendarParserProvider), _changed);
     _conv.attach(ref.watch(conversationsParserProvider), _changed);
 
@@ -572,6 +609,7 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
       timetable: _tt.feed,
       lessons: _lessons.feed,
       substitutions: _subs.feed,
+      substitutionHistory: _subsHistory,
       calendar: _cal.feed,
       conversations: _conv.feed,
       userChoice: _choice,
