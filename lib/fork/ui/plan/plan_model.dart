@@ -407,13 +407,11 @@ String gridName(PlanLesson l) {
       (l.subject.length <= 8 ? l.subject : l.short);
 }
 
-/// Farbplatz je Fach eines Kindes: in der Reihenfolge des ersten Auftretens
-/// (Mo 1. Stunde zuerst), Kürzel ohne Farbe bekommen den nächsten freien.
-/// Ursache: Aus dem Kürzel errechnete Plätze kollidierten (Englisch, Mathe,
-/// NaWi und Sport waren alle grau). Grenze: Bei mehr Fächern als Farben
-/// (KitPalette.subjects, 8) wiederholen sich Farben – dann aber erst ab dem
-/// neunten Fach.
-Map<String, int> subjectColorSlots(KidPlan plan) {
+/// Platz je Fach eines Kindes in der Reihenfolge des ersten Auftretens im
+/// Wochenplan (Mo 1. Stunde zuerst). Ordnet die Fächer unter „Unterricht“
+/// und bei den Noten so, wie das Kind sie in der Woche erlebt. Bis 9392
+/// wählte der Platz auch die Fachfarbe (entfallen 21.10.26).
+Map<String, int> subjectPlanOrder(KidPlan plan) {
   final out = <String, int>{};
   for (final d in plan.days) {
     for (final c in d) {

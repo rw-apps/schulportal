@@ -106,8 +106,8 @@ void main() {
       expect(blockLabel(jonas, mo.last), '3.–4. Block');
     });
 
-    test('Fachfarben: verschiedene Fächer verschiedene Plätze', () {
-      final slots = subjectColorSlots(jonas);
+    test('Reihenfolge der Fächer: verschiedene Fächer verschiedene Plätze', () {
+      final slots = subjectPlanOrder(jonas);
       expect(slots.values.toSet().length, slots.length);
       expect(slots['NaWi'], 0, reason: 'Mo 1. Block zuerst');
     });
@@ -232,15 +232,20 @@ void main() {
     expect(musik.bottom, lessThan(nav.top));
   });
 
-  testWidgets('Tagesansicht endet über der Leiste', (t) async {
+  testWidgets('Tagesansicht endet über der Leiste, Kopf bleibt stehen', (
+    t,
+  ) async {
     await _pixel(t);
     await t.pumpWidget(_app());
     await _openPlan(t);
-    await t.drag(find.byType(CustomScrollView), const Offset(0, -3000));
+    final title = t.getRect(find.text('Kalender').first);
+    await t.drag(find.byType(ListView), const Offset(0, -3000));
     await t.pumpAndSettle();
     final last = t.getRect(find.text('Musik'));
     final nav = t.getRect(find.byType(FloatingNavBar));
     expect(last.bottom, lessThan(nav.top));
+    // PinnedPage: Überschrift nach dem Scrollen an derselben Stelle.
+    expect(t.getRect(find.text('Kalender').first), title);
   });
 
   testWidgets('Woche: Zeilen höchstens Sz.gridRowMax hoch (Jonas, 4 Blöcke)', (

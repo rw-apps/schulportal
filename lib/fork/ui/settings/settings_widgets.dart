@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import '../pinned_page.dart';
 import '../segments.dart';
 
 /// Bausteine der Einstellungsseiten (Entwurf 20.10.26 „verdichtet“,
@@ -42,32 +43,45 @@ class SettingsHeader extends StatelessWidget {
   }
 }
 
-/// Seite mit Kopf und Liste.
+/// Seite mit Kopf und Liste; der Kopf (Zurück, Titel) steht fest
+/// (PinnedPage, Rückmeldung 21.10.26).
 class SettingsScaffold extends StatelessWidget {
   const SettingsScaffold({
     super.key,
     required this.title,
     required this.children,
+    this.subtitle,
+    this.onRefresh,
   });
 
   final String title;
   final List<Widget> children;
 
+  /// Kleine Zeile unter dem Titel (z. B. Ordner in der Dateiablage).
+  final String? subtitle;
+
+  /// Ziehen zum Aktualisieren; null = ohne.
+  final Future<void> Function()? onRefresh;
+
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final bottom = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
       backgroundColor: k.p.bg,
-      body: SafeArea(
-        bottom: false,
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(Sp.page, Sp.m, Sp.page, bottom + Sp.xl),
-          children: [
-            SettingsHeader(title: title),
-            ...children,
-          ],
-        ),
+      body: PinnedPage(
+        headerPadding: const EdgeInsets.fromLTRB(Sp.page, Sp.m, Sp.page, 0),
+        bodyPadding: const EdgeInsets.fromLTRB(Sp.page, 0, Sp.page, Sp.xl),
+        onRefresh: onRefresh,
+        header: [
+          SettingsHeader(title: title),
+          if (subtitle case final sub? when sub.isNotEmpty)
+            Padding(
+              // Bündig mit dem Titel neben dem Zurück-Pfeil.
+              padding: const EdgeInsets.only(left: Sp.xxl + Sp.l),
+              child: Text(sub, style: k.cardMeta),
+            ),
+        ],
+        children: children,
       ),
     );
   }

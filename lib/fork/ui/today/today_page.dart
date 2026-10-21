@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import '../pinned_page.dart';
 import '../../class_choice.dart' show classLabel;
 import 'kid_hints.dart';
 import 'kind_icons.dart';
@@ -97,8 +98,6 @@ class TodayPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final t = context.t;
-    // Enthält bei Scaffold(extendBody: true) die Höhe der schwebenden Leiste.
-    final bottom = MediaQuery.paddingOf(context).bottom;
     final wide = MediaQuery.sizeOf(context).width >= Sz.wideLayout;
     final updated = data.updatedAt;
 
@@ -153,22 +152,20 @@ class TodayPage extends StatelessWidget {
             onOpenAll: onOpenCalendar,
           );
 
-    final view = ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(
-        Sp.page,
-        MediaQuery.paddingOf(context).top + Sp.l,
-        Sp.page,
-        bottom + Sp.xl,
+    // Kopf (Datum, Stand) fest, Inhalt scrollt darunter (PinnedPage).
+    return PinnedPage(
+      headerPadding: const EdgeInsets.fromLTRB(
+        Sp.page + Sp.xs,
+        Sp.l,
+        Sp.page + Sp.xs,
+        Sp.s,
       ),
+      onRefresh: onRefresh,
+      header: [head],
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Sp.xs),
-          child: head,
-        ),
-        for (final n in notices)
+        for (final (i, n) in notices.indexed)
           Padding(
-            padding: const EdgeInsets.only(top: Sp.m),
+            padding: EdgeInsets.only(top: i == 0 ? Sp.s : Sp.m),
             child: n,
           ),
         if (data.isDemo)
@@ -176,7 +173,7 @@ class TodayPage extends StatelessWidget {
             padding: const EdgeInsets.only(top: Sp.m),
             child: Text(t.demoNote, style: k.meta, textAlign: TextAlign.center),
           ),
-        const SizedBox(height: Sp.m),
+        const SizedBox(height: Sp.s),
         if (wide)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,9 +195,6 @@ class TodayPage extends StatelessWidget {
         ],
       ],
     );
-    final refresh = onRefresh;
-    if (refresh == null) return view;
-    return RefreshIndicator(onRefresh: refresh, child: view);
   }
 }
 

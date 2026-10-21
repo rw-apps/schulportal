@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import '../pinned_page.dart';
 
 /// Ein Eintrag unter „Mehr“: Dienste und Aktionen, die keinen eigenen
 /// Bereich brauchen (Konzept 17.10.26).
@@ -28,21 +29,17 @@ class MorePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final bottom = MediaQuery.paddingOf(context).bottom;
-    return SafeArea(
-      bottom: false,
-      child: ListView(
-        padding: EdgeInsets.fromLTRB(Sp.page, Sp.xl, Sp.page, bottom + Sp.xl),
-        children: [
-          Text(context.t.navMore, style: k.pageTitle),
-          const SizedBox(height: Sp.l),
-          for (final e in entries)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Sp.s),
-              child: _EntryTile(entry: e),
-            ),
-        ],
-      ),
+    // Überschrift fest (PinnedPage).
+    return PinnedPage(
+      header: [Text(context.t.navMore, style: k.pageTitle)],
+      bodyPadding: const EdgeInsets.fromLTRB(Sp.page, Sp.xs, Sp.page, Sp.xl),
+      children: [
+        for (final e in entries)
+          Padding(
+            padding: const EdgeInsets.only(bottom: Sp.s),
+            child: _EntryTile(entry: e),
+          ),
+      ],
     );
   }
 }

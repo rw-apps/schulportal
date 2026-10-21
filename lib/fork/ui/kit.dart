@@ -164,9 +164,10 @@ abstract final class Rad {
   static const double pill = 20;
 }
 
-/// Fläche und Schrift eines Fachs im Wochenraster.
-class FachTone {
-  const FachTone(this.bg, this.ink);
+/// Fläche und Schrift ohne Signalbedeutung ([Kit.plainTone]): Köpfe der
+/// Bereiche auf der Fachseite, Merkmale im Einstieg.
+class PlainTone {
+  const PlainTone(this.bg, this.ink);
   final Color bg;
   final Color ink;
 }
@@ -233,13 +234,8 @@ class KitPalette {
     required this.kids,
     required this.change,
     required this.cancel,
-    required this.subjects,
     required this.barNeutral,
   });
-
-  /// Fachfarben fürs Wochenraster. Bewusst ohne Rot und Gelb, damit kein
-  /// Fach wie eine Vertretung oder ein Ausfall aussieht.
-  final List<FachTone> subjects;
 
   final Color bg;
   final Color card;
@@ -331,16 +327,6 @@ class KitPalette {
       dot: Color(0xFFD92D20),
     ),
     barNeutral: Color(0xFFD0D5DD),
-    subjects: [
-      FachTone(Color(0xFFE0EAFF), Color(0xFF1E3A8A)),
-      FachTone(Color(0xFFD5F2EC), Color(0xFF134E48)),
-      FachTone(Color(0xFFECE4FF), Color(0xFF4C1D95)),
-      FachTone(Color(0xFFE4F2D3), Color(0xFF365314)),
-      FachTone(Color(0xFFDCF0FA), Color(0xFF0C4A6E)),
-      FachTone(Color(0xFFE6E9EF), Color(0xFF334155)),
-      FachTone(Color(0xFFE8E7FF), Color(0xFF3730A3)),
-      FachTone(Color(0xFFEEF0D8), Color(0xFF4A5216)),
-    ],
   );
 
   /// Dunkle Fassung derselben Familie (Töne aus Entwurf B/C abgeleitet).
@@ -403,16 +389,6 @@ class KitPalette {
       dot: Color(0xFFF87171),
     ),
     barNeutral: Color(0xFF3A414D),
-    subjects: [
-      FachTone(Color(0xFF1E2A47), Color(0xFFC7D7FE)),
-      FachTone(Color(0xFF15332F), Color(0xFFBDEDE4)),
-      FachTone(Color(0xFF2B2245), Color(0xFFDDD3FE)),
-      FachTone(Color(0xFF22301A), Color(0xFFD4EBB5)),
-      FachTone(Color(0xFF152F3D), Color(0xFFC3E6F7)),
-      FachTone(Color(0xFF262C36), Color(0xFFD5DBE5)),
-      FachTone(Color(0xFF24234A), Color(0xFFD0CFFD)),
-      FachTone(Color(0xFF2B2E1A), Color(0xFFE0E4B8)),
-    ],
   );
 }
 
@@ -430,8 +406,11 @@ class Kit {
 
   KidTone kid(int index) => p.kids[index % p.kids.length];
 
-  /// Fachfarbe nach Platz (siehe subjectColorSlots im Plan-Modell).
-  FachTone subjectAt(int slot) => p.subjects[slot % p.subjects.length];
+  /// Neutrale Fläche statt Fachfarbe. Ursache (Rückmeldung 21.10.26: „die
+  /// App soll überall konsistent sein“): Farbe tragen nur noch Abweichungen
+  /// (Ausfall, Vertretung) und das Kind; die acht Fachfarben (Wochenraster,
+  /// Fächerliste, Fachseite, Noten) sind entfallen.
+  PlainTone get plainTone => PlainTone(p.inset, p.ink);
 
   TextStyle _s(double size, FontWeight w, Color c, {double ls = 0}) =>
       TextStyle(

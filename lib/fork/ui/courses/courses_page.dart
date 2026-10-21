@@ -4,6 +4,7 @@ import '../../class_choice.dart' show classLabel;
 import '../../homework_ledger.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import '../pinned_page.dart';
 import '../segments.dart';
 import 'courses_model.dart';
 import 'exam_card.dart';
@@ -118,7 +119,6 @@ class _CoursesPageState extends State<CoursesPage> {
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final t = context.t;
-    final bottom = MediaQuery.paddingOf(context).bottom;
     final items = widget.items;
     final open =
         widget.homework?.open ??
@@ -133,10 +133,10 @@ class _CoursesPageState extends State<CoursesPage> {
                 given: i.date,
               ),
         ];
-    // Fächer nach Platz im Wochenplan (= Fachfarbe), ohne Platz ans Ende.
+    // Fächer nach erstem Auftreten im Wochenplan, ohne Platz ans Ende.
     final subjects = items.where((i) => !i.extra).toList()
       ..sort((a, b) {
-        final c = (a.colorSlot ?? 999).compareTo(b.colorSlot ?? 999);
+        final c = (a.planOrder ?? 999).compareTo(b.planOrder ?? 999);
         return c != 0 ? c : a.title.compareTo(b.title);
       });
     final extra = items.where((i) => i.extra).toList();
@@ -149,7 +149,8 @@ class _CoursesPageState extends State<CoursesPage> {
 
     final grades = widget.grades;
     final showGrades = grades != null && _grades;
-    final children = <Widget>[
+    // Überschrift, Unterzeile und Umschalter fest (PinnedPage).
+    final header = <Widget>[
       Padding(
         padding: const EdgeInsets.only(left: Sp.xs),
         child: Text(t.navCourses, style: k.pageTitle),
@@ -168,6 +169,8 @@ class _CoursesPageState extends State<CoursesPage> {
             onChanged: (i) => _mode(i == 1),
           ),
         ),
+    ];
+    final children = <Widget>[
       if (showGrades)
         GradesView(
           key: _gradesKey,
@@ -181,20 +184,13 @@ class _CoursesPageState extends State<CoursesPage> {
         ..._courseList(k, t, items, open, subjects, extra),
     ];
 
-    final view = ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(
-        Sp.page,
-        MediaQuery.paddingOf(context).top + Sp.xl,
-        Sp.page,
-        bottom + Sp.xl,
-      ),
+    return PinnedPage(
+      header: header,
       children: children,
+      onRefresh: showGrades
+          ? () async => _gradesKey.currentState?.reload()
+          : widget.onRefresh,
     );
-    final r = showGrades
-        ? () async => _gradesKey.currentState?.reload()
-        : widget.onRefresh;
-    return r == null ? view : RefreshIndicator(onRefresh: r, child: view);
   }
 
   List<Widget> _courseList(
@@ -371,9 +367,9 @@ class _MissingCard extends StatelessWidget {
   }
 }
 
-/// Kurszeile: Fachfarbe links (wie im Wochenraster), Fach, Nachnamen der
-/// Lehrkräfte, letzter Eintrag; offene Hausaufgabe und Fehlstunden als
-/// Marken.
+/// Kurszeile: Fach, Nachnamen der Lehrkräfte, letzter Eintrag; offene
+/// Hausaufgabe und Fehlstunden als Marken. Ohne Fachfarbe am Rand (seit
+/// 21.10.26, Kit.plainTone): Farbe nur für Abweichungen und das Kind.
 class _CourseRow extends StatelessWidget {
   const _CourseRow({required this.item, this.onTap});
 
@@ -384,9 +380,6 @@ class _CourseRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final t = context.t;
-    final stripe = item.colorSlot == null
-        ? k.p.line
-        : k.subjectAt(item.colorSlot!).ink;
     final latest = [
       if (item.date != null) formatDate(t, t.dateShort, item.date!),
       ?item.topic,
@@ -415,10 +408,9 @@ class _CourseRow extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(width: Sp.xs + Sp.xxs, color: stripe),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(Sp.m, Sp.m, Sp.s, Sp.m),
+                  padding: const EdgeInsets.fromLTRB(Sp.l, Sp.m, Sp.s, Sp.m),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -591,21 +583,15 @@ class AllCoursesView extends StatelessWidget {
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final t = context.t;
-    final bottom = MediaQuery.paddingOf(context).bottom;
     final meta = [
       t.allKids,
       t.openHomeworkCount(homework.length),
       if (exams.isNotEmpty) t.examCount(exams.length),
     ].join(' · ');
-    final view = ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(
-        Sp.page,
-        MediaQuery.paddingOf(context).top + Sp.xl,
-        Sp.page,
-        bottom + Sp.xl,
-      ),
-      children: [
+    // Überschrift und Unterzeile fest (PinnedPage).
+    return PinnedPage(
+      onRefresh: onRefresh,
+      header: [
         Padding(
           padding: const EdgeInsets.only(left: Sp.xs),
           child: Text(t.navCourses, style: k.pageTitle),
@@ -614,6 +600,8 @@ class AllCoursesView extends StatelessWidget {
           padding: const EdgeInsets.only(left: Sp.xs),
           child: Text(meta, style: k.meta),
         ),
+      ],
+      children: [
         _Section(title: t.openHomeworkTitle),
         HomeworkSection(
           open: [
@@ -663,7 +651,5 @@ class AllCoursesView extends StatelessWidget {
         ),
       ],
     );
-    final r = onRefresh;
-    return r == null ? view : RefreshIndicator(onRefresh: r, child: view);
   }
 }

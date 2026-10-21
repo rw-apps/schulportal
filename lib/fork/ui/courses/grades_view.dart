@@ -393,9 +393,9 @@ class _SubjectCard extends StatelessWidget {
     final k = Kit.of(context);
     final t = context.t;
     final c = item.course;
-    final tone = c.colorSlot == null ? null : k.subjectAt(c.colorSlot!);
-    final tint = tone?.bg ?? k.p.inset;
-    final ink = tone?.ink ?? k.p.ink;
+    // Kopf neutral statt in Fachfarbe (Kit.plainTone, 21.10.26).
+    final tint = k.plainTone.bg;
+    final ink = k.plainTone.ink;
     return Container(
       margin: const EdgeInsets.only(top: Sp.m),
       decoration: BoxDecoration(

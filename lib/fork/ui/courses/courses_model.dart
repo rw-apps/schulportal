@@ -18,7 +18,7 @@ class CourseItem {
     this.attendance,
     this.missing = 0,
     this.files = 0,
-    this.colorSlot,
+    this.planOrder,
     this.extra = false,
     this.entry,
   });
@@ -37,7 +37,7 @@ class CourseItem {
     attendance: attendance,
     missing: missing,
     files: files,
-    colorSlot: colorSlot,
+    planOrder: planOrder,
     extra: extra,
     entry: entry,
   );
@@ -73,8 +73,10 @@ class CourseItem {
   final int missing;
   final int files;
 
-  /// Fachfarbe wie im Wochenraster; null, wenn der Kurs nicht im Plan steht.
-  final int? colorSlot;
+  /// Platz in der Reihenfolge des Wochenplans (subjectPlanOrder); null, wenn
+  /// der Kurs nicht im Plan steht. Bis 9392 hieß das Feld colorSlot und
+  /// wählte auch die Fachfarbe.
+  final int? planOrder;
 
   /// Weiteres Angebot (Ganztag, Training …), siehe isExtraOffer.
   final bool extra;
@@ -122,7 +124,7 @@ List<CourseItem> courseItemsFrom(
   Map<String, String> ownNames = const {},
   KidPlan? plan,
 }) {
-  final slots = plan == null ? const <String, int>{} : subjectColorSlots(plan);
+  final slots = plan == null ? const <String, int>{} : subjectPlanOrder(plan);
   // Überschriften, die mehrere Kurse mit VERSCHIEDENEN vollen Namen teilen.
   // Sind auch die vollen Namen gleich (Schule A: zweimal „Ganztagsangebot 06 …“),
   // hilft der volle Name nicht – dann bleibt die kurze Überschrift.
@@ -158,7 +160,7 @@ List<CourseItem> courseItemsFrom(
           ? l.name.trim()
           : courseTitle(l.name),
       teacherCodes: codes,
-      colorSlot: short == null ? null : slots[short],
+      planOrder: short == null ? null : slots[short],
       extra: plan != null && isExtraOffer(l.name, inPlan: short != null),
       missing: attendanceCounts(l.attendances ?? const {})?.missing ?? 0,
       fullName: l.name.trim(),

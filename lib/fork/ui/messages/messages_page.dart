@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import '../pinned_page.dart';
 
 /// Eine Unterhaltung für die Liste (Auszug aus OverviewEntry).
 class MessageItem {
@@ -52,92 +53,79 @@ class MessagesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final t = context.t;
-    final bottom = MediaQuery.paddingOf(context).bottom;
     final unread = items.where((i) => i.unread).length;
-    final view = CustomScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
-        SliverSafeArea(
-          bottom: false,
-          sliver: SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              Sp.page + Sp.xs,
-              Sp.xl,
-              Sp.page,
-              0,
-            ),
-            sliver: SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(t.navMessages, style: k.pageTitle),
-                  Text(
-                    unread == 0 ? t.allRead : t.unreadShort(unread),
-                    style: k.meta,
-                  ),
-                ],
+    // Überschrift und „Neue Nachricht“ fest, die Liste scrollt darunter
+    // (PinnedPage).
+    return PinnedPage(
+      onRefresh: onRefresh,
+      bodyPadding: const EdgeInsets.fromLTRB(Sp.page, Sp.xs, Sp.page, Sp.xl),
+      header: [
+        Padding(
+          padding: const EdgeInsets.only(left: Sp.xs),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(t.navMessages, style: k.pageTitle),
+              Text(
+                unread == 0 ? t.allRead : t.unreadShort(unread),
+                style: k.meta,
               ),
-            ),
+            ],
           ),
         ),
         if (onCompose != null)
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(Sp.page, Sp.l, Sp.page, 0),
-            sliver: SliverToBoxAdapter(
-              child: Material(
-                color: k.p.strong,
+          Padding(
+            padding: const EdgeInsets.only(top: Sp.l),
+            child: Material(
+              color: k.p.strong,
+              borderRadius: BorderRadius.circular(Rad.button),
+              child: InkWell(
                 borderRadius: BorderRadius.circular(Rad.button),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(Rad.button),
-                  onTap: onCompose,
-                  child: SizedBox(
-                    height: Sz.button,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.edit_outlined,
-                          size: Sz.icon,
-                          color: k.p.onStrong,
+                onTap: onCompose,
+                child: SizedBox(
+                  height: Sz.button,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.edit_outlined,
+                        size: Sz.icon,
+                        color: k.p.onStrong,
+                      ),
+                      const SizedBox(width: Sp.s),
+                      Flexible(
+                        child: Text(
+                          t.newMessage,
+                          style: k.button(k.p.onStrong),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(width: Sp.s),
-                        Flexible(
-                          child: Text(
-                            t.newMessage,
-                            style: k.button(k.p.onStrong),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
           ),
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(Sp.page, Sp.l, Sp.page, bottom + Sp.xl),
-          sliver: items.isEmpty
-              ? SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: Sp.xs),
-                    child: Text(
-                      loading ? t.loading : t.noMessages,
-                      style: k.meta,
-                    ),
+      ],
+      slivers: [
+        items.isEmpty
+            ? SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: Sp.xs),
+                  child: Text(
+                    loading ? t.loading : t.noMessages,
+                    style: k.meta,
                   ),
-                )
-              : SliverList.separated(
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: Sp.s),
-                  itemBuilder: (context, i) =>
-                      _Row(item: items[i], onTap: onOpen),
                 ),
-        ),
+              )
+            : SliverList.separated(
+                itemCount: items.length,
+                separatorBuilder: (_, _) => const SizedBox(height: Sp.s),
+                itemBuilder: (context, i) =>
+                    _Row(item: items[i], onTap: onOpen),
+              ),
       ],
     );
-    final r = onRefresh;
-    return r == null ? view : RefreshIndicator(onRefresh: r, child: view);
   }
 }
 

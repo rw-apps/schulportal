@@ -46,11 +46,12 @@ class GradesOverview {
   int get markCount => withMarks.fold(0, (a, s) => a + s.marks.length);
 }
 
-/// Reihenfolge wie im Bereich „Unterricht“: Platz im Wochenplan (= Fachfarbe),
-/// ohne Platz ans Ende, dann nach Name; weitere Angebote zuletzt.
+/// Reihenfolge wie im Bereich „Unterricht“: erstes Auftreten im Wochenplan
+/// (subjectPlanOrder), ohne Platz ans Ende, dann nach Name; weitere Angebote
+/// zuletzt.
 int compareCourses(CourseItem a, CourseItem b) {
   if (a.extra != b.extra) return a.extra ? 1 : -1;
-  final c = (a.colorSlot ?? 999).compareTo(b.colorSlot ?? 999);
+  final c = (a.planOrder ?? 999).compareTo(b.planOrder ?? 999);
   return c != 0 ? c : a.title.compareTo(b.title);
 }
 

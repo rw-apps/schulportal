@@ -6,6 +6,7 @@ import 'package:lanis/utils/file_operations.dart' as fo;
 import '../../data_storage.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import '../settings/settings_widgets.dart';
 import '../nav.dart';
 
 /// „Dateien der Schule“ (dateispeicher.php, Wunsch 20.10.26): oben die
@@ -62,7 +63,6 @@ class _StoragePageState extends State<StoragePage> {
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final t = context.t;
-    final bottom = MediaQuery.paddingOf(context).bottom;
     final v = _view;
     Widget section(String title) => Padding(
       padding: const EdgeInsets.only(left: Sp.xs, top: Sp.xl, bottom: Sp.s),
@@ -117,48 +117,12 @@ class _StoragePageState extends State<StoragePage> {
           ),
       ],
     ];
-    return Scaffold(
-      backgroundColor: k.p.bg,
-      body: SafeArea(
-        bottom: false,
-        child: RefreshIndicator(
-          onRefresh: _reload,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(
-              Sp.page,
-              Sp.m,
-              Sp.page,
-              bottom + Sp.xl,
-            ),
-            children: [
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: Icon(Icons.arrow_back, color: k.p.ink),
-                    tooltip: t.back,
-                  ),
-                  const SizedBox(width: Sp.xs),
-                  Expanded(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(widget.title, style: k.pageTitle),
-                    ),
-                  ),
-                ],
-              ),
-              if (widget.subtitle.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(left: Sp.xxl + Sp.l),
-                  child: Text(widget.subtitle, style: k.cardMeta),
-                ),
-              ...body,
-            ],
-          ),
-        ),
-      ),
+    // Kopf fest wie alle Unterseiten (SettingsScaffold → PinnedPage).
+    return SettingsScaffold(
+      title: widget.title,
+      subtitle: widget.subtitle,
+      onRefresh: _reload,
+      children: body,
     );
   }
 }

@@ -398,7 +398,6 @@ class _PreviewShellState extends State<PreviewShell> {
                 title: i.title,
                 fullName: i.fullName,
                 teachers: [for (final n in i.teachers) ('', n)],
-                colorSlot: i.colorSlot ?? 0,
               ),
               load: ({required bool firstHalf}) async => demoDetailedLesson(i),
               onWrite: (_) {},

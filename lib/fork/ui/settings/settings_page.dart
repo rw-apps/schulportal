@@ -728,61 +728,38 @@ class _UserDataPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final bottom = MediaQuery.paddingOf(context).bottom;
     String label(String key) => key.isEmpty
         ? key
         : '${key[0].toUpperCase()}${key.substring(1)}'.replaceAll('_', ' ');
-    return Scaffold(
-      backgroundColor: k.p.bg,
-      body: SafeArea(
-        bottom: false,
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(Sp.page, Sp.m, Sp.page, bottom + Sp.xl),
-          children: [
-            Row(
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  icon: Icon(Icons.arrow_back, color: k.p.ink),
-                  tooltip: context.t.back,
-                ),
-                const SizedBox(width: Sp.xs),
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(context.t.userData, style: k.pageTitle),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: Sp.s),
-            Text(context.t.userDataNote, style: k.meta),
-            const SizedBox(height: Sp.l),
-            for (final e in data.entries)
-              Padding(
-                padding: const EdgeInsets.only(bottom: Sp.s),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: Sp.l,
-                    vertical: Sp.m,
-                  ),
-                  decoration: BoxDecoration(
-                    color: k.p.card,
-                    borderRadius: BorderRadius.circular(Rad.signal),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(label(e.key), style: k.planMeta(k.p.muted)),
-                      SelectableText(e.value, style: k.body),
-                    ],
-                  ),
-                ),
+    // Kopf wie alle Unterseiten fest (SettingsScaffold → PinnedPage).
+    return SettingsScaffold(
+      title: context.t.userData,
+      children: [
+        const SizedBox(height: Sp.s),
+        Text(context.t.userDataNote, style: k.meta),
+        const SizedBox(height: Sp.l),
+        for (final e in data.entries)
+          Padding(
+            padding: const EdgeInsets.only(bottom: Sp.s),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Sp.l,
+                vertical: Sp.m,
               ),
-          ],
-        ),
-      ),
+              decoration: BoxDecoration(
+                color: k.p.card,
+                borderRadius: BorderRadius.circular(Rad.signal),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label(e.key), style: k.planMeta(k.p.muted)),
+                  SelectableText(e.value, style: k.body),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

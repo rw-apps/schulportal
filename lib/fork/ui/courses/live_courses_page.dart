@@ -192,7 +192,6 @@ Widget liveCourseDetail(
       title: i.title,
       fullName: i.fullName,
       teachers: teachers,
-      colorSlot: i.colorSlot ?? 0,
       nextLesson: live == null
           ? null
           : nextLessonOf(

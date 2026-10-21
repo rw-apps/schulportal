@@ -12,8 +12,8 @@ import 'package:liblanis/liblanis.dart';
 // Synthetisch, im Aufbau wie die Kursseiten (Abschnitte „Kommende“ und
 // „Alle“, jede Arbeit doppelt) – keine echten Daten.
 const _courses = [
-  CourseItem(id: 'm', title: 'Mathematik', fullName: 'M', colorSlot: 0),
-  CourseItem(id: 'e', title: 'Englisch', fullName: 'E', colorSlot: 1),
+  CourseItem(id: 'm', title: 'Mathematik', fullName: 'M', planOrder: 0),
+  CourseItem(id: 'e', title: 'Englisch', fullName: 'E', planOrder: 1),
 ];
 
 DetailedLesson _page({

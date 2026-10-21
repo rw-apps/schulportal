@@ -282,7 +282,6 @@ void main() {
               title: 'Englisch',
               fullName: 'Englisch 07 b',
               teachers: const [('WOL', 'Tim Wolf')],
-              colorSlot: 2,
               calendarExams: [
                 WeekItem(
                   day: DateTime.now().add(const Duration(days: 9)),

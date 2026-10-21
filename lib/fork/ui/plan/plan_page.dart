@@ -5,6 +5,7 @@ import '../../mensa.dart' show isoWeek;
 import '../calendar/event_list.dart';
 import '../kid_chips.dart';
 import '../kit.dart';
+import '../pinned_page.dart';
 import '../today/today_model.dart' show ChangeKind, WeekItem, minutesOf;
 import '../today/today_page.dart' show schoolWeek, dayDiff, weekdayShort;
 import 'plan_model.dart';
@@ -449,96 +450,64 @@ class _PlanPageState extends State<PlanPage> {
               e.childIndex == _eventsSel)
             e,
       ];
-      final view = CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverSafeArea(
-            bottom: false,
-            sliver: SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [head.first],
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              Sp.page,
-              Sp.ml,
-              Sp.page,
-              bottom + Sp.xl,
-            ),
-            sliver: SliverToBoxAdapter(
-              child: EventList(
-                items: events,
-                now: widget.now,
-                kidColor: _plan.colorIndex,
-                kids: [
-                  for (final p in widget.plans)
-                    (name: p.firstName, color: p.colorIndex),
-                ],
-                showKid: many && _eventsSel < 0,
-              ),
-            ),
+      // Kopf fest, Termine scrollen darunter (PinnedPage).
+      return PinnedPage(
+        headerPadding: EdgeInsets.zero,
+        bodyPadding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, Sp.xl),
+        onRefresh: widget.onRefresh,
+        header: [head.first],
+        children: [
+          EventList(
+            items: events,
+            now: widget.now,
+            kidColor: _plan.colorIndex,
+            kids: [
+              for (final p in widget.plans)
+                (name: p.firstName, color: p.colorIndex),
+            ],
+            showKid: many && _eventsSel < 0,
           ),
         ],
       );
-      final refresh = widget.onRefresh;
-      return refresh == null
-          ? view
-          : RefreshIndicator(onRefresh: refresh, child: view);
     }
 
-    final dayView = CustomScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
-        SliverSafeArea(
-          bottom: false,
-          sliver: SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: head,
-            ),
-          ),
-        ),
-        SliverPadding(
+    // Kopf samt Tagesauswahl fest, die Stunden scrollen darunter
+    // (PinnedPage).
+    return PinnedPage(
+      headerPadding: const EdgeInsets.only(bottom: Sp.s),
+      bodyPadding: const EdgeInsets.fromLTRB(Sp.page, Sp.m, Sp.page, Sp.xl),
+      onRefresh: widget.onRefresh,
+      header: [
+        ...head,
+        Padding(
           padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
-          sliver: SliverToBoxAdapter(
-            child: _Swipe(
-              onPrev: () => _shiftWeek(-1),
-              onNext: () => _shiftWeek(1),
-              child: _DayPicker(
-                week: _week,
-                selected: _day,
-                today: _todayIndex,
-                onSelect: (i) => setState(() => _day = i),
-              ),
-            ),
-          ),
-        ),
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, bottom + Sp.xl),
-          sliver: SliverToBoxAdapter(
-            child: DayPlan(
-              plan: _plan,
-              day: _day,
-              choice: _choice,
-              freeLabel: widget.freeDays[_kid]?[_week[_day]],
-              now: _day == _todayIndex ? widget.now : null,
-              onOpenGroup: _openGroupSheet,
-              onOpenLesson: _openLesson,
-              onEditTimes: widget.onEditTimes == null
-                  ? null
-                  : () => widget.onEditTimes!(_kid),
+          child: _Swipe(
+            onPrev: () => _shiftWeek(-1),
+            onNext: () => _shiftWeek(1),
+            child: _DayPicker(
+              week: _week,
+              selected: _day,
+              today: _todayIndex,
+              onSelect: (i) => setState(() => _day = i),
             ),
           ),
         ),
       ],
+      children: [
+        DayPlan(
+          plan: _plan,
+          day: _day,
+          choice: _choice,
+          freeLabel: widget.freeDays[_kid]?[_week[_day]],
+          now: _day == _todayIndex ? widget.now : null,
+          onOpenGroup: _openGroupSheet,
+          onOpenLesson: _openLesson,
+          onEditTimes: widget.onEditTimes == null
+              ? null
+              : () => widget.onEditTimes!(_kid),
+        ),
+      ],
     );
-    final refresh = widget.onRefresh;
-    return refresh == null
-        ? dayView
-        : RefreshIndicator(onRefresh: refresh, child: dayView);
   }
 }
 

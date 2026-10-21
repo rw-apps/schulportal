@@ -9,12 +9,12 @@ import 'package:liblanis/liblanis.dart';
 
 // Synthetische Kurse und Noten – keine echten Daten.
 const _courses = [
-  CourseItem(id: 'c1', title: 'Mathematik', fullName: 'Mathe 9x', colorSlot: 1),
+  CourseItem(id: 'c1', title: 'Mathematik', fullName: 'Mathe 9x', planOrder: 1),
   CourseItem(
     id: 'c2',
     title: 'Englisch',
     fullName: 'Englisch 9x',
-    colorSlot: 0,
+    planOrder: 0,
   ),
   CourseItem(id: 'c3', title: 'Biologie', fullName: 'Bio 9x'),
   CourseItem(id: 'c4', title: 'Chor', fullName: 'Chor AG', extra: true),

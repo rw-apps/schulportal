@@ -5,6 +5,7 @@ import 'package:liblanis/liblanis.dart';
 import '../../data/message_templates.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import '../pinned_page.dart';
 import 'compose_model.dart';
 
 /// Abfrage und Versand, austauschbar für Tests (kein Portal nötig).
@@ -283,148 +284,148 @@ class _ComposePageState extends State<ComposePage> {
     final k = Kit.of(context);
     final t = context.t;
     final german = Localizations.localeOf(context).languageCode == 'de';
-    final bottom = MediaQuery.paddingOf(context).bottom;
+    // Kopf (Schließen, Titel) fest wie auf allen Seiten (PinnedPage).
     return Scaffold(
       backgroundColor: k.p.bg,
-      body: SafeArea(
-        bottom: false,
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(Sp.page, Sp.m, Sp.page, bottom + Sp.xl),
-          children: [
-            Row(
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  icon: Icon(Icons.close, color: k.p.ink),
-                  tooltip: t.cancel,
+      body: PinnedPage(
+        headerPadding: const EdgeInsets.fromLTRB(Sp.page, Sp.m, Sp.page, 0),
+        bodyPadding: const EdgeInsets.fromLTRB(Sp.page, 0, Sp.page, Sp.xl),
+        header: [
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: Icon(Icons.close, color: k.p.ink),
+                tooltip: t.cancel,
+              ),
+              const SizedBox(width: Sp.xs),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(t.newMessage, style: k.pageTitle),
                 ),
-                const SizedBox(width: Sp.xs),
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(t.newMessage, style: k.pageTitle),
+              ),
+            ],
+          ),
+        ],
+        children: [
+          _step(k, '1', t.stepToWhom),
+          if (widget.candidates.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: Sp.xs, bottom: Sp.s),
+              child: Text(t.noKnownTeachers, style: k.meta),
+            ),
+          for (final c in widget.candidates)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Sp.s),
+              child: _CandidateTile(
+                candidate: c,
+                selected: _chosen.containsKey(_idOf[c.kuerzel]),
+                state: _state[c.kuerzel] ?? _State.idle,
+                onTap: () => _toggle(c),
+              ),
+            ),
+          const SizedBox(height: Sp.s),
+          TextField(
+            controller: _search,
+            style: k.body,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => _runSearch(),
+            decoration: _field(k, t.searchOtherPerson).copyWith(
+              suffixIcon: IconButton(
+                icon: _searching
+                    ? const SizedBox.square(
+                        dimension: Sz.icon,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(Icons.search, color: k.p.muted),
+                onPressed: _runSearch,
+              ),
+            ),
+          ),
+          for (final r in _found)
+            CheckboxListTile(
+              value: _chosen.containsKey(r.id),
+              onChanged: (v) => setState(() {
+                if (v == true) {
+                  _chosen[r.id] = r.name;
+                } else {
+                  _chosen.remove(r.id);
+                }
+              }),
+              title: Text(r.name, style: k.planSubject(k.p.ink)),
+              subtitle: r.isTeacher
+                  ? Text(t.teacher, style: k.planMeta(k.p.muted))
+                  : null,
+            ),
+          _step(k, '2', t.stepTopic),
+          Wrap(
+            spacing: Sp.s,
+            runSpacing: Sp.s,
+            children: [
+              for (final m in messageTemplates)
+                ActionChip(
+                  label: Text(
+                    _templateLabel(t, m),
+                    style: k.chipLabel(false, k.p.onStrong),
                   ),
-                ),
-              ],
-            ),
-            _step(k, '1', t.stepToWhom),
-            if (widget.candidates.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(left: Sp.xs, bottom: Sp.s),
-                child: Text(t.noKnownTeachers, style: k.meta),
-              ),
-            for (final c in widget.candidates)
-              Padding(
-                padding: const EdgeInsets.only(bottom: Sp.s),
-                child: _CandidateTile(
-                  candidate: c,
-                  selected: _chosen.containsKey(_idOf[c.kuerzel]),
-                  state: _state[c.kuerzel] ?? _State.idle,
-                  onTap: () => _toggle(c),
-                ),
-              ),
-            const SizedBox(height: Sp.s),
-            TextField(
-              controller: _search,
-              style: k.body,
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _runSearch(),
-              decoration: _field(k, t.searchOtherPerson).copyWith(
-                suffixIcon: IconButton(
-                  icon: _searching
-                      ? const SizedBox.square(
-                          dimension: Sz.icon,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(Icons.search, color: k.p.muted),
-                  onPressed: _runSearch,
-                ),
-              ),
-            ),
-            for (final r in _found)
-              CheckboxListTile(
-                value: _chosen.containsKey(r.id),
-                onChanged: (v) => setState(() {
-                  if (v == true) {
-                    _chosen[r.id] = r.name;
-                  } else {
-                    _chosen.remove(r.id);
-                  }
-                }),
-                title: Text(r.name, style: k.planSubject(k.p.ink)),
-                subtitle: r.isTeacher
-                    ? Text(t.teacher, style: k.planMeta(k.p.muted))
-                    : null,
-              ),
-            _step(k, '2', t.stepTopic),
-            Wrap(
-              spacing: Sp.s,
-              runSpacing: Sp.s,
-              children: [
-                for (final m in messageTemplates)
-                  ActionChip(
-                    label: Text(
-                      _templateLabel(t, m),
-                      style: k.chipLabel(false, k.p.onStrong),
-                    ),
-                    backgroundColor: k.p.card,
-                    side: BorderSide.none,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(Rad.pill),
-                    ),
-                    onPressed: () => _template(m),
+                  backgroundColor: k.p.card,
+                  side: BorderSide.none,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(Rad.pill),
                   ),
-              ],
+                  onPressed: () => _template(m),
+                ),
+            ],
+          ),
+          if (!german)
+            Padding(
+              padding: const EdgeInsets.only(top: Sp.s, left: Sp.xs),
+              child: Text(t.templatesNote, style: k.meta),
             ),
-            if (!german)
-              Padding(
-                padding: const EdgeInsets.only(top: Sp.s, left: Sp.xs),
-                child: Text(t.templatesNote, style: k.meta),
-              ),
-            const SizedBox(height: Sp.m),
-            TextField(
-              controller: _subject,
-              style: k.body,
-              onChanged: (_) => setState(() {}),
-              decoration: _field(k, t.subject),
-            ),
-            const SizedBox(height: Sp.s),
-            TextField(
-              controller: _text,
-              style: k.body,
-              minLines: 6,
-              maxLines: null,
-              onChanged: (_) => setState(() {}),
-              decoration: _field(k, t.message),
-            ),
-            _step(k, '3', t.send),
-            Material(
-              color: _ready ? k.p.strong : k.p.inset,
+          const SizedBox(height: Sp.m),
+          TextField(
+            controller: _subject,
+            style: k.body,
+            onChanged: (_) => setState(() {}),
+            decoration: _field(k, t.subject),
+          ),
+          const SizedBox(height: Sp.s),
+          TextField(
+            controller: _text,
+            style: k.body,
+            minLines: 6,
+            maxLines: null,
+            onChanged: (_) => setState(() {}),
+            decoration: _field(k, t.message),
+          ),
+          _step(k, '3', t.send),
+          Material(
+            color: _ready ? k.p.strong : k.p.inset,
+            borderRadius: BorderRadius.circular(Rad.button),
+            child: InkWell(
               borderRadius: BorderRadius.circular(Rad.button),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(Rad.button),
-                onTap: _ready ? _send : null,
-                child: SizedBox(
-                  height: Sz.button,
-                  child: Center(
-                    child: _sending
-                        ? const CircularProgressIndicator()
-                        : Text(
-                            _chosen.isEmpty
-                                ? t.chooseRecipientFirst
-                                : _chosen.length == 1
-                                ? t.sendToOne(_chosen.values.single)
-                                : t.sendToMany(_chosen.length),
-                            style: k.button(_ready ? k.p.onStrong : k.p.muted),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                  ),
+              onTap: _ready ? _send : null,
+              child: SizedBox(
+                height: Sz.button,
+                child: Center(
+                  child: _sending
+                      ? const CircularProgressIndicator()
+                      : Text(
+                          _chosen.isEmpty
+                              ? t.chooseRecipientFirst
+                              : _chosen.length == 1
+                              ? t.sendToOne(_chosen.values.single)
+                              : t.sendToMany(_chosen.length),
+                          style: k.button(_ready ? k.p.onStrong : k.p.muted),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

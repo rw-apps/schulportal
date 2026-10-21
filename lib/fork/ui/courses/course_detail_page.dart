@@ -5,6 +5,7 @@ import '../../courses_scan.dart' show examsOfPage;
 import '../../exams.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import '../pinned_page.dart';
 import '../segments.dart';
 import '../today/today_model.dart' show WeekItem;
 import '../today/today_page.dart' show dayDiff, relativeDay;
@@ -17,7 +18,6 @@ class CourseContext {
     required this.title,
     required this.fullName,
     required this.teachers,
-    this.colorSlot = 0,
     this.kidColor = 0,
     this.nextLesson,
     this.calendarExams = const [],
@@ -32,9 +32,6 @@ class CourseContext {
 
   /// Kürzel → ausgeschriebener Name, in der Reihenfolge des Portals.
   final List<(String kuerzel, String name)> teachers;
-
-  /// Fachfarbe wie im Wochenraster (subjectColorSlots).
-  final int colorSlot;
 
   /// Farbe des Kindes (kid_colors.dart) für „Als Nächstes“ und die
   /// Anwesenheit. Ursache (Prüfung 20.10.26): Fest k.kid(0) – die Seite
@@ -161,12 +158,11 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
     final k = Kit.of(context);
     final t = context.t;
     final c = widget.course;
-    final f = k.subjectAt(c.colorSlot);
-    final top = MediaQuery.paddingOf(context).top;
-    final bottom = MediaQuery.paddingOf(context).bottom;
+    final f = k.plainTone;
     final d = _data;
 
-    final children = <Widget>[
+    // Zurück, Fach und Halbjahr fest (PinnedPage, Rückmeldung 21.10.26).
+    final header = <Widget>[
       Row(
         children: [
           IconButton(
@@ -189,6 +185,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
         ),
       ],
     ];
+    final children = <Widget>[];
 
     if (d == null) {
       children.add(
@@ -213,18 +210,12 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
 
     return Scaffold(
       backgroundColor: k.p.bg,
-      body: RefreshIndicator(
+      body: PinnedPage(
+        headerPadding: const EdgeInsets.fromLTRB(Sp.page, Sp.s, Sp.page, Sp.xs),
+        bodyPadding: const EdgeInsets.fromLTRB(Sp.page, 0, Sp.page, Sp.xl),
         onRefresh: _fetch,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            Sp.page,
-            top + Sp.s,
-            Sp.page,
-            bottom + Sp.xl,
-          ),
-          children: children,
-        ),
+        header: header,
+        children: children,
       ),
     );
   }
@@ -234,7 +225,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
     Kit k,
     ForkL10n t,
     DetailedLesson d,
-    FachTone f,
+    PlainTone f,
   ) {
     final c = widget.course;
     final now = DateTime.now();
@@ -316,7 +307,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
     // ---- Lehrkraft ------------------------------------------------------
     if (c.teachers.isNotEmpty) {
       final shown = c.teachers.take(3).toList();
-      final teach = k.subjectAt(1);
+      final teach = k.plainTone;
       out.add(
         _Block(
           icon: Icons.person_outline,
@@ -351,7 +342,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
     final counts = attendanceCounts(d.attendances);
     final absent = absentEntries(d.history);
     if (counts != null || absent.isNotEmpty) {
-      final pres = k.subjectAt(3);
+      final pres = k.plainTone;
       out.add(
         _Block(
           icon: Icons.fact_check_outlined,
@@ -441,7 +432,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
     // ---- Material -------------------------------------------------------
     final files = allFiles(d.history);
     if (files.isNotEmpty) {
-      final mat = k.subjectAt(5);
+      final mat = k.plainTone;
       out.add(
         _Block(
           icon: Icons.folder_open_outlined,
@@ -487,7 +478,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
     }
 
     // ---- Leistungen / Leistungskontrollen -------------------------------
-    final marks = k.subjectAt(4);
+    final marks = k.plainTone;
     if (d.marks.isNotEmpty) {
       out.add(
         _Block(
@@ -579,7 +570,7 @@ class _Header extends StatelessWidget {
   const _Header({required this.course, required this.tone});
 
   final CourseContext course;
-  final FachTone tone;
+  final PlainTone tone;
 
   @override
   Widget build(BuildContext context) {
@@ -756,7 +747,7 @@ class _TeacherRow extends StatelessWidget {
   });
 
   final String name;
-  final FachTone tone;
+  final PlainTone tone;
   final (String, VoidCallback)? last;
   final VoidCallback? onWrite;
 
@@ -874,7 +865,7 @@ class _TopicGroupView extends StatelessWidget {
 
   final TopicGroup group;
   final bool Function(CurrentEntry e) isOpen;
-  final FachTone tone;
+  final PlainTone tone;
   final bool first;
   final bool open;
   final VoidCallback onToggle;
