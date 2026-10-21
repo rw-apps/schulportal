@@ -452,7 +452,7 @@ class _PlanPageState extends State<PlanPage> {
       ];
       // Kopf fest, Termine scrollen darunter (PinnedPage).
       return PinnedPage(
-        headerPadding: EdgeInsets.zero,
+        headerPadding: const EdgeInsets.only(bottom: Sp.s),
         bodyPadding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, Sp.xl),
         onRefresh: widget.onRefresh,
         header: [head.first],
@@ -471,14 +471,17 @@ class _PlanPageState extends State<PlanPage> {
       );
     }
 
-    // Kopf samt Tagesauswahl fest, die Stunden scrollen darunter
-    // (PinnedPage).
+    // Nur die Überschriftzeile (Kalender, Tag/Woche/Termine) steht fest;
+    // Wochenwahl, Gruppenwahl und Tagesleiste scrollen mit den Stunden.
+    // Ursache (Rückmeldung 21.10.26): Fest stand sonst knapp die halbe
+    // Höhe, bei großer Schrift blieben vier Stunden sichtbar.
     return PinnedPage(
       headerPadding: const EdgeInsets.only(bottom: Sp.s),
-      bodyPadding: const EdgeInsets.fromLTRB(Sp.page, Sp.m, Sp.page, Sp.xl),
+      bodyPadding: const EdgeInsets.only(bottom: Sp.xl),
       onRefresh: widget.onRefresh,
-      header: [
-        ...head,
+      header: [head.first],
+      children: [
+        ...head.skip(1),
         Padding(
           padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
           child: _Swipe(
@@ -492,19 +495,20 @@ class _PlanPageState extends State<PlanPage> {
             ),
           ),
         ),
-      ],
-      children: [
-        DayPlan(
-          plan: _plan,
-          day: _day,
-          choice: _choice,
-          freeLabel: widget.freeDays[_kid]?[_week[_day]],
-          now: _day == _todayIndex ? widget.now : null,
-          onOpenGroup: _openGroupSheet,
-          onOpenLesson: _openLesson,
-          onEditTimes: widget.onEditTimes == null
-              ? null
-              : () => widget.onEditTimes!(_kid),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Sp.page, Sp.ml, Sp.page, 0),
+          child: DayPlan(
+            plan: _plan,
+            day: _day,
+            choice: _choice,
+            freeLabel: widget.freeDays[_kid]?[_week[_day]],
+            now: _day == _todayIndex ? widget.now : null,
+            onOpenGroup: _openGroupSheet,
+            onOpenLesson: _openLesson,
+            onEditTimes: widget.onEditTimes == null
+                ? null
+                : () => widget.onEditTimes!(_kid),
+          ),
         ),
       ],
     );

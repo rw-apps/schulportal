@@ -271,7 +271,8 @@ class _OpenCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final t = context.t;
-    final tone = k.p.change;
+    // Dezent grau (KitPalette.todo), nicht Gelb wie eine Vertretung.
+    final tone = k.p.todo;
     final item = entry.item;
     final text = item.text.isEmpty ? t.homeworkEntered : item.text;
     final meta = item.given == null

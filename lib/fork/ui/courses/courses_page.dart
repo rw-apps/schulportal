@@ -389,7 +389,7 @@ class _CourseRow extends StatelessWidget {
         _Chip(
           icon: Icons.menu_book_outlined,
           text: t.chipHomeworkOpen,
-          tone: k.p.change,
+          tone: k.p.todo,
         ),
       if (item.missing > 0)
         _Chip(

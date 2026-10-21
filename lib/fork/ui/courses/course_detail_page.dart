@@ -276,7 +276,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
         lines.add(
           _Line(
             icon: Icons.upload_file,
-            color: k.p.change.ink,
+            color: k.p.todo.strong,
             title: t.uploadTitle(u.name),
             meta: [
               if (u.date != null && u.date!.isNotEmpty) t.uploadUntil(u.date!),
@@ -284,7 +284,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                   ? t.uploadNotYet
                   : t.uploadDone(u.uploaded!),
             ].join(' · '),
-            metaColor: k.p.change.ink,
+            metaColor: k.p.todo.strong,
             onTap: widget.onOpenUpload == null
                 ? null
                 : () => widget.onOpenUpload!(u),
@@ -921,7 +921,7 @@ class _TopicGroupView extends StatelessWidget {
                 _Chip(
                   icon: Icons.menu_book_outlined,
                   text: t.openCount(openCount),
-                  tone: k.p.change,
+                  tone: k.p.todo,
                 ),
                 const SizedBox(width: Sp.xs),
               ],
@@ -997,7 +997,7 @@ class _EntryCard extends StatelessWidget {
                 Icon(
                   homeworkOpen ? Icons.menu_book_outlined : Icons.check_circle,
                   size: Sz.icon,
-                  color: homeworkOpen ? k.p.change.ink : k.p.faint,
+                  color: homeworkOpen ? k.p.todo.strong : k.p.faint,
                 ),
                 const SizedBox(width: Sp.s),
                 Expanded(
@@ -1006,7 +1006,7 @@ class _EntryCard extends StatelessWidget {
                         ? t.homeworkEntered
                         : hw.description.trim(),
                     style: homeworkOpen
-                        ? k.boxStrong(k.p.change)
+                        ? k.boxStrong(k.p.todo)
                         : k.planMeta(k.p.faint),
                   ),
                 ),

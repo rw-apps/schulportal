@@ -234,6 +234,7 @@ class KitPalette {
     required this.kids,
     required this.change,
     required this.cancel,
+    required this.todo,
     required this.barNeutral,
   });
 
@@ -259,6 +260,11 @@ class KitPalette {
   final List<KidTone> kids;
   final SignalTone change;
   final SignalTone cancel;
+
+  /// Offene Aufgabe (Hausaufgabe, Abgabe): dezent grau statt Gelb. Ursache
+  /// (Rückmeldung 21.10.26): Gelb heißt Vertretung, Raumwechsel oder Essen;
+  /// eine offene Hausaufgabe ist keine Abweichung, soll aber auffallen.
+  final SignalTone todo;
 
   /// Kommende Abschnitte der schlichten Tagesleiste (Kinderkarte).
   /// Erledigte nehmen [faint], die laufende Stunde füllt sich mit [muted].
@@ -326,6 +332,13 @@ class KitPalette {
       bar: Color(0xFFFDA29B),
       dot: Color(0xFFD92D20),
     ),
+    todo: SignalTone(
+      bg: Color(0xFFE4E7EC),
+      ink: Color(0xFF101828),
+      strong: Color(0xFF344054),
+      bar: Color(0xFFD0D5DD),
+      dot: Color(0xFF667085),
+    ),
     barNeutral: Color(0xFFD0D5DD),
   );
 
@@ -387,6 +400,13 @@ class KitPalette {
       strong: Color(0xFFFCA5A5),
       bar: Color(0xFF7F2A2A),
       dot: Color(0xFFF87171),
+    ),
+    todo: SignalTone(
+      bg: Color(0xFF262C36),
+      ink: Color(0xFFF2F4F8),
+      strong: Color(0xFFD0D5DD),
+      bar: Color(0xFF3A414D),
+      dot: Color(0xFF9AA3B2),
     ),
     barNeutral: Color(0xFF3A414D),
   );
