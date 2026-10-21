@@ -1490,5 +1490,16 @@
     }
   },
   "changeUnclear": "Bitte prüfen",
-  "cellUnclear": "prüfen?"
+  "cellUnclear": "prüfen?",
+  "staleTitle": "Portal nicht erreichbar",
+  "staleText": "Gespeicherter Stand von {when}",
+  "@staleText": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "staleRetry": "Neu laden",
+  "dayYesterday": "Gestern"
 }

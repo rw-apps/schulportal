@@ -34,6 +34,20 @@ String relativeDay(ForkL10n t, DateTime day, DateTime now) {
   return formatDate(t, t.dateShort, day);
 }
 
+/// Zeitpunkt eines Datenstands: heute „09:27“, gestern „gestern 21:40“,
+/// sonst „Di 20.10. 21:40“. Ursache (21.10.26): Seit bei einem Ausfall der
+/// gespeicherte Stand erscheint, kann „Stand“ vom Vortag sein – die bloße
+/// Uhrzeit hätte ihn wie heute aussehen lassen.
+String standLabel(ForkL10n t, DateTime at, DateTime now) {
+  final hm =
+      '${at.hour.toString().padLeft(2, '0')}:'
+      '${at.minute.toString().padLeft(2, '0')}';
+  final diff = dayDiff(at, now);
+  if (diff == 0) return hm;
+  if (diff == 1) return '${lowerFor(t, t.dayYesterday)} $hm';
+  return '${formatDate(t, t.dateShort, at)} $hm';
+}
+
 /// Kurzer Wochentag („Mo“) – Standalone-Form „ccc“, ohne Punkt.
 String weekdayShort(ForkL10n t, DateTime d) => formatDate(t, 'ccc', d);
 
@@ -119,13 +133,7 @@ class TodayPage extends StatelessWidget {
         ),
         if (updated != null) ...[
           const SizedBox(width: Sp.s),
-          Text(
-            t.asOf(
-              '${updated.hour.toString().padLeft(2, '0')}:'
-              '${updated.minute.toString().padLeft(2, '0')}',
-            ),
-            style: k.meta,
-          ),
+          Text(t.asOf(standLabel(t, updated, data.now)), style: k.meta),
         ],
       ],
     );

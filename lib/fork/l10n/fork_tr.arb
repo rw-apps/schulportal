@@ -560,5 +560,9 @@
   "unclearCourse": "{code} dersi için {what}",
   "unclearNoCourse": "{what}, ders belirtilmemiş",
   "changeUnclear": "Lütfen kontrol edin",
-  "cellUnclear": "kontrol?"
+  "cellUnclear": "kontrol?",
+  "staleTitle": "Portala ulaşılamıyor",
+  "staleText": "{when} tarihli kayıtlı durum",
+  "staleRetry": "Yenile",
+  "dayYesterday": "Dün"
 }

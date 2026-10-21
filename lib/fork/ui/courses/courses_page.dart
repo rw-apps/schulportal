@@ -186,10 +186,10 @@ class _CoursesPageState extends State<CoursesPage> {
 
     return PinnedPage(
       header: header,
-      children: children,
       onRefresh: showGrades
           ? () async => _gradesKey.currentState?.reload()
           : widget.onRefresh,
+      children: children,
     );
   }
 

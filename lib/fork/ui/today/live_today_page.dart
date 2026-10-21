@@ -189,8 +189,29 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
         void select(ChildToday c) =>
             FamilyData.scopeOf(context)?.onSelect?.call(memberOf(c).accountId);
         final scope = FamilyData.scopeOf(context);
+        // Gespeicherter Stand oder letzter Abruf fehlgeschlagen
+        // (live_data.dart, _Source): Hinweis oben mit dem Stand.
+        bool stale(Feed<Object?> f) =>
+            f.content != null && (f.offline || f.error != null);
+        final staleShown = shown.any(
+          (x) =>
+              stale(x.$1.snapshot.timetable) ||
+              stale(x.$1.snapshot.substitutions),
+        );
         return TodayPage(
           notices: [
+            if (staleShown && updated != null)
+              HintCard(
+                icon: Icons.cloud_off_outlined,
+                title: context.t.staleTitle,
+                text: context.t.staleText(standLabel(context.t, updated, now)),
+                action: context.t.staleRetry,
+                onAction: () {
+                  for (final (m, _) in shown) {
+                    m.snapshot.refresh();
+                  }
+                },
+              ),
             for (final f in scope?.failures ?? const <FamilyFailure>[])
               LoginFailureCard(
                 failure: f,

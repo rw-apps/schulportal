@@ -57,3 +57,23 @@ class SerialLoader {
     }
   }
 }
+
+/// Folge schneller Wiederholversuche nach einem fehlgeschlagenen Durchgang
+/// (live_data.dart, _scheduleRetry): [after] gibt die nächste Wartezeit oder
+/// null – null, wenn alles gelang (Folge beginnt dann von vorn) oder die
+/// Folge aufgebraucht ist (dann übernimmt der feste Takt).
+class RetryBackoff {
+  RetryBackoff(this.delays);
+
+  final List<Duration> delays;
+  int _step = 0;
+
+  Duration? after({required bool failed}) {
+    if (!failed) {
+      _step = 0;
+      return null;
+    }
+    if (_step >= delays.length) return null;
+    return delays[_step++];
+  }
+}

@@ -11,10 +11,12 @@ import 'package:lanis/utils/applet_settings.dart';
 
 import '../../courses_scan.dart';
 import '../../homework_ledger.dart';
+import '../../offline_store.dart';
 import '../../substitution_history.dart';
 import '../../lessons_parent.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import 'feed_source.dart';
 import 'serial_loader.dart';
 import '../../mensa.dart';
 import '../plan/lesson_times.dart';
@@ -297,52 +299,19 @@ class LiveDataScope extends ConsumerStatefulWidget {
   ConsumerState<LiveDataScope> createState() => _LiveDataScopeState();
 }
 
-class _Source<T> {
-  _Source(this.phpUrl);
-
-  final String phpUrl;
-  AppletParser<T>? parser;
-  StreamSubscription<FetcherResponse<T>>? sub;
-  Feed<T> feed = const Feed();
-
-  void attach(AppletParser<T> p, VoidCallback changed) {
-    if (identical(p, parser)) return;
-    sub?.cancel();
-    parser = p;
-    feed = Feed(content: p.latestResponse?.content);
-    sub = p.stream.listen((r) {
-      final c = r.content ?? feed.content;
-      feed = Feed(
-        content: c,
-        loading: r.status == FetcherStatus.fetching,
-        error: r.status == FetcherStatus.error
-            ? (r.error?.exception ?? 'Fehler')
-            : null,
-        offline: r.contentStatus == ContentStatus.offline,
-        fetchedAt: r.status == FetcherStatus.done
-            ? r.fetchedAt
-            : feed.fetchedAt,
-      );
-      changed();
-    });
-  }
-
-  /// Fehler, die fetchData selbst wirft (Neuanmeldung im zweiten Versuch,
-  /// AppletParser.fetchData), statt sie als Antwort zu melden.
-  void fail(Object e) {
-    feed = Feed(content: feed.content, error: e, fetchedAt: feed.fetchedAt);
-  }
-
-  void dispose() => sub?.cancel();
-}
-
 class _LiveDataScopeState extends ConsumerState<LiveDataScope>
     with WidgetsBindingObserver {
-  final _tt = _Source<TimeTable>('stundenplan.php');
-  final _lessons = _Source<Lessons>('meinunterricht.php');
-  final _subs = _Source<SubstitutionPlan>('vertretungsplan.php');
-  final _cal = _Source<List<CalendarEvent>>('kalender.php');
-  final _conv = _Source<List<OverviewEntry>>('nachrichten.php');
+  final _tt = FeedSource<TimeTable>('stundenplan.php');
+  final _lessons = FeedSource<Lessons>(
+    'meinunterricht.php',
+    store: lessonsCodec,
+  );
+  final _subs = FeedSource<SubstitutionPlan>('vertretungsplan.php');
+  final _cal = FeedSource<List<CalendarEvent>>(
+    'kalender.php',
+    store: calendarCodec,
+  );
+  final _conv = FeedSource<List<OverviewEntry>>('nachrichten.php');
 
   GroupChoice _choice = const {};
   Map<String, String> _names = const {};
@@ -358,13 +327,28 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
   DateTime? _electionChecked;
   MensaAddresses _mensa = const MensaAddresses({});
   int? _settingsFor;
-  late final _loader = SerialLoader(
-    (force, only) => _run(_supported, force, only),
-  );
+  late final _loader = SerialLoader((force, only) async {
+    await _run(_supported, force, only);
+    _scheduleRetry();
+  });
   Set<String> _loadedFor = const {};
   Set<String> _supported = const {};
   Timer? _timer;
   DateTime? _lastLoad;
+
+  /// Schneller Wiederholversuch nach einem Fehler ([_scheduleRetry]).
+  Timer? _retry;
+  final _backoff = RetryBackoff(retryDelays);
+
+  /// Abstände der Wiederholversuche nach einem Fehler; danach wieder der
+  /// 10-Minuten-Takt ([_period]). Ursache (Rückmeldung 21.10.26, Vorschlag
+  /// c): Nach einem Ausfall stand der alte Stand sonst bis zu 10 Minuten,
+  /// obwohl das Portal oft nach ein, zwei Minuten wieder antwortet.
+  static const retryDelays = [
+    Duration(minutes: 1),
+    Duration(minutes: 2),
+    Duration(minutes: 5),
+  ];
 
   /// Eigener Takt statt AppletParser.startAutoRefresh. Ursache: Die
   /// bisherigen Ansichten teilen dieselben Parser und schalten deren Takt
@@ -415,6 +399,7 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
     settingsRevision.removeListener(_onSettingsReplaced);
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
+    _retry?.cancel();
     for (final s in [_tt, _lessons, _subs, _cal, _conv]) {
       s.dispose();
     }
@@ -532,6 +517,35 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
       _lastLoad = DateTime.now();
       await _loadExtras(force);
     }
+  }
+
+  /// Nach jedem Durchgang: Sind Quellen fehlgeschlagen, nach
+  /// [retryDelays] nur diese erneut holen (im Vordergrund); gelingt alles,
+  /// beginnt die Folge beim nächsten Fehler wieder bei einer Minute.
+  /// Grenze: Nach dem dritten Versuch übernimmt der 10-Minuten-Takt.
+  void _scheduleRetry() {
+    if (!mounted) return;
+    final failed = {
+      for (final s in [_tt, _lessons, _subs, _cal, _conv])
+        if (s.parser != null &&
+            _supported.contains(s.phpUrl) &&
+            s.feed.error != null)
+          s.phpUrl,
+    };
+    if (_retry?.isActive ?? false) return;
+    final wait = _backoff.after(failed: failed.isNotEmpty);
+    if (wait == null) {
+      _retry?.cancel();
+      _retry = null;
+      return;
+    }
+    _retry = Timer(wait, () {
+      _retry = null;
+      if (!mounted) return;
+      final state = WidgetsBinding.instance.lifecycleState;
+      if (state != null && state != AppLifecycleState.resumed) return;
+      _loader.run(force: true, only: failed);
+    });
   }
 
   /// Wahltool und Profilfoto (portal_extras.dart), nach den Hauptquellen.

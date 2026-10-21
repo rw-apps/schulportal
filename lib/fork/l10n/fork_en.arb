@@ -560,5 +560,9 @@
   "unclearCourse": "{what} for course {code}",
   "unclearNoCourse": "{what}, course not given",
   "changeUnclear": "Please check",
-  "cellUnclear": "check?"
+  "cellUnclear": "check?",
+  "staleTitle": "Portal unreachable",
+  "staleText": "Saved state from {when}",
+  "staleRetry": "Reload",
+  "dayYesterday": "Yesterday"
 }

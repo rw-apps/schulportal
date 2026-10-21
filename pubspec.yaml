@@ -20,7 +20,7 @@ publish_to: 'none'
 # Upstream-Ständen denselben Code. 9301 = Upstream-Build 93, Fork-Ausgabe 01.
 # Grenze: Die Test-APK vom 14.10.26 (arm64, --split-per-abi) hatte 2093;
 # 9301 > 2093, das Update darüber klappt also.
-version: 4.1.0+9400
+version: 4.1.0+9401
 
 environment:
   sdk: ^3.10.0
