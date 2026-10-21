@@ -74,9 +74,27 @@ class KidPlan {
     this.teacherNames = const {},
     this.timed = true,
     this.customTimes = false,
+    this.classCodes = const [],
   });
 
   final String firstName;
+
+  /// Fachkürzel aller Kurse der KLASSE je Tag und Stunde
+  /// (classCodes[Tag][Stunde], groß geschrieben), wenn [days] aus dem
+  /// persönlichen Plan stammt; sonst leer.
+  ///
+  /// Ursache (Rückmeldung 21.10.26): Der persönliche Plan eines
+  /// Schülerkontos zeigt nur den eigenen Kurs (Ev. Religion), der
+  /// Klassenplan auch die Parallelkurse („ETHI“, „RKA“). Nur damit lässt
+  /// sich eine Vertretungszeile sicher dem Parallelkurs zuordnen
+  /// (_overlay in today_from_lanis.dart).
+  final List<List<Set<String>>> classCodes;
+
+  /// Kürzel der Klasse in dieser Stunde (leer, wenn unbekannt).
+  Set<String> classCodesAt(int day, int slot) =>
+      day < classCodes.length && slot < classCodes[day].length
+      ? classCodes[day][slot]
+      : const {};
 
   /// Zeigt die Schule Uhrzeiten? Ursache (Export Schule B 17.10.26): Manche
   /// Schulen blenden sie im Stundenplan aus – dann tragen die [slots]
@@ -121,6 +139,7 @@ class KidPlan {
       teacherNames: merged,
       timed: timed,
       customTimes: customTimes,
+      classCodes: classCodes,
     );
   }
 

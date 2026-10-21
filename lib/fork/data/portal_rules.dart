@@ -206,6 +206,7 @@ abstract final class SubjectNames {
     'INF': 'Informatik',
     'IF': 'Informatik',
     'ETH': 'Ethik',
+    'ETHI': 'Ethik',
     'ET': 'Ethik',
     'REV': 'Ev. Religion',
     'ER': 'Ev. Religion',

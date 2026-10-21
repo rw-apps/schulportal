@@ -175,6 +175,17 @@ Set<int> hoursOf(String stunde) {
   );
 }
 
+/// Nennt die Zeile einen anderen Kurs, den die Klasse in dieser Stunde hat
+/// ([classCodes], KidPlan.classCodes)? Dann betrifft sie sicher den
+/// Parallelkurs, nicht die Stunde [o]. Ursache (Rückmeldung 21.10.26):
+/// Schule B kürzt Ethik „ETHI“ ab – kein Eintrag in SubjectNames.known,
+/// [_otherSubject] allein hätte den Ausfall weiter Religion zugeordnet.
+bool _otherCourse(Set<String> codes, PlanLesson o, Set<String> classCodes) {
+  final own = o.short.toUpperCase();
+  if (codes.isEmpty || codes.contains(own)) return false;
+  return codes.any((c) => c != own && classCodes.contains(c));
+}
+
 /// Nennt die Zeile (Fächer [codes], Fach und altes Fach) sicher ein anderes
 /// Fach als die Stunde [o]? Ja nur, wenn KEIN Kürzel zur Stunde passt und
 /// JEDES Kürzel einem Fachnamen zugeordnet ist (Plan des Kindes, sonst
@@ -300,7 +311,9 @@ KidPlan planWithSubstitutions({
               !codes.contains(o.short.toUpperCase())) {
             continue;
           }
-          if (opts.length == 1 && _otherSubject(codes, o, planNames)) {
+          if (opts.length == 1 &&
+              (_otherCourse(codes, o, plan.classCodesAt(wd, i)) ||
+                  _otherSubject(codes, o, planNames))) {
             continue;
           }
           if (!_concerns(s, o)) continue;
@@ -342,6 +355,7 @@ KidPlan planWithSubstitutions({
       teacherNames: plan.teacherNames,
       timed: plan.timed,
       customTimes: plan.customTimes,
+      classCodes: plan.classCodes,
     ),
     unmatched: unmatched,
   );

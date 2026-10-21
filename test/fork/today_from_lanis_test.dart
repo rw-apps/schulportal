@@ -380,6 +380,49 @@ void main() {
     expect(run('XYZ').today.single.cancelled, isTrue);
   });
 
+  test('Einzelstunde: Kürzel eines Parallelkurses aus dem Klassenplan', () {
+    // Schule B kürzt Ethik „ETHI“ ab (nicht in SubjectNames.known); der
+    // Klassenplan nennt die Kurse der Stunde (KidPlan.classCodes).
+    const reli = PlanLesson(subject: 'Ev. Religion', short: 'REV');
+    final own = KidPlan(
+      firstName: 'Kind',
+      colorIndex: 0,
+      slots: const [PlanSlot(label: '1. Stunde', start: '08:00', end: '08:45')],
+      days: [
+        for (var d = 0; d < 5; d++)
+          [
+            const PlanCell([reli]),
+          ],
+      ],
+      classCodes: [
+        for (var d = 0; d < 5; d++)
+          [
+            {'ETHX', 'REV', 'RKX'},
+          ],
+      ],
+    );
+    List<DayLesson> run(String fach) => applySubstitutions(
+      t: de,
+      plan: own,
+      choice: const {},
+      now: DateTime(2026, 10, 21, 7, 30),
+      days: [
+        _day('21.10.2026', [
+          _sub('21.10.2026', '1', art: 'Entfall', fach: fach),
+        ]),
+      ],
+    ).today;
+    expect(run('ETHX').single.change, isNull);
+    expect(run('rkx').single.change, isNull, reason: 'Groß/klein egal');
+    expect(run('REV').single.cancelled, isTrue);
+    // Mit Namen eingetragen bleibt die Kurszuordnung erhalten.
+    expect(own.withTeacherNames(const {'A': 'B'}).classCodesAt(0, 0), {
+      'ETHX',
+      'REV',
+      'RKX',
+    });
+  });
+
   test('unbekannte Art gilt als Vertretung, nie als Ausfall', () {
     final c = classifySubstitution(
       t: de,

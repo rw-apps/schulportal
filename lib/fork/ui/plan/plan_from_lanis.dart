@@ -140,6 +140,31 @@ KidPlan kidPlanFromTimetable(
     });
   }
 
+  // Kurse der ganzen Klasse je Stunde, wenn oben der persönliche Plan
+  // genommen wurde (KidPlan.classCodes) – für die Zuordnung von
+  // Vertretungen zum Parallelkurs.
+  final all = tt.planForAll ?? const <TimetableDay>[];
+  final classCodes = identical(source, all) || all.isEmpty
+      ? const <List<Set<String>>>[]
+      : [
+          for (var d = 0; d < 5; d++)
+            () {
+              final cells = List.generate(slots.length, (_) => <String>{});
+              final day = d < all.length ? all[d] : const <TimetableSubject>[];
+              for (final subj in day) {
+                final code = (subj.name ?? '').trim().toUpperCase();
+                if (code.isEmpty) continue;
+                for (final s
+                    in rows.isEmpty
+                        ? _untimedSlotsOf(subj, untimed)
+                        : _slotsOf(subj, rows)) {
+                  cells[s].add(code);
+                }
+              }
+              return cells;
+            }(),
+        ];
+
   return KidPlan(
     firstName: firstName,
     colorIndex: colorIndex,
@@ -149,6 +174,7 @@ KidPlan kidPlanFromTimetable(
     // Eigene Zeiten nur, wo das Portal keine liefert (Portal geht vor).
     timed: rows.isNotEmpty || lessonTimes != null,
     customTimes: rows.isEmpty && lessonTimes != null,
+    classCodes: classCodes,
   );
 }
 
