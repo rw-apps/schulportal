@@ -340,6 +340,46 @@ void main() {
     },
   );
 
+  test('Einzelstunde: Ausfall eines anderen Fachs (Parallelkurs) entfällt', () {
+    // Rückmeldung 21.10.26: Im eigenen Plan steht nur Ev. Religion; der
+    // Vertretungsplan (ohne Lehrerkürzel) meldet den Ethikkurs als Entfall.
+    const reli = PlanLesson(subject: 'Ev. Religion', short: 'REV', room: 'R1');
+    final own = KidPlan(
+      firstName: 'Kind',
+      colorIndex: 0,
+      slots: const [
+        PlanSlot(label: '1. Stunde', start: '08:00', end: '08:45'),
+        PlanSlot(label: '2. Stunde', start: '08:45', end: '09:30'),
+      ],
+      days: [
+        for (var d = 0; d < 5; d++)
+          [
+            const PlanCell([reli]),
+            const PlanCell([reli]),
+          ],
+      ],
+    );
+    final wed = DateTime(2026, 10, 21, 7, 30);
+    ({List<ChangeItem> changes, List<DayLesson> today}) run(String fach) =>
+        applySubstitutions(
+          t: de,
+          plan: own,
+          choice: const {},
+          now: wed,
+          days: [
+            _day('21.10.2026', [
+              _sub('21.10.2026', '1 - 2', art: 'Entfall', fach: fach),
+            ]),
+          ],
+        );
+    final eth = run('ETH');
+    expect(eth.today.single.change, isNull, reason: 'Religion findet statt');
+    expect(eth.changes, isEmpty);
+    // Eigenes Fach bzw. unbekanntes Kürzel: weiter Ausfall.
+    expect(run('REV').today.single.cancelled, isTrue);
+    expect(run('XYZ').today.single.cancelled, isTrue);
+  });
+
   test('unbekannte Art gilt als Vertretung, nie als Ausfall', () {
     final c = classifySubstitution(
       t: de,

@@ -106,9 +106,19 @@ class ErrorLog {
 
   List<ErrorRecord> get records => List.unmodifiable(_records);
 
-  /// Datei festlegen und Gespeichertes laden; vorher Erfasstes bleibt.
+  /// Datei festlegen und Gespeichertes laden; vor dem ERSTEN Festlegen
+  /// Erfasstes bleibt und wird dazugezählt.
+  ///
+  /// Ein weiteres Festlegen (die Hintergrundprüfung startet die App-Dienste
+  /// je Lauf neu, background_service.dart → bootstrapLanisClient) liest nur
+  /// neu ein. Ursache (Fehlerbericht 21.10.26: „67108864×“ = 2^26): Vorher
+  /// wurde die Datei jedes Mal mit dem schon geladenen, gleichen Stand
+  /// zusammengezählt – jede Zahl verdoppelte sich je Lauf. Grenze: Schreiben
+  /// App und Hintergrund gleichzeitig, gewinnt der letzte Stand.
   void attach(File file) {
+    final pending = _file == null ? List.of(_records) : const <ErrorRecord>[];
     _file = file;
+    _records.clear();
     try {
       if (file.existsSync()) {
         final v = jsonDecode(file.readAsStringSync());
@@ -120,6 +130,9 @@ class ErrorLog {
       }
     } catch (_) {
       // Unlesbar – neu beginnen.
+    }
+    for (final r in pending) {
+      _merge(r);
     }
     _save();
   }

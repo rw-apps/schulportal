@@ -175,6 +175,28 @@ Set<int> hoursOf(String stunde) {
   );
 }
 
+/// Nennt die Zeile (Fächer [codes], Fach und altes Fach) sicher ein anderes
+/// Fach als die Stunde [o]? Ja nur, wenn KEIN Kürzel zur Stunde passt und
+/// JEDES Kürzel einem Fachnamen zugeordnet ist (Plan des Kindes, sonst
+/// SubjectNames.known), der vom Fach der Stunde abweicht – z. B. „ETH“
+/// (Ethik) neben „Ev. Religion“. Unbekannte Kürzel ergeben nein.
+bool _otherSubject(
+  Set<String> codes,
+  PlanLesson o,
+  Map<String, String> planNames,
+) {
+  if (codes.isEmpty) return false;
+  String norm(String s) => s.trim().toLowerCase();
+  for (final c in codes) {
+    if (c == o.short.toUpperCase()) return false;
+    final base = c.replaceAll(RegExp(r'\d+$'), '');
+    final name =
+        planNames[c] ?? SubjectNames.known[c] ?? SubjectNames.known[base];
+    if (name == null || norm(name) == norm(o.subject)) return false;
+  }
+  return true;
+}
+
 /// Betrifft die Zeile die Stunde des Kindes? Bei Parallelgruppen stehen
 /// auch die Vertretungen der ANDEREN Gruppen im Klassenplan (Lehrkraft der
 /// anderen Gruppe fehlt). Grenze: Ohne Lehrerkürzel in der Zeile wird sie
@@ -208,13 +230,20 @@ KidPlan planWithSubstitutions({
 /// [planWithSubstitutions] samt den Zeilen, die keine Stunde des Plans
 /// trafen (für [applySubstitutions]).
 ///
-/// Fach der Zeile: Es entscheidet nur zwischen parallelen Gruppen
-/// verschiedener Fächer (Religion/Ethik), und zwar Fach ODER altes Fach
-/// (Fachwechsel: „Fach“ ist das neue). Ursache (Prüfung 20.10.26): Bisher
-/// verlangte der Kalender, dass „Fach“ dem Kürzel im Plan gleicht – ein
-/// Fachwechsel fiel so durch, Heute zeigte ihn. Eine einzelne Stunde wird
-/// nie wegen des Fachs verworfen, weil unbelegt ist, ob Vertretungs- und
-/// Stundenplan dieselben Kürzel nutzen (Exporte 16./17.10.26 ohne Zeilen).
+/// Fach der Zeile: Bei parallelen Gruppen verschiedener Fächer
+/// (Religion/Ethik) muss Fach ODER altes Fach (Fachwechsel: „Fach“ ist das
+/// neue) dem Kürzel der Gruppe gleichen. Ursache (Prüfung 20.10.26):
+/// Bisher verlangte der Kalender, dass „Fach“ dem Kürzel im Plan gleicht –
+/// ein Fachwechsel fiel so durch, Heute zeigte ihn.
+///
+/// Eine einzelne Stunde wird verworfen, wenn die Zeile sicher ein ANDERES
+/// Fach nennt ([_otherSubject]). Ursache (Rückmeldung 21.10.26): Im
+/// eigenen Stundenplan eines Schülerkontos steht nur der eigene Kurs
+/// (Ev. Religion), nicht die Parallelkurse; der Vertretungsplan von
+/// Schule B hat keine Spalte Lehrerkürzel, also prüft [_concerns] nichts –
+/// der Ausfall des Ethikkurses erschien als Ausfall von Religion. Grenze:
+/// Ein unbekanntes Kürzel verwirft nichts (lieber ein Hinweis zu viel als
+/// ein verpasster Ausfall).
 ({KidPlan plan, List<(DateTime, Substitution)> unmatched}) _overlay({
   required KidPlan plan,
   required List<SubstitutionDay> days,
@@ -235,6 +264,12 @@ KidPlan planWithSubstitutions({
     for (final d in plan.days) [for (final c in d) List.of(c.options)],
   ];
   String nameOf(String k) => plan.teacherFull(k) ?? k;
+  // Kürzel → Fach aus dem Plan des Kindes (für _otherSubject).
+  final planNames = {
+    for (final d in plan.days)
+      for (final c in d)
+        for (final o in c.options) o.short.toUpperCase(): o.subject,
+  };
   var changed = false;
   for (final i in freeIdx) {
     for (final c in out[i]) {
@@ -263,6 +298,9 @@ KidPlan planWithSubstitutions({
           if (opts.length > 1 &&
               codes.isNotEmpty &&
               !codes.contains(o.short.toUpperCase())) {
+            continue;
+          }
+          if (opts.length == 1 && _otherSubject(codes, o, planNames)) {
             continue;
           }
           if (!_concerns(s, o)) continue;

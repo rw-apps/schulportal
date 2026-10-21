@@ -45,6 +45,27 @@ void main() {
     log.clear();
   });
 
+  test('erneutes Festlegen zählt nicht doppelt (Hintergrundlauf)', () {
+    // Fehlerbericht 21.10.26: „67108864×“ – jede Zahl verdoppelte sich je
+    // Lauf der Hintergrundprüfung.
+    final dir = Directory.systemTemp.createTempSync('errlog2');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final f = File('${dir.path}/e.json');
+    final log = ErrorLog.instance
+      ..clear()
+      ..version = '4.1.0+1'
+      ..attach(f);
+    log.notice('stundenplan.php', 'EmptyTimetable', const {'rows': 1});
+    for (var i = 0; i < 5; i++) {
+      log.attach(f);
+    }
+    expect(log.records.single.count, 1);
+    log.notice('stundenplan.php', 'EmptyTimetable', const {'rows': 1});
+    log.attach(f);
+    expect(log.records.single.count, 2);
+    log.clear();
+  });
+
   test('Stapel: nur Rahmen und Kopfzeilen', () {
     final st = StackTrace.fromString(
       '*** *** ***\npid: 1, tid: 2, name 1.ui\nos: android arch: arm64\n'
