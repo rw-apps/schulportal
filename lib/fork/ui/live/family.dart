@@ -557,6 +557,13 @@ class SubpageKidChips extends StatelessWidget {
         ? -2
         : members.indexWhere((m) => m.accountId == me.accountId);
     return PinnedKidChips(
+      // Zurück links in der Pillenzeile; die Seite selbst zeigt keinen
+      // eigenen Pfeil (BackInChips).
+      leading: IconButton(
+        onPressed: () => Navigator.of(context).maybePop(),
+        icon: Icon(Icons.arrow_back, color: Kit.of(context).p.ink),
+        tooltip: context.t.back,
+      ),
       chips: KidChips(
         allLabel: withAll ? context.t.forEveryone : null,
         kids: [
@@ -578,7 +585,7 @@ class SubpageKidChips extends StatelessWidget {
           }
         },
       ),
-      child: child,
+      child: BackInChips(child: child),
     );
   }
 }

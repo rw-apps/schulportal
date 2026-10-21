@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
+import '../kid_chips.dart';
 import '../kit.dart';
 import '../pinned_page.dart';
 import '../segments.dart';
@@ -23,14 +24,19 @@ class SettingsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
+    // Pfeil schon in der Pillenzeile (BackInChips): nur der Titel.
+    final back = !BackInChips.of(context);
     return Row(
       children: [
-        IconButton(
-          onPressed: () => Navigator.of(context).maybePop(),
-          icon: Icon(Icons.arrow_back, color: k.p.ink),
-          tooltip: context.t.back,
-        ),
-        const SizedBox(width: Sp.xs),
+        if (back) ...[
+          IconButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: Icon(Icons.arrow_back, color: k.p.ink),
+            tooltip: context.t.back,
+          ),
+          const SizedBox(width: Sp.xs),
+        ] else
+          const SizedBox(width: Sp.xs),
         Expanded(
           child: FittedBox(
             fit: BoxFit.scaleDown,

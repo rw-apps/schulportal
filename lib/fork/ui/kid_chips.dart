@@ -115,10 +115,18 @@ class KidChips extends StatelessWidget {
 /// Seite darunter bekommt keinen oberen Rand mehr (sie liegt schon unter
 /// der Statusleiste).
 class PinnedKidChips extends StatelessWidget {
-  const PinnedKidChips({super.key, required this.chips, required this.child});
+  const PinnedKidChips({
+    super.key,
+    required this.chips,
+    required this.child,
+    this.leading,
+  });
 
   final KidChips chips;
   final Widget child;
+
+  /// Links in derselben Zeile (Zurück auf Unterseiten, SubpageKidChips).
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -128,7 +136,15 @@ class PinnedKidChips extends StatelessWidget {
         bottom: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(Sp.page, Sp.m, Sp.page, 0),
-          child: chips,
+          child: leading == null
+              ? chips
+              : Row(
+                  children: [
+                    leading!,
+                    const SizedBox(width: Sp.xs),
+                    Expanded(child: chips),
+                  ],
+                ),
         ),
       ),
       Expanded(
@@ -140,4 +156,21 @@ class PinnedKidChips extends StatelessWidget {
       ),
     ],
   );
+}
+
+/// Markiert eine Seite, deren Zurück-Pfeil schon in der Pillenzeile steht
+/// (SubpageKidChips). Die Seite zeigt dann keinen eigenen.
+///
+/// Ursache (Rückmeldung 21.10.26: „Warum ist der Pfeil zurück nicht auf
+/// gleicher Höhe wie die Schülerauswahl?“): Pillen und Pfeil standen in zwei
+/// Zeilen übereinander. Grenze: Ohne Pillen (ein Kind, Einstellungen) bleibt
+/// der Pfeil im Kopf der Seite.
+class BackInChips extends InheritedWidget {
+  const BackInChips({super.key, required super.child});
+
+  static bool of(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<BackInChips>() != null;
+
+  @override
+  bool updateShouldNotify(BackInChips old) => false;
 }

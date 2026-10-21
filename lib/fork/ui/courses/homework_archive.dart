@@ -5,6 +5,7 @@ import 'package:liblanis/liblanis.dart';
 import '../../error_log.dart';
 import '../../homework_ledger.dart';
 import '../../l10n/l10n.dart';
+import '../kid_chips.dart';
 import '../kit.dart';
 import '../live/live_data.dart';
 import 'courses_model.dart' show courseTitle;
@@ -104,6 +105,8 @@ class HomeworkArchivePage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: k.p.bg,
         surfaceTintColor: k.p.bg,
+        // Pfeil schon in der Pillenzeile (BackInChips).
+        automaticallyImplyLeading: !BackInChips.of(context),
         title: Text(t.homeworkArchiveTitle, style: k.section),
       ),
       body: ListView(

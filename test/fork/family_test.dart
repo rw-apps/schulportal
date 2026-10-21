@@ -320,8 +320,11 @@ void main() {
     await t.tap(find.text('Öffnen'));
     await t.pumpAndSettle();
     expect(find.text('Fach von Anna'), findsOneWidget);
-    // Pillen auf der Unterseite, samt „Alle“ wie auf der Übersicht.
+    // Pillen auf der Unterseite, samt „Alle“ wie auf der Übersicht, und
+    // Zurück in derselben Zeile (BackInChips).
     expect(find.text('Alle'), findsOneWidget);
+    final back = t.getCenter(find.byTooltip('Zurück'));
+    expect(back.dy, closeTo(t.getCenter(find.text('Alle')).dy, 1));
     await t.tap(find.text('Ben').last);
     await t.pumpAndSettle();
     expect(find.text('Fach von Anna'), findsNothing);

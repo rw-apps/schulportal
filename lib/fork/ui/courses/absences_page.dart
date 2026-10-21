@@ -7,6 +7,7 @@ import '../../absences.dart';
 import '../../data/message_templates.dart';
 import '../../error_log.dart';
 import '../../l10n/l10n.dart';
+import '../kid_chips.dart';
 import '../kit.dart';
 import '../live/live_data.dart';
 import '../messages/compose_model.dart';
@@ -279,6 +280,8 @@ class AbsencesView extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: k.p.bg,
         surfaceTintColor: k.p.bg,
+        // Pfeil schon in der Pillenzeile (BackInChips).
+        automaticallyImplyLeading: !BackInChips.of(context),
         title: Text(t.absencesTitle, style: k.section),
       ),
       body: ListView(

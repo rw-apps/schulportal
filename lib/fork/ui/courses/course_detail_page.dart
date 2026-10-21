@@ -4,6 +4,7 @@ import 'package:liblanis/liblanis.dart';
 import '../../courses_scan.dart' show examsOfPage;
 import '../../exams.dart';
 import '../../l10n/l10n.dart';
+import '../kid_chips.dart';
 import '../kit.dart';
 import '../pinned_page.dart';
 import '../segments.dart';
@@ -163,16 +164,19 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
 
     // Zurück, Fach und Halbjahr fest (PinnedPage, Rückmeldung 21.10.26).
     final header = <Widget>[
-      Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: Icon(Icons.arrow_back, color: k.p.ink),
-            tooltip: t.back,
-          ),
-        ],
-      ),
-      const SizedBox(height: Sp.xs),
+      // Ohne Pillen eigener Pfeil; mit Pillen steht er dort (BackInChips).
+      if (!BackInChips.of(context)) ...[
+        Row(
+          children: [
+            IconButton(
+              onPressed: () => Navigator.of(context).maybePop(),
+              icon: Icon(Icons.arrow_back, color: k.p.ink),
+              tooltip: t.back,
+            ),
+          ],
+        ),
+        const SizedBox(height: Sp.xs),
+      ],
       _Header(course: c, tone: f),
       if (_hasFirstHalf) ...[
         const SizedBox(height: Sp.m),
