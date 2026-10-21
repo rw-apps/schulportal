@@ -485,6 +485,7 @@ class _HintRow extends StatelessWidget {
       HintKind.cancelled => changeIcon(ChangeKind.cancelled),
       HintKind.substitution => changeIcon(ChangeKind.substitution),
       HintKind.roomChange => changeIcon(ChangeKind.roomChange),
+      HintKind.unclear => changeIcon(ChangeKind.unclear),
       HintKind.meal => Icons.restaurant,
     };
     final detail = h.detail;

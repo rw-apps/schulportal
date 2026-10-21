@@ -554,5 +554,11 @@
   "hintSubstitution": "{subject}: vekil öğretmen",
   "hintRoom": "{subject}: derslik değişikliği",
   "hintLaterStart": "başlangıç {time}",
-  "hintEarlyEnd": "bitiş {time}"
+  "hintEarlyEnd": "bitiş {time}",
+  "hintUnclear": "{subject}: lütfen kontrol edin",
+  "changeCancelledNoun": "İptal",
+  "unclearCourse": "{code} dersi için {what}",
+  "unclearNoCourse": "{what}, ders belirtilmemiş",
+  "changeUnclear": "Lütfen kontrol edin",
+  "cellUnclear": "kontrol?"
 }

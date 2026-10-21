@@ -1460,5 +1460,35 @@
         "type": "String"
       }
     }
-  }
+  },
+  "hintUnclear": "{subject}: bitte prüfen",
+  "@hintUnclear": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "changeCancelledNoun": "Ausfall",
+  "unclearCourse": "{what} für Kurs {code}",
+  "@unclearCourse": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      },
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "unclearNoCourse": "{what}, Kurs nicht angegeben",
+  "@unclearNoCourse": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "changeUnclear": "Bitte prüfen",
+  "cellUnclear": "prüfen?"
 }

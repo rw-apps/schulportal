@@ -10,7 +10,12 @@ library;
 
 import 'dart:typed_data';
 
-enum ChangeKind { substitution, roomChange, cancelled }
+/// [unclear]: Die Vertretungszeile passt in die Stunde, nennt aber keinen
+/// oder einen unbekannten Kurs, während die Klasse in dieser Stunde
+/// Parallelkurse hat (KidPlan.classCodes) – gelb mit „bitte prüfen“, zählt
+/// nie als Ausfall. Ursache (Rückmeldung 21.10.26): Ein unsicherer Ausfall
+/// sollte nicht wie ein sicherer aussehen.
+enum ChangeKind { substitution, roomChange, cancelled, unclear }
 
 /// Ein Abschnitt des heutigen Plans. Doppelstunden desselben Fachs sind
 /// EIN Abschnitt („3.–4.“). Ursache: Ein Tag mit 8 Stunden bliebe sonst als

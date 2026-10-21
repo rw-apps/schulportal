@@ -12,6 +12,7 @@ IconData changeIcon(ChangeKind kind) => switch (kind) {
   ChangeKind.cancelled => Icons.event_busy_outlined,
   ChangeKind.substitution => Icons.swap_horiz,
   ChangeKind.roomChange => Icons.meeting_room_outlined,
+  ChangeKind.unclear => Icons.help_outline,
 };
 
 IconData weekIcon(WeekKind kind) => switch (kind) {

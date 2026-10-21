@@ -12,7 +12,7 @@ import '../../l10n/l10n.dart';
 import 'today_model.dart';
 import 'today_page.dart' show dayDiff, relativeDay;
 
-enum HintKind { cancelled, substitution, roomChange, meal }
+enum HintKind { cancelled, substitution, roomChange, unclear, meal }
 
 class KidHint {
   const KidHint({
@@ -41,12 +41,14 @@ HintKind _kind(ChangeKind k) => switch (k) {
   ChangeKind.cancelled => HintKind.cancelled,
   ChangeKind.substitution => HintKind.substitution,
   ChangeKind.roomChange => HintKind.roomChange,
+  ChangeKind.unclear => HintKind.unclear,
 };
 
 String _title(ForkL10n t, ChangeKind k, String subject) => switch (k) {
   ChangeKind.cancelled => t.hintCancelled(subject),
   ChangeKind.substitution => t.hintSubstitution(subject),
   ChangeKind.roomChange => t.hintRoom(subject),
+  ChangeKind.unclear => t.hintUnclear(subject),
 };
 
 /// Geschützte Leerzeichen innerhalb einer Angabe: umbrochen wird nur

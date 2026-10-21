@@ -415,6 +415,13 @@ void main() {
     expect(run('ETHX').single.change, isNull);
     expect(run('rkx').single.change, isNull, reason: 'Groß/klein egal');
     expect(run('REV').single.cancelled, isTrue);
+    // Unbekannter oder fehlender Kurs bei Parallelkursen: „bitte prüfen“,
+    // nie als Ausfall (zählt als stattfindend).
+    final unknown = run('XYZ').single;
+    expect(unknown.change, ChangeKind.unclear);
+    expect(unknown.cancelled, isFalse);
+    expect(unknown.changeDetail, 'Ausfall für Kurs XYZ');
+    expect(run('').single.changeDetail, 'Ausfall, Kurs nicht angegeben');
     // Mit Namen eingetragen bleibt die Kurszuordnung erhalten.
     expect(own.withTeacherNames(const {'A': 'B'}).classCodesAt(0, 0), {
       'ETHX',

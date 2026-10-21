@@ -311,8 +311,9 @@ KidPlan planWithSubstitutions({
               !codes.contains(o.short.toUpperCase())) {
             continue;
           }
+          final cls = plan.classCodesAt(wd, i);
           if (opts.length == 1 &&
-              (_otherCourse(codes, o, plan.classCodesAt(wd, i)) ||
+              (_otherCourse(codes, o, cls) ||
                   _otherSubject(codes, o, planNames))) {
             continue;
           }
@@ -325,17 +326,43 @@ KidPlan planWithSubstitutions({
             lessonTeachers: KidPlan.kuerzelOf(o.teacher),
             nameOf: nameOf,
           );
-          // Ausfall schlägt alles; sonst bleibt die erste Angabe.
-          if (o.change != null && c.kind != ChangeKind.cancelled) continue;
+          // Unsicher (ChangeKind.unclear): Die Klasse hat in dieser Stunde
+          // Parallelkurse, die Zeile nennt aber nicht den des Kindes –
+          // sondern keinen oder einen unbekannten (Rückmeldung 21.10.26:
+          // „als zu prüfen kennzeichnen“ statt sicherem Ausfall).
+          final own = o.short.toUpperCase();
+          final unclear =
+              opts.length == 1 &&
+              !codes.contains(own) &&
+              cls.any((x) => x != own);
+          final kind = unclear ? ChangeKind.unclear : c.kind;
+          // Sichere Angabe schlägt unsichere, Ausfall schlägt alles; sonst
+          // bleibt die erste.
+          final old = o.change;
+          final replace =
+              old == null ||
+              (old == ChangeKind.unclear && kind != ChangeKind.unclear) ||
+              (kind == ChangeKind.cancelled && old != ChangeKind.cancelled);
+          if (!replace) continue;
+          String what() => switch (c.kind) {
+            ChangeKind.cancelled => t.changeCancelledNoun,
+            ChangeKind.roomChange => t.changeRoom,
+            _ => t.changeSubstitution,
+          };
+          final code = _plain(s.fach) ?? _plain(s.fach_alt);
           opts[j] = PlanLesson(
             subject: o.subject,
             short: o.short,
-            room: c.kind == ChangeKind.roomChange
+            room: kind == ChangeKind.roomChange
                 ? (_plain(s.raum) ?? o.room)
                 : o.room,
             teacher: o.teacher,
-            change: c.kind,
-            changeDetail: c.detail,
+            change: kind,
+            changeDetail: unclear
+                ? (code == null
+                      ? t.unclearNoCourse(what())
+                      : t.unclearCourse(what(), code))
+                : c.detail,
           );
           changed = true;
         }

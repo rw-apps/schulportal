@@ -975,9 +975,12 @@ class _DayRow extends StatelessWidget {
         } else if (x.change != null) {
           bg = k.p.change.bg;
           ink = sub = k.p.change.ink;
-          final what = x.change == ChangeKind.substitution
-              ? context.t.changeSubstitution
-              : context.t.changeRoom;
+          final what = switch (x.change!) {
+            ChangeKind.substitution => context.t.changeSubstitution,
+            ChangeKind.roomChange => context.t.changeRoom,
+            // Unsicher: „Bitte prüfen: Ausfall für Kurs XYZ“.
+            _ => context.t.changeUnclear,
+          };
           second = [what, ?x.changeDetail].join(': ');
         }
         // Vorbei heißt nicht mehr grau: Heute sieht aus wie jeder andere
@@ -1507,6 +1510,8 @@ class _GridCell extends StatelessWidget {
           }
           if (x.change == ChangeKind.substitution) {
             lines.add((context.t.changeSubstitution, k.cellTeacher(ink)));
+          } else if (x.change == ChangeKind.unclear) {
+            lines.add((context.t.cellUnclear, k.cellTeacher(ink)));
           } else if (x.change == ChangeKind.roomChange) {
             lines.add((context.t.changeRoom, k.cellTeacher(ink)));
           } else if (x.teacher != null) {

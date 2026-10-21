@@ -53,6 +53,8 @@ String _changeLine(ForkL10n t, ChangeItem c) {
     ChangeKind.roomChange => '${t.changeRoom} ${c.detail ?? ''}'.trim(),
     ChangeKind.substitution =>
       '${t.changeSubstitution} ${c.detail ?? ''}'.trim(),
+    // Unsicher (ChangeKind.unclear): als Bitte um Prüfung, nie als Ausfall.
+    ChangeKind.unclear => '${t.changeUnclear}: ${c.detail ?? ''}'.trim(),
   };
   return '${c.slot} ${c.subject} – $what';
 }

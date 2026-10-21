@@ -554,5 +554,11 @@
   "hintSubstitution": "{subject}: substitute",
   "hintRoom": "{subject}: room change",
   "hintLaterStart": "starts at {time}",
-  "hintEarlyEnd": "ends at {time}"
+  "hintEarlyEnd": "ends at {time}",
+  "hintUnclear": "{subject}: please check",
+  "changeCancelledNoun": "Cancellation",
+  "unclearCourse": "{what} for course {code}",
+  "unclearNoCourse": "{what}, course not given",
+  "changeUnclear": "Please check",
+  "cellUnclear": "check?"
 }
