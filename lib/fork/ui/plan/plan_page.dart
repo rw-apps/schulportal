@@ -713,8 +713,9 @@ class _OpenGroupsHint extends StatelessWidget {
           Text(context.t.chooseGroupLabel, style: k.meta),
           for (final s in shorts) ...[
             const SizedBox(width: Sp.s),
+            // Blau statt Gelb wie die Zelle „Wahl“ (_GridCell).
             Material(
-              color: k.p.change.bg,
+              color: k.p.navSelected,
               borderRadius: BorderRadius.circular(Rad.pill),
               child: InkWell(
                 borderRadius: BorderRadius.circular(Rad.pill),
@@ -725,7 +726,7 @@ class _OpenGroupsHint extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     groupShortLabel(plan, s),
-                    style: k.button(k.p.change.ink),
+                    style: k.button(k.p.onNavSelected),
                   ),
                 ),
               ),
@@ -946,7 +947,6 @@ class _DayRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final tone = k.kid(plan.colorIndex);
     // Ohne Uhrzeiten der Schule (KidPlan.timed): Stundennummer statt Zeit,
     // kein „läuft“/„vorbei“ – die Ersatzzeiten stimmen nicht.
     final start = plan.timed ? plan.slots[block.firstSlot].start : '';
@@ -1007,10 +1007,6 @@ class _DayRow extends StatelessWidget {
               ? context.t.changeSubstitution
               : context.t.changeRoom;
           second = [what, ?x.changeDetail].join(': ');
-        } else if (running) {
-          bg = tone.tint;
-          ink = tone.onTint;
-          sub = tone.meta;
         } else if (done) {
           ink = sub = k.p.faint;
         }
@@ -1036,8 +1032,8 @@ class _DayRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (plan.timed) ...[
-                  Text(start, style: done ? k.timeEnd : k.timeStart),
-                  Text(end, style: k.timeEnd),
+                  _FitTime(start, style: done ? k.timeEnd : k.timeStart),
+                  _FitTime(end, style: k.timeEnd),
                 ] else
                   Text(
                     plan.slots[block.firstSlot].label.split(' ').first,
@@ -1051,7 +1047,14 @@ class _DayRow extends StatelessWidget {
         Expanded(
           child: Material(
             color: bg,
-            borderRadius: BorderRadius.circular(Rad.signal),
+            // Laufende Stunde: dunkler Rahmen statt Kinderfarbe (Abnahme
+            // 21.10.26); geänderte Stunden behalten ihre Signalfläche.
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(Rad.signal),
+              side: running && bg == k.p.card
+                  ? BorderSide(color: k.p.strong, width: Sz.cellBorder)
+                  : BorderSide.none,
+            ),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: onTap,
@@ -1135,7 +1138,7 @@ class _DayRow extends StatelessWidget {
                       child: FractionallySizedBox(
                         alignment: Alignment.centerLeft,
                         widthFactor: progress.clamp(0, 1),
-                        child: ColoredBox(color: tone.accent),
+                        child: ColoredBox(color: k.p.muted),
                       ),
                     ),
                 ],
@@ -1146,6 +1149,23 @@ class _DayRow extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Uhrzeit in der schmalen Spalte (Sz.slotColumn): verkleinern statt
+/// umbrechen. Ursache (Prüfbild 21.10.26, Schrift ×1,29): Die laufende
+/// Stunde (fett) brach „09:50“ in „09:5“ / „0“.
+class _FitTime extends StatelessWidget {
+  const _FitTime(this.text, {required this.style});
+
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) => FittedBox(
+    fit: BoxFit.scaleDown,
+    alignment: Alignment.centerLeft,
+    child: Text(text, style: style, maxLines: 1, softWrap: false),
+  );
 }
 
 bool _isParallelSubject(KidPlan plan, String short) => plan.days.any(
@@ -1159,7 +1179,8 @@ bool _isParallelSubject(KidPlan plan, String short) => plan.days.any(
 /// Zeilenhöhe = (freie Höhe − Kopf − Abstände) / Stunden, zwischen
 /// [Sz.gridRowMin] und [Sz.gridRowMax]; unter dem Minimum wird gescrollt. Pausen ab 15 Minuten sind
 /// eine größere Lücke ([Sz.gridBreak]), damit Vormittagsblöcke erkennbar
-/// sind. Heute: Spalte hinterlegt, Jetzt-Linie in Kinderfarbe.
+/// sind. Heute: Spalte grau hinterlegt, Jetzt-Linie und laufende Stunde
+/// dunkel (KitPalette.strong) statt in Kinderfarbe (Abnahme 21.10.26).
 class WeekGrid extends StatelessWidget {
   const WeekGrid({
     super.key,
@@ -1335,7 +1356,6 @@ class WeekGrid extends StatelessWidget {
     double bodyH,
   ) {
     final k = Kit.of(context);
-    final tone = k.kid(plan.colorIndex);
     final isToday = d == today;
     final blocks = _blocks(d, used);
     final nowY = isToday && plan.timed ? _nowY(used, tops, rowH) : null;
@@ -1347,7 +1367,7 @@ class WeekGrid extends StatelessWidget {
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: tone.tint.withValues(alpha: 0.6),
+                color: k.p.line,
                 borderRadius: BorderRadius.circular(Rad.cell),
               ),
             ),
@@ -1374,7 +1394,7 @@ class WeekGrid extends StatelessWidget {
             left: -Sz.gridGap,
             right: -Sz.gridGap,
             height: Sz.nowLine,
-            child: IgnorePointer(child: ColoredBox(color: tone.accent)),
+            child: IgnorePointer(child: ColoredBox(color: k.p.strong)),
           ),
       ],
     );
@@ -1449,7 +1469,6 @@ class _GridCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final tone = k.kid(plan.colorIndex);
     final s = minutesOf(plan.slots[block.firstSlot].start).minutes;
     final e = minutesOf(plan.slots[block.lastSlot].end).minutes;
     final t = now.hour * 60 + now.minute;
@@ -1466,9 +1485,12 @@ class _GridCell extends StatelessWidget {
       case ResolvedNone():
         return const SizedBox.shrink();
       case ResolvedOpen o:
-        bg = k.p.change.bg;
-        ink = k.p.change.ink;
-        border = k.p.change.dot;
+        // Offene Wahl in Blau (Farbe für „hier tippen“, wie die gewählte
+        // Leiste) statt Gelb: Gelb heißt seit 21.10.26 nur Vertretung,
+        // Raumwechsel oder Essen (KidCard-Hinweise).
+        bg = k.p.navSelected;
+        ink = k.p.onNavSelected;
+        border = k.p.onNavSelected;
         final same = isSameSubjectChoice(o.options);
         final t = context.t;
         lines.add((same ? o.subject : t.cellChoice, k.cellShort(ink)));
@@ -1482,9 +1504,12 @@ class _GridCell extends StatelessWidget {
         onTap = () => onOpenGroup(o.short);
       case ResolvedLesson r:
         final x = r.lesson;
-        final f = k.subjectAt(subjectColorSlots(plan)[x.short] ?? 0);
-        bg = f.bg;
-        ink = f.ink;
+        // Schlicht ohne Fachfarbe (Abnahme 21.10.26, Variante A): Farbe
+        // tragen nur Ausfall, Vertretung und offene Wahl. Ursache: Mit den
+        // Fachfarben fielen Signalfarben im Raster kaum auf. Ein Fachstreifen
+        // (Variante B) wurde verworfen – der Fachname steht in jeder Zelle.
+        bg = k.p.card;
+        ink = k.p.ink;
         if (x.change == ChangeKind.cancelled) {
           bg = k.p.cancel.bg;
           ink = k.p.cancel.ink;
@@ -1513,7 +1538,7 @@ class _GridCell extends StatelessWidget {
           }
         }
     }
-    if (running) border = tone.accent;
+    if (running) border = k.p.strong;
 
     return Material(
       color: bg,
