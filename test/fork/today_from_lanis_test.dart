@@ -312,6 +312,34 @@ void main() {
     );
   });
 
+  test(
+    'Vertreter nur als Spalte „Vertreter“ (HTML-Plan): Name statt Kürzel',
+    () {
+      String name(String k) => plan.teacherFull(k) ?? k;
+      Substitution html(String? vertreter) => Substitution(
+        tag: '19.10.2026',
+        tag_en: '',
+        stunde: '1',
+        art: 'Vertretung',
+        fach: 'D',
+        vertreter: vertreter,
+      );
+      expect(
+        classifySubstitution(html('FFF'), t: de, nameOf: name).detail,
+        'Fritz Fink',
+      );
+      // Schon ein Name bzw. ein unbekanntes Kürzel: unverändert.
+      expect(
+        classifySubstitution(html('Sommer, Tim'), t: de, nameOf: name).detail,
+        'Sommer, Tim',
+      );
+      expect(
+        classifySubstitution(html('XYZ'), t: de, nameOf: name).detail,
+        'XYZ',
+      );
+    },
+  );
+
   test('unbekannte Art gilt als Vertretung, nie als Ausfall', () {
     final c = classifySubstitution(
       t: de,

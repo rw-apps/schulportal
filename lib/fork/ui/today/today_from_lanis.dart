@@ -158,7 +158,16 @@ Set<int> hoursOf(String stunde) {
     );
   }
 
-  final who = sub != null ? name(sub) : subText;
+  // Auch die Spalte „Vertreter“ über das Namensverzeichnis: Der Plan als
+  // HTML-Tabelle (liblanis substitutions/parser.dart, Zweig ohne AJAX) füllt
+  // nur „Vertreter“/„Lehrer“, keine Kürzel-Spalten – bei Schule A steht dort
+  // das Kürzel selbst (Bildschirmfoto 21.10.26: Vertretung mit Kürzel,
+  // obwohl der Name aus „Mein Unterricht“ bekannt war). Grenze: Steht dort
+  // schon ein Name, bleibt er unverändert (KidPlan.teacherFull übersetzt nur
+  // bekannte Kürzel); unbekannte Kürzel bleiben Kürzel.
+  final who = sub != null
+      ? name(sub)
+      : (subText == null ? null : name(subText));
   final parts = [?who, if (roomMoved) room];
   return (
     kind: ChangeKind.substitution,
