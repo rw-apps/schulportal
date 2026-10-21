@@ -1417,5 +1417,48 @@
   },
   "homeworkDoneButton": "Erledigt",
   "homeworkMarkOpen": "Als unerledigt markieren",
-  "homeworkMarkOpenShort": "Unerledigt"
+  "homeworkMarkOpenShort": "Unerledigt",
+  "hintsTitle": "Hinweise",
+  "timetableTitle": "Stundenplan",
+  "wholeDay": "Ganzer Tag",
+  "hintCancelled": "{subject} fällt aus",
+  "@hintCancelled": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "hintSubstitution": "{subject}: Vertretung",
+  "@hintSubstitution": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "hintRoom": "{subject}: Raumwechsel",
+  "@hintRoom": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "hintLaterStart": "Beginn erst {time}",
+  "@hintLaterStart": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "hintEarlyEnd": "Schluss schon {time}",
+  "@hintEarlyEnd": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -83,6 +83,16 @@ abstract final class Sz {
   /// Höhe der Tagesleiste je Kind.
   static const double dayBar = 10;
 
+  /// Symbol vor einem Hinweis an der Kinderkarte (Ausfall, Vertretung,
+  /// Essen): etwas größer als [icon], weil der Hinweistext 16 statt 14 ist.
+  static const double hintIcon = 20;
+
+  /// Rahmen um den Stundenplan an der Kinderkarte. Farbe der Nebenschrift
+  /// (KitPalette.faint) statt der Trennlinie: Ein hellgrauer Rahmen war
+  /// schon im Prüfbild kaum zu sehen (Abnahme 21.10.26), bei Sonnenlicht
+  /// gar nicht (wie die Knöpfe, Rückmeldung 20.10.26).
+  static const double frame = 1;
+
   /// Spalte für „3.–4.“ in der aufgeklappten Tagesliste.
   static const double slotColumn = 52;
 
@@ -169,8 +179,6 @@ class KidTone {
     required this.onTint,
     required this.label,
     required this.meta,
-    required this.barDone,
-    required this.barRest,
   });
 
   /// Avatar, Punkte, Fortschritt.
@@ -187,10 +195,6 @@ class KidTone {
 
   /// Uhrzeit/Raum auf [tint].
   final Color meta;
-
-  /// Tagesleiste: erledigte bzw. kommende Abschnitte.
-  final Color barDone;
-  final Color barRest;
 }
 
 /// Signalfarbe (Vertretung/Raumwechsel bzw. Ausfall).
@@ -230,6 +234,7 @@ class KitPalette {
     required this.change,
     required this.cancel,
     required this.subjects,
+    required this.barNeutral,
   });
 
   /// Fachfarben fürs Wochenraster. Bewusst ohne Rot und Gelb, damit kein
@@ -259,6 +264,13 @@ class KitPalette {
   final SignalTone change;
   final SignalTone cancel;
 
+  /// Kommende Abschnitte der schlichten Tagesleiste (Kinderkarte).
+  /// Erledigte nehmen [faint], die laufende Stunde füllt sich mit [muted].
+  /// Ursache (Rückmeldung 21.10.26): Mit der Kinderfarbe war der reguläre
+  /// Plan so bunt, dass Ausfall und Vertretung nicht mehr auffielen; jetzt
+  /// tragen nur Signalfarben Farbe.
+  final Color barNeutral;
+
   /// Werte aus dem Entwurf A + C (hell).
   static const light = KitPalette(
     bg: Color(0xFFF2F4F7),
@@ -281,8 +293,6 @@ class KitPalette {
         onTint: Color(0xFF0B1F4D),
         label: Color(0xFF1D4ED8),
         meta: Color(0xFF344A7A),
-        barDone: Color(0xFF93B4F8),
-        barRest: Color(0xFFD6E2FC),
       ),
       KidTone(
         accent: Color(0xFF0F8A7E),
@@ -290,8 +300,6 @@ class KitPalette {
         onTint: Color(0xFF08332E),
         label: Color(0xFF0B6B61),
         meta: Color(0xFF2D5A54),
-        barDone: Color(0xFF8FD6CB),
-        barRest: Color(0xFFCDEDE8),
       ),
       KidTone(
         accent: Color(0xFF7C3AED),
@@ -299,8 +307,6 @@ class KitPalette {
         onTint: Color(0xFF2E1065),
         label: Color(0xFF6D28D9),
         meta: Color(0xFF4C3A75),
-        barDone: Color(0xFFC4A8F8),
-        barRest: Color(0xFFE4D8FD),
       ),
       KidTone(
         accent: Color(0xFF4D7C0F),
@@ -308,8 +314,6 @@ class KitPalette {
         onTint: Color(0xFF1F3305),
         label: Color(0xFF3F6212),
         meta: Color(0xFF44562A),
-        barDone: Color(0xFFB5D67F),
-        barRest: Color(0xFFD7EBB5),
       ),
     ],
     change: SignalTone(
@@ -326,6 +330,7 @@ class KitPalette {
       bar: Color(0xFFFDA29B),
       dot: Color(0xFFD92D20),
     ),
+    barNeutral: Color(0xFFD0D5DD),
     subjects: [
       FachTone(Color(0xFFE0EAFF), Color(0xFF1E3A8A)),
       FachTone(Color(0xFFD5F2EC), Color(0xFF134E48)),
@@ -360,8 +365,6 @@ class KitPalette {
         onTint: Color(0xFFE6EEFE),
         label: Color(0xFF8AB6FF),
         meta: Color(0xFFB9CBEA),
-        barDone: Color(0xFF3E5F99),
-        barRest: Color(0xFF26324A),
       ),
       KidTone(
         accent: Color(0xFF2DD4BF),
@@ -369,8 +372,6 @@ class KitPalette {
         onTint: Color(0xFFDDF3EF),
         label: Color(0xFF5EEAD4),
         meta: Color(0xFFA8DCD5),
-        barDone: Color(0xFF1F6F66),
-        barRest: Color(0xFF1B3B37),
       ),
       KidTone(
         accent: Color(0xFFA78BFA),
@@ -378,8 +379,6 @@ class KitPalette {
         onTint: Color(0xFFEFE7FE),
         label: Color(0xFFC4B5FD),
         meta: Color(0xFFCFC3EE),
-        barDone: Color(0xFF5B45A0),
-        barRest: Color(0xFF352A55),
       ),
       KidTone(
         accent: Color(0xFFA3E635),
@@ -387,8 +386,6 @@ class KitPalette {
         onTint: Color(0xFFECF5D8),
         label: Color(0xFFBEF264),
         meta: Color(0xFFCFE3B0),
-        barDone: Color(0xFF5E7F2A),
-        barRest: Color(0xFF2F3F22),
       ),
     ],
     change: SignalTone(
@@ -405,6 +402,7 @@ class KitPalette {
       bar: Color(0xFF7F2A2A),
       dot: Color(0xFFF87171),
     ),
+    barNeutral: Color(0xFF3A414D),
     subjects: [
       FachTone(Color(0xFF1E2A47), Color(0xFFC7D7FE)),
       FachTone(Color(0xFF15332F), Color(0xFFBDEDE4)),
@@ -464,8 +462,7 @@ class Kit {
     selected ? p.onStrong : p.ink,
   );
 
-  // ---- Kasten „Wichtig“ -------------------------------------------------
-  TextStyle get boxTitle => _s(12, FontWeight.w800, p.change.strong, ls: 1.2);
+  // ---- Signalflächen (Hinweise, Hinweiskarten) --------------------------
   TextStyle boxText(SignalTone t) => _s(14, FontWeight.w500, t.ink);
   TextStyle boxStrong(SignalTone t) => _s(14, FontWeight.w800, t.ink);
 
@@ -474,11 +471,25 @@ class Kit {
   TextStyle get cardMeta => _s(13, FontWeight.w500, p.muted);
   TextStyle get avatarLetter => _s(18, FontWeight.w800, p.onStrong);
 
-  TextStyle nowLabel(KidTone t) => _s(11, FontWeight.w800, t.label, ls: 1);
-  TextStyle nowSubject(KidTone t) => _s(22, FontWeight.w800, t.onTint);
-  TextStyle nowMeta(KidTone t) => _s(13, FontWeight.w500, t.meta);
-
   TextStyle get barLabel => _s(11, FontWeight.w600, p.muted);
+
+  // Kinderkarte ab 21.10.26: „Hinweise“ farbig gefüllt, „Stundenplan“
+  // schlicht und umrandet (Abnahme 21.10.26).
+  /// Überschrift „Hinweise“ bzw. „Stundenplan“ in der Karte.
+  TextStyle get cardSection => _s(15, FontWeight.w800, p.ink);
+
+  /// „Ev. Religion fällt aus“: größer als boxStrong (14), weil Ausfall und
+  /// Vertretung wichtiger sind als der reguläre Plan (Rückmeldung 21.10.26).
+  TextStyle hintTitle(SignalTone t) => _s(16, FontWeight.w800, t.ink);
+  TextStyle hintDetail(SignalTone t) => _s(13, FontWeight.w500, t.ink);
+
+  /// „Morgen“ vor der Stunde eines Hinweises für den nächsten Schultag.
+  TextStyle hintWhen(SignalTone t) => _s(13, FontWeight.w800, t.ink);
+
+  /// Schlichter Plan: Zeile „JETZT · 3.–4. STD.“, Fach, Zeit/Raum/Lehrkraft.
+  TextStyle get planNowLabel => _s(11, FontWeight.w800, p.muted, ls: 1);
+  TextStyle get planNowSubject => _s(22, FontWeight.w800, p.ink);
+  TextStyle get planNowMeta => _s(13, FontWeight.w500, p.muted);
 
   // Aufgeklappte Tagesliste
   TextStyle rowSlot(Color c) => _s(12, FontWeight.w700, c);

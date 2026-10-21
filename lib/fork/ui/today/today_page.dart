@@ -3,10 +3,9 @@ import 'package:flutter/material.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
 import '../../class_choice.dart' show classLabel;
+import 'kid_hints.dart';
 import 'kind_icons.dart';
 import 'today_model.dart';
-
-DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
 
 /// Abstand in Kalendertagen. Über UTC gerechnet, weil `difference` in
 /// Ortszeit über die Zeitumstellung (z. B. 25.10.26) 23 Stunden ergibt und
@@ -59,9 +58,10 @@ List<DateTime> schoolWeek(DateTime now) {
 /// Seite „Heute“ (Entwurf A + C, abgenommen 16.10.26; kompakt nach
 /// Entwurf 18.10.26: „möglichst wenig scrollen, maximale Übersicht“).
 ///
-/// Kopf in einer Zeile (Datum, Stand) statt Datum plus Begrüßung; Kasten nur
-/// für morgen (heute steht an der Karte); Karten je Kind; „Demnächst“ als
-/// Liste. Ab [Sz.wideLayout] Breite (Tablet) Kinder links, Termine rechts.
+/// Kopf in einer Zeile (Datum, Stand) statt Datum plus Begrüßung; Karten je
+/// Kind mit Hinweisen für heute und den nächsten Schultag (KidCard, seit
+/// 21.10.26 statt eines eigenen Kastens für morgen); „Demnächst“ als Liste.
+/// Ab [Sz.wideLayout] Breite (Tablet) Kinder links, Termine rechts.
 class TodayPage extends StatelessWidget {
   const TodayPage({
     super.key,
@@ -171,11 +171,6 @@ class TodayPage extends StatelessWidget {
             padding: const EdgeInsets.only(top: Sp.m),
             child: n,
           ),
-        if (tomorrowItems(data).isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: Sp.m),
-            child: ImportantBox(data: data),
-          ),
         if (data.isDemo)
           Padding(
             padding: const EdgeInsets.only(top: Sp.m),
@@ -209,7 +204,7 @@ class TodayPage extends StatelessWidget {
   }
 }
 
-/// Farbpunkt (Kind bzw. Änderungsart) in Kasten „Wichtig“ und „Demnächst“.
+/// Farbpunkt (Kind) in „Demnächst“.
 class _Dot extends StatelessWidget {
   const _Dot({required this.color});
 
@@ -223,108 +218,16 @@ class _Dot extends StatelessWidget {
   );
 }
 
-// ---- Kasten „Wichtig heute und morgen“ -------------------------------------
-
-/// Änderungen aller Kinder für heute und morgen, nach Tag sortiert.
-List<(ChildToday, ChangeItem)> importantItems(FamilyToday data) {
-  final today = _day(data.now);
-  final items = <(ChildToday, ChangeItem)>[
-    for (final kid in data.kids)
-      for (final c in kid.changes)
-        if (dayDiff(today, c.day) case 0 || 1) (kid, c),
-  ];
-  items.sort((a, b) => a.$2.day.compareTo(b.$2.day));
-  return items;
-}
-
-/// Nur morgen – die heutigen Änderungen stehen an der Karte des Kindes
-/// (KidCard, Entwurf 18.10.26).
-List<(ChildToday, ChangeItem)> tomorrowItems(FamilyToday data) => [
-  for (final x in importantItems(data))
-    if (dayDiff(data.now, x.$2.day) == 1) x,
-];
-
-/// Kasten mit den Änderungen für morgen, eine Zeile je Änderung, ohne
-/// Überschrift (Entwurf 18.10.26: „Morgen“ steht in jeder Zeile).
-class ImportantBox extends StatelessWidget {
-  const ImportantBox({super.key, required this.data});
-
-  final FamilyToday data;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    final items = tomorrowItems(data);
-    return Container(
-      padding: const EdgeInsets.fromLTRB(Sp.l, Sp.m, Sp.l, Sp.m),
-      decoration: BoxDecoration(
-        color: k.p.change.bg,
-        borderRadius: BorderRadius.circular(Rad.signal),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final (i, (kid, c)) in items.indexed) ...[
-            if (i > 0) const SizedBox(height: Sp.xs + Sp.xxs),
-            _ImportantRow(kid: kid, item: c, now: data.now),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ImportantRow extends StatelessWidget {
-  const _ImportantRow({
-    required this.kid,
-    required this.item,
-    required this.now,
-  });
-
-  final ChildToday kid;
-  final ChangeItem item;
-  final DateTime now;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = Kit.of(context);
-    final t = context.t;
-    final tone = item.kind == ChangeKind.cancelled ? k.p.cancel : k.p.change;
-    final what = switch (item.kind) {
-      ChangeKind.cancelled => t.lessonCancelled,
-      ChangeKind.roomChange => '${t.changeRoom} ${item.detail ?? ''}'.trim(),
-      ChangeKind.substitution =>
-        '${t.changeSubstitution} ${item.detail ?? ''}'.trim(),
-    };
-    final when = lowerFor(t, relativeDay(t, item.day, now));
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: Sp.xxs),
-          child: Icon(changeIcon(item.kind), size: Sz.icon, color: tone.ink),
-        ),
-        const SizedBox(width: Sp.s),
-        Expanded(
-          child: Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: '${kid.firstName} · $when ${item.slot} ${item.subject}',
-                  style: k.boxStrong(tone),
-                ),
-                TextSpan(text: ' – $what', style: k.boxText(tone)),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 // ---- Karte je Kind ----------------------------------------------------------
 
+/// Karte je Kind: Kopf, „Hinweise“, „Stundenplan“, Aktionen.
+///
+/// Aufbau nach Abnahme 21.10.26: Was vom Plan abweicht, steht farbig
+/// gefüllt unter „Hinweise“ (kid_hints.dart); der reguläre Plan steht
+/// schlicht (ohne Kinderfarbe) in einem Rahmen unter „Stundenplan“. Ursache
+/// (Rückmeldung 21.10.26): Ausfall und Vertretung waren zu klein, und mit
+/// dem bunten Plan fielen Signalfarben nicht auf. Die Kinderfarbe bleibt
+/// nur am Bild bzw. Anfangsbuchstaben.
 class KidCard extends StatelessWidget {
   const KidCard({
     super.key,
@@ -345,12 +248,6 @@ class KidCard extends StatelessWidget {
   final void Function(ChildToday child)? onOrderMeal;
   final void Function(ChildToday child)? onOpenDay;
 
-  /// Heutige Änderungen an Stunden, die noch kommen oder laufen.
-  List<DayLesson> _changesLeft() => [
-    for (final x in kid.lessons)
-      if (x.change != null && !lessonDone(x, now)) x,
-  ];
-
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
@@ -361,7 +258,8 @@ class KidCard extends StatelessWidget {
       kid.school,
       classLabel(kid.className),
     ].where((s) => s.isNotEmpty).join(' · ');
-    final changes = _changesLeft();
+    final hints = kidHints(kid, now, t);
+    final openDay = onOpenDay == null ? null : () => onOpenDay!(kid);
 
     return Container(
       padding: const EdgeInsets.all(Sp.l),
@@ -429,37 +327,58 @@ class KidCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: Sp.m),
-          _NowPanel(kid: kid, status: status, tone: tone),
-          if (kid.lessons.isNotEmpty) ...[
-            const SizedBox(height: Sp.m),
-            // Antippen öffnet den Tag im Kalender (alle Stunden, Pausen).
-            Material(
-              type: MaterialType.transparency,
-              child: InkWell(
-                onTap: onOpenDay == null ? null : () => onOpenDay!(kid),
-                borderRadius: BorderRadius.circular(Rad.bar),
-                child: _DayBar(kid: kid, status: status, tone: tone, now: now),
-              ),
-            ),
+          // Ohne Hinweise entfallen Überschrift und Abschnitt ganz.
+          if (hints.isNotEmpty) ...[
+            const SizedBox(height: Sp.l),
+            _SectionHead(text: t.hintsTitle),
+            for (final (i, h) in hints.indexed) ...[
+              if (i > 0) const SizedBox(height: Sp.s),
+              _HintRow(hint: h),
+            ],
           ],
-          for (final x in changes)
-            Padding(
-              padding: const EdgeInsets.only(top: Sp.s),
-              child: _ChangeLine(lesson: x),
+          const SizedBox(height: Sp.l),
+          // „Ganzer Tag ›“ macht sichtbar, dass Antippen den Tag im Kalender
+          // öffnet (die Leiste allein verriet das nicht, Mockup 21.10.26).
+          _SectionHead(
+            text: t.timetableTitle,
+            link: t.wholeDay,
+            onTap: openDay,
+          ),
+          // Rahmen statt Fläche: gefüllt = Hinweis, umrandet = Plan. Die
+          // ganze umrandete Fläche öffnet den Tag (alle Stunden, Pausen).
+          Material(
+            color: k.p.card,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(Rad.row),
+              side: BorderSide(color: k.p.faint, width: Sz.frame),
             ),
-          if (kid.mealHint != null)
-            Padding(
-              padding: const EdgeInsets.only(top: Sp.s),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.restaurant, size: Sz.icon, color: k.p.muted),
-                  const SizedBox(width: Sp.s),
-                  Expanded(child: Text(kid.mealHint!, style: k.cardMeta)),
-                ],
+            child: InkWell(
+              customBorder: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(Rad.row),
+              ),
+              onTap: openDay,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Sp.m,
+                  Sp.s + Sp.xxs,
+                  Sp.m,
+                  Sp.m,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _NowPanel(kid: kid, status: status),
+                    // Ohne stattfindende Stunde (alle fallen aus, schulfrei)
+                    // keine Leiste: Sie hätte nur rote bzw. keine Abschnitte.
+                    if (kid.lessons.any((x) => !x.cancelled)) ...[
+                      const SizedBox(height: Sp.m),
+                      _DayBar(kid: kid, status: status, now: now),
+                    ],
+                  ],
+                ),
               ),
             ),
+          ),
           ..._actions(t),
         ],
       ),
@@ -518,62 +437,118 @@ class KidCard extends StatelessWidget {
   }
 }
 
-/// Heutige Änderung als Zeile: „5. Std. Deutsch – Vertretung Tim Sommer“.
-class _ChangeLine extends StatelessWidget {
-  const _ChangeLine({required this.lesson});
+/// Überschrift „Hinweise“ bzw. „Stundenplan“ in der Karte; rechts optional
+/// ein Verweis („Ganzer Tag ›“).
+class _SectionHead extends StatelessWidget {
+  const _SectionHead({required this.text, this.link, this.onTap});
 
-  final DayLesson lesson;
+  final String text;
+  final String? link;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
-    final t = context.t;
-    final x = lesson;
-    final tone = x.cancelled ? k.p.cancel : k.p.change;
-    final what = switch (x.change!) {
-      ChangeKind.cancelled => t.lessonCancelled,
-      ChangeKind.roomChange => '${t.changeRoom} ${x.changeDetail ?? ''}'.trim(),
-      ChangeKind.substitution =>
-        '${t.changeSubstitution} ${x.changeDetail ?? ''}'.trim(),
-    };
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: Sp.xxs),
-          child: Icon(changeIcon(x.change!), size: Sz.icon, color: tone.ink),
-        ),
-        const SizedBox(width: Sp.s),
-        Expanded(
-          child: Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: '${x.slot} ${x.subject}',
-                  style: k.boxStrong(tone),
-                ),
-                TextSpan(text: ' – $what', style: k.boxText(tone)),
-              ],
+    final link = this.link;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Sp.s),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(child: Text(text, style: k.cardSection)),
+          if (link != null && onTap != null)
+            InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(Rad.bar),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(link, style: k.link),
+                  Icon(Icons.chevron_right, size: Sz.icon, color: k.link.color),
+                ],
+              ),
             ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-/// Fläche „JETZT · 3./4. STD. · NOCH 30 MIN.“, Fach und Raum in einem
-/// Absatz (bricht nur um, wenn es nicht passt).
+/// Ein Hinweis als gefüllte Fläche: Titel („Ev. Religion fällt aus“) fett,
+/// darunter klein Stunde und Folge bzw. Lehrkraft. Rot für Ausfall, Gelb
+/// für Vertretung, Raumwechsel und Essen.
+class _HintRow extends StatelessWidget {
+  const _HintRow({required this.hint});
+
+  final KidHint hint;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final h = hint;
+    final tone = h.cancelled ? k.p.cancel : k.p.change;
+    final icon = switch (h.kind) {
+      HintKind.cancelled => changeIcon(ChangeKind.cancelled),
+      HintKind.substitution => changeIcon(ChangeKind.substitution),
+      HintKind.roomChange => changeIcon(ChangeKind.roomChange),
+      HintKind.meal => Icons.restaurant,
+    };
+    final detail = h.detail;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Sp.m,
+        vertical: Sp.s + Sp.xxs,
+      ),
+      decoration: BoxDecoration(
+        color: tone.bg,
+        borderRadius: BorderRadius.circular(Rad.row),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: Sp.xxs),
+            child: Icon(icon, size: Sz.hintIcon, color: tone.strong),
+          ),
+          const SizedBox(width: Sp.s),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(h.title, style: k.hintTitle(tone)),
+                if (h.when != null || (detail != null && detail.isNotEmpty))
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        if (h.when != null)
+                          TextSpan(
+                            text: detail == null || detail.isEmpty
+                                ? h.when
+                                : '${h.when} · ',
+                            style: k.hintWhen(tone),
+                          ),
+                        if (detail != null && detail.isNotEmpty)
+                          TextSpan(text: detail, style: k.hintDetail(tone)),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// „JETZT · 3./4. STD. · NOCH 30 MIN.“, Fach und Raum in einem Absatz
+/// (bricht nur um, wenn es nicht passt). Schlicht ohne eigene Fläche; der
+/// Rahmen um den Stundenplan (KidCard) grenzt ab.
 class _NowPanel extends StatelessWidget {
-  const _NowPanel({
-    required this.kid,
-    required this.status,
-    required this.tone,
-  });
+  const _NowPanel({required this.kid, required this.status});
 
   final ChildToday kid;
   final DayStatus status;
-  final KidTone tone;
 
   @override
   Widget build(BuildContext context) {
@@ -588,7 +563,7 @@ class _NowPanel extends StatelessWidget {
     // zwischen Uhrzeit, Raum und Lehrkraft, nie mitten im Namen. Ursache
     // (Rückmeldung 20.10.26): „Jan / Wolf“ stand auf zwei Zeilen. Grenze:
     // Ist ein Name allein breiter als die Fläche, bricht Flutter ihn doch.
-    String keep(String v) => v.replaceAll(' ', '\u00A0');
+    String keep(String v) => v.replaceAll(' ', ' ');
     String details(DayLesson x) => [
       keep(hasTime(x) ? '${x.start}–${x.end}' : x.slot),
       if (x.room != null) keep(x.room!),
@@ -630,59 +605,53 @@ class _NowPanel extends StatelessWidget {
         meta = details(x);
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Sp.m,
-        vertical: Sp.s + Sp.xxs,
-      ),
-      decoration: BoxDecoration(
-        color: tone.tint,
-        borderRadius: BorderRadius.circular(Rad.row),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: k.nowLabel(tone)),
-          Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(text: title, style: k.nowSubject(tone)),
-                if (meta != null && meta.isNotEmpty)
-                  TextSpan(text: '   $meta', style: k.nowMeta(tone)),
-              ],
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: k.planNowLabel),
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(text: title, style: k.planNowSubject),
+              if (meta != null && meta.isNotEmpty)
+                TextSpan(text: '   $meta', style: k.planNowMeta),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-/// Tagesleiste: ein Abschnitt je (Doppel-)Stunde, Breite nach Dauer.
+/// Tagesleiste: ein Abschnitt je (Doppel-)Stunde, Breite nach Dauer;
+/// schlicht grau, farbig nur Ausfall (rot) und Vertretung (gelb).
+///
+/// Die Leiste beginnt bei der ersten und endet bei der letzten Stunde, die
+/// stattfindet. Ursache (Bildschirmfoto 21.10.26): Fielen die 1.–2. Stunde
+/// aus, stand links „08:00“, obwohl der Tag erst um 09:45 begann. Ausfälle
+/// am Rand nennt der Hinweis mit Folge („Beginn erst 09:45“, kid_hints.dart);
+/// Ausfälle mitten am Tag bleiben als roter Abschnitt sichtbar.
 class _DayBar extends StatelessWidget {
-  const _DayBar({
-    required this.kid,
-    required this.status,
-    required this.tone,
-    required this.now,
-  });
+  const _DayBar({required this.kid, required this.status, required this.now});
 
   final ChildToday kid;
   final DayStatus status;
-  final KidTone tone;
   final DateTime now;
 
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final l = kid.lessons;
+    // Aufrufer (KidCard) zeigt die Leiste nur mit stattfindender Stunde.
+    final first = l.indexWhere((x) => !x.cancelled);
+    final last = l.lastIndexWhere((x) => !x.cancelled);
 
     Color colorFor(int i) {
       final x = l[i];
       if (x.cancelled) return k.p.cancel.bar;
       if (x.change != null && !lessonDone(x, now)) return k.p.change.bar;
-      if (lessonDone(x, now)) return tone.barDone;
-      return tone.barRest;
+      if (lessonDone(x, now)) return k.p.faint;
+      return k.p.barNeutral;
     }
 
     // „Danach“ an der Leiste: die Stunde nach der, die oben steht. Ursache
@@ -709,7 +678,6 @@ class _DayBar extends StatelessWidget {
     final center = next == null || !timed
         ? ''
         : t.barThen(next.start, next.subject);
-    final lastEnd = l.lastWhere((x) => !x.cancelled, orElse: () => l.last).end;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -718,8 +686,8 @@ class _DayBar extends StatelessWidget {
           height: Sz.dayBar,
           child: Row(
             children: [
-              for (var i = 0; i < l.length; i++) ...[
-                if (i > 0) const SizedBox(width: Sp.xs),
+              for (var i = first; i <= last; i++) ...[
+                if (i > first) const SizedBox(width: Sp.xs),
                 Expanded(
                   flex: lessonMinutes(l[i]),
                   child: ClipRRect(
@@ -732,7 +700,7 @@ class _DayBar extends StatelessWidget {
                           FractionallySizedBox(
                             alignment: Alignment.centerLeft,
                             widthFactor: status.progress.clamp(0, 1),
-                            child: ColoredBox(color: tone.accent),
+                            child: ColoredBox(color: k.p.muted),
                           ),
                       ],
                     ),
@@ -745,7 +713,7 @@ class _DayBar extends StatelessWidget {
         const SizedBox(height: Sp.xs + Sp.xxs),
         Row(
           children: [
-            Text(timed ? l.first.start : '', style: k.barLabel),
+            Text(timed ? l[first].start : '', style: k.barLabel),
             Expanded(
               child: Text(
                 center,
@@ -754,7 +722,7 @@ class _DayBar extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            Text(timed ? t.barUntil(lastEnd) : '', style: k.barLabel),
+            Text(timed ? t.barUntil(l[last].end) : '', style: k.barLabel),
           ],
         ),
       ],

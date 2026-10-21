@@ -89,14 +89,7 @@ void main() {
     expect(schoolWeek(DateTime(2026, 10, 24)).first, DateTime(2026, 10, 26));
   });
 
-  test('Wichtig: nur heute und morgen, nach Tag sortiert', () {
-    final items = importantItems(demoFamily());
-    expect(items.map((e) => e.$2.subject), ['Deutsch', 'Sport']);
-    // Kasten nur noch für morgen; heute steht an der Karte.
-    expect(tomorrowItems(demoFamily()).map((e) => e.$2.subject), ['Sport']);
-  });
-
-  testWidgets('Heute kompakt: Änderung an der Karte, Tagesleiste, Tablet', (
+  testWidgets('Heute: Hinweise und Stundenplan an der Karte, Tablet', (
     t,
   ) async {
     final opened = <String>[];
@@ -115,11 +108,17 @@ void main() {
     await t.pumpWidget(page());
     await t.pumpAndSettle();
     expect(t.takeException(), isNull);
-    expect(find.textContaining('morgen 1. Std. Sport'), findsOneWidget);
-    expect(find.text('Ganzen Tag zeigen'), findsNothing);
-    expect(find.textContaining('Tim Sommer'), findsOneWidget);
+    // Kein eigener Kasten für morgen mehr: Hinweis an Lenas Karte.
+    expect(find.text('Sport fällt aus'), findsOneWidget);
+    expect(find.textContaining('Morgen · '), findsOneWidget);
+    expect(find.text('Deutsch: Vertretung'), findsOneWidget);
+    expect(find.textContaining('Tim\u00A0Sommer'), findsOneWidget);
+    expect(find.text('Hinweise'), findsWidgets);
+    expect(find.text('Stundenplan'), findsNWidgets(2));
+    // Die umrandete Fläche und „Ganzer Tag“ öffnen den Tag.
     await t.tap(find.textContaining('Danach').first);
-    expect(opened, ['Lena']);
+    await t.tap(find.text('Ganzer Tag').first);
+    expect(opened, ['Lena', 'Lena']);
     // Tablet: Termine neben den Kindern, ohne Scrollen sichtbar.
     t.view.physicalSize = const Size(1600, 2560);
     t.view.devicePixelRatio = 2.0;
@@ -139,7 +138,7 @@ void main() {
         await t.pumpAndSettle();
         expect(t.takeException(), isNull);
         expect(find.text('Lena'), findsOneWidget);
-        expect(find.textContaining('Vertretung Tim Sommer'), findsOneWidget);
+        expect(find.text('Deutsch: Vertretung'), findsOneWidget);
         expect(find.textContaining('NOCH 30 MIN.'), findsOneWidget);
 
         await t.drag(find.byType(Scrollable).first, const Offset(0, -6000));

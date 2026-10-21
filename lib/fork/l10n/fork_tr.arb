@@ -546,5 +546,13 @@
   "homeworkShowAll": "Tamamlanan {n} ödevin hepsini göster",
   "homeworkDoneButton": "Tamamlandı",
   "homeworkMarkOpen": "Yapılmadı olarak işaretle",
-  "homeworkMarkOpenShort": "Yapılmadı"
+  "homeworkMarkOpenShort": "Yapılmadı",
+  "hintsTitle": "Bildirimler",
+  "timetableTitle": "Ders programı",
+  "wholeDay": "Tüm gün",
+  "hintCancelled": "{subject} iptal",
+  "hintSubstitution": "{subject}: vekil öğretmen",
+  "hintRoom": "{subject}: derslik değişikliği",
+  "hintLaterStart": "başlangıç {time}",
+  "hintEarlyEnd": "bitiş {time}"
 }

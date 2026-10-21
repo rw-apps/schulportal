@@ -546,5 +546,13 @@
   "homeworkShowAll": "Show all {n} completed",
   "homeworkDoneButton": "Done",
   "homeworkMarkOpen": "Mark as not done",
-  "homeworkMarkOpenShort": "Not done"
+  "homeworkMarkOpenShort": "Not done",
+  "hintsTitle": "Notices",
+  "timetableTitle": "Timetable",
+  "wholeDay": "Whole day",
+  "hintCancelled": "{subject} cancelled",
+  "hintSubstitution": "{subject}: substitute",
+  "hintRoom": "{subject}: room change",
+  "hintLaterStart": "starts at {time}",
+  "hintEarlyEnd": "ends at {time}"
 }
