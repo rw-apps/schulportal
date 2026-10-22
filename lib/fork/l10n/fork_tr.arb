@@ -436,9 +436,9 @@
   "loginLockedTitle": "Hesap kısa süreliğine kilitli",
   "loginLockedText": "Birkaç hatalı girişten sonra okul portalı hesabı {seconds} saniye kilitledi – web sitesinde de. Lütfen bekleyin: her deneme kilidi uzatır.",
   "loginDownTitle": "Okul portalına ulaşılamıyor",
-  "loginDownText": "Okul portalı şu anda yanıt vermiyor (bakım veya arıza). O zamana kadar uygulama son kaydedilen durumu gösterir.",
-  "loginOfflineTitle": "Bağlantı yok",
-  "loginOfflineText": "Cihaz çevrimdışı. Uygulama son kaydedilen durumu gösterir.",
+  "loginDownText": "Okul portalı şu anda bakımda veya arızalı – bu uygulamadan kaynaklanmıyor.",
+  "loginOfflineTitle": "Okul portalına bağlantı yok",
+  "loginOfflineText": "Wi-Fi veya mobil veriyi kontrol edin. Açıksa portal şu anda yanıt vermiyor – bu durumda sorun uygulamada değil.",
   "loginIncompleteText": "Bu hesap için giriş bilgileri eksik. Şifreyi yeniden girin.",
   "loginOtherTitle": "Giriş başarısız",
   "loginOtherText": "Beklenmedik bir şey oldu. Birazdan tekrar deneyin; devam ederse hata raporunu gönderin (Ayarlar → Sorun giderme).",
@@ -564,5 +564,10 @@
   "staleTitle": "Portala ulaşılamıyor",
   "staleText": "{when} tarihli kayıtlı durum",
   "staleRetry": "Yenile",
-  "dayYesterday": "Dün"
+  "dayYesterday": "Dün",
+  "loginServerTitle": "Okul portalında arıza",
+  "loginServerText": "Okul portalı bir sunucu hatasıyla yanıt verdi (kod {code}). Bu uygulamadan kaynaklanmıyor ve genellikle kısa sürede düzelir.",
+  "reasonServer": "Okul portalı bir arıza bildiriyor (sunucu hatası {code}) – bu uygulamadan kaynaklanmıyor.",
+  "reasonDown": "Okul portalı şu anda bakımda veya arızalı.",
+  "reasonUnreachable": "Okul portalına bağlantı yok."
 }

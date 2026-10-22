@@ -4,6 +4,7 @@ import 'package:liblanis/liblanis.dart';
 
 import '../l10n/l10n.dart';
 import '../login_guard.dart';
+import '../portal_fault.dart';
 import 'kit.dart';
 
 /// Überschrift und Erklärung zu einem Anmeldefehler – für Menschen, nicht
@@ -14,27 +15,75 @@ import 'kit.dart';
 /// seite der Vorlage zeigte den englischen Fehlertyp und bat, ihn zu melden
 /// – auch bei Fällen, die gar kein Fehler der App sind (gesperrtes Konto,
 /// falsches Passwort, Portal nicht erreichbar).
-({String title, String text}) loginErrorText(ForkL10n t, Object e) =>
-    switch (e) {
-      WrongCredentialsException() => (
-        title: t.loginWrongTitle,
-        text: t.loginWrongText,
+///
+/// Seit 22.10.26 über portalFault (portal_fault.dart): Ein Serverfehler des
+/// Portals (HTTP 5xx) hat eine eigene Meldung „Störung beim Schulportal“,
+/// statt als „Etwas Unerwartetes“ zu erscheinen. Wo das Portal oder die
+/// Verbindung schuld ist, sagt der Text ausdrücklich, dass es nicht an der
+/// App liegt. „Keine Verbindung“ nennt beide Möglichkeiten (Gerät offline
+/// oder Portal antwortet nicht): Die Prüfung von liblanis
+/// (ConnectionChecker.testConnection) fragt nur das Portal selbst und kann
+/// sie nicht unterscheiden.
+({String title, String text}) loginErrorText(ForkL10n t, Object e) {
+  final f = portalFault(e);
+  return switch (f.kind) {
+    FaultKind.wrongCredentials => (
+      title: t.loginWrongTitle,
+      text: t.loginWrongText,
+    ),
+    FaultKind.locked => (
+      title: t.loginLockedTitle,
+      text: t.loginLockedText(
+        e is LoginTimeoutException ? int.tryParse(e.time.trim()) ?? 60 : 60,
       ),
-      LoginTimeoutException(:final time) => (
-        title: t.loginLockedTitle,
-        text: t.loginLockedText(int.tryParse(time.trim()) ?? 60),
-      ),
-      LanisDownException() => (title: t.loginDownTitle, text: t.loginDownText),
-      NoConnectionException() || NetworkException() => (
-        title: t.loginOfflineTitle,
-        text: t.loginOfflineText,
-      ),
-      CredentialsIncompleteException() => (
-        title: t.loginWrongTitle,
-        text: t.loginIncompleteText,
-      ),
-      _ => (title: t.loginOtherTitle, text: t.loginOtherText),
-    };
+    ),
+    FaultKind.down => (title: t.loginDownTitle, text: t.loginDownText),
+    FaultKind.server => (
+      title: t.loginServerTitle,
+      text: t.loginServerText('${f.status}'),
+    ),
+    FaultKind.unreachable => (
+      title: t.loginOfflineTitle,
+      text: t.loginOfflineText,
+    ),
+    FaultKind.incomplete => (
+      title: t.loginWrongTitle,
+      text: t.loginIncompleteText,
+    ),
+    FaultKind.other => (title: t.loginOtherTitle, text: t.loginOtherText),
+  };
+}
+
+/// Ein Satz zur Ursache, wenn eine Seite nicht laden konnte („Der
+/// Stundenplan ließ sich nicht laden.“ + Grund); null = Ursache unklar.
+/// Ursache wie bei [loginErrorText]: Ohne Grund wirkte jeder Ausfall des
+/// Portals wie ein Fehler der App.
+String? loadFailureReason(ForkL10n t, Object? e) {
+  if (e == null) return null;
+  final f = portalFault(e);
+  return switch (f.kind) {
+    FaultKind.server => t.reasonServer('${f.status}'),
+    FaultKind.down => t.reasonDown,
+    FaultKind.unreachable => t.reasonUnreachable,
+    _ => null,
+  };
+}
+
+/// „Der Stundenplan ließ sich nicht laden.“ mit Grund, falls bekannt.
+String withReason(ForkL10n t, String text, Object? e) {
+  final r = loadFailureReason(t, e);
+  return r == null ? text : '$text $r';
+}
+
+/// Technische Zeile unter „Etwas Unerwartetes“: Fehlertyp und erste Zeile
+/// der Meldung, höchstens [max] Zeichen. Ursache (Bildschirmfoto
+/// 22.10.26): Der volle Dio-Text füllte zehn Zeilen mit Englisch.
+String technicalLine(Object e, {int max = 160}) {
+  final cause = e is LanisException ? e.cause : '$e';
+  final first = cause.split('\n').first.trim();
+  final line = '${e.runtimeType}: $first';
+  return line.length <= max ? line : '${line.substring(0, max - 1)}…';
+}
 
 /// Neues Passwort für das Konto [accountId] abfragen, beim Portal prüfen und
 /// speichern. true = gespeichert.

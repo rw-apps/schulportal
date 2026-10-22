@@ -10,6 +10,7 @@ import 'package:lanis/utils/file_operations.dart' as fo;
 import '../../courses_scan.dart';
 import '../../homework_ledger.dart';
 import '../../l10n/l10n.dart';
+import '../login_errors.dart';
 import '../kit.dart';
 import '../nav.dart';
 import '../live/live_data.dart';
@@ -49,7 +50,7 @@ class LiveCoursesPage extends ConsumerWidget {
         }
         if (s.lessons.failed) {
           return LiveMessage(
-            text: t.coursesFailed,
+            text: withReason(t, t.coursesFailed, s.lessons.error),
             style: Kit.of(context).meta,
             action: TextButton(
               onPressed: s.refresh,

@@ -1165,9 +1165,9 @@
     }
   },
   "loginDownTitle": "Schulportal nicht erreichbar",
-  "loginDownText": "Das Schulportal antwortet gerade nicht (Wartung oder Störung). Bis dahin zeigt die App den zuletzt gespeicherten Stand.",
-  "loginOfflineTitle": "Keine Verbindung",
-  "loginOfflineText": "Das Gerät ist offline. Die App zeigt den zuletzt gespeicherten Stand.",
+  "loginDownText": "Das Schulportal ist gerade in Wartung oder gestört – das liegt nicht an der App.",
+  "loginOfflineTitle": "Keine Verbindung zum Schulportal",
+  "loginOfflineText": "Prüf WLAN bzw. mobile Daten. Sind sie an, antwortet das Portal gerade nicht – das liegt dann nicht an der App.",
   "loginIncompleteText": "Für dieses Konto fehlen Zugangsdaten. Trag das Passwort neu ein.",
   "loginOtherTitle": "Anmeldung fehlgeschlagen",
   "loginOtherText": "Etwas Unerwartetes ist passiert. Versuch es gleich noch einmal; bleibt es dabei, schick den Fehlerbericht (Einstellungen → Fehlersuche).",
@@ -1501,5 +1501,24 @@
     }
   },
   "staleRetry": "Neu laden",
-  "dayYesterday": "Gestern"
+  "dayYesterday": "Gestern",
+  "loginServerTitle": "Störung beim Schulportal",
+  "loginServerText": "Das Schulportal hat mit einem Serverfehler geantwortet (Code {code}). Das liegt nicht an der App und ist meist nach kurzer Zeit behoben.",
+  "@loginServerText": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "reasonServer": "Das Schulportal meldet eine Störung (Serverfehler {code}) – das liegt nicht an der App.",
+  "@reasonServer": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "reasonDown": "Das Schulportal ist gerade in Wartung oder gestört.",
+  "reasonUnreachable": "Keine Verbindung zum Schulportal."
 }

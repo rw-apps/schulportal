@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liblanis/liblanis.dart';
@@ -55,6 +56,25 @@ void main() {
     final t = await pump(tester, UnknownException('boom'));
     expect(find.text(t.loginOtherTitle), findsOneWidget);
     expect(find.textContaining('boom'), findsOneWidget);
+  });
+
+  testWidgets('Serverfehler des Portals: eigene Meldung, kein Englisch', (
+    tester,
+  ) async {
+    // Wie LanisSession.authenticate einen HTTP-500 weitergibt
+    // (Bildschirmfoto 22.10.26).
+    final req = RequestOptions(path: '/');
+    final dio = DioException.badResponse(
+      statusCode: 500,
+      requestOptions: req,
+      response: Response(requestOptions: req, statusCode: 500),
+    );
+    final t = await pump(tester, UnknownException(dio.message));
+    expect(find.text(t.loginServerTitle), findsOneWidget);
+    expect(find.text(t.loginServerText('500')), findsOneWidget);
+    expect(find.byIcon(Icons.cloud_off_outlined), findsOneWidget);
+    expect(find.textContaining('Exception'), findsNothing);
+    expect(find.text(t.loginStatusPage), findsOneWidget);
   });
 
   testWidgets('falsches Passwort: verständlicher Titel', (tester) async {

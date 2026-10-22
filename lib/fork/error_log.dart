@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'portal_fault.dart';
+
 /// Fehlerprotokoll ohne Inhalte – nur auf dem Gerät, gesendet wird nur, was
 /// der Nutzer selbst teilt (Einstellungen → Fehlersuche).
 ///
@@ -138,7 +140,9 @@ class ErrorLog {
   }
 
   /// Fehler erfassen. [area] ist ein fester Name aus dem Code, nie Text aus
-  /// dem Portal.
+  /// dem Portal. Am Typ steht bei Störungen des Portals der Grund
+  /// (faultTag, z. B. „UnknownException · Portal 500“) – nur Status und Art,
+  /// keine Meldung.
   void record(String area, Object error, StackTrace? st, {DateTime? now}) {
     final t = now ?? DateTime.now();
     _merge(
@@ -147,7 +151,7 @@ class ErrorLog {
         last: t,
         version: version,
         area: area,
-        type: error.runtimeType.toString(),
+        type: [error.runtimeType, ?faultTag(error)].join(' · '),
         stack: safeStack(st),
       ),
     );

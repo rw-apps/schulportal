@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:liblanis/liblanis.dart';
 
 import '../../l10n/l10n.dart';
+import '../../portal_fault.dart';
 import '../kit.dart';
 import '../live/family.dart';
 import '../login_errors.dart';
@@ -24,9 +24,14 @@ class LoginFailureCard extends ConsumerWidget {
     final msg = loginErrorText(t, e);
     final a = failure.account;
     final who = a.schoolName.isNotEmpty ? a.schoolName : a.username;
+    final kind = portalFault(e).kind;
     final wrong =
-        e is WrongCredentialsException || e is CredentialsIncompleteException;
-    final tone = k.p.cancel;
+        kind == FaultKind.wrongCredentials || kind == FaultKind.incomplete;
+    // Rot nur, wenn das Konto selbst ein Problem hat; ist das Portal
+    // gestört, grau wie die übrigen Hinweise (HintCard, KitPalette.todo).
+    // Ursache (Rückmeldung 22.10.26): Eine rote Karte wirkte bei einer
+    // Störung des Portals wie ein Fehler der App.
+    final tone = portalFault(e).notTheApp ? k.p.todo : k.p.cancel;
     return Container(
       padding: const EdgeInsets.fromLTRB(Sp.l, Sp.m, Sp.s, Sp.s),
       decoration: BoxDecoration(
@@ -39,7 +44,13 @@ class LoginFailureCard extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.error_outline, size: Sz.navIcon, color: tone.ink),
+              Icon(
+                portalFault(e).notTheApp
+                    ? Icons.cloud_off_outlined
+                    : Icons.error_outline,
+                size: Sz.navIcon,
+                color: tone.ink,
+              ),
               const SizedBox(width: Sp.m),
               Expanded(
                 child: Column(

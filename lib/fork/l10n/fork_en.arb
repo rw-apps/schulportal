@@ -436,9 +436,9 @@
   "loginLockedTitle": "Account briefly locked",
   "loginLockedText": "After several failed sign-ins the school portal locked the account for {seconds} seconds – on the website too. Please wait: every attempt extends the lock.",
   "loginDownTitle": "School portal unavailable",
-  "loginDownText": "The school portal isn't responding right now (maintenance or outage). Until then the app shows the last saved state.",
-  "loginOfflineTitle": "No connection",
-  "loginOfflineText": "The device is offline. The app shows the last saved state.",
+  "loginDownText": "The school portal is under maintenance or has an outage – this is not caused by the app.",
+  "loginOfflineTitle": "No connection to the school portal",
+  "loginOfflineText": "Check Wi-Fi or mobile data. If they are on, the portal isn't responding right now – then it's not caused by the app.",
   "loginIncompleteText": "Credentials are missing for this account. Enter the password again.",
   "loginOtherTitle": "Sign-in failed",
   "loginOtherText": "Something unexpected happened. Try again in a moment; if it persists, send the error report (Settings → Troubleshooting).",
@@ -564,5 +564,10 @@
   "staleTitle": "Portal unreachable",
   "staleText": "Saved state from {when}",
   "staleRetry": "Reload",
-  "dayYesterday": "Yesterday"
+  "dayYesterday": "Yesterday",
+  "loginServerTitle": "School portal problem",
+  "loginServerText": "The school portal answered with a server error (code {code}). This is not caused by the app and is usually fixed within a short time.",
+  "reasonServer": "The school portal reports a problem (server error {code}) – this is not caused by the app.",
+  "reasonDown": "The school portal is under maintenance or has an outage.",
+  "reasonUnreachable": "No connection to the school portal."
 }

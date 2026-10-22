@@ -15,6 +15,7 @@ import '../../offline_store.dart';
 import '../../substitution_history.dart';
 import '../../lessons_parent.dart';
 import '../../l10n/l10n.dart';
+import '../login_errors.dart';
 import '../kit.dart';
 import 'feed_source.dart';
 import 'serial_loader.dart';
@@ -779,7 +780,9 @@ class LiveGate extends StatelessWidget {
     if (s.timetable.content == null) {
       if (s.timetable.failed) {
         return LiveMessage(
-          text: s.timetable.offline ? t.offlineNothingSaved : t.timetableFailed,
+          text: s.timetable.offline
+              ? t.offlineNothingSaved
+              : withReason(t, t.timetableFailed, s.timetable.error),
           style: k.meta,
           action: TextButton(
             onPressed: s.refresh,

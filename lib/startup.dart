@@ -17,6 +17,7 @@ import 'package:lanis/fork/onboarding/onboarding_kit.dart';
 import 'package:lanis/fork/onboarding/onboarding_pages.dart'
     show notifyAskedDuringSetup;
 import 'package:lanis/fork/ui/kit.dart';
+import 'package:lanis/fork/portal_fault.dart';
 import 'package:lanis/fork/ui/login_errors.dart';
 
 /// Splash / auth progress / recoverable auth errors.
@@ -160,7 +161,8 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
 /// englischen Fehlertyp und bat, ihn zu melden – auch bei gesperrtem Konto
 /// oder falschem Passwort. Jetzt Überschrift und Erklärung aus
 /// loginErrorText; der technische Text nur noch bei unbekannten Fehlern
-/// (für eine Meldung). Bei abgelehntem Passwort „Passwort ändern“ direkt hier.
+/// (für eine Meldung), gekürzt auf eine Zeile (technicalLine). Bei
+/// abgelehntem Passwort „Passwort ändern“ direkt hier.
 class StartupAuthErrorContent extends ConsumerWidget {
   final LanisException exception;
   final VoidCallback onRetry;
@@ -180,11 +182,11 @@ class StartupAuthErrorContent extends ConsumerWidget {
     final t = context.t;
     final e = exception;
     final msg = loginErrorText(t, e);
-    final isDown = e is LanisDownException;
-    final isOffline = e is NoConnectionException || e is NetworkException;
+    final fault = portalFault(e);
     final wrong =
-        e is WrongCredentialsException || e is CredentialsIncompleteException;
-    final known = wrong || isDown || isOffline || e is LoginTimeoutException;
+        fault.kind == FaultKind.wrongCredentials ||
+        fault.kind == FaultKind.incomplete;
+    final known = fault.kind != FaultKind.other;
     final account = ref.watch(activeAccountProvider);
     return SafeArea(
       child: ConstrainedBox(
@@ -198,11 +200,13 @@ class StartupAuthErrorContent extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Icon(
-                isOffline
-                    ? Icons.wifi_off
-                    : e is LoginTimeoutException
-                    ? Icons.lock_clock_outlined
-                    : Icons.error_outline,
+                switch (fault.kind) {
+                  FaultKind.unreachable => Icons.wifi_off,
+                  FaultKind.locked => Icons.lock_clock_outlined,
+                  FaultKind.down ||
+                  FaultKind.server => Icons.cloud_off_outlined,
+                  _ => Icons.error_outline,
+                },
                 size: Sz.navIcon * 2,
                 color: k.p.muted,
               ),
@@ -222,7 +226,7 @@ class StartupAuthErrorContent extends ConsumerWidget {
               if (!known) ...[
                 const SizedBox(height: Sp.m),
                 SelectableText(
-                  '${e.runtimeType}: ${e.cause}',
+                  technicalLine(e),
                   style: k.meta,
                   textAlign: TextAlign.center,
                 ),
@@ -273,7 +277,9 @@ class StartupAuthErrorContent extends ConsumerWidget {
               ),
               // Fork (17.10.26): statt der alten Lanis-Ansichten der zuletzt
               // gespeicherte Stand in der neuen Oberfläche.
-              if (isOffline || isDown) const OfflineEntry(),
+              // Portal gestört oder nicht erreichbar (auch Serverfehler,
+              // 22.10.26): der zuletzt gespeicherte Stand.
+              if (fault.notTheApp) const OfflineEntry(),
             ],
           ),
         ),

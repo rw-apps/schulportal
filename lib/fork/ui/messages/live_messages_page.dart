@@ -6,6 +6,7 @@ import 'package:lanis/applets/conversations/chat_pages.dart'
     show ConversationChatPage;
 
 import '../../l10n/l10n.dart';
+import '../login_errors.dart';
 import '../kit.dart';
 import '../nav.dart';
 import '../live/family.dart';
@@ -37,7 +38,7 @@ class LiveMessagesPage extends ConsumerWidget {
         }
         if (s.conversations.failed) {
           return LiveMessage(
-            text: t.messagesFailed,
+            text: withReason(t, t.messagesFailed, s.conversations.error),
             style: k.meta,
             action: TextButton(
               onPressed: s.refresh,
