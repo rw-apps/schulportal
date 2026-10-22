@@ -81,6 +81,11 @@ class LoginFailureCard extends ConsumerWidget {
                   },
                   child: Text(t.passwordChange, style: k.link),
                 ),
+              if (kind == FaultKind.other)
+                TextButton(
+                  onPressed: () => openErrorReport(context),
+                  child: Text(t.reportError, style: k.link),
+                ),
               if (onRetry != null)
                 TextButton(
                   onPressed: onRetry,

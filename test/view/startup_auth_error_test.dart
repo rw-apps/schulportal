@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/fork/l10n/l10n.dart';
+import 'package:lanis/fork/ui/settings/error_report_page.dart';
 import 'package:lanis/startup.dart';
 
 import '../helpers/test_app.dart';
@@ -71,10 +72,20 @@ void main() {
     );
     final t = await pump(tester, UnknownException(dio.message));
     expect(find.text(t.loginServerTitle), findsOneWidget);
-    expect(find.text(t.loginServerText('500')), findsOneWidget);
+    expect(find.text(t.loginServerText), findsOneWidget);
     expect(find.byIcon(Icons.cloud_off_outlined), findsOneWidget);
     expect(find.textContaining('Exception'), findsNothing);
     expect(find.text(t.loginStatusPage), findsOneWidget);
+    expect(find.text(t.reportError), findsNothing);
+  });
+
+  testWidgets('unbekannter Fehler: „Fehler melden“ öffnet den Bericht', (
+    tester,
+  ) async {
+    final t = await pump(tester, UnknownException('boom'));
+    await tester.tap(find.text(t.reportError));
+    await tester.pumpAndSettle();
+    expect(find.byType(ErrorReportPage), findsOneWidget);
   });
 
   testWidgets('falsches Passwort: verständlicher Titel', (tester) async {

@@ -852,7 +852,7 @@
   "noErrors": "Keine Probleme erkannt",
   "noErrorsDetail": "Die App merkt sich Fehler ohne Inhalte; gesendet wird nur, was du teilst.",
   "errorReportTitle": "Erkannte Probleme",
-  "errorReportIntro": "Genau dieser Text wird geteilt: App-Version, Bereich, Fehlerart und Stellen im Code. Keine Namen, Noten oder Nachrichten.",
+  "errorReportIntro": "Tipp auf „Teilen“ und schick den Bericht per Messenger oder E-Mail an die Person, die die App betreut. Er enthält keine Namen, Noten oder Nachrichten.",
   "shareReport": "Teilen",
   "reportOnGithub": "Auf GitHub melden",
   "deleteErrors": "Löschen",
@@ -1154,9 +1154,9 @@
   "transferDone": "Eingaben übernommen.",
   "openInGoogleCalendar": "In Google Kalender öffnen",
   "loginWrongTitle": "Passwort abgelehnt",
-  "loginWrongText": "Das Schulportal hat das gespeicherte Passwort abgelehnt – wurde es auf der Webseite geändert? Die App meldet sich mit diesem Passwort nicht mehr von selbst an, damit das Konto nicht gesperrt wird. Trag das aktuelle Passwort ein.",
+  "loginWrongText": "Das Schulportal lehnt das gespeicherte Passwort ab – vielleicht wurde es geändert. Trag das aktuelle Passwort ein.",
   "loginLockedTitle": "Konto kurz gesperrt",
-  "loginLockedText": "Nach mehreren falschen Anmeldungen hat das Schulportal das Konto für {seconds} Sekunden gesperrt – auch auf der Webseite. Bitte so lange warten: Jeder Versuch verlängert die Sperre.",
+  "loginLockedText": "Zu viele falsche Anmeldungen: Das Schulportal sperrt das Konto für {seconds} Sekunden. Bitte warten – jeder Versuch verlängert die Sperre.",
   "@loginLockedText": {
     "placeholders": {
       "seconds": {
@@ -1164,13 +1164,13 @@
       }
     }
   },
-  "loginDownTitle": "Schulportal nicht erreichbar",
-  "loginDownText": "Das Schulportal ist gerade in Wartung oder gestört – das liegt nicht an der App.",
-  "loginOfflineTitle": "Keine Verbindung zum Schulportal",
-  "loginOfflineText": "Prüf WLAN bzw. mobile Daten. Sind sie an, antwortet das Portal gerade nicht – das liegt dann nicht an der App.",
+  "loginDownTitle": "Schulportal nicht verfügbar",
+  "loginDownText": "Das Schulportal wird gerade gewartet oder ist gestört. Versuch es später noch einmal.",
+  "loginOfflineTitle": "Keine Verbindung",
+  "loginOfflineText": "Prüf WLAN oder mobile Daten. Sind sie an, liegt die Störung beim Schulportal.",
   "loginIncompleteText": "Für dieses Konto fehlen Zugangsdaten. Trag das Passwort neu ein.",
   "loginOtherTitle": "Anmeldung fehlgeschlagen",
-  "loginOtherText": "Etwas Unerwartetes ist passiert. Versuch es gleich noch einmal; bleibt es dabei, schick den Fehlerbericht (Einstellungen → Fehlersuche).",
+  "loginOtherText": "Etwas ist schiefgelaufen. Versuch es noch einmal.",
   "passwordNewTitle": "Passwort neu eintragen",
   "passwordNewLabel": "Aktuelles Passwort",
   "passwordChange": "Passwort ändern",
@@ -1503,22 +1503,9 @@
   "staleRetry": "Neu laden",
   "dayYesterday": "Gestern",
   "loginServerTitle": "Störung beim Schulportal",
-  "loginServerText": "Das Schulportal hat mit einem Serverfehler geantwortet (Code {code}). Das liegt nicht an der App und ist meist nach kurzer Zeit behoben.",
-  "@loginServerText": {
-    "placeholders": {
-      "code": {
-        "type": "String"
-      }
-    }
-  },
-  "reasonServer": "Das Schulportal meldet eine Störung (Serverfehler {code}) – das liegt nicht an der App.",
-  "@reasonServer": {
-    "placeholders": {
-      "code": {
-        "type": "String"
-      }
-    }
-  },
-  "reasonDown": "Das Schulportal ist gerade in Wartung oder gestört.",
-  "reasonUnreachable": "Keine Verbindung zum Schulportal."
+  "loginServerText": "Das Problem liegt beim Schulportal, nicht an der App. Versuch es später noch einmal.",
+  "reasonServer": "Das Schulportal hat gerade eine Störung.",
+  "reasonDown": "Das Schulportal ist gerade nicht verfügbar.",
+  "reasonUnreachable": "Keine Verbindung zum Schulportal.",
+  "reportError": "Fehler melden"
 }

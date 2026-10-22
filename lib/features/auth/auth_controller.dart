@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/bridge/login_telemetry.dart';
+import 'package:lanis/fork/error_log.dart';
 import 'package:lanis/fork/login_guard.dart';
+import 'package:lanis/fork/portal_fault.dart';
 import 'package:lanis/utils/privacy_policy.dart';
 
 enum AuthPhase { unauthenticated, authenticating, authenticated, error }
@@ -134,10 +136,23 @@ class AuthController extends Notifier<AuthState> {
       state = AuthState.error(e);
     } on CredentialsIncompleteException catch (e) {
       state = AuthState.error(e);
-    } on LanisException catch (e) {
+    } on LanisException catch (e, st) {
+      _recordUnexpected(e, st);
       state = AuthState.error(e);
-    } catch (e) {
+    } catch (e, st) {
+      _recordUnexpected(e, st);
       state = AuthState.error(UnknownException(e.toString()));
+    }
+  }
+
+  /// Fork (22.10.26): Unerwartete Anmeldefehler ins Fehlerprotokoll, damit
+  /// „Fehler melden“ auf der Fehlerseite einen Bericht hat. Ursache: Bisher
+  /// landete nur die Anmeldung weiterer Konten dort (family.dart), die des
+  /// Hauptkontos nicht. Bewusst nicht: falsches Passwort, Sperre, Störung
+  /// des Portals – sie sind kein Fehler der App (portalFault).
+  void _recordUnexpected(Object e, StackTrace st) {
+    if (portalFault(e).kind == FaultKind.other) {
+      ErrorLog.instance.record('anmeldung', e, st);
     }
   }
 

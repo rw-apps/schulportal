@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/features/auth/auth_controller.dart';
+import 'package:lanis/fork/error_log.dart';
 
 import '../helpers/test_app.dart';
 
@@ -100,6 +101,26 @@ void main() {
       isA<NoConnectionException>(),
     );
   });
+
+  // Fork (22.10.26): nur unerwartete Anmeldefehler ins Fehlerprotokoll.
+  test(
+    'bootstrap: unerwarteter Fehler im Protokoll, Verbindung nicht',
+    () async {
+      final log = ErrorLog.instance..clear();
+      addTearDown(log.clear);
+      for (final r in [FakeAuthResult.noConnection, FakeAuthResult.unknown]) {
+        installFakeSessionAuth(result: r);
+        final container = createAuthTestContainer();
+        addTearDown(container.dispose);
+        acceptPrivacy(container);
+        await addTestAccount(container);
+        await container.read(authControllerProvider.notifier).bootstrap();
+      }
+      expect(log.records.map((r) => (r.area, r.type)), [
+        ('anmeldung', 'UnknownException'),
+      ]);
+    },
+  );
 
   test('bootstrapIfNeeded no-ops when already authenticated', () async {
     installFakeSessionAuth();

@@ -66,14 +66,13 @@ void main() {
   test('Meldung: Serverfehler nennt Portal und Code, nicht die App', () {
     final m = loginErrorText(t, _wrapped(_status(500)));
     expect(m.title, t.loginServerTitle);
-    expect(m.text, contains('500'));
     expect(m.text, contains('nicht an der App'));
   });
 
   test('Seitenmeldung mit Grund', () {
     expect(
       withReason(t, t.timetableFailed, _status(503)),
-      '${t.timetableFailed} ${t.reasonServer('503')}',
+      '${t.timetableFailed} ${t.reasonServer}',
     );
     expect(
       withReason(t, t.timetableFailed, NoConnectionException()),

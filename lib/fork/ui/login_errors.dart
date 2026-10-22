@@ -6,6 +6,7 @@ import '../l10n/l10n.dart';
 import '../login_guard.dart';
 import '../portal_fault.dart';
 import 'kit.dart';
+import 'settings/error_report_page.dart';
 
 /// Überschrift und Erklärung zu einem Anmeldefehler – für Menschen, nicht
 /// für Entwickler.
@@ -18,12 +19,16 @@ import 'kit.dart';
 ///
 /// Seit 22.10.26 über portalFault (portal_fault.dart): Ein Serverfehler des
 /// Portals (HTTP 5xx) hat eine eigene Meldung „Störung beim Schulportal“,
-/// statt als „Etwas Unerwartetes“ zu erscheinen. Wo das Portal oder die
-/// Verbindung schuld ist, sagt der Text ausdrücklich, dass es nicht an der
-/// App liegt. „Keine Verbindung“ nennt beide Möglichkeiten (Gerät offline
-/// oder Portal antwortet nicht): Die Prüfung von liblanis
-/// (ConnectionChecker.testConnection) fragt nur das Portal selbst und kann
-/// sie nicht unterscheiden.
+/// statt als „Etwas Unerwartetes“ zu erscheinen. „Keine Verbindung“ nennt
+/// beide Möglichkeiten (Gerät offline oder Portal antwortet nicht): Die
+/// Prüfung von liblanis (ConnectionChecker.testConnection) fragt nur das
+/// Portal selbst und kann sie nicht unterscheiden.
+///
+/// Texte kurz, ohne Fehlercode und ohne Wegbeschreibung in die
+/// Einstellungen (Rückmeldung 22.10.26: „kürzer, klarer, einfacher“; „wie
+/// öffne ich die Fehlersuche?“). Der Code steht im Fehlerprotokoll
+/// (faultTag), der Weg zum Bericht ist ein Knopf „Fehler melden“
+/// (openErrorReport).
 ({String title, String text}) loginErrorText(ForkL10n t, Object e) {
   final f = portalFault(e);
   return switch (f.kind) {
@@ -38,10 +43,7 @@ import 'kit.dart';
       ),
     ),
     FaultKind.down => (title: t.loginDownTitle, text: t.loginDownText),
-    FaultKind.server => (
-      title: t.loginServerTitle,
-      text: t.loginServerText('${f.status}'),
-    ),
+    FaultKind.server => (title: t.loginServerTitle, text: t.loginServerText),
     FaultKind.unreachable => (
       title: t.loginOfflineTitle,
       text: t.loginOfflineText,
@@ -62,7 +64,7 @@ String? loadFailureReason(ForkL10n t, Object? e) {
   if (e == null) return null;
   final f = portalFault(e);
   return switch (f.kind) {
-    FaultKind.server => t.reasonServer('${f.status}'),
+    FaultKind.server => t.reasonServer,
     FaultKind.down => t.reasonDown,
     FaultKind.unreachable => t.reasonUnreachable,
     _ => null,
@@ -170,3 +172,12 @@ Future<bool> changeAccountPassword(
   noteLoginResult(settings, pw, null);
   return true;
 }
+
+/// Öffnet „Erkannte Probleme“ (ErrorReportPage) direkt – von der
+/// Fehlerseite beim Start und von der Karte auf „Heute“. Ursache
+/// (Rückmeldung 22.10.26): Der Text verwies auf „Einstellungen →
+/// Fehlersuche“; die Fehlerseite beim Start lässt sich aber nicht
+/// schließen, die Einstellungen waren von dort gar nicht erreichbar.
+Future<void> openErrorReport(BuildContext context) => Navigator.of(
+  context,
+).push(MaterialPageRoute<void>(builder: (_) => const ErrorReportPage()));

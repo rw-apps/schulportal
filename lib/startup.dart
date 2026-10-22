@@ -256,6 +256,11 @@ class StartupAuthErrorContent extends ConsumerWidget {
               Wrap(
                 alignment: WrapAlignment.center,
                 children: [
+                  if (!known)
+                    TextButton(
+                      onPressed: () => openErrorReport(context),
+                      child: Text(t.reportError, style: k.link),
+                    ),
                   TextButton(
                     onPressed: () =>
                         safeLaunchUrl(Uri.parse(_statusUrl), context: context),

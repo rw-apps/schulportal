@@ -4,7 +4,13 @@ import 'package:lanis/features/auth/auth_controller.dart';
 import 'package:lanis/utils/privacy_policy.dart';
 
 /// Controllable stand-in for [sessionProvider.notifier.authenticate].
-enum FakeAuthResult { success, wrongCredentials, noConnection, lanisDown }
+enum FakeAuthResult {
+  success,
+  wrongCredentials,
+  noConnection,
+  lanisDown,
+  unknown,
+}
 
 /// Installs [AuthController.debugAuthenticate] / [debugDeauthenticate].
 ///
@@ -24,6 +30,8 @@ void installFakeSessionAuth({
         throw NoConnectionException();
       case FakeAuthResult.lanisDown:
         throw LanisDownException();
+      case FakeAuthResult.unknown:
+        throw UnknownException('boom');
     }
   };
   AuthController.debugDeauthenticate = (_) async {};
