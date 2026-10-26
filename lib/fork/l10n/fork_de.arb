@@ -1509,9 +1509,9 @@
   "reasonUnreachable": "Keine Verbindung zum Schulportal.",
   "reportError": "Fehler melden",
   "anonExportTitle": "Anonymer Export",
-  "anonExportDetail": "Aufbau der Portalseiten ohne Namen und Noten – hilft, die App zu verbessern",
-  "anonExportIntro": "Der Export zeigt, wie die Seiten des Schulportals aufgebaut sind – ohne Namen, Kürzel, Noten oder Texte. Damit lernt die App weitere Schulen und Lehrerkonten kennen.",
-  "anonExportRules": "Jedes Wort wird durch zufällige Buchstaben ersetzt, außer festen Beschriftungen wie „Vertretung“. Noten werden zufällig neu vergeben, Schulnummer, Bilder und Anmeldedaten entfernt. Zahlen, Uhrzeiten und Daten bleiben.",
+  "anonExportDetail": "Seitenaufbau ohne Namen und Noten",
+  "anonExportIntro": "Zeigt den Aufbau der Portalseiten – ohne Namen, Noten oder Texte. So lernt die App weitere Schulen und Lehrerkonten kennen.",
+  "anonExportRules": "Wörter werden durch Zufallsbuchstaben ersetzt, Noten zufällig neu vergeben. Zahlen, Uhrzeiten und feste Beschriftungen bleiben.",
   "anonExportRun": "Export erstellen",
   "anonExportProgress": "Seite {done} von {total} …",
   "@anonExportProgress": {
@@ -1525,9 +1525,9 @@
     }
   },
   "anonExportKeptTitle": "Diese Wörter bleiben stehen",
-  "anonExportKeptHint": "Bitte kurz prüfen: Steht hier ein Name, nicht teilen und Bescheid geben.",
+  "anonExportKeptHint": "Steht hier ein Name? Dann bitte nicht teilen.",
   "anonExportPreviewTitle": "Vorschau",
-  "anonExportSize": "Anfang der Datei; geteilt wird die ganze Datei ({kb} KB).",
+  "anonExportSize": "Anfang der Datei · geteilt wird alles ({kb} KB)",
   "@anonExportSize": {
     "placeholders": {
       "kb": {
