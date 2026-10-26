@@ -39,6 +39,10 @@ dependencies:
   url_launcher: ^6.1.14
   cookie_jar: ^4.0.8
   dio: ^5.11.0
+  # Fork (Demo-Modus, lib/fork/demo): Gegenstelle zur Verschlüsselung von
+  # liblanis (Cryptor) – dieselben Pakete, die liblanis selbst nutzt.
+  encrypt: ^5.0.3
+  pointycastle: ^3.9.1
   html: ^0.15.4
   flutter_local_notifications: ^21.0.0
   background_fetch: ^1.6.2

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:lanis/fork/demo/demo_entry.dart';
 import 'package:lanis/fork/onboarding/onboarding_pages.dart';
 import 'package:lanis/fork/ui/settings/device_transfer_page.dart';
 
@@ -14,6 +15,7 @@ class WelcomeLoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ForkWelcomePage(
     onLogin: () => context.go('/login'),
+    onDemo: () => showDemoChooser(context),
     onTransfer: () => Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => const DeviceReceivePage(firstSetup: true),

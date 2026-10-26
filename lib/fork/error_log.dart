@@ -104,6 +104,10 @@ class ErrorLog {
 
   File? _file;
   String version = '';
+
+  /// Im Demo-Modus nichts erfassen (demo_mode.dart): Fehler mit erfundenen
+  /// Daten gehören nicht in Berichte.
+  bool muted = false;
   final List<ErrorRecord> _records = [];
 
   List<ErrorRecord> get records => List.unmodifiable(_records);
@@ -144,6 +148,7 @@ class ErrorLog {
   /// (faultTag, z. B. „UnknownException · Portal 500“) – nur Status und Art,
   /// keine Meldung.
   void record(String area, Object error, StackTrace? st, {DateTime? now}) {
+    if (muted) return;
     final t = now ?? DateTime.now();
     _merge(
       ErrorRecord(
@@ -161,6 +166,7 @@ class ErrorLog {
   /// Auffälligkeit ohne Ausnahme, z. B. „Stundenplan ohne Einträge“, mit
   /// Zählwerten zur Eingrenzung. Nur Zahlen – nie Text aus dem Portal.
   void notice(String area, String what, Map<String, int> counts) {
+    if (muted) return;
     final t = DateTime.now();
     final detail = counts.entries.map((e) => '${e.key}=${e.value}').join(' ');
     _merge(

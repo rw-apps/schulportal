@@ -18,6 +18,8 @@ import 'package:lanis/utils/theme_settings.dart';
 import '../../calendar_subscribe.dart';
 import '../../class_choice.dart';
 import '../../kid_colors.dart';
+import '../../demo/demo_entry.dart';
+import '../../demo/demo_mode.dart';
 import '../../error_log.dart';
 import '../../l10n/l10n.dart';
 import '../font_step.dart';
@@ -699,6 +701,21 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
               errorsRow(context, errors, () {
                 if (mounted) setState(() {});
               }),
+            // Demo (fork/demo): ansehen bzw. beenden.
+            if (demoActive)
+              SettingsRow(
+                icon: Icons.stop_circle_outlined,
+                label: t.demoEnd,
+                detail: t.demoRunningText,
+                onTap: () => restartApp?.call(),
+              )
+            else
+              SettingsRow(
+                icon: Icons.play_circle_outline,
+                label: t.demoTitle,
+                detail: t.demoSettingDetail,
+                onTap: () => showDemoChooser(context),
+              ),
             SettingsRow(
               icon: Icons.info_outline,
               label: forkAppName,

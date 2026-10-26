@@ -600,5 +600,15 @@
   "pageReportFailed": "Gönderilemedi.",
   "pageLessons": "Derslerim",
   "pageSubstitutions": "Vekâlet planı",
-  "pageCalendar": "Takvim"
+  "pageCalendar": "Takvim",
+  "demoTitle": "Demoyu dene",
+  "demoIntro": "Uydurma bir okul – giriş yok. Hiçbir şey gönderilmez, hesaplarınız etkilenmez.",
+  "demoParent": "Veli olarak",
+  "demoParentText": "İki çocuk, biri kendi öğrenci hesabıyla",
+  "demoStudent": "Öğrenci olarak",
+  "demoStudentText": "Kendi ders programı, dersler ve ödevler",
+  "demoRunningTitle": "Demo",
+  "demoRunningText": "Uydurma okul – gönderme ve değiştirme kapalı.",
+  "demoEnd": "Demoyu bitir",
+  "demoSettingDetail": "Uydurma okul, giriş yok"
 }

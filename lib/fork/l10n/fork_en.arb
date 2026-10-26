@@ -600,5 +600,15 @@
   "pageReportFailed": "Sending failed.",
   "pageLessons": "My lessons",
   "pageSubstitutions": "Substitution plan",
-  "pageCalendar": "Calendar"
+  "pageCalendar": "Calendar",
+  "demoTitle": "Try the demo",
+  "demoIntro": "A made-up school – no login. Nothing is sent, your accounts stay untouched.",
+  "demoParent": "As a parent",
+  "demoParentText": "Two children, one with their own student account",
+  "demoStudent": "As a student",
+  "demoStudentText": "Own timetable, courses and homework",
+  "demoRunningTitle": "Demo",
+  "demoRunningText": "Made-up school – sending and changing are disabled.",
+  "demoEnd": "End demo",
+  "demoSettingDetail": "Made-up school, no login"
 }

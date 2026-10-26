@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:liblanis/liblanis.dart';
 
+import 'demo/demo_mode.dart' show demoActive;
 import 'error_log.dart';
 
 /// Adresse des Weiterleitungsdiensts (Cloudflare Worker,
@@ -85,6 +86,9 @@ Future<bool> flushErrorReports(
 }) async {
   final l = log ?? ErrorLog.instance;
   if (!relayConfigured && send == null) return false;
+  // Demo (demo_mode.dart): keine Berichte, auch nicht die alten der echten
+  // Konten – die gehen nach dem Beenden wie gewohnt raus.
+  if (demoActive) return false;
   if (settings.getBool(autoReportKey) != true || l.records.isEmpty) {
     return false;
   }

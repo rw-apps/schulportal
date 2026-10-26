@@ -18,6 +18,7 @@ import 'today_model.dart';
 import '../settings/class_sheet.dart';
 import 'class_prompt_card.dart';
 import 'auto_report_prompt.dart';
+import '../../demo/demo_entry.dart';
 import 'hint_card.dart';
 import '../portal_link.dart';
 import 'login_failure_card.dart';
@@ -211,6 +212,7 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
         );
         return TodayPage(
           notices: [
+            ?demoNotice(context),
             ?stale,
             // Zustimmung zum automatischen Melden (auto_report_prompt.dart).
             if (autoReportPromptDue(

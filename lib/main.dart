@@ -9,7 +9,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lanis/fork/demo/demo_mode.dart';
 import 'package:lanis/fork/l10n/l10n.dart' show ForkL10n;
+import 'package:liblanis/liblanis.dart' show LanisClient;
+import 'package:riverpod/misc.dart' show Override;
 import 'package:lanis/fork/ui/font_step.dart';
 import 'package:lanis/fork/ui/language.dart';
 import 'package:lanis/applets/conversations/view/shared.dart';
@@ -51,6 +54,9 @@ Future<void> _startApp() async {
     await removeLegacyV3StorageArtifacts();
     final overrides = await bootstrapLanisClient();
     syncGlitchTipReportingFromConfig();
+    // Fork (26.10.26): Demo starten/beenden baut die App mit anderen
+    // Overrides neu auf (fork/demo/demo_mode.dart).
+    restartApp = _relaunch;
 
     enableTransparentNavigationBar();
 
@@ -65,12 +71,7 @@ Future<void> _startApp() async {
 
     await initializeDateFormatting();
 
-    runApp(
-      ProviderScope(
-        overrides: overrides,
-        child: Phoenix(child: const App()),
-      ),
-    );
+    _run(overrides);
   } catch (e, st) {
     logger.e(e, stackTrace: st);
     await captureGlitchTipException(e, stackTrace: st);
@@ -85,6 +86,27 @@ Future<void> _startApp() async {
       ),
     );
   }
+}
+
+void _run(List<Override> overrides) => runApp(
+  ProviderScope(
+    key: UniqueKey(),
+    overrides: overrides,
+    child: Phoenix(child: const App()),
+  ),
+);
+
+/// Demo starten ([demo] gesetzt) oder beenden. Ursache: liblanis hält die
+/// Einstellung (Datenbank, Netzadapter) statisch (LanisClient.configure);
+/// ein Wechsel braucht neue Overrides und einen neuen ProviderScope. Der
+/// Hintergrunddienst bleibt unberührt.
+Future<void> _relaunch({DemoChoice? demo}) async {
+  LanisClient.reset();
+  if (demo == null) leaveDemo();
+  final overrides = demo == null
+      ? await bootstrapLanisClient()
+      : await bootstrapDemoClient(demo);
+  _run(overrides);
 }
 
 Future<void> enableTransparentNavigationBar() async {

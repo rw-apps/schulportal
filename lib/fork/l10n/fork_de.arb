@@ -1561,5 +1561,15 @@
   "pageReportFailed": "Senden hat nicht geklappt.",
   "pageLessons": "Mein Unterricht",
   "pageSubstitutions": "Vertretungsplan",
-  "pageCalendar": "Kalender"
+  "pageCalendar": "Kalender",
+  "demoTitle": "Demo ansehen",
+  "demoIntro": "Eine erfundene Schule – ohne Anmeldung. Es wird nichts gesendet, deine Konten bleiben unberührt.",
+  "demoParent": "Als Eltern",
+  "demoParentText": "Zwei Kinder, eines mit eigenem Schülerkonto",
+  "demoStudent": "Als Schüler",
+  "demoStudentText": "Eigener Plan, Kurse und Hausaufgaben",
+  "demoRunningTitle": "Demo",
+  "demoRunningText": "Erfundene Schule – Senden und Ändern sind gesperrt.",
+  "demoEnd": "Demo beenden",
+  "demoSettingDetail": "Erfundene Schule, ohne Anmeldung"
 }

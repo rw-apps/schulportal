@@ -13,9 +13,17 @@ import 'onboarding_kit.dart';
 /// – beides trifft auf diese App nicht zu, und sechs Seiten bis zur Anmeldung
 /// sind zu viel. Jetzt eine Seite: was die App kann, dann „Anmelden“.
 class ForkWelcomePage extends StatelessWidget {
-  const ForkWelcomePage({super.key, required this.onLogin, this.onTransfer});
+  const ForkWelcomePage({
+    super.key,
+    required this.onLogin,
+    this.onTransfer,
+    this.onDemo,
+  });
 
   final VoidCallback onLogin;
+
+  /// „Demo ansehen“ (fork/demo/demo_entry.dart).
+  final VoidCallback? onDemo;
 
   /// „Von anderem Gerät übernehmen“ (device_transfer.dart).
   final VoidCallback? onTransfer;
@@ -92,6 +100,11 @@ class ForkWelcomePage extends StatelessWidget {
               onPressed: onTransfer,
             ),
           ],
+          if (onDemo != null)
+            TextButton(
+              onPressed: onDemo,
+              child: Text(t.demoTitle, style: k.link),
+            ),
         ],
       ),
     );
