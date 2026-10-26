@@ -1581,5 +1581,63 @@
         "type": "String"
       }
     }
-  }
+  },
+  "mealWeekTitle": "Essen",
+  "mealWeekTitleFor": "Essen · {name}",
+  "@mealWeekTitleFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mealBalance": "Guthaben {amount} €",
+  "@mealBalance": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "mealOrdered": "bestellt",
+  "mealCancelUntil": "abbestellbar bis {time}",
+  "@mealCancelUntil": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "mealNothing": "Nichts bestellt",
+  "mealStillOpen": "noch bestellbar",
+  "mealMissed": "Bestellfrist vorbei",
+  "mealSides": "Dazu: {list}",
+  "@mealSides": {
+    "placeholders": {
+      "list": {
+        "type": "String"
+      }
+    }
+  },
+  "mealChange": "Bestellen oder ändern",
+  "mealLoadFailed": "Der Speiseplan ließ sich nicht lesen. Die Bestellseite zeigt ihn.",
+  "mealLunch": "Essen: {dish}",
+  "@mealLunch": {
+    "placeholders": {
+      "dish": {
+        "type": "String"
+      }
+    }
+  },
+  "mealClosed": "Keine Essensausgabe",
+  "mealUnordered": "Kein Essen bestellt",
+  "mealMoreOptions": "+ {count} weitere",
+  "@mealMoreOptions": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "mealLoading": "Speiseplan wird gelesen …"
 }

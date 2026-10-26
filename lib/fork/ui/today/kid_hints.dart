@@ -143,10 +143,31 @@ List<KidHint> kidHints(
   if (kid.mealHint case final meal?) {
     out.add(KidHint(kind: HintKind.meal, title: meal));
   }
+  final unordered = kid.mealUnordered;
+  if (unordered != null && dayDiff(now, unordered) == 0) {
+    out.add(
+      KidHint(
+        kind: HintKind.meal,
+        title: t.mealUnordered,
+        detail: t.mealStillOpen,
+      ),
+    );
+  }
   final next = nextSchoolDay(now);
   for (final c in kid.changes) {
     if (dayDiff(next, c.day) != 0) continue;
     out.add(fromItem(c, when: relativeDay(t, c.day, now)));
+  }
+  // Nichts bestellt für den nächsten Schultag (mensa_store.dart).
+  if (unordered != null && dayDiff(next, unordered) == 0) {
+    out.add(
+      KidHint(
+        kind: HintKind.meal,
+        title: t.mealUnordered,
+        detail: t.mealStillOpen,
+        when: relativeDay(t, unordered, now),
+      ),
+    );
   }
   // Arbeiten heute und am nächsten Schultag, nach den Planänderungen
   // (Vorschlag 5, Entwurf 26.10.26). Ursache: Sie standen nur unter

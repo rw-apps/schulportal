@@ -22,24 +22,52 @@ import '../../demo/demo_entry.dart';
 import 'hint_card.dart';
 import '../portal_link.dart';
 import 'login_failure_card.dart';
+import '../../mensa_store.dart';
+import '../../mensa_week.dart' show MealState;
+import '../mensa/meal_refresh.dart';
+import '../mensa/meal_week_page.dart';
 import 'kid_hints.dart' show nextSchoolDay;
 import 'today_page.dart';
 import '../nav.dart';
 
 /// Bestellseite des Kindes in der App öffnen (MensaPage). Ohne Adresse
 /// geschieht nichts – die Oberfläche bietet dann „eintragen“ an.
+///
+/// Liest die App die Seite des Caterers (mensa_week.dart), öffnet sich die
+/// eigene Ansicht „Essen“ (MealWeekPage); ließ sie sich zuletzt nicht lesen
+/// (MealEntry.unreadable), gleich die Seite selbst.
 Future<void> openMensa(
   BuildContext context,
   LiveSnapshot s,
   String kid, {
   String? name,
+  int colorIndex = 0,
 }) async {
   final url = s.mensa.of(kid);
   if (url == null) return;
+  final owner = s.mensaOwner(kid);
+  final unreadable = MealCache.instance.of(owner)?.unreadable ?? false;
   await pushFullScreen<void>(
     context,
-    (_) => MensaPage(url: url, owner: s.mensaOwner(kid), childName: name),
+    (_) => unreadable
+        ? MensaPage(url: url, owner: owner, childName: name)
+        : MealWeekPage(
+            url: url,
+            owner: owner,
+            childName: name,
+            colorIndex: colorIndex,
+          ),
   );
+}
+
+/// Tag (heute bzw. [next]), für den nichts bestellt ist, obwohl es noch
+/// ginge; null sonst oder wenn das Kind nie bestellt.
+DateTime? mealUnorderedDay(MealEntry? e, DateTime now, DateTime next) {
+  if (e == null || !e.ordersAtAll) return null;
+  for (final d in [DateTime(now.year, now.month, now.day), next]) {
+    if (e.dayOf(d)?.state == MealState.open) return d;
+  }
+  return null;
 }
 
 /// Krankmeldung über der neuen Oberfläche öffnen.
@@ -116,6 +144,9 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
     );
     if (live == null) return null;
     final className = liveClassName(s);
+    final meals = s.mensaUrl == null
+        ? null
+        : MealCache.instance.of(s.mensaOwner(s.mensaKid));
     final courses = s.courseNames;
     final events = s.calendar.content ?? const [];
     return childTodayFromLanis(
@@ -136,11 +167,23 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
       free: s.offers('kalender.php')
           ? freeDaysFrom(events, at, className: className, days: 1)
           : const {},
+      lunch: meals?.dayOf(at)?.ordered?.name,
+      mealUnordered: day == null
+          ? mealUnorderedDay(meals, now, nextSchoolDay(now))
+          : null,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Neu gelesene Essenswochen (MealCache) erneuern die Karten.
+    return ValueListenableBuilder(
+      valueListenable: MealCache.instance.notifier,
+      builder: (context, _, _) => _build(context),
+    );
+  }
+
+  Widget _build(BuildContext context) {
     return LiveGate(
       builder: (context, active) {
         final now = DateTime.now();
@@ -219,7 +262,7 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
             }
           },
         );
-        return TodayPage(
+        final page = TodayPage(
           notices: [
             ?demoNotice(context),
             ?stale,
@@ -302,6 +345,7 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
                     name: kids.length > 1 || s.kids.length > 1
                         ? c.firstName
                         : null,
+                    colorIndex: c.colorIndex,
                   );
                 }
               : null,
@@ -321,6 +365,16 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
           onRefresh: () async {
             await Future.wait([for (final m in members) m.snapshot.refresh()]);
           },
+        );
+        // Essen im Hintergrund lesen (meal_refresh.dart).
+        return MealRefresh(
+          targets: [
+            for (final (m, _) in shown)
+              if (m.snapshot.mensaUrl case final url?)
+                (owner: m.snapshot.mensaOwner(m.snapshot.mensaKid), url: url),
+          ],
+          now: now,
+          child: page,
         );
       },
     );

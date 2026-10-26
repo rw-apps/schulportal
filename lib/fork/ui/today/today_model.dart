@@ -85,7 +85,19 @@ class ChildToday {
     this.mensaUrl,
     this.photo,
     this.freeLabel,
+    this.lunch,
+    this.mealUnordered,
   });
+
+  /// Tag (heute oder nächster Schultag), für den nichts bestellt ist,
+  /// obwohl es noch ginge – gelber Hinweis „Kein Essen bestellt“. Nur wenn
+  /// das Kind überhaupt bestellt (MealEntry.ordersAtAll, Abnahme 26.10.26).
+  final DateTime? mealUnordered;
+
+  /// Bestelltes Mittagessen dieses Tages beim Caterer (mensa_week.dart);
+  /// null = unbekannt oder nichts bestellt. Steht als Zeile unter dem Plan
+  /// (Entwurf 26.10.26, Kantine Schritt 2).
+  final String? lunch;
 
   /// Profilfoto aus dem Portal (nur Schülerkonten, portal_extras.dart).
   final Uint8List? photo;

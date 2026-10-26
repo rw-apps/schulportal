@@ -444,6 +444,23 @@ class KidCard extends StatelessWidget {
               ),
             ),
           ),
+          if (planKid.lunch case final dish?) ...[
+            const SizedBox(height: Sp.s),
+            InkWell(
+              onTap: onOrderMeal == null ? null : () => onOrderMeal!(kid),
+              borderRadius: BorderRadius.circular(Rad.bar),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: Sp.xs),
+                child: Row(
+                  children: [
+                    Icon(Icons.restaurant, size: Sz.icon, color: k.p.muted),
+                    const SizedBox(width: Sp.s),
+                    Expanded(child: Text(t.mealLunch(dish), style: k.meta)),
+                  ],
+                ),
+              ),
+            ),
+          ],
           ..._actions(t),
         ],
       ),
@@ -502,8 +519,6 @@ class KidCard extends StatelessWidget {
   }
 }
 
-/// Überschrift „Hinweise“ bzw. „Stundenplan“ in der Karte; rechts optional
-/// ein Verweis („Ganzer Tag ›“).
 /// Kopf der Karte nach Schulschluss: kurz „HEUTE · Unterricht vorbei“,
 /// Trennlinie, dann als Überschrift „MORGEN · Dienstag, 27. Oktober“ bzw.
 /// „NÄCHSTER SCHULTAG · Montag, 2. November“. Hinweise und Plan darunter
@@ -570,6 +585,8 @@ class _NextDayHead extends StatelessWidget {
   }
 }
 
+/// Überschrift „Hinweise“ bzw. „Stundenplan“ in der Karte; rechts optional
+/// ein Verweis („Ganzer Tag ›“).
 class _SectionHead extends StatelessWidget {
   const _SectionHead({required this.text, this.link, this.onTap});
 

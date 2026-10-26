@@ -613,5 +613,21 @@
   "demoSettingDetail": "Made-up school, no login",
   "demoBlocked": "Nothing is sent or changed in the demo.",
   "nextSchoolDayLabel": "Next school day",
-  "schoolOverSince": "School finished at {time}"
+  "schoolOverSince": "School finished at {time}",
+  "mealWeekTitle": "Meals",
+  "mealWeekTitleFor": "Meals · {name}",
+  "mealBalance": "Balance €{amount}",
+  "mealOrdered": "ordered",
+  "mealCancelUntil": "can cancel until {time}",
+  "mealNothing": "Nothing ordered",
+  "mealStillOpen": "can still be ordered",
+  "mealMissed": "Order deadline passed",
+  "mealSides": "With: {list}",
+  "mealChange": "Order or change",
+  "mealLoadFailed": "Couldn't read the menu. The order page shows it.",
+  "mealLunch": "Lunch: {dish}",
+  "mealClosed": "No meals served",
+  "mealUnordered": "No lunch ordered",
+  "mealMoreOptions": "+ {count} more",
+  "mealLoading": "Reading the menu …"
 }

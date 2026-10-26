@@ -11,6 +11,9 @@ import 'package:lanis/utils/safe_launch.dart';
 import '../../l10n/l10n.dart';
 import '../../mensa.dart';
 import '../kit.dart';
+import '../../mensa_store.dart';
+import '../../mensa_week.dart';
+import 'meal_fetcher.dart' show pageHtml;
 import 'mensa_unclip.dart';
 
 /// Wer zuletzt auf welcher Bestellseite war (geräteweit, Host → Kind).
@@ -71,6 +74,7 @@ class _MensaPageState extends ConsumerState<MensaPage> {
           // der Caterer sie liefert.
           onPageFinished: (_) {
             _c.runJavaScript(mensaUnclipJs).catchError((_) {});
+            _remember();
           },
           onWebResourceError: (e) {
             if (e.isForMainFrame != false && mounted) {
@@ -97,6 +101,19 @@ class _MensaPageState extends ConsumerState<MensaPage> {
       );
     _checkOwner();
     _c.loadRequest(Uri.parse(mensaWeekUrl(widget.url, DateTime.now())));
+  }
+
+  /// Gelesene Woche für „Essen“ und Heute merken (mensa_store.dart): Nach
+  /// einer Bestellung hier stimmt die Anzeige ohne weiteren Abruf.
+  Future<void> _remember() async {
+    final src = await pageHtml(_c);
+    final w = src == null ? null : parseMealWeek(src);
+    if (w == null || !mounted) return;
+    try {
+      MealCache.instance
+        ..attach(ref.read(sharedOverAccountSettingsProvider))
+        ..put(widget.owner, [w]);
+    } catch (_) {}
   }
 
   Map<String, dynamic> _readLast() {

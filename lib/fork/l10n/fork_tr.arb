@@ -613,5 +613,21 @@
   "demoSettingDetail": "Uydurma okul, giriş yok",
   "demoBlocked": "Demoda hiçbir şey gönderilmez veya değiştirilmez.",
   "nextSchoolDayLabel": "Sonraki okul günü",
-  "schoolOverSince": "Ders {time} itibarıyla bitti"
+  "schoolOverSince": "Ders {time} itibarıyla bitti",
+  "mealWeekTitle": "Yemek",
+  "mealWeekTitleFor": "Yemek · {name}",
+  "mealBalance": "Bakiye {amount} €",
+  "mealOrdered": "sipariş verildi",
+  "mealCancelUntil": "{time} saatine kadar iptal edilebilir",
+  "mealNothing": "Sipariş yok",
+  "mealStillOpen": "hâlâ sipariş verilebilir",
+  "mealMissed": "Sipariş süresi geçti",
+  "mealSides": "Yanında: {list}",
+  "mealChange": "Sipariş ver veya değiştir",
+  "mealLoadFailed": "Yemek listesi okunamadı. Sipariş sayfası gösteriyor.",
+  "mealLunch": "Yemek: {dish}",
+  "mealClosed": "Yemek verilmiyor",
+  "mealUnordered": "Yemek siparişi yok",
+  "mealMoreOptions": "+ {count} tane daha",
+  "mealLoading": "Yemek listesi okunuyor …"
 }

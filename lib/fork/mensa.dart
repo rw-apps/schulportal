@@ -103,8 +103,17 @@ class MensaAddresses {
 /// Ursache: Die kopierte Adresse enthielt die Woche des Kopierens; ohne
 /// Ersetzen öffnete die App ewig dieselbe alte Woche. Grenze: Nur das Muster
 /// Jahr/Woche mit Schrägstrichen; andere Schreibweisen bleiben unverändert.
-String mensaWeekUrl(String url, DateTime now) {
-  final w = mensaOrderWeek(now);
+String mensaWeekUrl(String url, DateTime now) =>
+    mensaUrlForWeek(url, mensaOrderWeek(now));
+
+/// Adresse für die Kalenderwoche [w]: „/JJJJ/WW/“ bzw. „week=JJJJ_WW“
+/// ersetzt. Grenze: Ohne eines der Muster bleibt die Adresse unverändert –
+/// die Seite zeigt dann ihre eigene Standardwoche.
+String mensaUrlForWeek(String url, ({int year, int week}) w) {
+  final param = RegExp(r'([?&]week=)(20\d{2})_(\d{1,2})');
+  if (param.hasMatch(url)) {
+    return url.replaceAllMapped(param, (m) => '${m[1]}${w.year}_${w.week}');
+  }
   final re = RegExp(
     r'(/|%2F)(20\d{2})(/|%2F)(\d{1,2})(?=/|%2F|$|\?|&|#)',
     caseSensitive: false,

@@ -529,6 +529,8 @@ ChildToday childTodayFromLanis({
   int unreadMessages = 0,
   Uint8List? photo,
   Map<DateTime, String> free = const {},
+  String? lunch,
+  DateTime? mealUnordered,
 }) {
   final r = applySubstitutions(
     plan: plan,
@@ -557,6 +559,8 @@ ChildToday childTodayFromLanis({
     unreadMessages: unreadMessages,
     photo: photo,
     freeLabel: freeLabel,
+    lunch: freeLabel != null ? null : lunch,
+    mealUnordered: mealUnordered,
   );
 }
 

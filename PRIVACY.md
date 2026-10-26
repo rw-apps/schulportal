@@ -15,6 +15,7 @@ Benutzername, Schulnummer und Passwort bleiben **nur auf deinem Gerät**. Das Pa
 - **Schulportal Hessen** (`*.schulportal.hessen.de`, auch Moodle deiner Schule): für Anmeldung und Inhalte.
 - **GitHub** (`api.github.com`): Die App prüft dort, ob es eine neue Version gibt, und lädt auf der Seite „Über diese App“ die Liste der Mitwirkenden. GitHub erfährt dabei deine IP-Adresse, aber keine Zugangsdaten und keine Portal-Inhalte.
 - **Cloudflare** (`*.workers.dev`): nur für Fehlerberichte mit deiner Zustimmung (siehe unten).
+- **Bestellseite eures Caterers** (nur wenn ihr eine Adresse unter „Essen bestellen“ eingetragen habt): Die App öffnet sie in der App und liest daraus, welches Essen bestellt ist. Die Gerichte der letzten Wochen speichert sie nur auf dem Gerät, um sie auf „Heute“ zu zeigen. Die Anmeldung beim Caterer bleibt in der eingebetteten Ansicht auf dem Gerät.
 
 ## Fehlerberichte – nur mit deiner Zustimmung
 
