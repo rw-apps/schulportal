@@ -52,7 +52,28 @@ TimeTable parseTimetableKeepingFirstRow(Document document) {
 class ForkTimetableParser extends TimetableStudentParser {
   ForkTimetableParser(super.ctx, {super.isConnected});
 
+  /// Seite ohne jede Plantabelle (weder `#all` noch `#own`) gilt als
+  /// Fehler, nicht als leerer Plan.
+  ///
+  /// Ursache (Fehlerbericht 26.10.26: „EmptyTimetable(all=0 own=0 rows=1
+  /// stunden=0)“ 7× in drei Tagen, dazu einmal rows=0): Das Portal lieferte
+  /// eine Seite ohne Stundenplan – meist eine abgelaufene Sitzung oder eine
+  /// Fehlerseite. Als Ergebnis gewertet, überschrieb sie den gespeicherten
+  /// Plan (AppletParser._getHome legt jedes Ergebnis offline ab) und die
+  /// Woche stand leer da. Jetzt: Fehler → liblanis meldet sich einmal neu an
+  /// und versucht es erneut (AppletParser.fetchData, secondTry); scheitert
+  /// das auch, bleibt der gespeicherte Plan mit dem Hinweis „Gespeicherter
+  /// Stand von …“ (stale_notice.dart).
+  ///
+  /// Grenze: Eine Seite MIT Tabelle, aber ohne Einträge (z. B. Plan noch
+  /// nicht freigegeben) bleibt ein leerer Plan – das kann echt sein.
   @override
-  TimeTable parseDocument(Document document) =>
-      parseTimetableKeepingFirstRow(document);
+  TimeTable parseDocument(Document document) {
+    final tt = parseTimetableKeepingFirstRow(document);
+    if (document.querySelector('#all') == null &&
+        document.querySelector('#own') == null) {
+      throw UnknownException('stundenplan.php: keine Plantabelle');
+    }
+    return tt;
+  }
 }

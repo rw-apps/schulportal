@@ -5,6 +5,7 @@ import 'package:liblanis/liblanis.dart';
 import 'package:lanis/bridge/lanis_bootstrap.dart' show bootstrapOverrides;
 
 import '../../error_log.dart';
+import '../../portal_fault.dart';
 import '../../kid_colors.dart';
 import '../../login_guard.dart';
 import '../../l10n/l10n.dart';
@@ -264,7 +265,14 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
         await db.updateLastLogin(id, at: before);
       }
     } catch (e, st) {
-      ErrorLog.instance.record('family', e, st);
+      // Nur unerwartete Fehler ins Protokoll – wie beim Hauptkonto
+      // (AuthController._recordUnexpected). Ursache (Fehlerbericht 26.10.26:
+      // „family · WrongCredentialsException“): Ein abgelehntes Passwort oder
+      // eine Störung des Portals ist kein Fehler der App und stand trotzdem
+      // als „Problem erkannt“ im Bericht.
+      if (portalFault(e).kind == FaultKind.other) {
+        ErrorLog.instance.record('family', e, st);
+      }
       if (_containers[id] == c) {
         _containers.remove(id);
         c.dispose();

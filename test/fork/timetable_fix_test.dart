@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:liblanis/liblanis.dart';
 import 'package:html/parser.dart' show parse;
 import 'package:lanis/fork/timetable_fix.dart';
 import 'package:lanis/fork/ui/live/live_data.dart';
@@ -47,5 +49,49 @@ void main() {
     final p = livePlan(tt: tt, lessons: const [], firstName: 'A').plan;
     expect(p.slots.map((s) => s.start), ['08:00']);
     expect(p.days[4][0].options.single.short, 'G');
+  });
+
+  test('Seite ohne Plantabelle ist ein Fehler, kein leerer Plan', () {
+    LanisClient.configure();
+    addTearDown(LanisClient.reset);
+    final container = ProviderContainer(overrides: LanisClient.overrides);
+    addTearDown(container.dispose);
+    final account = ClearTextAccount(
+      localId: 1,
+      schoolID: 1,
+      username: 'x',
+      password: 'x',
+      schoolName: 'X',
+      accountType: AccountType.student,
+    );
+    final db = container.read(lanisDatabaseProvider);
+    final session = LanisSession(
+      account: account,
+      config: LanisClient.config!,
+      connectionChecker: ConnectionChecker(),
+    );
+    final parser = ForkTimetableParser(
+      AppletContext(
+        session: session,
+        database: db,
+        account: account,
+        accountSettings: TypedSettings.shared(db),
+      ),
+    );
+    expect(
+      () => parser.parseDocument(
+        parse(
+          '<html><body><table><tr><td>Anmeldung</td></tr></table></body></html>',
+        ),
+      ),
+      throwsA(isA<UnknownException>()),
+    );
+    // Mit Tabelle, aber ohne Einträge: leerer Plan, kein Fehler.
+    final empty = parser.parseDocument(
+      parse(
+        '<div id="all"><table><tbody><tr><td></td></tr></tbody></table></div>',
+      ),
+    );
+    expect(empty.planForAll, isEmpty);
   });
 }
