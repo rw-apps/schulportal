@@ -4,6 +4,7 @@ import 'package:liblanis/liblanis.dart';
 
 import '../../data/message_templates.dart';
 import '../../l10n/l10n.dart';
+import '../../demo/demo_entry.dart' show blockedInDemo;
 import '../kit.dart';
 import '../pinned_page.dart';
 import 'compose_model.dart';
@@ -208,6 +209,7 @@ class _ComposePageState extends State<ComposePage> {
   }
 
   Future<void> _send() async {
+    if (blockedInDemo(context)) return;
     final k = Kit.of(context);
     final t = context.t;
     final names = _chosen.values.join(', ');

@@ -1,4 +1,5 @@
 import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
+import 'package:lanis/fork/demo/demo_entry.dart' show blockedInDemo;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
@@ -222,6 +223,8 @@ class _ConversationsChatState extends ConsumerState<ConversationsChat>
   }
 
   Future<void> sendMessage(String text) async {
+    // Fork: in der Demo nichts senden (fork/demo/demo_entry.dart).
+    if (blockedInDemo(context)) return;
     MessageState state = MessageState.first;
     if (chat.last is Message) {
       DateTime date = chat.last.date;

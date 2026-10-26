@@ -116,6 +116,26 @@ class DemoPortal implements HttpClientAdapter {
         return page == null ? _status(404) : _html(page);
       case '/meinunterricht.php' when q['a'] == null:
         return _html(lessonsPage(user, _clock));
+      case '/nachrichten.php' when q['a'] == 'searchRecipt':
+        // Empfängersuche beim Schreiben (ConversationsParser.searchTeacher).
+        final term = (q['q'] ?? '').toLowerCase();
+        return _json(
+          jsonEncode({
+            'items': [
+              for (final t in demoTeachers.values)
+                if ('${t.full} ${t.code}'.toLowerCase().contains(term))
+                  {
+                    'type': 'lul',
+                    'id': 'l-demo-${t.code}',
+                    'logo': 'fa fa-user',
+                    'text': '${t.last}, ${t.first} (${t.code})',
+                  },
+            ],
+          }),
+        );
+      case '/nachrichten.php' when q['a'] == null && o.method == 'GET':
+        // Seite selbst: nur für canChooseType (#MsgOptions fehlt).
+        return _html('<html><body>Nachrichten</body></html>');
       case '/nachrichten.php' when q['a'] == 'headers':
         return _json(
           jsonEncode({

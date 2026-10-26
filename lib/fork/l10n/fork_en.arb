@@ -610,5 +610,6 @@
   "demoRunningTitle": "Demo",
   "demoRunningText": "Made-up school – sending and changing are disabled.",
   "demoEnd": "End demo",
-  "demoSettingDetail": "Made-up school, no login"
+  "demoSettingDetail": "Made-up school, no login",
+  "demoBlocked": "Nothing is sent or changed in the demo."
 }

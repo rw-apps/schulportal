@@ -124,3 +124,16 @@ Widget? demoNotice(BuildContext context) {
     onAction: () => restartApp?.call(),
   );
 }
+
+/// In der Demo gesperrte Aktion (Senden, Hochladen, Löschen): Hinweis
+/// zeigen und true liefern. Ursache (Abnahme 26.10.26): Statt der
+/// normalen Fehlermeldung („ließ sich nicht senden“) ein klarer Satz, dass
+/// es an der Demo liegt. Grenze: Nur Aktionen, die ans Portal gehen; was
+/// die App selbst speichert (Hausaufgabe abhaken), geht auch in der Demo.
+bool blockedInDemo(BuildContext context) {
+  if (!demoActive) return false;
+  ScaffoldMessenger.maybeOf(
+    context,
+  )?.showSnackBar(SnackBar(content: Text(context.t.demoBlocked)));
+  return true;
+}

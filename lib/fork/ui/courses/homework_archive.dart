@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
 
+import '../../demo/demo_mode.dart' show demoActive;
 import '../../error_log.dart';
 import '../../homework_ledger.dart';
 import '../../l10n/l10n.dart';
@@ -35,6 +36,8 @@ Future<void> setHomeworkDone({
   save((l) => l.put(item.record(done: done ? now : null, now: now), now));
   if (s.session.account.accountType != AccountType.student) return;
   if (item.entry.isEmpty) return;
+  // Demo: nur in der App abhaken, nicht ans (erfundene) Portal.
+  if (demoActive) return;
   try {
     final r = await parser.setHomework(item.course, item.entry, done);
     // Das Portal antwortet mit „1“ bei Erfolg.

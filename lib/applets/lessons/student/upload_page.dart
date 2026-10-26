@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:lanis/fork/demo/demo_entry.dart' show blockedInDemo;
 
 import 'package:dart_date/dart_date.dart';
 import 'package:dio/dio.dart';
@@ -153,6 +154,8 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                           FloatingActionButton(
                             heroTag: null,
                             onPressed: () async {
+                              // Fork: in der Demo nicht hochladen.
+                              if (blockedInDemo(context)) return;
                               if (snapshot.data["upload_multiple_files"] ==
                                       false ||
                                   snapshot.data["upload_any_number_of_times"] ==
@@ -720,6 +723,10 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                                           FilledButton(
                                             onPressed: () async {
                                               Navigator.pop(context);
+                                              // Fork: in der Demo nicht löschen.
+                                              if (blockedInDemo(context)) {
+                                                return;
+                                              }
 
                                               showSnackbar(
                                                 text: AppLocalizations()

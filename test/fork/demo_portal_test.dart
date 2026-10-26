@@ -1,6 +1,10 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:lanis/fork/demo/demo_entry.dart';
+import 'package:lanis/fork/demo/demo_mode.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:html/parser.dart' show parse;
 import 'package:liblanis/liblanis.dart';
@@ -142,5 +146,43 @@ void main() {
     final rows = jsonDecode('${r.data}') as Map;
     final text = s.cryptor.decryptString('${rows['rows']}');
     expect(text, contains('Workbook'));
+  });
+
+  test('Empfängersuche findet erfundene Lehrkräfte', () async {
+    final s = await _login('demo.lena');
+    final r = await s.dio.get(
+      'https://start.schulportal.hessen.de/nachrichten.php',
+      queryParameters: {'a': 'searchRecipt', 'q': 'klemm'},
+    );
+    final items = (jsonDecode('${r.data}') as Map)['items'] as List;
+    expect(items.single['text'], 'Klemm, Petra (KLM)');
+  });
+
+  testWidgets('In der Demo: Hinweis statt Senden', (t) async {
+    demoActive = true;
+    addTearDown(() => demoActive = false);
+    var blocked = false;
+    await t.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: ForkL10n.localizationsDelegates,
+        supportedLocales: ForkL10n.supportedLocales,
+        locale: const Locale('de'),
+        home: Scaffold(
+          body: Builder(
+            builder: (c) => TextButton(
+              onPressed: () => blocked = blockedInDemo(c),
+              child: const Text('senden'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await t.tap(find.text('senden'));
+    await t.pump();
+    expect(blocked, isTrue);
+    expect(
+      find.text('In der Demo wird nichts gesendet oder geändert.'),
+      findsOneWidget,
+    );
   });
 }

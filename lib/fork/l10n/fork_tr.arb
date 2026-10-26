@@ -610,5 +610,6 @@
   "demoRunningTitle": "Demo",
   "demoRunningText": "Uydurma okul – gönderme ve değiştirme kapalı.",
   "demoEnd": "Demoyu bitir",
-  "demoSettingDetail": "Uydurma okul, giriş yok"
+  "demoSettingDetail": "Uydurma okul, giriş yok",
+  "demoBlocked": "Demoda hiçbir şey gönderilmez veya değiştirilmez."
 }
