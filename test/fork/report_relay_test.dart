@@ -81,10 +81,13 @@ void main() {
     });
   });
 
-  test('ohne Dienst keine Frage auf Heute', () {
+  test('Frage auf Heute nur mit Fehler und ohne Entscheidung', () {
+    final s = _mem();
+    expect(autoReportPromptDue(s), isFalse, reason: 'noch kein Fehler');
     ErrorLog.instance.record('x', UnknownException('x'), StackTrace.empty);
-    expect(relayConfigured, isFalse);
-    expect(autoReportPromptDue(_mem()), isFalse);
+    expect(autoReportPromptDue(s), relayConfigured);
+    s.setBool(autoReportKey, false);
+    expect(autoReportPromptDue(s), isFalse, reason: 'entschieden');
   });
 
   test('Seiten zum Senden: Lehrkraft eigene Übersicht, Nachrichten nie', () {

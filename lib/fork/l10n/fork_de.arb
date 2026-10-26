@@ -374,7 +374,7 @@
   "unofficial": "inoffiziell, nicht vom Land Hessen",
   "whatsNew": "Neu in dieser Version",
   "privacy": "Datenschutz",
-  "privacyDetail": "Kein eigener Server – alles bleibt auf dem Gerät",
+  "privacyDetail": "Kein eigener Server – Fehlerberichte nur mit Zustimmung",
   "sourceLicense": "Quellcode und Lizenz",
   "sourceLicenseDetail": "Freie Software (GPL-3.0), Grundlage {upstream}",
   "@sourceLicenseDetail": {

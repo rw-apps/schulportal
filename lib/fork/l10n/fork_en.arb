@@ -147,7 +147,7 @@
   "unofficial": "unofficial, not from the State of Hesse",
   "whatsNew": "New in this version",
   "privacy": "Privacy",
-  "privacyDetail": "No server of our own – everything stays on your device",
+  "privacyDetail": "No own server – error reports only with your consent",
   "sourceLicense": "Source code and licence",
   "sourceLicenseDetail": "Free software (GPL-3.0), based on {upstream}",
   "libraries": "Libraries used",

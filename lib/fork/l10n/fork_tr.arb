@@ -147,7 +147,7 @@
   "unofficial": "resmî değildir, Hessen eyaletine ait değildir",
   "whatsNew": "Bu sürümdeki yenilikler",
   "privacy": "Gizlilik",
-  "privacyDetail": "Kendi sunucumuz yok – her şey cihazınızda kalır",
+  "privacyDetail": "Kendi sunucusu yok – hata raporları yalnızca onayınızla",
   "sourceLicense": "Kaynak kodu ve lisans",
   "sourceLicenseDetail": "Özgür yazılım (GPL-3.0), temeli {upstream}",
   "libraries": "Kullanılan kütüphaneler",

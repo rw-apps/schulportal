@@ -5,16 +5,17 @@ import 'package:liblanis/liblanis.dart';
 
 import 'error_log.dart';
 
-/// Adresse des Weiterleitungsdiensts (Cloudflare Worker, Entwurf
-/// tools/report-relay/worker.js, abgenommen 26.10.26). Leer, solange der
-/// Dienst nicht eingerichtet ist: Dann bietet die App kein automatisches
+/// Adresse des Weiterleitungsdiensts (Cloudflare Worker,
+/// tools/report-relay/worker.js, eingerichtet 26.10.26, Probebericht
+/// angekommen). Leer = kein Dienst: Dann bietet die App kein automatisches
 /// Melden an, und „Anonym senden“ öffnet das Teilen-Menü.
 ///
 /// Ursache: Die App hat bewusst keinen eigenen Server (Entscheidung
 /// 17.10.26), und ein GitHub-Schlüssel in der offenen App wäre öffentlich;
 /// der Dienst hält den Schlüssel und legt ein Issue im privaten
 /// Berichte-Repo an.
-const reportRelayUrl = '';
+const reportRelayUrl =
+    'https://schulportal-berichte.rideguide-family-2026.workers.dev';
 
 bool get relayConfigured => reportRelayUrl.isNotEmpty;
 

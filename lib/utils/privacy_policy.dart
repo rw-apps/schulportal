@@ -4,7 +4,9 @@ import 'package:lanis/fork_identity.dart';
 /// ISO date of the latest published privacy policy.
 ///
 /// Bump this string when the policy is republished so users are prompted again.
-const privacyPolicyPublishedAt = '2026-10-14'; // Fork: eigene PRIVACY.md
+// Fork: 26.10.26 neu wegen der Fehlerberichte (report_relay.dart) – alle
+// werden einmal neu gefragt, weil ein neuer Empfänger dazukommt.
+const privacyPolicyPublishedAt = '2026-10-26';
 
 /// Canonical privacy policy URL (About + login + gate screen).
 const privacyPolicyUrl = forkPrivacyPolicyUrl;
