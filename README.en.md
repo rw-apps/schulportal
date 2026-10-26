@@ -1,126 +1,52 @@
-# Lanis Mobile
+# Schulportal
 
 *[Auf Deutsch lesen](README.md)*
 
-Your app for the Hessian school portal! In cooperation with the staatliches Schulamt für den Landkreis Groß-Gerau und den Main-Taunus-Kreis.
-**In use at numerous schools in Hesse with over 45 thousand daily users.**
+An Android app for the **Schulportal Hessen** (the school portal of the German state of Hesse) – made for parents and students who want the school day at a glance: what's on today, what's cancelled, which homework is open. Private and non-commercial, shared with family and friends.
 
-<p align="center">
-    <img src="https://github.com/alessioC42/lanis-mobile/assets/84250128/19d30436-32f7-4cbe-b78e-f2fee3583c28" width="60%">
-</p>
+The app is a fork of [Lanis-Mobile](https://github.com/lanis-mobile/lanis) and, like the original, licensed under the **GPL-3.0**. It is not affiliated with the State of Hesse, the Schulportal Hessen or the Lanis-Mobile developers.
 
-<table>
-    <tr>
-        <td colspan='2'>
-            <a href='https://play.google.com/store/apps/details?id=io.github.alessioc42.sph&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png' style='height: 71px'/></a>
-        </td>
-        <td colspan='2'>
-            <a href="https://apt.izzysoft.de/fdroid/index/apk/io.github.alessioc42.sph"><img src="https://www.martinstoeckli.ch/images/izzy-on-droid-badge-en.png" alt="Get it on IzzyOnDroid" style="height: 56px;"></a>
-        </td>
-        <td colspan='2'>
-            <a href='https://apps.apple.com/de/app/lanis-mobile/id6511247743?l=en-GB'><img alt='Download on the App Store' src='https://lanis-mobile.github.io/assets/ios-badge.svg' style='height: 61px'/></a>
-        </td>
-    </tr>
-    <tr>
-        <td colspan='3'>
-            <a href='https://lanis-mobile.github.io/'>website</a>
-        </td>
-        <td colspan='3'>
-            <a href='https://discord.gg/MGYaSetUsY'>discord</a>
-        </td>
-    </tr>
-</table>
+## Features
 
-<p></p>
-<details>
-  <summary>Screenshots</summary>
-<div style="text-align: center;">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/01.png" width="250" >
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/02.png" width="250" >
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/03.png" width="250" >
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/04.png" width="250" >
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/05.png" width="250" >
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/06.png" width="250" >
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/07.png" width="250" >
+- **Today** – one card per child: cancellations, substitutions and room changes first, then the day's timetable with the current lesson; open homework, new messages, upcoming events.
+- **Calendar** – day, week and events; substitutions stay visible for past days; group choice for parallel courses (e.g. religion/ethics).
+- **Lessons** – course folders, open and completed homework, upcoming tests, grades and absences.
+- **Messages** – read, reply, write new ones.
+- **Family** – several accounts side by side, also at different schools (parent and student accounts).
+- **Offline** – shows the last saved state and when it is from.
+- **Notifications** – for cancellations, substitutions and new messages.
+- **Demo** – “Try the demo” on the start page shows the app with a made-up school, no login needed.
 
-</div>
-</details>
+## Installation
 
-## Contributing
-This project relies heavily on bug reports from other schools and on new contributors. The reason for this lies in
-the modular nature of the school portal, which makes it extremely difficult to develop a universal Lanis app.
+The app is available for **Android** only.
 
-Don't hesitate to open a bug report if you find an issue. We're always open to new contributors/students working with us to improve the app.
+1. Download and install the APK from the [releases](https://github.com/rw-apps/schulportal/releases/latest). Android asks once whether installs from this source are allowed.
+2. For automatic updates: install [Obtainium](https://github.com/ImranR98/Obtainium) and add `https://github.com/rw-apps/schulportal`.
 
-Bug reports can also be sent to <a href="mailto:lanis-mobile@alessioc42.dev">this</a> email address if you don't have a GitHub account.
+The app has its own app ID (`io.github.rwapps.sph`) and runs alongside Lanis-Mobile.
 
-## Get started with development
-### 1. [Setup Flutter](https://docs.flutter.dev/get-started/quick) with your favourite IDE (Android Studio / VScode recommended)
+## Privacy
 
-### 2. Generate the code
-```shell
-dart run build_runner build # Database
-dart run intl_utils:generate # Localisations
-```
-### 3. Development
-Note the flags here:
-#### `--dart-define=cronetHttpNoPlay=true`
-**[Partially optional]**
-This flag is used to include the Cronet binary for networking on non-Play-Services-enabled devices (we also ship this version on the Play Store).
+The app signs in **directly with the school portal**; credentials stay on the device. No ads, no tracking, no usage statistics. Error reports are only sent with consent and contain no names, grades or messages. Details (German): [PRIVACY.md](PRIVACY.md).
 
-If you are currently using the default Android emulator image, consider using an AOSP image instead, as these tend to perform much better than versions with Play Services enabled.
+## Reporting problems
 
-On iOS builds this flag is not required.
+In the app under **Settings → About → Troubleshooting**: share the detected problems or – with consent – report them automatically. If the app can't read a portal page (e.g. at another school or with a teacher account), the **anonymous export** helps: it shows the structure of the pages without names, grades or texts.
 
-#### `--dart-define=ANSI=true`
-**[Optional]**
-This flag allows the application's logs to be colorized, which can help a lot if you are not already using your IDE's log-filtering tools. (Recommended to omit on macOS due to lack of support in the default Terminal.)
+Questions and hints are welcome as an [issue](https://github.com/rw-apps/schulportal/issues).
 
-```shell
-flutter run --dart-define=cronetHttpNoPlay=true --dart-define=ANSI=true
-```
+## For developers
 
-### 4. Production
-For actual release mode signing is required, which can be added via placing the respective `key.properties` and `local.properties` in the `android` directory. On iOS the Development team has to be changed in Xcode.
+- Flutter (stable, see `pubspec.yaml`), Riverpod, [liblanis](https://pub.dev/packages/liblanis) for portal access.
+- Fork code lives in `lib/fork/`, the UI in `lib/fork/ui/` with the central design kit `lib/fork/ui/kit.dart`.
+- Strings: `lib/fork/l10n/fork_*.arb` (German, English, Turkish), then `flutter gen-l10n`.
+- Checks: `dart format lib test/fork`, `flutter analyze`, `flutter test`.
+- Test data is made up – real school or personal data does not belong in the repository.
+- A release is created by a version bump in `pubspec.yaml` on `main` (`.github/workflows/release-fork.yml`).
 
-If you are producing a build that you intend to distribute to other people, please consider changing the app ID from `io.github.alessioc42.sph` to `io.github.alessioc42.sph.<fork|dev>.<YOUR_NAME>` or any other name that is different from the original app ID. This will prevent conflicts with the store versions that we are publishing.
+Changes compared to the original (German): [CHANGELOG-FORK.md](CHANGELOG-FORK.md).
 
-```shell
-flutter build <apk|aab|ipa> --release --dart-define=cronetHttpNoPlay=true
-```
+## Origin and license
 
-An alternative is the interactive `build.py` script, which can build Android and/or iOS in one run, copy artifacts into `artifacts/`, and optionally upload to App Store Connect / Google Play:
-
-```shell
-python3 build.py
-# or non-interactive:
-python3 build.py --android --ios --skip-upgrade --yes
-```
-
-#### Store uploads (optional)
-
-`build.py` loads secrets from gitignored `.env` / `.build.env` in the repo root (real environment variables win). Example:
-
-```env
-ASC_API_KEY_ID=XXXXXXXXXX
-ASC_API_ISSUER_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-ASC_API_KEY_PATH=/path/to/AuthKey_XXXXXXXXXX.p8
-PLAY_SERVICE_ACCOUNT_JSON=/path/to/service-account.json
-```
-
-Extra file: `python3 build.py --env-file /path/to/secrets.env`.
-
-For Play uploads, install the optional Python deps and use a Google Cloud service account that has been invited in Play Console (Users and permissions) with permission to manage tracks:
-
-```shell
-pip install -r requirements-build.txt
-python3 build.py --android --upload-android --play-track internal --yes
-```
-
-For App Store Connect uploads (macOS + Xcode), create an App Store Connect API key, put the values in `.env` (or export them), then:
-
-```shell
-python3 build.py --ios --upload-ios --yes
-```
-
-Uploads deliver the binary only (TestFlight / Play track). They do not submit for App Review or promote a production rollout.
+Based on [Lanis-Mobile](https://github.com/lanis-mobile/lanis) – many thanks to everyone who contributed to it. License: [GPL-3.0](LICENSE). The Manrope font is licensed under the SIL Open Font License 1.1.

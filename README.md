@@ -1,138 +1,52 @@
-# Schulportal (rw-apps)
-
-Inoffizielle, private Abwandlung von [Lanis-Mobile](https://github.com/lanis-mobile/lanis) für Familie und Freunde. Lizenz wie das Original: GPL-3.0.
-
-**Unterschiede zum Original:** eigener Name und eigene App-ID (`io.github.rwapps.sph`, läuft parallel zum Original), keine Login-Statistik, keine Fehlerberichte, eigener User-Agent gegenüber dem Schulportal, Update-Hinweise und Kontakt über dieses Repository. Datenschutz: [PRIVACY.md](PRIVACY.md). Den Wächter für Adressen des Originals findest du in `test/fork_identity_test.dart`, die Fork-Identität in `lib/fork_identity.dart`.
-
-**Installation (Android):** Die APK aus den [Releases](https://github.com/rw-apps/schulportal/releases/latest) installieren. Wer automatische Updates will, installiert [Obtainium](https://github.com/ImranR98/Obtainium) und fügt dort die Repo-Adresse `https://github.com/rw-apps/schulportal` hinzu.
-
----
-
-*Original-README:*
-
-# Lanis Mobile
+# Schulportal
 
 *[Read this in English](README.en.md)*
 
-Deine App für das hessische Schulportal! In Zusammenarbeit mit dem staatlichen Schulamt für den Landkreis Groß-Gerau und den Main-Taunus-Kreis
-**Einsatz an zahlreichen Schulen in Hessen mit über 45 Tausend täglichen Nutzern.**
+Eine Android-App für das **Schulportal Hessen** – gemacht für Eltern und Schüler, die den Alltag auf einen Blick sehen wollen: was heute ansteht, was ausfällt, welche Hausaufgaben offen sind. Privat und nicht kommerziell, weitergegeben im Familien- und Freundeskreis.
 
-<p align="center">
-    <img src="https://github.com/alessioC42/lanis-mobile/assets/84250128/19d30436-32f7-4cbe-b78e-f2fee3583c28" width="60%">
-</p>
+Die App ist eine Abwandlung von [Lanis-Mobile](https://github.com/lanis-mobile/lanis) und steht wie das Original unter der **GPL-3.0**. Mit dem Land Hessen, dem Schulportal Hessen und den Entwicklern von Lanis-Mobile besteht keine Verbindung.
 
-<table>
-    <tr>
-        <td colspan='2'>
-            <a href='https://play.google.com/store/apps/details?id=io.github.alessioc42.sph&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'><img alt='Jetzt bei Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/de_badge_web_generic.png' style='height: 71px'/></a>
-        </td>
-        <td colspan='2'>
-            <a href="https://apt.izzysoft.de/fdroid/index/apk/io.github.alessioc42.sph"><img src="https://www.martinstoeckli.ch/images/izzy-on-droid-badge-en.png" alt="Get it on IzzyOnDroid" style="height: 56px;"></a>
-        </td>
-        <td colspan='2'>
-            <a href='https://apps.apple.com/de/app/lanis-mobile/id6511247743?l=en-GB'><img alt='Jetzt im App Store' src='https://lanis-mobile.github.io/assets/ios-badge.svg' style='height: 61px'/></a>
-        </td>
-    </tr>
-    <tr>
-        <td colspan='3'>
-            <a href='https://lanis-mobile.github.io/'>Website</a>
-        </td>
-        <td colspan='3'>
-            <a href='https://discord.gg/MGYaSetUsY'>Discord</a>
-        </td>
-    </tr>
-</table>
+## Was die App kann
 
-<p></p>
-<details>
-  <summary>Screenshots</summary>
-<div style="text-align: center;">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/01.png" width="250" >
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/02.png" width="250" >
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/03.png" width="250" >
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/04.png" width="250" >
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/05.png" width="250" >
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/06.png" width="250" >
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/07.png" width="250" >
+- **Heute** – je Kind eine Karte: Ausfälle, Vertretungen und Raumwechsel zuerst, darunter der Stundenplan des Tages mit der laufenden Stunde; offene Hausaufgaben, neue Nachrichten, nächste Termine.
+- **Kalender** – Tag, Woche und Termine; Vertretungen bleiben auch für vergangene Tage sichtbar; Gruppenwahl bei parallelen Kursen (z. B. Religion/Ethik).
+- **Unterricht** – Kursmappen, offene und erledigte Hausaufgaben, anstehende Arbeiten, Noten und Fehlzeiten.
+- **Nachrichten** – lesen, beantworten, neu schreiben.
+- **Familie** – mehrere Konten nebeneinander, auch an verschiedenen Schulen (Eltern- und Schülerkonten).
+- **Ohne Netz** – zeigt den zuletzt gespeicherten Stand und sagt, von wann er ist.
+- **Benachrichtigungen** – bei Ausfällen, Vertretungen und neuen Nachrichten.
+- **Demo** – „Demo ansehen“ auf der Startseite zeigt die App mit einer erfundenen Schule, ohne Anmeldung.
 
-</div>
-</details>
+## Installation
 
-## Mitarbeit
-Dieses Projekt ist stark von Bug-Reports anderer Schulen oder von neuen Mitarbeitern abhängig. Der Grund dafür liegt in
-der modularen Natur des Schulportals, die es äußerst schwierig macht, eine universelle Lanis-App zu entwickeln.
+Die App gibt es nur für **Android**.
 
-Scheue dich nicht, einen Bug-Report zu erstellen, wenn du einen Fehler findest. Wir sind immer offen für neue Mitarbeiter/Schüler, die mit uns arbeiten, um die App zu verbessern.
+1. Die APK aus den [Releases](https://github.com/rw-apps/schulportal/releases/latest) herunterladen und installieren. Android fragt einmal, ob Installationen aus dieser Quelle erlaubt sind.
+2. Für automatische Updates: [Obtainium](https://github.com/ImranR98/Obtainium) installieren und dort `https://github.com/rw-apps/schulportal` hinzufügen.
 
-Bug-Reports können auch an <a href="mailto:lanis-mobile@alessioc42.dev">diese</a> E-Mail-Adresse gesendet werden, falls kein Github-Konto vorhanden ist.
+Die App hat eine eigene App-ID (`io.github.rwapps.sph`) und läuft parallel zu Lanis-Mobile.
 
-## Erste Schritte für die Entwicklung
-### 1. [Flutter einrichten](https://docs.flutter.dev/get-started/quick) mit deiner bevorzugten IDE (Android Studio / VScode empfohlen)
+## Datenschutz
 
-### 2. Code generieren
-```shell
-dart run build_runner build # Datenbank
-dart run intl_utils:generate # Lokalisierungen
-```
-### 3. Entwicklung
-Beachte hierbei folgende Flags:
-#### `--dart-define=cronetHttpNoPlay=true`
-**[Teilweise optional]**
-Dieses Flag wird verwendet, um die Cronet-Binärdatei für das Networking auf Geräten ohne Play Services einzubinden (diese Version stellen wir auch im Play Store bereit).
+Die App meldet sich **direkt beim Schulportal** an; Zugangsdaten bleiben auf dem Gerät. Es gibt keine Werbung, kein Tracking und keine Nutzungsstatistik. Fehlerberichte gehen nur mit Zustimmung raus und enthalten keine Namen, Noten oder Nachrichten. Einzelheiten: [PRIVACY.md](PRIVACY.md).
 
-Falls du aktuell das Standard-Android-Emulator-Image verwendest, solltest du stattdessen ein AOSP-Image nutzen, da diese in der Regel deutlich performanter sind als Versionen mit Play Services.
+## Fehler melden
 
-Bei iOS-Builds ist dieses Flag nicht erforderlich.
+In der App unter **Einstellungen → Über die App → Fehlersuche**: „Erkannte Probleme“ teilen oder – mit Zustimmung – automatisch melden. Kann die App eine Seite des Portals nicht lesen (z. B. an einer anderen Schule oder mit einem Lehrerkonto), hilft der **anonyme Export**: Er zeigt den Aufbau der Seiten ohne Namen, Noten und Texte.
 
-#### `--dart-define=ANSI=true`
-**[Optional]**
-Dieses Flag ermöglicht farbige Logs der Anwendung, was sehr hilfreich sein kann, falls du noch nicht die Log-Filter-Tools deiner IDE nutzt. (Auf macOS wird empfohlen, dieses Flag wegzulassen, da das Standard-Terminal dies nicht unterstützt.)
+Fragen und Hinweise gern als [Issue](https://github.com/rw-apps/schulportal/issues).
 
-```shell
-flutter run --dart-define=cronetHttpNoPlay=true --dart-define=ANSI=true
-```
+## Für Entwickler
 
-### 4. Produktion
-Für den tatsächlichen Release-Modus ist eine Signierung erforderlich. Dafür müssen die entsprechenden Dateien `key.properties` und `local.properties` im `android`-Verzeichnis abgelegt werden. Bei iOS muss in Xcode das Development Team geändert werden.
+- Flutter (stable, siehe `pubspec.yaml`), Riverpod, [liblanis](https://pub.dev/packages/liblanis) für den Zugriff aufs Portal.
+- Eigener Code liegt in `lib/fork/`, die Oberfläche in `lib/fork/ui/` mit dem zentralen Design-Kit `lib/fork/ui/kit.dart`.
+- Texte: `lib/fork/l10n/fork_*.arb` (Deutsch, Englisch, Türkisch), danach `flutter gen-l10n`.
+- Prüfen: `dart format lib test/fork`, `flutter analyze`, `flutter test`.
+- Testdaten sind frei erfunden – echte Schul- oder Personendaten gehören nicht ins Repo.
+- Ein Release entsteht durch einen Versionssprung in `pubspec.yaml` auf `main` (`.github/workflows/release-fork.yml`).
 
-Falls du einen Build erstellst, den du an andere Personen weitergeben möchtest, ändere bitte die App-ID von `io.github.alessioc42.sph` in `io.github.alessioc42.sph.<fork|dev>.<DEIN_NAME>` oder einen anderen Namen, der sich von der Original-App-ID unterscheidet. Dies verhindert Konflikte mit den von uns veröffentlichten Store-Versionen.
+Änderungen gegenüber dem Original: [CHANGELOG-FORK.md](CHANGELOG-FORK.md).
 
-```shell
-flutter build <apk|aab|ipa> --release --dart-define=cronetHttpNoPlay=true
-```
+## Herkunft und Lizenz
 
-Alternativ gibt es das interaktive Skript `build.py`, das Android und/oder iOS in einem Durchlauf bauen, die Artefakte nach `artifacts/` kopieren und optional zu App Store Connect / Google Play hochladen kann:
-
-```shell
-python3 build.py
-# oder nicht-interaktiv:
-python3 build.py --android --ios --skip-upgrade --yes
-```
-
-#### Store-Uploads (optional)
-
-`build.py` lädt Zugangsdaten aus den (per `.gitignore` ausgeschlossenen) Dateien `.env` / `.build.env` im Repository-Root (echte Umgebungsvariablen haben Vorrang). Beispiel:
-
-```env
-ASC_API_KEY_ID=XXXXXXXXXX
-ASC_API_ISSUER_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-ASC_API_KEY_PATH=/path/to/AuthKey_XXXXXXXXXX.p8
-PLAY_SERVICE_ACCOUNT_JSON=/path/to/service-account.json
-```
-
-Zusätzliche Datei: `python3 build.py --env-file /path/to/secrets.env`.
-
-Für Play-Uploads installiere die optionalen Python-Abhängigkeiten und verwende ein Google-Cloud-Service-Konto, das in der Play Console (Nutzer und Berechtigungen) mit der Berechtigung zur Verwaltung von Tracks eingeladen wurde:
-
-```shell
-pip install -r requirements-build.txt
-python3 build.py --android --upload-android --play-track internal --yes
-```
-
-Für App-Store-Connect-Uploads (macOS + Xcode) erstelle einen App Store Connect API-Key, trage die Werte in `.env` ein (oder exportiere sie) und führe dann aus:
-
-```shell
-python3 build.py --ios --upload-ios --yes
-```
-
-Uploads liefern lediglich die Binärdatei aus (TestFlight / Play-Track). Sie reichen den Build nicht zur App-Review ein und geben kein Produktions-Rollout frei.
+Grundlage ist [Lanis-Mobile](https://github.com/lanis-mobile/lanis) – vielen Dank an alle, die daran mitgearbeitet haben. Lizenz: [GPL-3.0](LICENSE). Die Schrift Manrope steht unter der SIL Open Font License 1.1.
