@@ -12,7 +12,7 @@ import '../../l10n/l10n.dart';
 import 'today_model.dart';
 import 'today_page.dart' show dayDiff, relativeDay;
 
-enum HintKind { cancelled, substitution, roomChange, unclear, meal }
+enum HintKind { cancelled, substitution, roomChange, unclear, meal, exam }
 
 class KidHint {
   const KidHint({
@@ -80,7 +80,12 @@ DateTime nextSchoolDay(DateTime now) {
 /// wenn eine Stunde mit gleichem Fach und gleicher Art geändert ist. Nicht
 /// über die Stunde verglichen, weil die Bezeichnung abweichen kann
 /// („5.“ an der Stunde, „5. Std.“ im Beispiel demo_family.dart).
-List<KidHint> kidHints(ChildToday kid, DateTime now, ForkL10n t) {
+List<KidHint> kidHints(
+  ChildToday kid,
+  DateTime now,
+  ForkL10n t, {
+  List<WeekItem> exams = const [],
+}) {
   final l = kid.lessons;
   final held = [
     for (var i = 0; i < l.length; i++)
@@ -143,5 +148,51 @@ List<KidHint> kidHints(ChildToday kid, DateTime now, ForkL10n t) {
     if (dayDiff(next, c.day) != 0) continue;
     out.add(fromItem(c, when: relativeDay(t, c.day, now)));
   }
+  // Arbeiten heute und am nächsten Schultag, nach den Planänderungen
+  // (Vorschlag 5, Entwurf 26.10.26). Ursache: Sie standen nur unter
+  // „Demnächst“ zwischen Elternabend und Ferien; am Vorabend gehören sie
+  // zu den Hinweisen.
+  for (final e in exams) {
+    if (!examIsHint(e, now)) continue;
+    final today = dayDiff(now, e.day) == 0;
+    out.add(
+      KidHint(
+        kind: HintKind.exam,
+        title: e.title,
+        detail: e.time == null ? null : _keep(e.time!),
+        when: today ? null : relativeDay(t, e.day, now),
+      ),
+    );
+  }
   return out;
 }
+
+/// Arbeit, die als Hinweis auf der Kinderkarte steht (heute oder am
+/// nächsten Schultag) – UpcomingList lässt sie dann weg (Abnahme 26.10.26:
+/// nicht doppelt). Grenze: Ohne Kindzuordnung (childIndex null) nur bei
+/// einem einzigen Kind, sonst wüsste die Karte nicht, wem sie gehört.
+bool examIsHint(WeekItem w, DateTime now) =>
+    w.kind == WeekKind.exam &&
+    (dayDiff(now, w.day) == 0 || dayDiff(nextSchoolDay(now), w.day) == 0);
+
+/// Arbeiten der Karte [index] aus [week] (Familie mit [kidCount] Kindern).
+List<WeekItem> examsFor(List<WeekItem> week, int index, int kidCount) => [
+  for (final w in week)
+    if (w.kind == WeekKind.exam &&
+        (w.childIndex == index || (w.childIndex == null && kidCount == 1)))
+      w,
+];
+
+/// Termine für „Demnächst“ ohne die Arbeiten, die schon als Hinweis auf
+/// einer Karte stehen.
+List<WeekItem> upcomingWithoutHints(
+  List<WeekItem> week,
+  DateTime now,
+  int kidCount,
+) => [
+  for (final w in week)
+    if (!examIsHint(w, now) ||
+        (w.childIndex == null && kidCount != 1) ||
+        (w.childIndex != null && w.childIndex! >= kidCount))
+      w,
+];

@@ -103,14 +103,18 @@ class _PreviewShellState extends State<PreviewShell> {
   /// „Alle Termine“ auf Heute: Kalender in der Ansicht „Termine“ öffnen
   /// (PlanPage.viewRequest).
   final _calendarView = ValueNotifier<PlanView?>(null);
+  final _calendarDay = ValueNotifier<DateTime?>(null);
 
   @override
   void dispose() {
     _calendarView.dispose();
+    _calendarDay.dispose();
     super.dispose();
   }
 
-  void _openDay() {
+  /// Kalender „Tag“ für [day] (null = heute).
+  void _openDay([DateTime? day]) {
+    _calendarDay.value = day;
     _calendarView.value = PlanView.day;
     _navKeys[ShellTab.calendar]!.currentState?.popUntil((r) => r.isFirst);
     _select(ShellTab.calendar);
@@ -374,7 +378,10 @@ class _PreviewShellState extends State<PreviewShell> {
           builder: (c) => _today(FamilyMember.around(c)?.accountId),
         ),
       ),
-      ShellTab.calendar => LiveCalendarPage(viewRequest: _calendarView),
+      ShellTab.calendar => LiveCalendarPage(
+        viewRequest: _calendarView,
+        dayRequest: _calendarDay,
+      ),
       // Je Kind getrennt; bei mehreren Konten mit Auswahl oben (family.dart).
       // „Alle“ vorn (Entwurf 20.10.26): Hausaufgaben, Arbeiten, Fehlstunden
       // aller Kinder; Fächer und Noten je Kind.
@@ -412,6 +419,7 @@ class _PreviewShellState extends State<PreviewShell> {
       },
       events: _data.week,
       viewRequest: _calendarView,
+      dayRequest: _calendarDay,
     ),
     ShellTab.courses => Builder(
       builder: (c) => CoursesPage(

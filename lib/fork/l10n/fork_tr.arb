@@ -611,5 +611,7 @@
   "demoRunningText": "Uydurma okul – gönderme ve değiştirme kapalı.",
   "demoEnd": "Demoyu bitir",
   "demoSettingDetail": "Uydurma okul, giriş yok",
-  "demoBlocked": "Demoda hiçbir şey gönderilmez veya değiştirilmez."
+  "demoBlocked": "Demoda hiçbir şey gönderilmez veya değiştirilmez.",
+  "nextSchoolDayLabel": "Sonraki okul günü",
+  "schoolOverSince": "Ders {time} itibarıyla bitti"
 }

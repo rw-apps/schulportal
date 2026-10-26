@@ -11,6 +11,7 @@ import 'package:lanis/utils/safe_launch.dart';
 import '../../l10n/l10n.dart';
 import '../../mensa.dart';
 import '../kit.dart';
+import 'mensa_unclip.dart';
 
 /// Wer zuletzt auf welcher Bestellseite war (geräteweit, Host → Kind).
 ///
@@ -64,6 +65,12 @@ class _MensaPageState extends ConsumerState<MensaPage> {
           },
           onPageStarted: (_) {
             if (mounted) setState(() => _failed = false);
+          },
+          // Abgeschnittene Gerichte aufheben (mensa_unclip.dart). Fehler
+          // (Seite schon verlassen) sind folgenlos: dann bleibt sie, wie
+          // der Caterer sie liefert.
+          onPageFinished: (_) {
+            _c.runJavaScript(mensaUnclipJs).catchError((_) {});
           },
           onWebResourceError: (e) {
             if (e.isForMainFrame != false && mounted) {

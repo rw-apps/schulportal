@@ -1572,5 +1572,14 @@
   "demoRunningText": "Erfundene Schule – Senden und Ändern sind gesperrt.",
   "demoEnd": "Demo beenden",
   "demoSettingDetail": "Erfundene Schule, ohne Anmeldung",
-  "demoBlocked": "In der Demo wird nichts gesendet oder geändert."
+  "demoBlocked": "In der Demo wird nichts gesendet oder geändert.",
+  "nextSchoolDayLabel": "Nächster Schultag",
+  "schoolOverSince": "Unterricht vorbei seit {time}",
+  "@schoolOverSince": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

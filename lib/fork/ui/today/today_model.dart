@@ -155,7 +155,15 @@ class FamilyToday {
     required this.week,
     this.isDemo = false,
     this.updatedAt,
+    this.next = const [],
+    this.nextDate,
   });
+
+  /// Plan des nächsten Schultags je Kind (gleiche Reihenfolge wie [kids],
+  /// null = unbekannt) und sein Datum. Nach Schulschluss zeigt die Karte
+  /// ihn statt „Unterricht vorbei“ (Vorschlag 4, Abnahme 26.10.26).
+  final List<ChildToday?> next;
+  final DateTime? nextDate;
 
   final DateTime now;
   final List<ChildToday> kids;

@@ -36,6 +36,7 @@ class PlanPage extends StatefulWidget {
     this.showAll = false,
     this.onSelectAll,
     this.viewRequest,
+    this.dayRequest,
     this.freeDays = const {},
     this.notices = const [],
   });
@@ -45,6 +46,12 @@ class PlanPage extends StatefulWidget {
   /// auf null. Ursache (Rückmeldung 18.10.26): Der Knopf öffnete den
   /// Kalender in der zuletzt gewählten Ansicht, oft „Tag“.
   final ValueNotifier<PlanView?>? viewRequest;
+
+  /// Tag zur Ansicht „Tag“ aus [viewRequest]; null = heute. Ursache
+  /// (Abnahme 26.10.26): Nach Schulschluss zeigt die Heute-Karte den
+  /// nächsten Schultag, „Ganzer Tag ›“ muss dann diesen öffnen. Wird wie
+  /// [viewRequest] nach der Übernahme auf null gesetzt.
+  final ValueNotifier<DateTime?>? dayRequest;
 
   /// Schulfreie Tage je Kind (Index in [plans]) → Titel (freeDaysFrom);
   /// die Tagesansicht nennt dann den Grund statt „kein Unterricht“. Die
@@ -202,8 +209,16 @@ class _PlanPageState extends State<PlanPage> {
     if (v != PlanView.events || widget.events != null) _view = v;
     // „Tag“ von „Heute“: immer der heutige Tag der laufenden Woche.
     if (v == PlanView.day) {
-      _weekOffset = 0;
-      _day = _todayIndex ?? 0;
+      final want = widget.dayRequest?.value;
+      widget.dayRequest?.value = null;
+      if (want == null) {
+        _weekOffset = 0;
+        _day = _todayIndex ?? 0;
+      } else {
+        final base = schoolWeek(widget.now).first;
+        _weekOffset = (dayDiff(base, schoolWeek(want).first) / 7).round();
+        _day = want.weekday <= 5 ? want.weekday - 1 : 0;
+      }
     }
     if (v == PlanView.events && widget.onSelectAll == null) _eventsKid = -1;
     r.value = null;

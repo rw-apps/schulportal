@@ -100,7 +100,7 @@ void main() {
       home: Scaffold(
         body: TodayPage(
           data: demoFamily(),
-          onOpenDay: (c) => opened.add(c.firstName),
+          onOpenDay: (c, _) => opened.add(c.firstName),
         ),
       ),
     );

@@ -22,6 +22,7 @@ import '../../demo/demo_entry.dart';
 import 'hint_card.dart';
 import '../portal_link.dart';
 import 'login_failure_card.dart';
+import 'kid_hints.dart' show nextSchoolDay;
 import 'today_page.dart';
 import '../nav.dart';
 
@@ -67,9 +68,10 @@ class LiveTodayPage extends StatefulWidget {
   /// Reiter keine Auswahl „Alle | Kind“.
   final int? onlyAccount;
 
-  /// Kalender in der Ansicht „Tag“ (Tagesleiste angetippt); das Kind ist
-  /// dann schon gewählt (FamilyData.onSelect).
-  final VoidCallback? onOpenDay;
+  /// Kalender in der Ansicht „Tag“ für diesen Tag (Tagesleiste angetippt;
+  /// nach Schulschluss der nächste Schultag); das Kind ist dann schon
+  /// gewählt (FamilyData.onSelect).
+  final ValueChanged<DateTime>? onOpenDay;
   final VoidCallback? onOpenCalendar;
   final VoidCallback? onOpenHomework;
   final VoidCallback? onOpenMessages;
@@ -98,7 +100,13 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
   }
 
   /// Karte eines Kontos; null, solange dessen Stundenplan fehlt.
-  ChildToday? _kidOf(FamilyMember m, DateTime now) {
+  ///
+  /// [day] statt heute: Karte für den nächsten Schultag (nextSchoolDay),
+  /// die die Kinderkarte nach Schulschluss zeigt (Abnahme 26.10.26). Grenze:
+  /// Ferien kennt nextSchoolDay nicht; ist der Tag laut Kalender frei,
+  /// trägt die Karte freeLabel und KidCard bleibt bei „Unterricht vorbei“.
+  ChildToday? _kidOf(FamilyMember m, DateTime now, {DateTime? day}) {
+    final at = day ?? now;
     final s = m.snapshot;
     if (!s.offers('stundenplan.php')) return null;
     final live = livePlanOf(
@@ -114,19 +122,19 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
       plan: live.plan,
       choice: effectiveChoice(live.auto, s.userChoice),
       substitutions: s.substitutions.content?.days ?? const [],
-      now: now,
+      now: at,
       school: shortSchoolName(s.schoolName),
       t: context.t,
       className: className,
       canReportAbsence: s.offers('abwesenheitsmeldung.php'),
       subjectName: (code) => subjectFullName(code, courses),
-      mealHint: mealHintFor(events, now, t: context.t, className: className),
+      mealHint: mealHintFor(events, at, t: context.t, className: className),
       mensaUrl: s.mensaUrl,
       openHomework: liveOpenHomework(s),
       unreadMessages: liveUnreadMessages(s),
       photo: s.photo,
       free: s.offers('kalender.php')
-          ? freeDaysFrom(events, now, className: className, days: 1)
+          ? freeDaysFrom(events, at, className: className, days: 1)
           : const {},
     );
   }
@@ -152,6 +160,7 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
             if (_kidOf(m, now) case final kid?) (m, kid),
         ];
         final kids = [for (final x in shown) x.$2];
+        final nextDay = nextSchoolDay(now);
         FamilyMember memberOf(ChildToday c) =>
             shown[kids.indexOf(c).clamp(0, shown.length - 1)].$1;
         // Nach Tag zusammenführen; innerhalb eines Tages bleibt die
@@ -265,12 +274,14 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
             kids: kids,
             week: week,
             updatedAt: updated,
+            next: [for (final (m, _) in shown) _kidOf(m, now, day: nextDay)],
+            nextDate: nextDay,
           ),
           onOpenDay: widget.onOpenDay == null
               ? null
-              : (c) {
+              : (c, day) {
                   select(c);
-                  widget.onOpenDay!();
+                  widget.onOpenDay!(day);
                 },
           onReportAbsence: kids.any((k) => k.canReportAbsence)
               ? (c) {

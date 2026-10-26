@@ -23,10 +23,13 @@ import 'plan_page.dart';
 /// gefärbt. Grenze: Bei mehreren Kindern an EINER Schule zeigt das Portal
 /// unter stundenplan.php nur ein Kind.
 class LiveCalendarPage extends StatelessWidget {
-  const LiveCalendarPage({super.key, this.viewRequest});
+  const LiveCalendarPage({super.key, this.viewRequest, this.dayRequest});
 
   /// Siehe PlanPage.viewRequest.
   final ValueNotifier<PlanView?>? viewRequest;
+
+  /// Siehe PlanPage.dayRequest.
+  final ValueNotifier<DateTime?>? dayRequest;
 
   @override
   Widget build(BuildContext context) {
@@ -100,6 +103,7 @@ class LiveCalendarPage extends StatelessWidget {
             });
         return PlanPage(
           viewRequest: viewRequest,
+          dayRequest: dayRequest,
           key: ValueKey(
             'plan-${[for (final (m, _) in shown) m.snapshot.session.account.localId].join('-')}',
           ),

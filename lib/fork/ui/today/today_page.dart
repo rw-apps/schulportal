@@ -89,7 +89,11 @@ class TodayPage extends StatelessWidget {
     this.onOrderMeal,
     this.onRefresh,
     this.notices = const [],
+    this.title,
   });
+
+  /// Seitentitel statt des Datums (Entwurf 26.10.26, Variante B).
+  final String? title;
 
   /// Hinweise oben (z. B. Konto nicht angemeldet, login_failure_card.dart).
   final List<Widget> notices;
@@ -102,7 +106,9 @@ class TodayPage extends StatelessWidget {
 
   /// Tagesleiste angetippt: den Tag des Kindes im Kalender öffnen (ersetzt
   /// „Ganzen Tag zeigen“ an der Karte).
-  final void Function(ChildToday child)? onOpenDay;
+  /// Tag eines Kindes im Kalender öffnen: heute bzw. – nach Schulschluss –
+  /// den nächsten Schultag, den die Karte gerade zeigt.
+  final void Function(ChildToday child, DateTime day)? onOpenDay;
   final void Function(ChildToday child)? onOrderMeal;
 
   /// Ziehen zum Aktualisieren; null = ohne (Beispieldaten).
@@ -125,7 +131,7 @@ class TodayPage extends StatelessWidget {
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
-              formatDate(t, t.dateLong, data.now),
+              title ?? formatDate(t, t.dateLong, data.now),
               style: k.pageTitle,
               maxLines: 1,
             ),
@@ -149,10 +155,14 @@ class TodayPage extends StatelessWidget {
           onOpenMessages: onOpenMessages,
           onOrderMeal: onOrderMeal,
           onOpenDay: onOpenDay,
+          nextDay: i < data.next.length ? data.next[i] : null,
+          nextDate: data.nextDate,
+          exams: examsFor(data.week, i, data.kids.length),
         ),
       ],
     ];
-    final upcoming = data.week.isEmpty
+    final upcoming =
+        upcomingWithoutHints(data.week, data.now, data.kids.length).isEmpty
         ? null
         : UpcomingList(
             data: data,
@@ -240,15 +250,32 @@ class KidCard extends StatelessWidget {
     this.onOpenMessages,
     this.onOrderMeal,
     this.onOpenDay,
+    this.nextDay,
+    this.nextDate,
+    this.exams = const [],
   });
+
+  /// Arbeiten dieses Kindes (FamilyToday.week); heute und am nächsten
+  /// Schultag erscheinen sie als Hinweis (Vorschlag 5, Entwurf 26.10.26).
+  final List<WeekItem> exams;
 
   final ChildToday kid;
   final DateTime now;
+
+  /// Plan des nächsten Schultags; nach Schulschluss steht er im Abschnitt
+  /// „Stundenplan“ statt „Unterricht vorbei“ (Vorschlag 4, Entwurf
+  /// 26.10.26) – mit blauem Band „Morgen“ bzw. „Nächster Schultag“ und
+  /// Datum (_NextDayBand).
+  final ChildToday? nextDay;
+  final DateTime? nextDate;
   final void Function(ChildToday child)? onReportAbsence;
   final void Function(ChildToday child)? onOpenHomework;
   final void Function(ChildToday child)? onOpenMessages;
   final void Function(ChildToday child)? onOrderMeal;
-  final void Function(ChildToday child)? onOpenDay;
+
+  /// Tag eines Kindes im Kalender öffnen: heute bzw. – nach Schulschluss –
+  /// den nächsten Schultag, den die Karte gerade zeigt.
+  final void Function(ChildToday child, DateTime day)? onOpenDay;
 
   @override
   Widget build(BuildContext context) {
@@ -260,8 +287,35 @@ class KidCard extends StatelessWidget {
       kid.school,
       classLabel(kid.className),
     ].where((s) => s.isNotEmpty).join(' · ');
-    final hints = kidHints(kid, now, t);
-    final openDay = onOpenDay == null ? null : () => onOpenDay!(kid);
+    final hints = kidHints(kid, now, t, exams: exams);
+    // Nach Schulschluss bzw. an freien Tagen: nächster Schultag.
+    final next = nextDay;
+    final showNext =
+        next != null &&
+        nextDate != null &&
+        next.lessons.any((x) => !x.cancelled) &&
+        (status.phase == DayPhase.over || status.phase == DayPhase.noLessons);
+    final planKid = showNext ? next : kid;
+    // Uhrzeit vor Schulbeginn: Leiste ohne „erledigt“, oben die erste Stunde.
+    final planNow = showNext ? DateTime(now.year, now.month, now.day) : now;
+    final planStatus = showNext ? dayStatus(next.lessons, planNow) : status;
+    final doneAt = status.phase == DayPhase.over
+        ? kid.lessons.lastWhere((x) => !x.cancelled).end
+        : null;
+    // Nach Schulschluss steht der nächste Schultag als Kopf über Hinweisen
+    // und Plan (_NextDayBand); die Hinweise brauchen ihr „Morgen“ dann nicht
+    // mehr. Heutige Hinweise (Essen, Arbeit heute) sind nach Schulschluss
+    // erledigt und entfallen.
+    final openDay = onOpenDay == null
+        ? null
+        : () => onOpenDay!(kid, showNext ? nextDate! : now);
+    final shown = !showNext
+        ? hints
+        : [
+            for (final h in hints)
+              if (h.when != null)
+                KidHint(kind: h.kind, title: h.title, detail: h.detail),
+          ];
 
     return Container(
       padding: const EdgeInsets.all(Sp.l),
@@ -330,10 +384,19 @@ class KidCard extends StatelessWidget {
             ],
           ),
           // Ohne Hinweise entfallen Überschrift und Abschnitt ganz.
-          if (hints.isNotEmpty) ...[
+          if (showNext) ...[
+            const SizedBox(height: Sp.m),
+            _NextDayHead(
+              day: nextDate!,
+              now: now,
+              doneAt: doneAt,
+              freeLabel: kid.freeLabel,
+            ),
+          ],
+          if (shown.isNotEmpty) ...[
             const SizedBox(height: Sp.l),
             _SectionHead(text: t.hintsTitle),
-            for (final (i, h) in hints.indexed) ...[
+            for (final (i, h) in shown.indexed) ...[
               if (i > 0) const SizedBox(height: Sp.s),
               _HintRow(hint: h),
             ],
@@ -369,12 +432,12 @@ class KidCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _NowPanel(kid: kid, status: status),
+                    _NowPanel(kid: planKid, status: planStatus),
                     // Ohne stattfindende Stunde (alle fallen aus, schulfrei)
                     // keine Leiste: Sie hätte nur rote bzw. keine Abschnitte.
-                    if (kid.lessons.any((x) => !x.cancelled)) ...[
+                    if (planKid.lessons.any((x) => !x.cancelled)) ...[
                       const SizedBox(height: Sp.m),
-                      _DayBar(kid: kid, status: status, now: now),
+                      _DayBar(kid: planKid, status: planStatus, now: planNow),
                     ],
                   ],
                 ),
@@ -441,6 +504,72 @@ class KidCard extends StatelessWidget {
 
 /// Überschrift „Hinweise“ bzw. „Stundenplan“ in der Karte; rechts optional
 /// ein Verweis („Ganzer Tag ›“).
+/// Kopf der Karte nach Schulschluss: kurz „HEUTE · Unterricht vorbei“,
+/// Trennlinie, dann als Überschrift „MORGEN · Dienstag, 27. Oktober“ bzw.
+/// „NÄCHSTER SCHULTAG · Montag, 2. November“. Hinweise und Plan darunter
+/// gelten diesem Tag (ihr „Morgen ·“ entfällt, KidCard.shown).
+///
+/// Ursache (Abnahme 26.10.26, drei Runden): „Stundenplan · Morgen“ war zu
+/// leise, ein Band im Planrahmen galt nicht für die Hinweise, ein blaues
+/// Band über beiden wirkte wie ein Hinweis und verschwieg, dass heute schon
+/// Schluss ist. Jetzt trennen Linie und gleich gebaute Marken
+/// („HEUTE“/„MORGEN“, dateCaps) die beiden Tage; der nächste Tag steht in
+/// Abschnittsgröße (k.section) über „Hinweise“ und „Stundenplan“.
+class _NextDayHead extends StatelessWidget {
+  const _NextDayHead({
+    required this.day,
+    required this.now,
+    this.doneAt,
+    this.freeLabel,
+  });
+
+  final DateTime day;
+  final DateTime now;
+
+  /// Ende der letzten Stunde heute; null = heute kein Unterricht.
+  final String? doneAt;
+  final String? freeLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final t = context.t;
+    final done = doneAt;
+    final tomorrow = dayDiff(now, day) == 1;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(upperFor(t, t.dayToday), style: k.dateCaps),
+        const SizedBox(height: Sp.xs),
+        Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: k.p.muted, size: Sz.icon),
+            const SizedBox(width: Sp.s),
+            Expanded(
+              child: Text(
+                done == null
+                    ? (freeLabel ?? t.noLessons)
+                    : t.schoolOverSince(done),
+                style: k.meta,
+              ),
+            ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: Sp.l),
+          child: Container(height: Sz.frame, color: k.p.line),
+        ),
+        Text(
+          upperFor(t, tomorrow ? t.dayTomorrow : t.nextSchoolDayLabel),
+          style: k.dateCaps,
+        ),
+        const SizedBox(height: Sp.xxs),
+        Text(formatDate(t, t.dateLong, day), style: k.section),
+      ],
+    );
+  }
+}
+
 class _SectionHead extends StatelessWidget {
   const _SectionHead({required this.text, this.link, this.onTap});
 
@@ -488,13 +617,20 @@ class _HintRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final h = hint;
-    final tone = h.cancelled ? k.p.cancel : k.p.change;
+    // Arbeit: grau wie die übrigen Hinweise ohne Planänderung (Farbregel:
+    // Rot = Ausfall, Gelb = Vertretung/Raum/Essen).
+    final tone = h.cancelled
+        ? k.p.cancel
+        : h.kind == HintKind.exam
+        ? k.p.todo
+        : k.p.change;
     final icon = switch (h.kind) {
       HintKind.cancelled => changeIcon(ChangeKind.cancelled),
       HintKind.substitution => changeIcon(ChangeKind.substitution),
       HintKind.roomChange => changeIcon(ChangeKind.roomChange),
       HintKind.unclear => changeIcon(ChangeKind.unclear),
       HintKind.meal => Icons.restaurant,
+      HintKind.exam => weekIcon(WeekKind.exam),
     };
     final detail = h.detail;
     return Container(
@@ -807,7 +943,8 @@ class UpcomingList extends StatelessWidget {
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final t = context.t;
-    final items = [...data.week]..sort((a, b) => a.day.compareTo(b.day));
+    final items = upcomingWithoutHints(data.week, data.now, data.kids.length)
+      ..sort((a, b) => a.day.compareTo(b.day));
     final shown = items.take(max).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
