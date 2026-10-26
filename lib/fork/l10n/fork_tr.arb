@@ -628,6 +628,10 @@
   "mealLunch": "Yemek: {dish}",
   "mealClosed": "Yemek verilmiyor",
   "mealUnordered": "Yemek siparişi yok",
-  "mealMoreOptions": "+ {count} tane daha",
-  "mealLoading": "Yemek listesi okunuyor …"
+  "mealLoading": "Yemek listesi okunuyor …",
+  "mealChoices": "{count, plural, other{{count} yemek seçeneği}}",
+  "mensaRememberTitle": "Giriş hatırlansın mı?",
+  "mensaRememberText": "Oturum sona erdiğinde uygulama yemek firmasına kendisi giriş yapar – Bugün görünümü için de. Kullanıcı adı ve şifre yalnızca bu telefonda korumalı depolamada kalır.",
+  "mensaRememberYes": "Hatırla",
+  "mensaRememberNo": "Hatırlama"
 }

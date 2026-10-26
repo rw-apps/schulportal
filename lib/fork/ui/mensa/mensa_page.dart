@@ -10,6 +10,7 @@ import 'package:lanis/utils/safe_launch.dart';
 
 import '../../l10n/l10n.dart';
 import '../../mensa.dart';
+import '../../mensa_login.dart';
 import '../kit.dart';
 import '../../mensa_store.dart';
 import '../../mensa_week.dart';
@@ -34,7 +35,13 @@ class MensaPage extends ConsumerStatefulWidget {
     required this.url,
     required this.owner,
     this.childName,
+    this.open,
   });
+
+  /// Genau diese Adresse öffnen (eine Woche aus „Essen“); null = die
+  /// Bestellwoche (mensaWeekUrl). Ursache: Sonst ersetzte mensaWeekUrl die
+  /// gewählte Woche wieder durch die Bestellwoche.
+  final String? open;
 
   /// Eingetragene Adresse (normalizeMensaUrl); die Woche wird beim Öffnen
   /// ersetzt (mensaWeekUrl).
@@ -56,11 +63,22 @@ class _MensaPageState extends ConsumerState<MensaPage> {
   bool _failed = false;
   String? _otherName;
 
+  /// Gemerkte Anmeldung je Seite höchstens einmal einsetzen (mensa_login.dart).
+  bool _triedLogin = false;
+  bool _afterLogin = false;
+  bool _asked = false;
+
+  String get _start => widget.open ?? mensaWeekUrl(widget.url, DateTime.now());
+
   @override
   void initState() {
     super.initState();
     _c = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..addJavaScriptChannel(
+        mensaLoginChannel,
+        onMessageReceived: (m) => _onLogin(m.message),
+      )
       ..setNavigationDelegate(
         NavigationDelegate(
           onProgress: (p) {
@@ -74,6 +92,8 @@ class _MensaPageState extends ConsumerState<MensaPage> {
           // der Caterer sie liefert.
           onPageFinished: (_) {
             _c.runJavaScript(mensaUnclipJs).catchError((_) {});
+            _c.runJavaScript(mensaLoginCaptureJs).catchError((_) {});
+            _autoLogin();
             _remember();
           },
           onWebResourceError: (e) {
@@ -100,7 +120,87 @@ class _MensaPageState extends ConsumerState<MensaPage> {
         ),
       );
     _checkOwner();
-    _c.loadRequest(Uri.parse(mensaWeekUrl(widget.url, DateTime.now())));
+    _c.loadRequest(Uri.parse(_start));
+  }
+
+  Future<bool> _hasPasswordField() async {
+    try {
+      final r = await _c.runJavaScriptReturningResult(
+        "document.querySelector('input[type=password]') ? 1 : 0",
+      );
+      return '$r' == '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Abgelaufene Sitzung: gemerkte Anmeldung einsetzen. Danach leitet der
+  /// Caterer meist auf seine Startseite – dann einmal die gewünschte Woche
+  /// neu laden.
+  Future<void> _autoLogin() async {
+    if (_afterLogin) {
+      _afterLogin = false;
+      if (!await _hasPasswordField() && mounted) {
+        await _c.loadRequest(Uri.parse(_start));
+      }
+      return;
+    }
+    if (_triedLogin) return;
+    final l = await readMensaLogin(widget.owner);
+    final host = Uri.tryParse(await _c.currentUrl() ?? '')?.host;
+    if (l == null || host != l.host || !mounted) return;
+    try {
+      final r = await _c.runJavaScriptReturningResult(mensaLoginFillJs(l));
+      if ('$r'.contains('filled')) {
+        _triedLogin = true;
+        _afterLogin = true;
+      }
+    } catch (_) {}
+  }
+
+  /// Anmeldung eingegeben: einmal fragen, ob die App sie merken soll.
+  Future<void> _onLogin(String message) async {
+    final Object? v;
+    try {
+      v = jsonDecode(message);
+    } catch (_) {
+      return;
+    }
+    if (v is! Map) return;
+    final h = v['h'], u = v['u'], p = v['p'];
+    if (h is! String || u is! String || p is! String || u.isEmpty) return;
+    if (!mensaAllows(_home, Uri(scheme: 'https', host: h))) return;
+    if (_asked) return;
+    final old = await readMensaLogin(widget.owner);
+    if (old != null && old.user == u && old.pass == p && old.host == h) {
+      return;
+    }
+    if (old == null && await mensaLoginDeclined(widget.owner)) return;
+    if (!mounted) return;
+    _asked = true;
+    final t = context.t;
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text(t.mensaRememberTitle),
+        content: Text(t.mensaRememberText),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(false),
+            child: Text(t.mensaRememberNo),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(c).pop(true),
+            child: Text(t.mensaRememberYes),
+          ),
+        ],
+      ),
+    );
+    if (yes == true) {
+      await saveMensaLogin(widget.owner, MensaLogin(host: h, user: u, pass: p));
+    } else if (yes == false && old == null) {
+      await declineMensaLogin(widget.owner);
+    }
   }
 
   /// Gelesene Woche für „Essen“ und Heute merken (mensa_store.dart): Nach
@@ -146,7 +246,8 @@ class _MensaPageState extends ConsumerState<MensaPage> {
     await WebViewCookieManager().clearCookies();
     if (!mounted) return;
     setState(() => _otherName = null);
-    await _c.loadRequest(Uri.parse(mensaWeekUrl(widget.url, DateTime.now())));
+    _triedLogin = false;
+    await _c.loadRequest(Uri.parse(_start));
   }
 
   @override

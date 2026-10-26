@@ -21,6 +21,7 @@ import '../kit.dart';
 import 'feed_source.dart';
 import 'serial_loader.dart';
 import '../../mensa.dart';
+import '../../mensa_login.dart' show forgetMensaLogin;
 import '../plan/lesson_times.dart';
 import '../plan/plan_from_lanis.dart';
 import '../plan/plan_model.dart';
@@ -669,7 +670,14 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
       },
       accountKey: '${account.localId}',
       setMensaUrl: (kid, u) {
+        // Andere oder keine Adresse: gemerkte Anmeldung beim Caterer gehört
+        // zur alten Seite und wird gelöscht (mensa_login.dart).
+        final before = _mensa.of(kid);
         final next = _mensa.withUrl(kid, u);
+        if (Uri.tryParse(before ?? '')?.host !=
+            Uri.tryParse(next.of(kid) ?? '')?.host) {
+          forgetMensaLogin('${account.localId}:$kid');
+        }
         setState(() => _mensa = next);
         final s = ref.read(accountSpecificSettingsProvider);
         s?.setString('fork/$mensaUrlsSetting', next.encode());

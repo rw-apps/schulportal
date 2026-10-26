@@ -628,6 +628,10 @@
   "mealLunch": "Lunch: {dish}",
   "mealClosed": "No meals served",
   "mealUnordered": "No lunch ordered",
-  "mealMoreOptions": "+ {count} more",
-  "mealLoading": "Reading the menu …"
+  "mealLoading": "Reading the menu …",
+  "mealChoices": "{count, plural, =1{1 dish to choose from} other{{count} dishes to choose from}}",
+  "mensaRememberTitle": "Remember sign-in?",
+  "mensaRememberText": "The app will then sign in to the caterer by itself when the session has expired – also for the Today view. User name and password stay only on this phone in protected storage.",
+  "mensaRememberYes": "Remember",
+  "mensaRememberNo": "Don't remember"
 }

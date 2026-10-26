@@ -161,6 +161,13 @@ class MealOption {
 String _text(Element? e) =>
     (e?.text ?? '').replaceAll(RegExp(r'\s+'), ' ').trim();
 
+/// Kommas wie getippt bereinigen: „Reis ,Joghurt“ → „Reis, Joghurt“
+/// (Bildschirmfoto 27.10.26).
+String _tidy(String s) => s
+    .replaceAll(RegExp(r'\s+,'), ',')
+    .replaceAll(RegExp(r',(?=[A-Za-zÄÖÜäöüß])'), ', ')
+    .trim();
+
 /// Gerichtname: `<br>` als Leerzeichen.
 String _dish(Element e) {
   final c = e.clone(true);
@@ -253,7 +260,7 @@ MealWeek? _parseTabs(Document doc) {
       if (dish.isEmpty) continue;
       final o = MealOption(
         line: _text(p.querySelector('.panel-title')),
-        name: dish.join(', '),
+        name: _tidy(dish.join(', ')),
         allergens: small.isEmpty ? null : small,
       );
       options.add(o);
@@ -349,7 +356,7 @@ MealWeek? _parseDayList(Document doc) {
       if (name == null) continue;
       final o = MealOption(
         line: _text(r.querySelector('b')),
-        name: _dish(name),
+        name: _tidy(_dish(name)),
         allergens: _text(r.querySelector('small')).isEmpty
             ? null
             : _text(r.querySelector('small')),

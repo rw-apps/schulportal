@@ -1631,13 +1631,17 @@
   },
   "mealClosed": "Keine Essensausgabe",
   "mealUnordered": "Kein Essen bestellt",
-  "mealMoreOptions": "+ {count} weitere",
-  "@mealMoreOptions": {
+  "mealLoading": "Speiseplan wird gelesen …",
+  "mealChoices": "{count, plural, =1{1 Gericht zur Wahl} other{{count} Gerichte zur Wahl}}",
+  "@mealChoices": {
     "placeholders": {
       "count": {
-        "type": "String"
+        "type": "int"
       }
     }
   },
-  "mealLoading": "Speiseplan wird gelesen …"
+  "mensaRememberTitle": "Anmeldung merken?",
+  "mensaRememberText": "Dann meldet sich die App beim Caterer selbst an, wenn die Anmeldung abgelaufen ist – auch für die Anzeige auf Heute. Benutzername und Passwort bleiben nur auf diesem Handy im geschützten Speicher.",
+  "mensaRememberYes": "Merken",
+  "mensaRememberNo": "Nicht merken"
 }

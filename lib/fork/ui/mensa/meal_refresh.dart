@@ -89,6 +89,8 @@ class _MealRefreshState extends ConsumerState<MealRefresh> {
                     c.url,
                     isoWeek(schoolWeek(widget.now).first),
                   ),
+                  owner: c.owner,
+                  want: schoolWeek(widget.now).first,
                   onWeek: (w) => _cache.put(c.owner, [w]),
                   onUnreadable: () => _cache.markUnreadable(c.owner),
                   onDone: () {

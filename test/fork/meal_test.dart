@@ -69,6 +69,16 @@ void main() {
     });
   });
 
+  test('Kommas bereinigt', () {
+    final w = parseMealWeek(
+      File('test/fork/fixtures/meal_tabs.html').readAsStringSync().replaceFirst(
+        'Hacksteak mit Reis',
+        'Hacksteak mit Reis ,Soße',
+      ),
+    )!;
+    expect(w.days[1].options.first.name, 'Hacksteak mit Reis, Soße');
+  });
+
   test('unbekannte Seite: null', () {
     expect(parseMealWeek('<html><body>Anmelden</body></html>'), isNull);
   });
@@ -164,15 +174,11 @@ void main() {
         supportedLocales: ForkL10n.supportedLocales,
         locale: const Locale('de'),
         home: Scaffold(
-          body: ListView(
-            children: [
-              MealWeekView(
-                week: w,
-                now: DateTime(2026, 10, 26, 10),
-                colorIndex: 0,
-                onOrder: () => ordered++,
-              ),
-            ],
+          body: MealWeekView(
+            week: w,
+            now: DateTime(2026, 10, 26, 10),
+            colorIndex: 0,
+            onOrder: () => ordered++,
           ),
         ),
       ),
@@ -188,6 +194,14 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Nichts bestellt'), findsOneWidget);
+    // Offener Tag: zugeklappt nur die Zahl, aufgeklappt die Gerichte.
+    expect(find.text('noch bestellbar'), findsOneWidget);
+    expect(find.text('1 Gericht zur Wahl'), findsOneWidget);
+    expect(find.text('Gemüsesuppe'), findsNothing);
+    await t.tap(find.text('Nichts bestellt'));
+    await t.pump();
+    expect(find.text('Gemüsesuppe'), findsOneWidget);
+    expect(find.text('VEGGIE'), findsOneWidget);
     expect(find.text('Guthaben 12,50 €'), findsOneWidget);
     await t.tap(find.text('Bestellen oder ändern'));
     expect(ordered, 1);

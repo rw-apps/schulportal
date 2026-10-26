@@ -43,6 +43,8 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
   final _cache = MealCache.instance;
   DateTime? _shown;
   String? _fetch;
+  DateTime? _want;
+  int _count = 2;
   int _round = 0;
 
   DateTime get _thisWeek => schoolWeek(_now).first;
@@ -59,6 +61,8 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
   void _refresh() => setState(() {
     _round++;
     _fetch = mensaUrlForWeek(widget.url, isoWeek(_thisWeek));
+    _want = _thisWeek;
+    _count = 2;
   });
 
   List<MealWeek> get _weeks => _cache.of(widget.owner)?.weeks ?? const [];
@@ -83,6 +87,8 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
         setState(() {
           _round++;
           _fetch = Uri.parse(widget.url).resolve(link).toString();
+          _want = schoolWeek(target).first;
+          _count = 1;
         });
       }
     }
@@ -92,9 +98,8 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
     await pushFullScreen<void>(
       context,
       (_) => MensaPage(
-        url: w == null
-            ? widget.url
-            : mensaUrlForWeek(widget.url, isoWeek(w.start)),
+        url: widget.url,
+        open: w == null ? null : mensaUrlForWeek(widget.url, isoWeek(w.start)),
         owner: widget.owner,
         childName: widget.childName,
       ),
@@ -147,35 +152,33 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
             valueListenable: _cache.notifier,
             builder: (context, _, _) {
               final w = _week;
+              if (w != null) {
+                return MealWeekView(
+                  week: w,
+                  now: _now,
+                  colorIndex: widget.colorIndex,
+                  onPrev: w.prev == null ? null : () => _go(w, -1),
+                  onNext: w.next == null ? null : () => _go(w, 1),
+                  onOrder: () => _order(w),
+                );
+              }
               return ListView(
                 padding: const EdgeInsets.all(Sp.page),
                 children: [
-                  if (w == null)
-                    Padding(
-                      padding: const EdgeInsets.all(Sp.xl),
-                      child: Text(
-                        fetch == null ? t.mealLoadFailed : t.mealLoading,
-                        style: k.meta,
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  else
-                    MealWeekView(
-                      week: w,
-                      now: _now,
-                      colorIndex: widget.colorIndex,
-                      onPrev: w.prev == null ? null : () => _go(w, -1),
-                      onNext: w.next == null ? null : () => _go(w, 1),
-                      onOrder: () => _order(w),
+                  Padding(
+                    padding: const EdgeInsets.all(Sp.xl),
+                    child: Text(
+                      fetch == null ? t.mealLoadFailed : t.mealLoading,
+                      style: k.meta,
+                      textAlign: TextAlign.center,
                     ),
-                  if (w == null && fetch == null) ...[
-                    const SizedBox(height: Sp.l),
+                  ),
+                  if (fetch == null)
                     FilledButton.icon(
                       onPressed: () => _order(null),
                       icon: const Icon(Icons.open_in_new),
                       label: Text(t.mealChange),
                     ),
-                  ],
                 ],
               );
             },
@@ -187,6 +190,9 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
               child: MealFetcher(
                 key: ValueKey('$_round:$fetch'),
                 url: fetch,
+                owner: widget.owner,
+                want: _want,
+                weeks: _count,
                 onWeek: (w) => _cache.put(widget.owner, [w]),
                 onUnreadable: _unreadable,
                 onDone: () {
@@ -206,6 +212,11 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
 /// war in der App schwer lesbar. Hier steht je Tag nur, was zählt: bestellt
 /// (Gericht, Menülinie, Abbestellfrist), nichts bestellt (noch möglich bzw.
 /// Frist vorbei) oder keine Essensausgabe.
+///
+/// Aufbau (Rückmeldung 27.10.26, „Kopf- und Fußzeile fixieren“): Woche und
+/// Guthaben stehen fest oben, „Bestellen oder ändern“ fest unten über der
+/// Systemleiste (SafeArea); nur die Tage scrollen. Vorher lief beides mit
+/// und der Knopf lag halb unter der Gestenleiste.
 ///
 /// Farbstreifen links wie in der Terminliste (event_list.dart): Kinderfarbe
 /// = bestellt, Gelb = nichts bestellt, aber noch möglich (Essen ist laut
@@ -239,50 +250,83 @@ class MealWeekView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            IconButton(
-              tooltip: t.prevWeek,
-              onPressed: onPrev,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            Expanded(
-              child: Column(
-                children: [
-                  Text(
-                    week.label,
-                    style: k.cardSection,
-                    textAlign: TextAlign.center,
-                  ),
-                  if (balance != null)
-                    Text(
-                      t.mealBalance(balance),
-                      style: k.meta,
-                      textAlign: TextAlign.center,
+        // Kopf: fest.
+        Container(
+          color: k.p.bg,
+          padding: const EdgeInsets.fromLTRB(Sp.s, 0, Sp.s, Sp.s),
+          child: Row(
+            children: [
+              IconButton(
+                tooltip: t.prevWeek,
+                onPressed: onPrev,
+                icon: const Icon(Icons.chevron_left),
+              ),
+              Expanded(
+                child: Column(
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        week.label,
+                        style: k.cardSection,
+                        maxLines: 1,
+                      ),
                     ),
-                ],
+                    if (balance != null)
+                      Text(
+                        t.mealBalance(balance),
+                        style: k.meta,
+                        textAlign: TextAlign.center,
+                      ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: t.nextWeek,
+                onPressed: onNext,
+                icon: const Icon(Icons.chevron_right),
+              ),
+            ],
+          ),
+        ),
+        Container(height: Sz.frame, color: k.p.line),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(Sp.page, Sp.m, Sp.page, Sp.m),
+            children: [
+              for (final (i, d) in week.days.indexed) ...[
+                if (i > 0) const SizedBox(height: Sp.s),
+                _MealRow(day: d, now: now, colorIndex: colorIndex),
+              ],
+            ],
+          ),
+        ),
+        // Fuß: fest, über der Gesten- bzw. Navigationsleiste.
+        if (onOrder != null)
+          Container(
+            decoration: BoxDecoration(
+              color: k.p.bg,
+              border: Border(
+                top: BorderSide(color: k.p.line, width: Sz.frame),
               ),
             ),
-            IconButton(
-              tooltip: t.nextWeek,
-              onPressed: onNext,
-              icon: const Icon(Icons.chevron_right),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Sp.page,
+                  Sp.m,
+                  Sp.page,
+                  Sp.m,
+                ),
+                child: FilledButton.icon(
+                  onPressed: onOrder,
+                  icon: const Icon(Icons.open_in_new),
+                  label: Text(t.mealChange),
+                ),
+              ),
             ),
-          ],
-        ),
-        const SizedBox(height: Sp.m),
-        for (final (i, d) in week.days.indexed) ...[
-          if (i > 0) const SizedBox(height: Sp.s),
-          _MealRow(day: d, now: now, colorIndex: colorIndex),
-        ],
-        if (onOrder != null) ...[
-          const SizedBox(height: Sp.l),
-          FilledButton.icon(
-            onPressed: onOrder,
-            icon: const Icon(Icons.open_in_new),
-            label: Text(t.mealChange),
           ),
-        ],
       ],
     );
   }
@@ -300,7 +344,11 @@ String _shortUntil(String until, DateTime day) {
   return until;
 }
 
-class _MealRow extends StatelessWidget {
+/// Ein Tag. Offene Tage („Nichts bestellt“) zeigen nur die Zahl der
+/// Gerichte zur Wahl und klappen auf Antippen auf. Ursache (Bildschirmfoto
+/// 27.10.26): Mit drei Gerichten je Tag ausgeschrieben war eine Woche
+/// mehrere Bildschirme lang, und das Bestellte ging darin unter.
+class _MealRow extends StatefulWidget {
   const _MealRow({
     required this.day,
     required this.now,
@@ -312,13 +360,83 @@ class _MealRow extends StatelessWidget {
   final int colorIndex;
 
   @override
+  State<_MealRow> createState() => _MealRowState();
+}
+
+class _MealRowState extends State<_MealRow> {
+  var _open = false;
+
+  /// Offener Tag in drei Ebenen (Rückmeldung 27.10.26: „stärker
+  /// differenzieren“): Zustand als gelbe Marke „noch bestellbar“, daneben
+  /// in Linkfarbe die Zahl zur Wahl (antippbar), aufgeklappt die Gerichte
+  /// in einem eigenen Kasten – Menülinie klein darüber, Gericht darunter.
+  List<Widget> _openParts(Kit k, ForkL10n t, MealDay d) => [
+    const SizedBox(height: Sp.xs),
+    Wrap(
+      spacing: Sp.s,
+      runSpacing: Sp.xs,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Sp.s,
+            vertical: Sp.xxs,
+          ),
+          decoration: BoxDecoration(
+            color: k.p.change.bg,
+            borderRadius: BorderRadius.circular(Rad.pill),
+          ),
+          child: Text(
+            t.mealStillOpen,
+            style: k.tileCaption.copyWith(color: k.p.change.ink),
+          ),
+        ),
+        if (d.options.isNotEmpty)
+          Text(
+            t.mealChoices(d.options.length),
+            style: k.planMeta(k.p.onNavSelected),
+          ),
+      ],
+    ),
+    if (_open && d.options.isNotEmpty) ...[
+      const SizedBox(height: Sp.s),
+      Container(
+        decoration: BoxDecoration(
+          color: k.p.inset,
+          borderRadius: BorderRadius.circular(Rad.bar),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: Sp.m),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final (i, x) in d.options.indexed) ...[
+              if (i > 0) Container(height: Sz.frame, color: k.p.line),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: Sp.s),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (x.line.isNotEmpty)
+                      Text(upperFor(t, x.line), style: k.planNowLabel),
+                    Text(x.name, style: k.planMeta(k.p.ink)),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ],
+  ];
+
+  @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final t = context.t;
-    final d = day;
-    final today = dayDiff(now, d.day) == 0;
+    final d = widget.day;
+    final today = dayDiff(widget.now, d.day) == 0;
     final accent = switch (d.state) {
-      MealState.ordered => k.kid(colorIndex).accent,
+      MealState.ordered => k.kid(widget.colorIndex).accent,
       MealState.open => k.p.change.dot,
       MealState.missed || MealState.closed => k.p.faint,
     };
@@ -327,6 +445,7 @@ class _MealRow extends StatelessWidget {
     final String title;
     final Color ink;
     final lines = <String>[];
+    final canOpen = d.state == MealState.open && d.options.isNotEmpty;
     switch (d.state) {
       case MealState.ordered:
         title = o!.name;
@@ -344,14 +463,6 @@ class _MealRow extends StatelessWidget {
       case MealState.open:
         title = t.mealNothing;
         ink = k.p.change.ink;
-        lines.add(t.mealStillOpen);
-        // Höchstens drei zur Wahl; manche Caterer bieten fünf und mehr Linien.
-        for (final x in d.options.take(3)) {
-          lines.add('${x.line}: ${x.name}');
-        }
-        if (d.options.length > 3) {
-          lines.add(t.mealMoreOptions('${d.options.length - 3}'));
-        }
       case MealState.missed:
         title = t.mealNothing;
         ink = k.p.muted;
@@ -360,55 +471,63 @@ class _MealRow extends StatelessWidget {
         title = d.note ?? t.mealClosed;
         ink = k.p.muted;
     }
-    return Container(
-      decoration: BoxDecoration(
-        color: k.p.card,
+    final row = IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(width: Sp.xs, color: accent),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Sp.m, Sp.m, 0, Sp.m),
+            child: SizedBox(
+              width: Sz.slotColumn,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    today ? t.dayToday : formatDate(t, 'ccc', d.day),
+                    style: k.timeStart,
+                  ),
+                  Text(formatDate(t, t.dateDayMonth, d.day), style: k.timeEnd),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(Sp.s, Sp.m, Sp.m, Sp.m),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: k.planSubject(ink)),
+                  for (final l in lines) Text(l, style: k.planMeta(k.p.muted)),
+                  if (d.state == MealState.open) ..._openParts(k, t, d),
+                ],
+              ),
+            ),
+          ),
+          if (canOpen)
+            Padding(
+              padding: const EdgeInsets.only(right: Sp.s),
+              child: Icon(
+                _open ? Icons.expand_less : Icons.expand_more,
+                color: k.p.muted,
+              ),
+            ),
+        ],
+      ),
+    );
+    return Material(
+      color: k.p.card,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Rad.row),
-        border: today
-            ? Border.all(color: k.p.onNavSelected, width: Sz.frame)
-            : null,
+        side: today
+            ? BorderSide(color: k.p.onNavSelected, width: Sz.frame)
+            : BorderSide.none,
       ),
       clipBehavior: Clip.antiAlias,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(width: Sp.xs, color: accent),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(Sp.m, Sp.m, 0, Sp.m),
-              child: SizedBox(
-                width: Sz.slotColumn,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      today ? t.dayToday : formatDate(t, 'ccc', d.day),
-                      style: k.timeStart,
-                    ),
-                    Text(
-                      formatDate(t, t.dateDayMonth, d.day),
-                      style: k.timeEnd,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(Sp.s, Sp.m, Sp.m, Sp.m),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: k.planSubject(ink)),
-                    for (final l in lines)
-                      Text(l, style: k.planMeta(k.p.muted)),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: canOpen
+          ? InkWell(onTap: () => setState(() => _open = !_open), child: row)
+          : row,
     );
   }
 }
