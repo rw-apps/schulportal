@@ -1507,5 +1507,34 @@
   "reasonServer": "Das Schulportal hat gerade eine Störung.",
   "reasonDown": "Das Schulportal ist gerade nicht verfügbar.",
   "reasonUnreachable": "Keine Verbindung zum Schulportal.",
-  "reportError": "Fehler melden"
+  "reportError": "Fehler melden",
+  "anonExportTitle": "Anonymer Export",
+  "anonExportDetail": "Aufbau der Portalseiten ohne Namen und Noten – hilft, die App zu verbessern",
+  "anonExportIntro": "Der Export zeigt, wie die Seiten des Schulportals aufgebaut sind – ohne Namen, Kürzel, Noten oder Texte. Damit lernt die App weitere Schulen und Lehrerkonten kennen.",
+  "anonExportRules": "Jedes Wort wird durch zufällige Buchstaben ersetzt, außer festen Beschriftungen wie „Vertretung“. Noten werden zufällig neu vergeben, Schulnummer, Bilder und Anmeldedaten entfernt. Zahlen, Uhrzeiten und Daten bleiben.",
+  "anonExportRun": "Export erstellen",
+  "anonExportProgress": "Seite {done} von {total} …",
+  "@anonExportProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "anonExportKeptTitle": "Diese Wörter bleiben stehen",
+  "anonExportKeptHint": "Bitte kurz prüfen: Steht hier ein Name, nicht teilen und Bescheid geben.",
+  "anonExportPreviewTitle": "Vorschau",
+  "anonExportSize": "Anfang der Datei; geteilt wird die ganze Datei ({kb} KB).",
+  "@anonExportSize": {
+    "placeholders": {
+      "kb": {
+        "type": "int"
+      }
+    }
+  },
+  "anonExportNoSession": "Nicht angemeldet – bitte zuerst anmelden.",
+  "anonExportFailed": "Der Export ließ sich nicht erstellen."
 }

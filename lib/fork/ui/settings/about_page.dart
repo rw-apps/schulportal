@@ -9,6 +9,7 @@ import 'package:lanis/view/settings/subsettings/debug_export.dart';
 import '../../error_log.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import 'anon_export_page.dart';
 import 'error_report_page.dart';
 import 'settings_widgets.dart';
 
@@ -138,6 +139,20 @@ class _AboutSettingsPageState extends State<AboutSettingsPage> {
                 label: t.noErrors,
                 detail: t.noErrorsDetail,
               ),
+            // Fork (26.10.26): Seitenaufbau ohne Namen und Noten – damit die
+            // App Lehrerkonten und weitere Schulen lesen lernt. Sichtbar für
+            // alle, nicht hinter den sieben Tipps des Debug-Exports: Wer
+            // exportieren soll, muss den Weg ohne Anleitung finden.
+            SettingsRow(
+              icon: Icons.shield_outlined,
+              label: t.anonExportTitle,
+              detail: t.anonExportDetail,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => AnonExportPage(version: _version ?? ''),
+                ),
+              ),
+            ),
             if (_debugUnlocked)
               SettingsRow(
                 icon: Icons.bug_report_outlined,

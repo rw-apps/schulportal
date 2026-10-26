@@ -570,5 +570,17 @@
   "reasonServer": "Okul portalında şu anda bir arıza var.",
   "reasonDown": "Okul portalı şu anda kullanılamıyor.",
   "reasonUnreachable": "Okul portalına bağlantı yok.",
-  "reportError": "Hatayı bildir"
+  "reportError": "Hatayı bildir",
+  "anonExportTitle": "Anonim dışa aktarma",
+  "anonExportDetail": "İsim ve not olmadan portal sayfalarının yapısı – uygulamayı geliştirmeye yardımcı olur",
+  "anonExportIntro": "Dışa aktarma, okul portalı sayfalarının nasıl yapılandığını gösterir – isim, kısaltma, not veya metin olmadan. Böylece uygulama başka okulları ve öğretmen hesaplarını tanır.",
+  "anonExportRules": "“Vertretung” gibi sabit etiketler dışında her kelime rastgele harflerle değiştirilir. Notlar rastgele verilir; okul numarası, resimler ve giriş bilgileri kaldırılır. Sayılar, saatler ve tarihler kalır.",
+  "anonExportRun": "Dışa aktarmayı oluştur",
+  "anonExportProgress": "Sayfa {done} / {total} …",
+  "anonExportKeptTitle": "Bu kelimeler değişmeden kalır",
+  "anonExportKeptHint": "Lütfen kontrol edin: Burada bir isim varsa paylaşmayın ve haber verin.",
+  "anonExportPreviewTitle": "Önizleme",
+  "anonExportSize": "Dosyanın başı; dosyanın tamamı paylaşılır ({kb} KB).",
+  "anonExportNoSession": "Giriş yapılmadı – lütfen önce giriş yapın.",
+  "anonExportFailed": "Dışa aktarma oluşturulamadı."
 }
