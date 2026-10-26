@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:liblanis/liblanis.dart'
+    show TypedSettings, sharedOverAccountSettingsProvider;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 
@@ -8,6 +11,8 @@ import 'package:lanis/view/settings/subsettings/debug_export.dart';
 
 import '../../error_log.dart';
 import '../../l10n/l10n.dart';
+import '../../report_relay.dart';
+import '../today/auto_report_prompt.dart' show reportOs;
 import '../kit.dart';
 import 'anon_export_page.dart';
 import 'error_report_page.dart';
@@ -31,6 +36,16 @@ class AboutSettingsPage extends StatefulWidget {
 }
 
 class _AboutSettingsPageState extends State<AboutSettingsPage> {
+  TypedSettings? get _settings {
+    try {
+      return ProviderScope.containerOf(
+        context,
+      ).read(sharedOverAccountSettingsProvider);
+    } catch (_) {
+      return null;
+    }
+  }
+
   String? _version;
 
   /// Debug-Export erst nach 7× Antippen der Version (Entscheidung 17.10.26):
@@ -138,6 +153,24 @@ class _AboutSettingsPageState extends State<AboutSettingsPage> {
                 icon: Icons.check_circle_outline,
                 label: t.noErrors,
                 detail: t.noErrorsDetail,
+              ),
+            // Fork (26.10.26): automatisches Melden, nur mit eingerichtetem
+            // Dienst (report_relay.dart). Zustimmung auch hier änderbar.
+            if (relayConfigured)
+              SettingsRow(
+                icon: Icons.outgoing_mail,
+                label: t.autoReportSetting,
+                detail: t.autoReportSettingDetail,
+                chevron: false,
+                trailing: Switch(
+                  value: _settings?.getBool(autoReportKey) == true,
+                  onChanged: (v) => setState(() {
+                    _settings?.setBool(autoReportKey, v);
+                    if (v && _settings != null) {
+                      flushErrorReports(_settings!, os: reportOs());
+                    }
+                  }),
+                ),
               ),
             // Fork (26.10.26): Seitenaufbau ohne Namen und Noten – damit die
             // App Lehrerkonten und weitere Schulen lesen lernt. Sichtbar für

@@ -67,6 +67,9 @@ String? loadFailureReason(ForkL10n t, Object? e) {
     FaultKind.server => t.reasonServer,
     FaultKind.down => t.reasonDown,
     FaultKind.unreachable => t.reasonUnreachable,
+    // Seite kam an, ließ sich aber nicht lesen – meist unbekannter Aufbau
+    // (Lehrerkonto, andere Schule). Dazu „Anonym senden“ (page_report.dart).
+    FaultKind.other => t.reasonUnknownPage,
     _ => null,
   };
 }

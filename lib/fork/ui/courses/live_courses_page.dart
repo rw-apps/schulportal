@@ -11,6 +11,7 @@ import '../../courses_scan.dart';
 import '../../homework_ledger.dart';
 import '../../l10n/l10n.dart';
 import '../login_errors.dart';
+import '../live/page_report.dart';
 import '../kit.dart';
 import '../nav.dart';
 import '../live/live_data.dart';
@@ -52,9 +53,19 @@ class LiveCoursesPage extends ConsumerWidget {
           return LiveMessage(
             text: withReason(t, t.coursesFailed, s.lessons.error),
             style: Kit.of(context).meta,
-            action: TextButton(
-              onPressed: s.refresh,
-              child: Text(t.retry, style: Kit.of(context).link),
+            action: Wrap(
+              children: [
+                ?pageReportButton(
+                  context,
+                  session: s.session,
+                  phpUrl: 'meinunterricht.php',
+                  error: s.lessons.error,
+                ),
+                TextButton(
+                  onPressed: s.refresh,
+                  child: Text(t.retry, style: Kit.of(context).link),
+                ),
+              ],
             ),
           );
         }

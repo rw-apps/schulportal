@@ -1536,5 +1536,30 @@
     }
   },
   "anonExportNoSession": "Nicht angemeldet – bitte zuerst anmelden.",
-  "anonExportFailed": "Der Export ließ sich nicht erstellen."
+  "anonExportFailed": "Der Export ließ sich nicht erstellen.",
+  "autoReportTitle": "Fehler automatisch melden?",
+  "autoReportText": "Ohne Namen oder Inhalte – so lassen sich Fehler schneller beheben.",
+  "autoReportAllow": "Erlauben",
+  "autoReportLater": "Nicht jetzt",
+  "autoReportSetting": "Fehler automatisch melden",
+  "autoReportSettingDetail": "Ohne Namen oder Inhalte",
+  "reasonUnknownPage": "Die App kennt den Aufbau dieser Seite noch nicht.",
+  "pageReportButton": "Anonym senden",
+  "pageReportTitle": "Seite anonym senden?",
+  "pageReportText": "Gesendet wird nur der Aufbau von „{page}“. Diese Wörter bleiben stehen – steht hier ein Name? Dann bitte nicht senden.",
+  "@pageReportText": {
+    "placeholders": {
+      "page": {
+        "type": "String"
+      }
+    }
+  },
+  "pageReportLoading": "Seite wird anonymisiert …",
+  "pageReportPreview": "Ganze Vorschau ansehen",
+  "pageReportSend": "Senden",
+  "pageReportSent": "Gesendet – danke!",
+  "pageReportFailed": "Senden hat nicht geklappt.",
+  "pageLessons": "Mein Unterricht",
+  "pageSubstitutions": "Vertretungsplan",
+  "pageCalendar": "Kalender"
 }

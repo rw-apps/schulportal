@@ -3,13 +3,17 @@ import '../storage/storage_page.dart';
 import '../nav.dart' show pushInTab;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemNavigator;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:liblanis/liblanis.dart' show sharedOverAccountSettingsProvider;
 
 import 'package:lanis/applets/external_definitions.dart';
 import 'package:lanis/fork/start.dart';
 import 'package:lanis/utils/deep_link.dart';
 
 import '../../l10n/l10n.dart';
+import '../../report_relay.dart';
+import '../today/auto_report_prompt.dart' show reportOs;
 import '../../school_links.dart';
 import '../courses/course_detail_page.dart';
 import '../courses/courses_page.dart';
@@ -62,6 +66,27 @@ class PreviewShell extends StatefulWidget {
 
 class _PreviewShellState extends State<PreviewShell> {
   ShellTab _tab = ShellTab.today;
+
+  @override
+  void initState() {
+    super.initState();
+    // Fork (26.10.26): neue Fehler melden, falls zugestimmt
+    // (report_relay.dart). Nach dem ersten Bild, damit der Start nicht
+    // wartet; ohne Dienst oder Zustimmung tut es nichts.
+    if (widget.liveData) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        try {
+          flushErrorReports(
+            ProviderScope.containerOf(
+              context,
+            ).read(sharedOverAccountSettingsProvider),
+            os: reportOs(),
+          );
+        } catch (_) {}
+      });
+    }
+  }
 
   /// Ein Navigator je Reiter (Entscheidung 17.10.26: Leiste auch auf
   /// Unterseiten). Ursache: Mit einem gemeinsamen Navigator lag jede

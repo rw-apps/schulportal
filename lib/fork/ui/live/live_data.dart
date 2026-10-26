@@ -16,6 +16,7 @@ import '../../substitution_history.dart';
 import '../../lessons_parent.dart';
 import '../../l10n/l10n.dart';
 import '../login_errors.dart';
+import 'page_report.dart';
 import '../kit.dart';
 import 'feed_source.dart';
 import 'serial_loader.dart';
@@ -784,9 +785,19 @@ class LiveGate extends StatelessWidget {
               ? t.offlineNothingSaved
               : withReason(t, t.timetableFailed, s.timetable.error),
           style: k.meta,
-          action: TextButton(
-            onPressed: s.refresh,
-            child: Text(t.retry, style: k.link),
+          action: Wrap(
+            children: [
+              ?pageReportButton(
+                context,
+                session: s.session,
+                phpUrl: 'stundenplan.php',
+                error: s.timetable.error,
+              ),
+              TextButton(
+                onPressed: s.refresh,
+                child: Text(t.retry, style: k.link),
+              ),
+            ],
           ),
         );
       }

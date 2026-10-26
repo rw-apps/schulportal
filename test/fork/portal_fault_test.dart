@@ -80,7 +80,7 @@ void main() {
     );
     expect(
       withReason(t, t.timetableFailed, UnknownException('x')),
-      t.timetableFailed,
+      '${t.timetableFailed} ${t.reasonUnknownPage}',
     );
     expect(withReason(t, t.timetableFailed, null), t.timetableFailed);
   });

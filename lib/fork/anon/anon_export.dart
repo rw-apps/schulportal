@@ -182,3 +182,29 @@ Future<Response<dynamic>> _request(Dio dio, DebugExportHttpRequest r) async {
     );
   }
 }
+
+/// Eine einzelne Seite abrufen und anonymisieren – für „Anonym senden“ bei
+/// einer Seite, die die App nicht lesen konnte (page_report.dart).
+/// Ursache (Entwurf 26.10.26): Statt des ganzen Exports nur die Seite, an
+/// der es scheiterte – kleiner und genau passend zum Fehler.
+Future<AnonExport> anonPage({
+  required Dio dio,
+  required DebugExportHttpRequest request,
+  required int schoolId,
+  required String version,
+  required String label,
+  Anonymizer? anonymizer,
+}) async {
+  final a = anonymizer ?? Anonymizer(secretNumbers: ['$schoolId']);
+  final r = await _request(dio, request);
+  final ct = r.headers.value('content-type') ?? '';
+  final page = a.body(_asString(r.data), contentType: ct);
+  final text = StringBuffer()
+    ..writeln('Schulportal-App – anonyme Seite: $label')
+    ..writeln('Version $version · ${request.method} ${_shortUrl(a, request)}')
+    ..writeln('Status ${r.statusCode} · $ct')
+    ..writeln('Unverändert: ${a.kept.join(', ')}')
+    ..writeln()
+    ..write(page);
+  return AnonExport(text: text.toString(), kept: a.kept.toList());
+}

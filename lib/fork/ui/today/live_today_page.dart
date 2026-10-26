@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:liblanis/liblanis.dart' show sharedOverAccountSettingsProvider;
 
 import 'package:lanis/fork/absence/absence_view.dart';
 
@@ -15,6 +17,7 @@ import 'today_from_lanis.dart';
 import 'today_model.dart';
 import '../settings/class_sheet.dart';
 import 'class_prompt_card.dart';
+import 'auto_report_prompt.dart';
 import 'hint_card.dart';
 import '../portal_link.dart';
 import 'login_failure_card.dart';
@@ -209,6 +212,13 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
         return TodayPage(
           notices: [
             ?stale,
+            // Zustimmung zum automatischen Melden (auto_report_prompt.dart).
+            if (autoReportPromptDue(
+              ProviderScope.containerOf(
+                context,
+              ).read(sharedOverAccountSettingsProvider),
+            ))
+              const AutoReportPrompt(),
             for (final f in scope?.failures ?? const <FamilyFailure>[])
               LoginFailureCard(
                 failure: f,
