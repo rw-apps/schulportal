@@ -158,6 +158,7 @@ class HomeworkItem {
     required this.text,
     this.given,
     this.done,
+    this.due,
   });
 
   final String course;
@@ -166,6 +167,10 @@ class HomeworkItem {
   final String text;
   final DateTime? given;
   final DateTime? done;
+
+  /// Vermutete Frist: nächste Stunde im Fach nach [given] (homeworkLists,
+  /// dueOf); null = unbekannt (kein Stundenplan, Fach nicht im Plan).
+  final DateTime? due;
 
   String get key => homeworkKey(course, entry);
 
@@ -181,21 +186,40 @@ class HomeworkItem {
       );
 }
 
-/// Offene und erledigte Hausaufgaben eines Kontos.
+/// Offene, erledigte und abgelaufene Hausaufgaben eines Kontos.
 ///
 /// Offen: neueste Einträge mit Hausaufgabe, die weder das Portal noch das
 /// Protokoll als erledigt führt, dazu wieder geöffnete ältere aus dem
 /// Protokoll. Erledigt: alles, was das Protokoll als erledigt führt, und
 /// neueste Einträge, die das Portal als erledigt meldet (Schülerkonto, auf
-/// der Webseite abgehakt). [subjectOf] liefert den Fachnamen zur Kurs-ID.
-({List<HomeworkItem> open, List<HomeworkItem> done}) homeworkLists(
+/// der Webseite abgehakt). Abgelaufen: offene nach [homeworkExpiry] – sie
+/// gelten nicht als erledigt, sondern stehen als „nicht abgehakt“ im
+/// Archiv. [subjectOf] liefert den Fachnamen zur Kurs-ID, [dueOf] die
+/// vermutete Frist (ohne: keine Frist, nur die Halbjahresgrenze).
+({List<HomeworkItem> open, List<HomeworkItem> done, List<HomeworkItem> expired})
+homeworkLists(
   List<Lesson> lessons,
   HomeworkLedger ledger, {
   required String Function(Lesson l) subjectOf,
+  DateTime? Function(String course, DateTime? given)? dueOf,
+  DateTime? now,
 }) {
+  final at = now ?? DateTime.now();
   final open = <HomeworkItem>[];
   final done = <HomeworkItem>[];
+  final expired = <HomeworkItem>[];
   final seen = <String>{};
+  void sort(HomeworkItem item, bool isDone, HomeworkRecord? r) {
+    if (isDone) return done.add(item);
+    final reopened = r != null && !r.isDone ? r.changed : null;
+    final until = homeworkExpiry(
+      given: item.given,
+      due: item.due,
+      reopened: reopened,
+    );
+    (until != null && !at.isBefore(until) ? expired : open).add(item);
+  }
+
   for (final l in lessons) {
     final e = l.currentEntry;
     final h = e?.homework;
@@ -210,9 +234,9 @@ class HomeworkItem {
       text: h.description.trim(),
       given: e.topicDate,
       done: r?.done,
+      due: dueOf?.call(l.courseID, e.topicDate),
     );
-    final isDone = r != null ? r.isDone : h.homeWorkDone;
-    (isDone ? done : open).add(item);
+    sort(item, r != null ? r.isDone : h.homeWorkDone, r);
   }
   for (final r in ledger.byKey.values) {
     if (seen.contains(r.key)) continue;
@@ -223,16 +247,60 @@ class HomeworkItem {
       text: r.text,
       given: r.given,
       done: r.done,
+      due: dueOf?.call(r.course, r.given),
     );
-    (r.isDone ? done : open).add(item);
+    sort(item, r.isDone, r);
   }
   int byGiven(HomeworkItem a, HomeworkItem b) =>
       (b.given ?? DateTime(2000)).compareTo(a.given ?? DateTime(2000));
   open.sort(byGiven);
+  expired.sort(byGiven);
   done.sort((a, b) {
     final x = b.done ?? b.given ?? DateTime(2000);
     final y = a.done ?? a.given ?? DateTime(2000);
     return x.compareTo(y);
   });
-  return (open: open, done: done);
+  return (open: open, done: done, expired: expired);
+}
+
+/// Tage nach der vermuteten Frist, nach denen eine offene Hausaufgabe ins
+/// Archiv wandert (homeworkExpiry).
+const homeworkExpireDays = 28;
+
+/// Ab wann eine offene Hausaufgabe als abgelaufen gilt; null = nie (Tag des
+/// Aufgebens unbekannt).
+///
+/// Abnahme 27.10.26: zum früheren von (a) vier Wochen nach der vermuteten
+/// Frist [due] und (b) dem nächsten Halbjahreswechsel (1. Februar bzw.
+/// 1. August) nach dem Aufgeben – danach ändern sich die Kurse, und
+/// Aufgaben aus nicht mehr belieferten Kursen blieben sonst ewig stehen.
+/// Ohne Frist gilt nur (b). Wieder geöffnet ([reopened], im Archiv oder
+/// unter „Erledigt“): Zählung neu ab diesem Tag – vier Wochen bzw. bis zum
+/// nächsten Halbjahreswechsel danach. Grenze: Die Halbjahresgrenzen sind
+/// feste Tage, nicht die der Schule (Zeugnistermine kennt die App nicht).
+DateTime? homeworkExpiry({DateTime? given, DateTime? due, DateTime? reopened}) {
+  final base = reopened ?? given;
+  if (base == null) return null;
+  final half = halfYearAfter(base);
+  // Kalendertage statt Duration: über die Zeitumstellung hinweg sonst eine
+  // Stunde daneben (Test 27.10.26: 17.11. 23:00 statt 18.11.).
+  DateTime plus(DateTime d) =>
+      DateTime(d.year, d.month, d.day + homeworkExpireDays, d.hour, d.minute);
+  final limit = reopened != null
+      ? plus(reopened)
+      : (due == null ? null : plus(due));
+  if (limit == null) return half;
+  return limit.isBefore(half) ? limit : half;
+}
+
+/// Nächster Halbjahreswechsel (1. Februar, 1. August) nach [d].
+DateTime halfYearAfter(DateTime d) {
+  for (final c in [
+    DateTime(d.year, 2, 1),
+    DateTime(d.year, 8, 1),
+    DateTime(d.year + 1, 2, 1),
+  ]) {
+    if (c.isAfter(d)) return c;
+  }
+  return DateTime(d.year + 1, 2, 1);
 }

@@ -72,7 +72,7 @@ void main() {
       _l('b', 'Biologie 9x', '2', null),
     ];
     var ledger = HomeworkLedger.empty;
-    var x = homeworkLists(lessons, ledger, subjectOf: (l) => l.name);
+    var x = homeworkLists(lessons, ledger, subjectOf: (l) => l.name, now: now);
     expect([for (final h in x.open) h.course], ['m', 'd']);
     expect([for (final h in x.done) h.course], ['e']);
 
@@ -91,11 +91,109 @@ void main() {
       ).record(now: now),
       now,
     );
-    x = homeworkLists(lessons, ledger, subjectOf: (l) => l.name);
+    x = homeworkLists(lessons, ledger, subjectOf: (l) => l.name, now: now);
     expect({for (final h in x.open) h.key}, {'e|4', 'd|9', 'd|5'});
     expect([for (final h in x.done) h.key], ['m|7']);
     expect(x.done.single.done, now);
   });
+
+  test('Halbjahreswechsel 1. Februar / 1. August', () {
+    expect(halfYearAfter(DateTime(2026, 10, 27)), DateTime(2027, 2, 1));
+    expect(halfYearAfter(DateTime(2027, 1, 15)), DateTime(2027, 2, 1));
+    expect(halfYearAfter(DateTime(2027, 2, 1)), DateTime(2027, 8, 1));
+    expect(halfYearAfter(DateTime(2027, 7, 31)), DateTime(2027, 8, 1));
+  });
+
+  test('Ablauf: vier Wochen nach der Frist, spätestens Halbjahr', () {
+    // Frist bekannt: 4 Wochen danach.
+    expect(
+      homeworkExpiry(
+        given: DateTime(2026, 10, 20),
+        due: DateTime(2026, 10, 21),
+      ),
+      DateTime(2026, 11, 18),
+    );
+    // Ohne Frist: Halbjahreswechsel.
+    expect(homeworkExpiry(given: DateTime(2026, 10, 20)), DateTime(2027, 2, 1));
+    // Frist kurz vor dem Wechsel: der Wechsel kommt zuerst.
+    expect(
+      homeworkExpiry(given: DateTime(2027, 1, 20), due: DateTime(2027, 1, 22)),
+      DateTime(2027, 2, 1),
+    );
+    // Wieder geöffnet: neu ab diesem Tag.
+    expect(
+      homeworkExpiry(
+        given: DateTime(2026, 10, 20),
+        due: DateTime(2026, 10, 21),
+        reopened: DateTime(2026, 12, 1),
+      ),
+      DateTime(2026, 12, 29),
+    );
+    expect(homeworkExpiry(), isNull);
+  });
+
+  test(
+    'Abgelaufen: nicht erledigt, eigene Liste; wieder geöffnet zählt neu',
+    () {
+      // Aufgegeben 14.10. (_l); Frist laut Plan 15.10. → abgelaufen ab 12.11.
+      DateTime? due(String course, DateTime? given) =>
+          course == 'm' ? DateTime(2026, 10, 15) : null;
+      final lessons = [
+        _l('m', 'Mathematik 9x', '7', 'S. 12 Nr. 3'),
+        _l('d', 'Deutsch 9x', '9', 'Gedicht lernen'),
+      ];
+      var x = homeworkLists(
+        lessons,
+        HomeworkLedger.empty,
+        subjectOf: (l) => l.name,
+        dueOf: due,
+        now: DateTime(2026, 11, 11),
+      );
+      expect([for (final h in x.open) h.course], ['m', 'd']);
+      expect(x.open.first.due, DateTime(2026, 10, 15));
+      x = homeworkLists(
+        lessons,
+        HomeworkLedger.empty,
+        subjectOf: (l) => l.name,
+        dueOf: due,
+        now: DateTime(2026, 11, 12),
+      );
+      expect([for (final h in x.open) h.course], ['d']);
+      expect([for (final h in x.expired) h.course], ['m']);
+      expect(x.done, isEmpty);
+      // Ohne Frist (Deutsch) erst zum Halbjahr.
+      x = homeworkLists(
+        lessons,
+        HomeworkLedger.empty,
+        subjectOf: (l) => l.name,
+        dueOf: due,
+        now: DateTime(2027, 2, 1),
+      );
+      expect([for (final h in x.expired) h.course], ['m', 'd']);
+      // Im Archiv wieder geöffnet (12.11.): wieder offen bis 10.12.
+      final reopened = DateTime(2026, 11, 12, 18);
+      final ledger = HomeworkLedger.empty.put(
+        x.expired.first.record(now: reopened),
+        reopened,
+      );
+      x = homeworkLists(
+        lessons,
+        ledger,
+        subjectOf: (l) => l.name,
+        dueOf: due,
+        now: DateTime(2026, 12, 1),
+      );
+      expect([for (final h in x.open) h.course], ['m', 'd']);
+      x = homeworkLists(
+        lessons,
+        ledger,
+        subjectOf: (l) => l.name,
+        dueOf: due,
+        now: DateTime(2026, 12, 11),
+      );
+      expect([for (final h in x.expired) h.course], ['m']);
+    },
+  );
 
   testWidgets('Unterricht: abhaken, Rückgängig, Zugang zum Archiv', (t) async {
     t.view.physicalSize = const Size(1080, 2424);

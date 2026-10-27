@@ -10,7 +10,7 @@ Die App ist eine Abwandlung von [Lanis-Mobile](https://github.com/lanis-mobile/l
 
 - **Heute** – je Kind eine Karte: Ausfälle, Vertretungen und Raumwechsel zuerst, darunter der Stundenplan des Tages mit der laufenden Stunde; offene Hausaufgaben, neue Nachrichten, nächste Termine.
 - **Kalender** – Tag, Woche und Termine; Vertretungen bleiben auch für vergangene Tage sichtbar; Gruppenwahl bei parallelen Kursen (z. B. Religion/Ethik).
-- **Unterricht** – Kursmappen, offene und erledigte Hausaufgaben, anstehende Arbeiten, Noten und Fehlzeiten.
+- **Unterricht** – Kursmappen, offene Hausaufgaben mit vermuteter Frist (nächste Stunde im Fach), Archiv für erledigte und abgelaufene, anstehende Arbeiten, Noten und Fehlzeiten.
 - **Nachrichten** – lesen, beantworten, neu schreiben.
 - **Familie** – mehrere Konten nebeneinander, auch an verschiedenen Schulen (Eltern- und Schülerkonten).
 - **Essen** – bestellte Gerichte der Woche, bestellen und abbestellen in der App, Hinweise bei fehlender Bestellung und niedrigem Guthaben (für die bekannten Bestellseiten; sonst öffnet sich die Seite des Caterers).

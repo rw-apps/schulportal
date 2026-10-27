@@ -993,7 +993,7 @@
       }
     }
   },
-  "homeworkArchiveTitle": "Erledigte Hausaufgaben",
+  "homeworkArchiveTitle": "Hausaufgaben-Archiv",
   "homeworkArchiveEmpty": "Noch keine erledigten Hausaufgaben. Abgehakte Aufgaben erscheinen hier und lassen sich wieder öffnen.",
   "homeworkMarkedDone": "Als erledigt abgehakt.",
   "homeworkReopen": "Wieder offen",
@@ -1308,7 +1308,7 @@
   "upcomingExamsTitle": "Anstehende Arbeiten",
   "noUpcomingExams": "Keine Arbeiten in den nächsten Wochen bekannt.",
   "coursesAllHint": "Fächer, Noten und Kursmappen stehen beim einzelnen Kind – oben antippen.",
-  "archiveForWhom": "Erledigte Hausaufgaben von …",
+  "archiveForWhom": "Hausaufgaben-Archiv von …",
   "kidColorsTitle": "Farben der Kinder",
   "kidColorsHint": "Die Farbe gilt überall in der App und wird beim Übertragen der Eingaben mitgenommen.",
   "kidColorPick": "Farbe {n}",
@@ -1701,5 +1701,33 @@
   "mealRemindText": "Hinweis auf Heute und Benachrichtigung, wenn für einen Tag noch nichts bestellt ist und die Frist bald abläuft.",
   "mealRemindAll": "Erinnern, wenn nichts bestellt ist",
   "summaryMealOpen": "Essen noch nicht bestellt",
-  "mealFetchDetails": "Details zum Abruf"
+  "mealFetchDetails": "Details zum Abruf",
+  "hwDueOn": "fällig {day}",
+  "@hwDueOn": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "hwDueToday": "fällig heute",
+  "hwDueTomorrow": "fällig morgen",
+  "hwOverdue": "war fällig {day} · erledigt?",
+  "@hwOverdue": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "hwNotTickedTitle": "Nicht abgehakt",
+  "hwDoneTitle": "Erledigt",
+  "hwWasDue": "war fällig {day}",
+  "@hwWasDue": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  }
 }

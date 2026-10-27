@@ -361,7 +361,7 @@
   "examsGradesTab": "Sınavlar ve notlar",
   "undo": "Geri al",
   "homeworkArchive": "Tamamlanan ({n})",
-  "homeworkArchiveTitle": "Tamamlanan ödevler",
+  "homeworkArchiveTitle": "Ödev arşivi",
   "homeworkArchiveEmpty": "Henüz tamamlanan ödev yok. İşaretlenen ödevler burada görünür ve yeniden açılabilir.",
   "homeworkMarkedDone": "Tamamlandı olarak işaretlendi.",
   "homeworkReopen": "Yeniden aç",
@@ -492,7 +492,7 @@
   "upcomingExamsTitle": "Yaklaşan sınavlar",
   "noUpcomingExams": "Önümüzdeki haftalar için bilinen sınav yok.",
   "coursesAllHint": "Dersler, notlar ve ders dosyaları her çocukta ayrı gösterilir – yukarıdan seçin.",
-  "archiveForWhom": "Tamamlanan ödevler …",
+  "archiveForWhom": "Ödev arşivi …",
   "kidColorsTitle": "Çocukların renkleri",
   "kidColorsHint": "Renk uygulamanın her yerinde geçerlidir ve girişler aktarılırken birlikte taşınır.",
   "kidColorPick": "Renk {n}",
@@ -653,5 +653,12 @@
   "mealRemindText": "Bir gün için henüz sipariş yoksa ve süre dolmak üzereyse Bugün'de not ve bildirim.",
   "mealRemindAll": "Sipariş yoksa hatırlat",
   "summaryMealOpen": "yemek henüz sipariş edilmedi",
-  "mealFetchDetails": "Okuma ayrıntıları"
+  "mealFetchDetails": "Okuma ayrıntıları",
+  "hwDueOn": "son gün {day}",
+  "hwDueToday": "son gün bugün",
+  "hwDueTomorrow": "son gün yarın",
+  "hwOverdue": "son gün {day} idi · yapıldı mı?",
+  "hwNotTickedTitle": "İşaretlenmedi",
+  "hwDoneTitle": "Tamamlandı",
+  "hwWasDue": "son gün {day} idi"
 }

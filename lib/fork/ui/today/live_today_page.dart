@@ -25,6 +25,7 @@ import '../../mensa_store.dart';
 import '../../demo/demo_mode.dart' show demoActive;
 import '../../notify/summary.dart';
 import '../mensa/meal_refresh.dart';
+import '../courses/homework_due.dart' show liveOpenHomework;
 import '../mensa/meal_week_page.dart';
 import 'kid_hints.dart' show nextSchoolDay;
 import 'today_page.dart';

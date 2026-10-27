@@ -361,7 +361,7 @@
   "examsGradesTab": "Tests & grades",
   "undo": "Undo",
   "homeworkArchive": "Done ({n})",
-  "homeworkArchiveTitle": "Completed homework",
+  "homeworkArchiveTitle": "Homework archive",
   "homeworkArchiveEmpty": "No completed homework yet. Ticked-off tasks appear here and can be reopened.",
   "homeworkMarkedDone": "Marked as done.",
   "homeworkReopen": "Reopen",
@@ -492,7 +492,7 @@
   "upcomingExamsTitle": "Upcoming tests",
   "noUpcomingExams": "No tests known for the coming weeks.",
   "coursesAllHint": "Subjects, grades and course folders are shown per child – tap a name above.",
-  "archiveForWhom": "Completed homework of …",
+  "archiveForWhom": "Homework archive of …",
   "kidColorsTitle": "Children's colours",
   "kidColorsHint": "The colour applies throughout the app and is included when transferring your entries.",
   "kidColorPick": "Colour {n}",
@@ -653,5 +653,12 @@
   "mealRemindText": "A note on Today and a notification when nothing is ordered for a day and the deadline is near.",
   "mealRemindAll": "Remind when nothing is ordered",
   "summaryMealOpen": "lunch not ordered yet",
-  "mealFetchDetails": "Fetch details"
+  "mealFetchDetails": "Fetch details",
+  "hwDueOn": "due {day}",
+  "hwDueToday": "due today",
+  "hwDueTomorrow": "due tomorrow",
+  "hwOverdue": "was due {day} · done?",
+  "hwNotTickedTitle": "Not ticked off",
+  "hwDoneTitle": "Done",
+  "hwWasDue": "was due {day}"
 }

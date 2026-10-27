@@ -17,6 +17,7 @@ import '../today/auto_report_prompt.dart' show reportOs;
 import '../../school_links.dart';
 import '../courses/course_detail_page.dart';
 import '../courses/courses_page.dart';
+import '../courses/homework_due.dart' show liveOpenHomework;
 import '../courses/live_courses_page.dart';
 import '../kit.dart';
 import '../live/family.dart';

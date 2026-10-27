@@ -10,6 +10,7 @@ import '../kid_chips.dart';
 import '../kit.dart';
 import '../live/live_data.dart';
 import 'courses_model.dart' show courseTitle;
+import 'homework_due.dart';
 
 /// Hausaufgabe abhaken oder wieder öffnen.
 ///
@@ -62,10 +63,12 @@ class LiveHomeworkArchive extends ConsumerWidget {
       s.lessons.content ?? const <Lesson>[],
       s.homework,
       subjectOf: (l) => courseTitle(l.name),
+      dueOf: liveHomeworkDue(s),
     );
     final parser = ref.read(lessonsStudentParserProvider);
     return HomeworkArchivePage(
       items: lists.done,
+      expired: lists.expired,
       firstName: s.firstName,
       onReopen: (i) {
         final t = context.t;
@@ -92,9 +95,15 @@ class HomeworkArchivePage extends StatelessWidget {
     required this.items,
     required this.onReopen,
     this.firstName = '',
+    this.expired = const [],
   });
 
   final List<HomeworkItem> items;
+
+  /// Nicht abgehakt und abgelaufen (homeworkExpiry): eigener Abschnitt
+  /// über den erledigten, damit nichts als „erledigt“ erscheint, was
+  /// vielleicht nie gemacht wurde (Abnahme 27.10.26).
+  final List<HomeworkItem> expired;
   final void Function(HomeworkItem item) onReopen;
   final String firstName;
 
@@ -120,6 +129,25 @@ class HomeworkArchivePage extends StatelessWidget {
               padding: const EdgeInsets.only(left: Sp.xs, bottom: Sp.m),
               child: Text(firstName, style: k.meta),
             ),
+          if (expired.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Sp.xs, 0, Sp.xs, Sp.s),
+              child: Text(t.hwNotTickedTitle, style: k.cardSection),
+            ),
+            for (final i in expired)
+              Padding(
+                padding: const EdgeInsets.only(bottom: Sp.s),
+                child: _DoneCard(
+                  item: i,
+                  expired: true,
+                  onReopen: () => onReopen(i),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Sp.xs, Sp.l, Sp.xs, Sp.s),
+              child: Text(t.hwDoneTitle, style: k.cardSection),
+            ),
+          ],
           if (items.isEmpty)
             Padding(
               padding: const EdgeInsets.all(Sp.xs),
@@ -137,10 +165,17 @@ class HomeworkArchivePage extends StatelessWidget {
 }
 
 class _DoneCard extends StatelessWidget {
-  const _DoneCard({required this.item, required this.onReopen});
+  const _DoneCard({
+    required this.item,
+    required this.onReopen,
+    this.expired = false,
+  });
 
   final HomeworkItem item;
   final VoidCallback onReopen;
+
+  /// Abgelaufen statt erledigt: leerer Kreis, „war fällig …“.
+  final bool expired;
 
   @override
   Widget build(BuildContext context) {
@@ -150,8 +185,10 @@ class _DoneCard extends StatelessWidget {
       item.subject,
       if (item.given != null)
         t.givenDate(formatDate(t, t.dateShort, item.given!)),
-      if (item.done != null)
+      if (!expired && item.done != null)
         t.homeworkDoneOn(formatDate(t, t.dateShort, item.done!)),
+      if (expired && item.due != null)
+        t.hwWasDue(formatDate(t, t.dateShort, item.due!)),
     ].join(' · ');
     return Container(
       padding: const EdgeInsets.fromLTRB(Sp.l, Sp.m, Sp.s, Sp.s),
@@ -168,7 +205,7 @@ class _DoneCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: Sp.xxs),
                 child: Icon(
-                  Icons.check_circle,
+                  expired ? Icons.radio_button_unchecked : Icons.check_circle,
                   size: Sz.navIcon,
                   color: k.p.faint,
                 ),

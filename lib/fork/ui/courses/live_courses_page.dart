@@ -31,6 +31,7 @@ import 'courses_page.dart';
 import 'grades_view.dart';
 import 'absences_page.dart';
 import 'homework_archive.dart';
+import 'homework_due.dart';
 
 /// „Unterricht“ mit echten Daten (LiveDataScope, Quelle „Mein Unterricht“).
 /// Antippen öffnet die neue Kursseite ([CourseDetailPage]); sie lädt die
@@ -82,6 +83,7 @@ class LiveCoursesPage extends ConsumerWidget {
           s.lessons.content ?? const <Lesson>[],
           s.homework,
           subjectOf: (l) => titles[l.courseID] ?? courseTitle(l.name),
+          dueOf: liveHomeworkDue(s),
         );
         // Abgehakt in der App gilt auch für die Marke an der Kurszeile.
         final doneKeys = {for (final h in hw.done) h.key};
@@ -199,6 +201,7 @@ Widget liveCourseDetail(
     s.lessons.content ?? const <Lesson>[],
     s.homework,
     subjectOf: (_) => i.title,
+    dueOf: liveHomeworkDue(s),
   );
   // Farbe des Kindes: Rahmen des Kontos (Ansicht „Alle“), sonst das
   // aktive Konto in der Familie.
@@ -330,6 +333,7 @@ class LiveAllCoursesPage extends ConsumerWidget {
         s.lessons.content ?? const <Lesson>[],
         s.homework,
         subjectOf: (l) => byId[l.courseID]?.title ?? courseTitle(l.name),
+        dueOf: liveHomeworkDue(s),
       );
       // Parser des Kontos lesen, solange die Seite steht (nav.dart, _once).
       final c = m.container;

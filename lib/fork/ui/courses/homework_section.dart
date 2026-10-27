@@ -16,6 +16,7 @@ class HwEntry {
   });
 
   final HomeworkItem item;
+
   final KidTag? kid;
 
   /// Kurs öffnen (Antippen der Karte); null = nur Anzeige.
@@ -52,7 +53,11 @@ class HomeworkSection extends StatefulWidget {
     this.doneTotal,
     this.onShowAll,
     this.readOnly = false,
+    this.now,
   });
+
+  /// Nur Tests/Entwürfe (Frist-Zeile).
+  final DateTime? now;
 
   final List<HwEntry> open;
 
@@ -209,6 +214,7 @@ class _HomeworkSectionState extends State<HomeworkSection> {
                 ticked: (_openStage[e.key] ?? 0) >= 1,
                 flash: e.key == _flashKey ? _keyFlash : null,
                 onTick: widget.readOnly ? null : () => _start(_openStage, e),
+                now: widget.now,
               ),
             ),
             () => _finishTick(e),
@@ -258,7 +264,11 @@ class _OpenCard extends StatelessWidget {
     required this.ticked,
     required this.onTick,
     this.flash,
+    this.now,
   });
+
+  /// Nur Tests/Entwürfe.
+  final DateTime? now;
 
   final HwEntry entry;
   final bool ticked;
@@ -324,6 +334,10 @@ class _OpenCard extends StatelessWidget {
                   if (entry.kid != null) KidLine(kid: entry.kid!),
                 ],
               ),
+              if (entry.item.due case final due?) ...[
+                const SizedBox(height: Sp.xs),
+                _DueLine(due: due, now: now ?? DateTime.now()),
+              ],
             ],
           ),
         ),
@@ -548,6 +562,55 @@ class _DoneToggle extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Frist unter einer offenen Hausaufgabe (Entwurf 27.10.26): „fällig
+/// Mi 28.10.“ (Nebenschrift), „fällig heute“/„fällig morgen“ (kräftig),
+/// nach dem Tag gelb „war fällig Mi 22.10. · erledigt?“. Gelb wie andere
+/// Hinweise, die etwas zu tun verlangen; das Fragezeichen, weil die Frist
+/// nur vermutet ist (HomeworkItem.due) – die App hakt nichts selbst ab.
+class _DueLine extends StatelessWidget {
+  const _DueLine({required this.due, required this.now});
+
+  final DateTime due;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final t = context.t;
+    // In UTC rechnen: Über die Zeitumstellung hinweg ergäbe die Differenz
+    // lokaler Mitternächte 23 Stunden = 0 Tage („heute“ statt „morgen“).
+    final diff = DateTime.utc(
+      due.year,
+      due.month,
+      due.day,
+    ).difference(DateTime.utc(now.year, now.month, now.day)).inDays;
+    final day = formatDate(t, t.dateShort, due);
+    if (diff < 0) {
+      final tone = k.p.change;
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: Sp.s, vertical: Sp.xxs),
+        decoration: BoxDecoration(
+          color: tone.bg,
+          borderRadius: BorderRadius.circular(Rad.pill),
+        ),
+        child: Text(
+          t.hwOverdue(day),
+          style: k.tileCaption.copyWith(color: tone.ink),
+        ),
+      );
+    }
+    final text = switch (diff) {
+      0 => t.hwDueToday,
+      1 => t.hwDueTomorrow,
+      _ => t.hwDueOn(day),
+    };
+    return Text(
+      text,
+      style: diff <= 1 ? k.planTeacher(k.p.ink) : k.planMeta(k.p.muted),
     );
   }
 }

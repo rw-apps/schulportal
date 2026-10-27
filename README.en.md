@@ -10,7 +10,7 @@ The app is a fork of [Lanis-Mobile](https://github.com/lanis-mobile/lanis) and, 
 
 - **Today** – one card per child: cancellations, substitutions and room changes first, then the day's timetable with the current lesson; open homework, new messages, upcoming events.
 - **Calendar** – day, week and events; substitutions stay visible for past days; group choice for parallel courses (e.g. religion/ethics).
-- **Lessons** – course folders, open and completed homework, upcoming tests, grades and absences.
+- **Lessons** – course folders, open homework with an estimated due date (next lesson of the subject), an archive for completed and expired ones, upcoming tests, grades and absences.
 - **Messages** – read, reply, write new ones.
 - **Family** – several accounts side by side, also at different schools (parent and student accounts).
 - **Meals** – the week's ordered meals, ordering and cancelling in the app, hints for missing orders and low balance (for known caterer pages; otherwise the caterer's page opens).

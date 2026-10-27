@@ -837,16 +837,6 @@ class LiveMessage extends StatelessWidget {
   );
 }
 
-/// Offene Hausaufgaben: neueste Einträge mit Hausaufgabe, die weder Portal
-/// noch App als erledigt führen, dazu in der App wieder geöffnete
-/// (homeworkLists). Grenze: Ältere offene Aufgaben, die nie in der App
-/// standen, zeigt auch die Übersicht des Portals nicht.
-int liveOpenHomework(LiveSnapshot s) => homeworkLists(
-  s.lessons.content ?? const <Lesson>[],
-  s.homework,
-  subjectOf: (l) => l.name,
-).open.length;
-
 /// Ungelesene, nicht ausgeblendete Nachrichten laut Übersicht.
 int liveUnreadMessages(LiveSnapshot s) => [
   for (final e in s.conversations.content ?? const <OverviewEntry>[])
