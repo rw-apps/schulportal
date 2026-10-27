@@ -9,6 +9,9 @@ import 'package:lanis/bridge/lanis_bootstrap.dart' show bootstrapOverrides;
 import 'package:lanis/utils/privacy_policy.dart';
 
 import '../error_log.dart';
+import '../mensa_store.dart';
+import '../ui/live/live_data.dart' show mensaUrlSetting;
+import 'demo_meals.dart';
 import '../parent_support.dart';
 import 'demo_portal.dart';
 import 'demo_school.dart';
@@ -70,6 +73,7 @@ Future<List<Override>> bootstrapDemoClient(
   }
 
   demoActive = true;
+  MealCache.instance.demo = (_) => demoMealEntry(DateTime.now());
   ErrorLog.instance.muted = true;
   final overrides = LanisClient.configure(
     databasePath: path,
@@ -90,7 +94,7 @@ Future<void> prepareDemoDatabase(LanisDatabase db, DemoChoice choice) async {
   final shared = TypedSettings.shared(db);
   acceptPrivacyPolicy(shared);
   for (final u in demoUsersFor(choice)) {
-    await db.addAccount(
+    final id = await db.addAccount(
       schoolId: demoSchoolId,
       schoolName: demoSchoolName,
       username: u.username,
@@ -99,11 +103,18 @@ Future<void> prepareDemoDatabase(LanisDatabase db, DemoChoice choice) async {
           ? AccountType.parent
           : AccountType.student,
     );
+    // Erfundener Caterer (demo_meals.dart): Adresse, damit „Essen“ und die
+    // Zeilen auf Heute erscheinen.
+    TypedSettings.account(
+      db,
+      id,
+    ).setString('fork/$mensaUrlSetting', demoMensaUrl);
   }
 }
 
 /// Demo verlassen: Merker zurück, Protokoll wieder an.
 void leaveDemo() {
   demoActive = false;
+  MealCache.instance.demo = null;
   ErrorLog.instance.muted = false;
 }

@@ -64,6 +64,7 @@ class MealWeek {
   DateTime get start => days.first.day;
 
   Map<String, dynamic> toJson() => {
+    'v': format,
     'label': label,
     'balance': ?balance,
     'prev': ?prev,
@@ -73,8 +74,13 @@ class MealWeek {
     'days': [for (final d in days) d.toJson()],
   };
 
+  /// Stand des gespeicherten Formats. Ältere Wochen (vor 9413: ohne
+  /// Bestellbarkeit und Kennungen) werden verworfen und neu gelesen –
+  /// sonst fehlten „Bestellen“-Knöpfe (Bildschirmfoto 27.10.26).
+  static const format = 2;
+
   static MealWeek? fromJson(Object? j) {
-    if (j is! Map) return null;
+    if (j is! Map || j['v'] != format) return null;
     final days = [
       for (final d in (j['days'] as List? ?? const []))
         if (MealDay.fromJson(d) case final x?) x,

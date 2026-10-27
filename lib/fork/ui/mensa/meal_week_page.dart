@@ -9,6 +9,7 @@ import '../../mensa_week.dart';
 import '../kit.dart';
 import '../nav.dart';
 import '../today/today_page.dart' show dayDiff, schoolWeek;
+import '../../demo/demo_entry.dart' show blockedInDemo;
 import 'meal_fetcher.dart';
 import 'meal_order.dart';
 import 'mensa_page.dart';
@@ -84,7 +85,11 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
     _refresh();
   }
 
+  /// Demo: feste Wochen (demo_meals.dart), nichts zu lesen.
+  bool get _demo => _cache.demo != null;
+
   void _refresh() => setState(() {
+    if (_demo) return;
     _round++;
     _fetch = mensaUrlForWeek(_base, isoWeek(_thisWeek));
     _want = _thisWeek;
@@ -103,11 +108,10 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
 
   void _go(MealWeek w, int dir) {
     final target = DateTime(w.start.year, w.start.month, w.start.day + 7 * dir);
-    final have = _weeks.any(
-      (x) => dayDiff(schoolWeek(x.start).first, schoolWeek(target).first) == 0,
-    );
     setState(() => _shown = schoolWeek(target).first);
-    if (!have) {
+    // Auch gespeicherte Wochen neu lesen: Bestellstand und Fristen ändern
+    // sich (Bildschirmfoto 27.10.26 – alte Woche ohne „Bestellen“).
+    if (!_demo) {
       final link = dir > 0 ? w.next : w.prev;
       if (link != null) {
         setState(() {
@@ -121,6 +125,7 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
   }
 
   Future<void> _order(MealWeek? w) async {
+    if (blockedInDemo(context)) return;
     await pushFullScreen<void>(
       context,
       (_) => MensaPage(
@@ -144,6 +149,7 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
     // beim Caterer, und ein Wochenwechsel dort könnte das Speichern in eine
     // andere Woche lenken (Prüfung 27.10.26).
     if (_job != null || _fetch != null) return;
+    if (blockedInDemo(context)) return;
     if (!await confirmMealChange(context, day: d, option: o)) return;
     if (!mounted || _job != null || _fetch != null) return;
     setState(() {

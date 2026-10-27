@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:liblanis/liblanis.dart' show TypedSettings;
 
 import 'mensa_week.dart';
@@ -143,6 +144,11 @@ class MealCache {
   static final instance = MealCache._();
 
   TypedSettings? _settings;
+
+  /// Demo (demo_meals.dart): fester Stand für jedes Kind, nichts wird
+  /// gespeichert oder neu gelesen. null = echte Daten.
+  MealEntry Function(String owner)? demo;
+
   final notifier = ValueNotifier<Map<String, MealEntry>>(const {});
 
   void attach(TypedSettings s) {
@@ -160,10 +166,20 @@ class MealCache {
     } catch (_) {
       // Unlesbar – wie leer; der nächste Abruf schreibt neu.
     }
-    notifier.value = out;
+    // Aufruf aus initState (MealRefresh, MealWeekPage) fällt in den Aufbau;
+    // Heute hört auf [notifier] – erst nach dem Bild melden, sonst
+    // „setState() called during build“ (Demo-Test 27.10.26).
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      SchedulerBinding.instance.addPostFrameCallback(
+        (_) => notifier.value = out,
+      );
+    } else {
+      notifier.value = out;
+    }
   }
 
-  MealEntry? of(String owner) => notifier.value[owner];
+  MealEntry? of(String owner) => demo?.call(owner) ?? notifier.value[owner];
 
   /// Neue Wochen übernehmen: gleiche Woche ersetzt, höchstens drei Wochen
   /// (die jüngsten) je Kind.
@@ -203,6 +219,7 @@ class MealCache {
   );
 
   void _store(String owner, MealEntry e) {
+    if (demo != null) return;
     final next = {...notifier.value, owner: e};
     notifier.value = next;
     try {
