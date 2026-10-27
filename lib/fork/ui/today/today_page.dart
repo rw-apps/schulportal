@@ -502,20 +502,28 @@ class KidCard extends StatelessWidget {
     // Pillen stand bei großer Schrift fast jeder Knopf in einer eigenen
     // Zeile; nebeneinander mit schrumpfender Schrift wurden lange
     // Beschriftungen ungleich klein. Grenze: höchstens vier Aktionen.
+    //
+    // Vier Aktionen (Entwurf 27.10.26): In einer Zeile brachen „3 Aufgaben“
+    // und „1 Nachricht“ mitten im Wort um („Aufga|ben“). Ab vier deshalb
+    // zwei Zeilen zu je zwei Knöpfen; bis drei bleibt es eine Zeile.
+    Widget row(List<Widget> bs) => IntrinsicHeight(
+      // Gleich hoch, auch wenn eine Beschriftung zweizeilig ist.
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final (j, b) in bs.indexed) ...[
+            if (j > 0) const SizedBox(width: Sp.s),
+            Expanded(child: b),
+          ],
+        ],
+      ),
+    );
+    if (items.length <= 3) return [const SizedBox(height: Sp.m), row(items)];
     return [
       const SizedBox(height: Sp.m),
-      // Gleich hoch, auch wenn eine Beschriftung zweizeilig ist.
-      IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final (j, b) in items.indexed) ...[
-              if (j > 0) const SizedBox(width: Sp.s),
-              Expanded(child: b),
-            ],
-          ],
-        ),
-      ),
+      row(items.sublist(0, 2)),
+      const SizedBox(height: Sp.s),
+      row(items.sublist(2)),
     ];
   }
 }
