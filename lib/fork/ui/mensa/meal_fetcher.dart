@@ -317,6 +317,16 @@ class _MealFetcherState extends State<MealFetcher> {
       if ('$r'.contains('filled')) {
         _triedLogin = true;
         _afterLogin = true;
+        // Manche Anmeldeseiten melden sich per Skript an und leiten erst
+        // danach weiter (React, bis zu 6 s Warten auf das Hydrieren in
+        // mensaLoginFillJs); bleibt die Weiterleitung aus (falsches
+        // Passwort, Fehlermeldung auf der Seite), nach 15 s trotzdem
+        // weiter – sonst endete der Abruf erst am timeout, ohne Befund.
+        _watchdog?.cancel();
+        _watchdog = Timer(const Duration(seconds: 15), () {
+          _trace('no page after login');
+          _onPage();
+        });
         return true;
       }
     } catch (_) {}

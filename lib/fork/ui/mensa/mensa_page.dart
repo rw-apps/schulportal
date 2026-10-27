@@ -75,6 +75,7 @@ class _MensaPageState extends ConsumerState<MensaPage> {
     super.initState();
     _c = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(kitWebCanvas)
       ..addJavaScriptChannel(
         mensaLoginChannel,
         onMessageReceived: (m) => _onLogin(m.message),

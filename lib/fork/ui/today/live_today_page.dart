@@ -10,7 +10,6 @@ import '../../l10n/l10n.dart';
 import '../live/family.dart';
 import '../live/live_data.dart';
 import '../live/stale_notice.dart';
-import '../mensa/mensa_page.dart';
 import '../plan/plan_from_lanis.dart' show subjectFullName;
 import '../plan/plan_model.dart';
 import 'today_from_lanis.dart';
@@ -22,7 +21,6 @@ import '../../demo/demo_entry.dart';
 import 'hint_card.dart';
 import '../portal_link.dart';
 import 'login_failure_card.dart';
-import '../../mensa.dart' show mensaWeekUrl;
 import '../../mensa_store.dart';
 import '../../demo/demo_mode.dart' show demoActive;
 import '../../notify/summary.dart';
@@ -32,12 +30,15 @@ import 'kid_hints.dart' show nextSchoolDay;
 import 'today_page.dart';
 import '../nav.dart';
 
-/// Bestellseite des Kindes in der App öffnen (MensaPage). Ohne Adresse
+/// Essen des Kindes in der App öffnen. Ohne Adresse
 /// geschieht nichts – die Oberfläche bietet dann „eintragen“ an.
 ///
-/// Liest die App die Seite des Caterers (mensa_week.dart), öffnet sich die
-/// eigene Ansicht „Essen“ (MealWeekPage); ließ sie sich zuletzt nicht lesen
-/// (MealEntry.unreadable), gleich die Seite selbst.
+/// Öffnet immer die eigene Ansicht „Essen“ (MealWeekPage). Bis 9420 ging
+/// es bei MealEntry.unreadable gleich zur Seite des Caterers; dann war der
+/// Abrufverlauf (MealTrace, „Details zum Abruf“) nicht erreichbar und ein
+/// einmal gescheiterter Abruf wurde nie wieder versucht (Bildschirmfoto
+/// 27.10.26). Grenze: Für einen unbekannten Caterer ein Tipp mehr
+/// („Bestellen oder ändern“).
 Future<void> openMensa(
   BuildContext context,
   LiveSnapshot s,
@@ -48,25 +49,14 @@ Future<void> openMensa(
   final url = s.mensa.of(kid);
   if (url == null) return;
   final owner = s.mensaOwner(kid);
-  final unreadable = MealCache.instance.of(owner)?.unreadable ?? false;
   await pushFullScreen<void>(
     context,
-    (_) => unreadable
-        ? MensaPage(
-            url: url,
-            owner: owner,
-            childName: name,
-            open: switch (mealBaseUrl(url, MealCache.instance.of(owner))) {
-              final b when b != url => mensaWeekUrl(b, DateTime.now()),
-              _ => null,
-            },
-          )
-        : MealWeekPage(
-            url: url,
-            owner: owner,
-            childName: name,
-            colorIndex: colorIndex,
-          ),
+    (_) => MealWeekPage(
+      url: url,
+      owner: owner,
+      childName: name,
+      colorIndex: colorIndex,
+    ),
   );
 }
 

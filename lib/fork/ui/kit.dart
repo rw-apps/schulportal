@@ -19,6 +19,12 @@ import 'package:flutter/material.dart';
 
 const kitFont = 'Manrope';
 
+/// Grund eingebetteter Webseiten (MensaPage): Weiß wie im Browser, auch im
+/// dunklen Modus, weil die Seiten selbst hell gestaltet sind. Ursache
+/// (Bildschirmfoto 27.10.26): Solange die Seite noch lud, war die Fläche
+/// schwarz und wirkte wie ein Absturz.
+const kitWebCanvas = Color(0xFFFFFFFF);
+
 /// Schriftstufe der neuen Oberfläche, zusätzlich zur Systemschrift.
 ///
 /// Ursache: „Die Schriftgröße ist noch zu klein“ (Pixel, 16.10.26). „Normal“

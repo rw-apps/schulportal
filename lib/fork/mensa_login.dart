@@ -124,6 +124,18 @@ const mensaLoginCaptureJs = r'''
 /// Füllt eine sichtbare Anmeldemaske mit [l] und sendet sie ab; Ergebnis
 /// „filled“ bzw. „none“ (keine Maske gefunden). Werte als JSON eingesetzt,
 /// damit Anführungszeichen im Passwort nichts kaputt machen.
+///
+/// Seiten aus React/Next.js (Anmeldeseite eines Caterers der Familie,
+/// geprüft 27.10.26: Skripte unter `/_next/`, Felder ohne `name`, Anmeldung
+/// nur über den Klick-Handler): Vor dem Hydrieren sind Feldwerte und Klick
+/// wirkungslos – der Knopf schickt dann das leere Formular an die eigene
+/// Adresse, und es erscheint wieder die Anmeldeseite. Deshalb wartet das
+/// Skript dort, bis React das Passwortfeld übernommen hat (`__react…` am
+/// Element), höchstens [_reactWaitMs], und füllt erst dann. Auf anderen
+/// Seiten füllt es sofort. Grenze: Nach dem Warten wird trotzdem gefüllt;
+/// klappt es nicht, endet der Abruf wie bei falschem Passwort.
+const _reactWaitMs = 6000;
+
 String mensaLoginFillJs(MensaLogin l) =>
     '''
 (function (u, p) {
@@ -147,19 +159,32 @@ String mensaLoginFillJs(MensaLogin l) =>
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
-  put(user, u);
-  put(pw, p);
-  var f = pw.form;
-  var b = (f || document).querySelector('button[type=submit],input[type=submit]') ||
-    (f ? f.querySelector('button') : null);
-  // Ohne Formular: nächster Knopf in der Umgebung des Passwortfelds.
-  for (var a = pw.parentElement, n = 0; !b && a && n < 5; a = a.parentElement, n++) {
-    b = a.querySelector('button,input[type=submit],[role=button]');
+  function go() {
+    put(user, u);
+    put(pw, p);
+    var f = pw.form;
+    var b = (f || document).querySelector('button[type=submit],input[type=submit]') ||
+      (f ? f.querySelector('button') : null);
+    // Ohne Formular: nächster Knopf in der Umgebung des Passwortfelds.
+    for (var a = pw.parentElement, n = 0; !b && a && n < 5; a = a.parentElement, n++) {
+      b = a.querySelector('button,input[type=submit],[role=button]');
+    }
+    setTimeout(function () {
+      if (b) b.click();
+      else if (f) { if (f.requestSubmit) f.requestSubmit(); else f.submit(); }
+    }, 50);
   }
-  setTimeout(function () {
-    if (b) b.click();
-    else if (f) { if (f.requestSubmit) f.requestSubmit(); else f.submit(); }
-  }, 50);
-  return 'filled';
+  var react = !!document.querySelector('script[src*="/_next/"], #__next, [data-reactroot]');
+  function ready() {
+    return Object.keys(pw).some(function (k) { return k.indexOf('__react') === 0; });
+  }
+  if (!react || ready()) { go(); return 'filled'; }
+  var waited = 0;
+  (function wait() {
+    if (ready() || waited >= $_reactWaitMs) { go(); return; }
+    waited += 100;
+    setTimeout(wait, 100);
+  })();
+  return 'filled (waiting for react)';
 })(${jsonEncode(l.user)}, ${jsonEncode(l.pass)})
 ''';
