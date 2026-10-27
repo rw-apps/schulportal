@@ -531,6 +531,7 @@ ChildToday childTodayFromLanis({
   Map<DateTime, String> free = const {},
   String? lunch,
   DateTime? mealUnordered,
+  String? lowBalance,
 }) {
   final r = applySubstitutions(
     plan: plan,
@@ -561,6 +562,7 @@ ChildToday childTodayFromLanis({
     freeLabel: freeLabel,
     lunch: freeLabel != null ? null : lunch,
     mealUnordered: mealUnordered,
+    lowBalance: lowBalance,
   );
 }
 

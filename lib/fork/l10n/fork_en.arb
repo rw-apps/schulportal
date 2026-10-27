@@ -633,5 +633,16 @@
   "mensaRememberTitle": "Remember sign-in?",
   "mensaRememberText": "The app will then sign in to the caterer by itself when the session has expired – also for the Today view. User name and password stay only on this phone in protected storage.",
   "mensaRememberYes": "Remember",
-  "mensaRememberNo": "Don't remember"
+  "mensaRememberNo": "Don't remember",
+  "mealTransfer": "below €15 – please transfer money",
+  "mealOrderTitle": "Order this meal?",
+  "mealCancelTitle": "Cancel this meal?",
+  "mealOrderAction": "Order",
+  "mealCancelAction": "Cancel order",
+  "mealChangeHint": "The app does this on the caterer's page and then checks that it shows up there.",
+  "mealTransferShort": "please top up",
+  "mealOpenCaterer": "Caterer's page",
+  "mealOrderDone": "Ordered: {dish}",
+  "mealCancelDone": "Cancelled: {dish}",
+  "mealChangeFailed": "That didn't work – the caterer's page doesn't show it. Please check there."
 }

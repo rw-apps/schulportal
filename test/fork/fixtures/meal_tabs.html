@@ -4,6 +4,7 @@
 <form id="datenauswahl"><a class="page-link" href="https://bestellung.example/x/speiseplan.php?week=2026_43">«</a>
 <select name="week"><option value="2026_44" selected="selected">KW 44 (26.10. - 01.11.)</option></select>
 <a href="https://bestellung.example/x/speiseplan.php?week=2026_45">»</a></form>
+<form id="menueauswahl"><button type="submit" name="submit_bestellung">Menüauswahl speichern</button>
 <div id="menucontent" class="tab-content">
  <div class="tab-pane fade active day in" id="day-MO" name="2026-10-26">
   <input type="hidden" class="hiddenmenuefield" value="" name="menue_MO_0">
@@ -15,7 +16,7 @@
   <div class="panel menue menue_1 DI panel-default" rel="21"><div class="panel-heading"><input type="checkbox"><h3 class="panel-title">Geflügel</h3></div>
    <div class="panel-body"><p>Hacksteak mit Reis<br><br>Dessert: Joghurt</p></div></div>
   <div class="panel menue menue_2 DI active panel-primary" rel="22"><div class="panel-heading"><input type="checkbox" checked=""><h3 class="panel-title">vegetarisch</h3></div>
-   <div class="panel-body"><p>Gnocchi auf Gemüse<br><br>Dessert: Joghurt<br><small>GL</small></p></div></div>
+   <div class="panel-body"><p>Gnocchi auf Gemüse<br><br>Dessert: Joghurt<br><small>GL</small></p><div><button type="button" onclick="cancelOrderButtonClicked(this)">Abbestellen</button></div></div></div>
  </div>
  <div class="tab-pane fade day in" id="day-MI" name="2026-10-28">
   <input type="hidden" class="hiddenmenuefield" value="" name="menue_MI_0">
@@ -23,4 +24,4 @@
    <div class="panel-body"><p>Nudeln mit Soße<br>Kennzeichnungen entnehmen Sie bitte den Aushängen vor Ort</p></div></div>
  </div>
  <div class="tab-pane fade day in" id="day-DO" name="2026-10-29"></div>
-</div></body></html>
+</div></form></body></html>

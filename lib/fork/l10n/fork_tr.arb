@@ -633,5 +633,16 @@
   "mensaRememberTitle": "Giriş hatırlansın mı?",
   "mensaRememberText": "Oturum sona erdiğinde uygulama yemek firmasına kendisi giriş yapar – Bugün görünümü için de. Kullanıcı adı ve şifre yalnızca bu telefonda korumalı depolamada kalır.",
   "mensaRememberYes": "Hatırla",
-  "mensaRememberNo": "Hatırlama"
+  "mensaRememberNo": "Hatırlama",
+  "mealTransfer": "15 €'nun altında – lütfen para havale edin",
+  "mealOrderTitle": "Yemek sipariş edilsin mi?",
+  "mealCancelTitle": "Yemek iptal edilsin mi?",
+  "mealOrderAction": "Sipariş ver",
+  "mealCancelAction": "İptal et",
+  "mealChangeHint": "Uygulama bunu yemek firmasının sayfasında yapar ve ardından orada göründüğünü kontrol eder.",
+  "mealTransferShort": "lütfen yükleyin",
+  "mealOpenCaterer": "Firma sayfası",
+  "mealOrderDone": "Sipariş verildi: {dish}",
+  "mealCancelDone": "İptal edildi: {dish}",
+  "mealChangeFailed": "Olmadı – firma sayfası bunu göstermiyor. Lütfen orada kontrol edin."
 }

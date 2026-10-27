@@ -79,6 +79,45 @@ void main() {
     expect(w.days[1].options.first.name, 'Hacksteak mit Reis, Soße');
   });
 
+  test('Bestellbarkeit, Kennungen, Preise, Abbestellen', () {
+    final a = load('meal_daylist.html');
+    expect(a.kind, MealLayout.dayList);
+    expect(a.days[0].options.first.id, '1-101');
+    expect(a.days[0].canCancel, isFalse, reason: 'Minus gesperrt');
+    expect(a.days[2].canCancel, isTrue);
+    expect(a.days[3].options.single.orderable, isTrue);
+    expect(a.days[0].options.any((o) => o.orderable), isFalse);
+    final b = load('meal_tabs.html');
+    expect(b.kind, MealLayout.tabs);
+    expect(b.days[1].ordered!.id, '22');
+    expect(b.days[1].canCancel, isTrue);
+    expect(b.days[2].options.single.orderable, isTrue);
+    expect(b.days[0].options.single.orderable, isFalse);
+    final back = MealWeek.fromJson(
+      b.withUrl('https://x.example/s.php').toJson(),
+    )!;
+    expect(back.kind, MealLayout.tabs);
+    expect(back.url, 'https://x.example/s.php');
+    expect(back.days[1].canCancel, isTrue);
+    expect(back.days[2].options.single.id, '31');
+    expect(back.days[2].options.single.orderable, isTrue);
+  });
+
+  test('Adresse der Woche zum Bestellen', () {
+    final b = load('meal_tabs.html').withUrl('https://x.example/s.php');
+    expect(
+      mealWeekPageUrl(b, DateTime(2026, 11, 3), 'https://x.example/s.php'),
+      'https://x.example/s.php?week=2026_45',
+    );
+    final a = load(
+      'meal_daylist.html',
+    ).withUrl('https://a.example/k/essen/2026/44/');
+    expect(
+      mealWeekPageUrl(a, DateTime(2026, 11, 3), 'https://a.example/k/'),
+      'https://a.example/k/essen/2026/45/',
+    );
+  });
+
   test('unbekannte Seite: null', () {
     expect(parseMealWeek('<html><body>Anmelden</body></html>'), isNull);
   });
@@ -151,6 +190,45 @@ void main() {
     );
   });
 
+  test('Guthaben unter 15 €: Hinweis, nur wenn bestellt wird', () {
+    expect(parseEuro('1.234,50'), 1234.5);
+    expect(parseEuro('18,00'), 18.0);
+    expect(parseEuro('-3,00'), -3.0);
+    final w = load('meal_daylist.html');
+    final e = MealEntry(
+      at: DateTime(2026, 10, 26),
+      weeks: [w],
+      balance: '12,50',
+    );
+    expect(lowMealBalance(e), '12,50');
+    expect(
+      lowMealBalance(
+        MealEntry(at: DateTime(2026, 10, 26), weeks: [w], balance: '15,00'),
+      ),
+      isNull,
+    );
+    expect(
+      lowMealBalance(MealEntry(at: DateTime(2026, 10, 26), balance: '2,00')),
+      isNull,
+      reason: 'ohne Bestellungen kein Hinweis',
+    );
+    final c = MealCache.instance..reset();
+    c.put('k', [w]);
+    expect(c.of('k')!.balance, '12,50');
+    c.reset();
+    final kid = ChildToday(
+      firstName: 'Lena',
+      school: 'S',
+      className: '7X',
+      colorIndex: 0,
+      lowBalance: '12,50',
+    );
+    final h = kidHints(kid, DateTime(2026, 10, 26, 10), de).single;
+    expect(h.kind, HintKind.balance);
+    expect(h.title, 'Guthaben 12,50 €');
+    expect(h.detail, 'unter 15 € – bitte Geld überweisen');
+  });
+
   test('Hinweis „Kein Essen bestellt“ für morgen', () {
     final kid = ChildToday(
       firstName: 'Lena',
@@ -168,6 +246,8 @@ void main() {
   testWidgets('Wochenansicht: alle Zustände', (t) async {
     final w = load('meal_daylist.html');
     var ordered = 0;
+    var cancelled = 0;
+    String? chosen;
     await t.pumpWidget(
       MaterialApp(
         localizationsDelegates: ForkL10n.localizationsDelegates,
@@ -179,6 +259,8 @@ void main() {
             now: DateTime(2026, 10, 26, 10),
             colorIndex: 0,
             onOrder: () => ordered++,
+            onCancel: (_) => cancelled++,
+            onOrderOption: (_, o) => chosen = o.name,
           ),
         ),
       ),
@@ -202,8 +284,14 @@ void main() {
     await t.pump();
     expect(find.text('Gemüsesuppe'), findsOneWidget);
     expect(find.text('VEGGIE'), findsOneWidget);
-    expect(find.text('Guthaben 12,50 €'), findsOneWidget);
-    await t.tap(find.text('Bestellen oder ändern'));
+    expect(find.text('Guthaben 12,50 € · bitte überweisen'), findsOneWidget);
+    await t.tap(find.text('Seite des Caterers'));
     expect(ordered, 1);
+    // Abbestellen am Do (Frist läuft), Bestellen am Fr (aufgeklappt).
+    expect(find.text('Abbestellen'), findsOneWidget);
+    await t.tap(find.text('Abbestellen'));
+    expect(cancelled, 1);
+    await t.tap(find.text('Bestellen'));
+    expect(chosen, 'Gemüsesuppe');
   });
 }

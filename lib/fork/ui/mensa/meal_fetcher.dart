@@ -138,7 +138,7 @@ class _MealFetcherState extends State<MealFetcher> {
       return;
     }
     _read++;
-    widget.onWeek(week);
+    widget.onWeek(week.withUrl(url));
     final ws = schoolWeek(week.start).first;
     _seen.add(ws);
     final first = widget.want ?? ws;

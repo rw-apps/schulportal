@@ -1643,5 +1643,30 @@
   "mensaRememberTitle": "Anmeldung merken?",
   "mensaRememberText": "Dann meldet sich die App beim Caterer selbst an, wenn die Anmeldung abgelaufen ist – auch für die Anzeige auf Heute. Benutzername und Passwort bleiben nur auf diesem Handy im geschützten Speicher.",
   "mensaRememberYes": "Merken",
-  "mensaRememberNo": "Nicht merken"
+  "mensaRememberNo": "Nicht merken",
+  "mealTransfer": "unter 15 € – bitte Geld überweisen",
+  "mealOrderTitle": "Essen bestellen?",
+  "mealCancelTitle": "Essen abbestellen?",
+  "mealOrderAction": "Bestellen",
+  "mealCancelAction": "Abbestellen",
+  "mealChangeHint": "Die App erledigt das auf der Seite des Caterers und prüft danach, ob es dort so steht.",
+  "mealTransferShort": "bitte überweisen",
+  "mealOpenCaterer": "Seite des Caterers",
+  "mealOrderDone": "Bestellt: {dish}",
+  "@mealOrderDone": {
+    "placeholders": {
+      "dish": {
+        "type": "String"
+      }
+    }
+  },
+  "mealCancelDone": "Abbestellt: {dish}",
+  "@mealCancelDone": {
+    "placeholders": {
+      "dish": {
+        "type": "String"
+      }
+    }
+  },
+  "mealChangeFailed": "Hat nicht geklappt – die Seite des Caterers zeigt es nicht. Bitte dort prüfen."
 }

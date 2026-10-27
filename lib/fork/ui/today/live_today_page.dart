@@ -171,6 +171,7 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
       mealUnordered: day == null
           ? mealUnorderedDay(meals, now, nextSchoolDay(now))
           : null,
+      lowBalance: day == null ? lowMealBalance(meals) : null,
     );
   }
 

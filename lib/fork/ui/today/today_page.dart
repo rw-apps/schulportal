@@ -313,7 +313,8 @@ class KidCard extends StatelessWidget {
         ? hints
         : [
             for (final h in hints)
-              if (h.when != null)
+              // Guthaben gilt unabhängig vom Tag und bleibt stehen.
+              if (h.when != null || h.kind == HintKind.balance)
                 KidHint(kind: h.kind, title: h.title, detail: h.detail),
           ];
 
@@ -648,6 +649,7 @@ class _HintRow extends StatelessWidget {
       HintKind.unclear => changeIcon(ChangeKind.unclear),
       HintKind.meal => Icons.restaurant,
       HintKind.exam => weekIcon(WeekKind.exam),
+      HintKind.balance => Icons.account_balance_wallet_outlined,
     };
     final detail = h.detail;
     return Container(

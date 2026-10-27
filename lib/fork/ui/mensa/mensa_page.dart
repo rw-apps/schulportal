@@ -207,7 +207,8 @@ class _MensaPageState extends ConsumerState<MensaPage> {
   /// einer Bestellung hier stimmt die Anzeige ohne weiteren Abruf.
   Future<void> _remember() async {
     final src = await pageHtml(_c);
-    final w = src == null ? null : parseMealWeek(src);
+    final url = await _c.currentUrl();
+    final w = (src == null ? null : parseMealWeek(src))?.withUrl(url);
     if (w == null || !mounted) return;
     try {
       MealCache.instance

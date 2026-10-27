@@ -12,7 +12,15 @@ import '../../l10n/l10n.dart';
 import 'today_model.dart';
 import 'today_page.dart' show dayDiff, relativeDay;
 
-enum HintKind { cancelled, substitution, roomChange, unclear, meal, exam }
+enum HintKind {
+  cancelled,
+  substitution,
+  roomChange,
+  unclear,
+  meal,
+  exam,
+  balance,
+}
 
 class KidHint {
   const KidHint({
@@ -150,6 +158,15 @@ List<KidHint> kidHints(
         kind: HintKind.meal,
         title: t.mealUnordered,
         detail: t.mealStillOpen,
+      ),
+    );
+  }
+  if (kid.lowBalance case final b?) {
+    out.add(
+      KidHint(
+        kind: HintKind.balance,
+        title: t.mealBalance(b),
+        detail: t.mealTransfer,
       ),
     );
   }

@@ -87,7 +87,12 @@ class ChildToday {
     this.freeLabel,
     this.lunch,
     this.mealUnordered,
+    this.lowBalance,
   });
+
+  /// Guthaben beim Caterer unter 15 € („12,50“), sonst null
+  /// (mensa_store.lowMealBalance) – gelber Hinweis „bitte überweisen“.
+  final String? lowBalance;
 
   /// Tag (heute oder nächster Schultag), für den nichts bestellt ist,
   /// obwohl es noch ginge – gelber Hinweis „Kein Essen bestellt“. Nur wenn

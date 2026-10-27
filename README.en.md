@@ -13,6 +13,7 @@ The app is a fork of [Lanis-Mobile](https://github.com/lanis-mobile/lanis) and, 
 - **Lessons** – course folders, open and completed homework, upcoming tests, grades and absences.
 - **Messages** – read, reply, write new ones.
 - **Family** – several accounts side by side, also at different schools (parent and student accounts).
+- **Meals** – the week's ordered meals, ordering and cancelling in the app, hints for missing orders and low balance (for known caterer pages; otherwise the caterer's page opens).
 - **Offline** – shows the last saved state and when it is from.
 - **Notifications** – for cancellations, substitutions and new messages.
 - **Demo** – “Try the demo” on the start page shows the app with a made-up school, no login needed.

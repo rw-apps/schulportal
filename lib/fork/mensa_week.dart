@@ -25,7 +25,26 @@ class MealWeek {
     this.balance,
     this.prev,
     this.next,
+    this.kind = MealLayout.dayList,
+    this.url,
   });
+
+  /// Adresse, unter der diese Woche gelesen wurde (MealFetcher, MensaPage);
+  /// dort bestellt MealOrderRunner. null = unbekannt.
+  final String? url;
+
+  MealWeek withUrl(String? u) => MealWeek(
+    label: label,
+    days: days,
+    balance: balance,
+    prev: prev,
+    next: next,
+    kind: kind,
+    url: u,
+  );
+
+  /// Aufbau der Seite – bestimmt, wie die App dort bestellt.
+  final MealLayout kind;
 
   /// „26.10. bis 30.10.2026“
   final String label;
@@ -38,6 +57,9 @@ class MealWeek {
   final String? prev;
   final String? next;
 
+  /// Guthaben als Zahl („18,00“ → 18.0); null = unbekannt.
+  double? get balanceValue => parseEuro(balance);
+
   /// Erster Tag der Woche (Montag bzw. erster Tag der Liste).
   DateTime get start => days.first.day;
 
@@ -46,6 +68,8 @@ class MealWeek {
     'balance': ?balance,
     'prev': ?prev,
     'next': ?next,
+    'kind': kind.name,
+    'url': ?url,
     'days': [for (final d in days) d.toJson()],
   };
 
@@ -62,11 +86,19 @@ class MealWeek {
       balance: j['balance'] as String?,
       prev: j['prev'] as String?,
       next: j['next'] as String?,
+      url: j['url'] as String?,
+      kind: MealLayout.values.firstWhere(
+        (k) => k.name == j['kind'],
+        orElse: () => MealLayout.dayList,
+      ),
     );
   }
 }
 
 enum MealState { ordered, open, missed, closed }
+
+/// Bekannte Aufbauten (parseMealWeek).
+enum MealLayout { dayList, tabs }
 
 class MealDay {
   const MealDay({
@@ -77,7 +109,11 @@ class MealDay {
     this.sides = const [],
     this.cancelUntil,
     this.note,
+    this.canCancel = false,
   });
+
+  /// Bestellung lässt sich noch abbestellen (Frist läuft).
+  final bool canCancel;
 
   final DateTime day;
 
@@ -109,6 +145,7 @@ class MealDay {
     'sides': [for (final o in sides) o.toJson()],
     'cancelUntil': ?cancelUntil,
     'note': ?note,
+    if (canCancel) 'canCancel': true,
   };
 
   static MealDay? fromJson(Object? j) {
@@ -129,12 +166,30 @@ class MealDay {
       sides: list(j['sides']),
       cancelUntil: j['cancelUntil'] as String?,
       note: j['note'] as String?,
+      canCancel: j['canCancel'] == true,
     );
   }
 }
 
 class MealOption {
-  const MealOption({required this.line, required this.name, this.allergens});
+  const MealOption({
+    required this.line,
+    required this.name,
+    this.allergens,
+    this.price,
+    this.orderable = false,
+    this.id,
+  });
+
+  /// Kennung auf der Seite des Caterers zum Bestellen (meal_order.dart):
+  /// Tagesliste „Kind-Menü“ aus `tr#smo-…`, Reiter das `rel` der Menülinie.
+  final String? id;
+
+  /// „3,00 €“, wenn die Seite ihn nennt.
+  final String? price;
+
+  /// Lässt sich dieses Gericht jetzt noch bestellen (Knopf nicht gesperrt)?
+  final bool orderable;
 
   /// Menülinie („Veggie“).
   final String line;
@@ -147,6 +202,9 @@ class MealOption {
     'line': line,
     'name': name,
     'allergens': ?allergens,
+    'price': ?price,
+    if (orderable) 'orderable': true,
+    'id': ?id,
   };
 
   static MealOption? fromJson(Object? j) => j is Map && j['name'] is String
@@ -154,8 +212,19 @@ class MealOption {
           line: '${j['line'] ?? ''}',
           name: j['name'] as String,
           allergens: j['allergens'] as String?,
+          price: j['price'] as String?,
+          orderable: j['orderable'] == true,
+          id: j['id'] as String?,
         )
       : null;
+}
+
+/// „1.234,50“ / „18,00“ / „-3,00“ → Zahl; null, wenn nicht lesbar.
+double? parseEuro(String? s) {
+  if (s == null) return null;
+  final m = RegExp(r'-?\d[\d.]*(,\d+)?').firstMatch(s.replaceAll(' ', ''));
+  if (m == null) return null;
+  return double.tryParse(m[0]!.replaceAll('.', '').replaceAll(',', '.'));
 }
 
 String _text(Element? e) =>
@@ -228,6 +297,7 @@ MealWeek? _parseTabs(Document doc) {
     MealOption? ordered;
     List<MealOption> sides = const [];
     var orderable = false;
+    var canCancel = false;
     for (final p in panels) {
       final body = p.querySelector('.panel-body p');
       if (body == null) continue;
@@ -258,18 +328,26 @@ MealWeek? _parseTabs(Document doc) {
         }
       }
       if (dish.isEmpty) continue;
+      final open = !p.classes.contains('disabled');
+      final price = _text(p.querySelector('.badge'));
+      final rel = p.attributes['rel'];
       final o = MealOption(
         line: _text(p.querySelector('.panel-title')),
         name: _tidy(dish.join(', ')),
         allergens: small.isEmpty ? null : small,
+        price: price.isEmpty ? null : price,
+        orderable: open,
+        id: rel,
       );
       options.add(o);
-      if (!p.classes.contains('disabled')) orderable = true;
-      final rel = p.attributes['rel'];
+      if (open) orderable = true;
       if (p.classes.contains('active') ||
           (chosen != null && chosen.isNotEmpty && chosen == rel)) {
         ordered = o;
         sides = extra;
+        // Abbestellen: Knopf „Abbestellen“ vorhanden, Linie nicht gesperrt.
+        canCancel =
+            open && p.querySelector('button[onclick*="cancelOrder"]') != null;
       }
     }
     days.add(
@@ -283,6 +361,7 @@ MealWeek? _parseTabs(Document doc) {
         ordered: ordered,
         options: options,
         sides: sides,
+        canCancel: canCancel,
       ),
     );
   }
@@ -301,6 +380,7 @@ MealWeek? _parseTabs(Document doc) {
     balance: balance.isEmpty ? null : balance,
     prev: link('«'),
     next: link('»'),
+    kind: MealLayout.tabs,
   );
 }
 
@@ -350,25 +430,29 @@ MealWeek? _parseDayList(Document doc) {
     String? cancelUntil;
     String? orderNote;
     var orderable = false;
+    var canCancel = false;
     for (final r in rows) {
       if (r.classes.contains('day-closed')) continue;
       final name = r.querySelector('span[id^="child-meal-"]');
       if (name == null) continue;
+      final form = r.querySelector('form');
+      final plus = r.querySelector('button[data-method="plus"]');
       final o = MealOption(
         line: _text(r.querySelector('b')),
         name: _tidy(_dish(name)),
         allergens: _text(r.querySelector('small')).isEmpty
             ? null
             : _text(r.querySelector('small')),
+        orderable:
+            form != null && plus != null && !plus.classes.contains('disabled'),
+        id: r.id.startsWith('smo-') ? r.id.substring(4) : null,
       );
-      final form = r.querySelector('form');
       if (form == null) {
         sides.add(o);
         continue;
       }
       options.add(o);
-      final plus = r.querySelector('button[data-method="plus"]');
-      if (plus != null && !plus.classes.contains('disabled')) orderable = true;
+      if (o.orderable) orderable = true;
       // Die Hinweistexte der Knöpfe stehen nur in der breiten Tabelle
       // (`td#mo-…` zu `tr#smo-…`); die Tagesliste hat sie nicht immer.
       final wide = doc.getElementById((r.id).replaceFirst('smo-', 'mo-'));
@@ -376,6 +460,8 @@ MealWeek? _parseDayList(Document doc) {
           _tip(r, method) ?? (wide == null ? null : _tip(wide, method));
       if (form.attributes['data-order-status'] == '1') {
         ordered = o;
+        final minusBtn = r.querySelector('button[data-method="minus"]');
+        canCancel = minusBtn != null && !minusBtn.classes.contains('disabled');
         final minus = tip('minus');
         final until = minus == null
             ? null
@@ -396,6 +482,7 @@ MealWeek? _parseDayList(Document doc) {
         sides: sides,
         cancelUntil: cancelUntil,
         note: ordered == null ? orderNote : null,
+        canCancel: canCancel,
       ),
     );
   }

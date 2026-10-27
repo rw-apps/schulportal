@@ -10,7 +10,30 @@ import '../kit.dart';
 import '../nav.dart';
 import '../today/today_page.dart' show dayDiff, schoolWeek;
 import 'meal_fetcher.dart';
+import 'meal_order.dart';
 import 'mensa_page.dart';
+
+/// Seite der Woche zum Bestellen: gelesene Adresse, auf die Woche von
+/// [day] gesetzt (mensaUrlForWeek); beim Reiter-Aufbau ohne `week=` in der
+/// Adresse wird es ergänzt. Grenze: Ohne Wochenmuster (Tagesliste) bleibt
+/// es die gelesene Adresse – zeigt sie eine andere Woche, bricht
+/// MealOrderRunner ab, statt falsch zu bestellen.
+String mealWeekPageUrl(MealWeek w, DateTime day, String base) {
+  var u = w.url ?? base;
+  if (w.kind == MealLayout.tabs && !u.contains('week=')) {
+    final x = Uri.parse(u);
+    final wk = isoWeek(day);
+    u = x
+        .replace(
+          queryParameters: {
+            ...x.queryParameters,
+            'week': '${wk.year}_${wk.week}',
+          },
+        )
+        .toString();
+  }
+  return mensaUrlForWeek(u, isoWeek(day));
+}
 
 /// Seite „Essen · Kind“: gespeicherte Wochen sofort, im Hintergrund neu
 /// gelesen (MealFetcher). Lässt sich die Seite des Caterers nicht lesen und
@@ -107,6 +130,44 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
     if (mounted) _refresh();
   }
 
+  /// Laufender Bestell- bzw. Abbestellvorgang (MealOrderRunner).
+  ({MealDay day, MealOption? option, String url})? _job;
+  int _jobRound = 0;
+
+  Future<void> _change(MealWeek w, MealDay d, MealOption? o) async {
+    if (_job != null) return;
+    if (!await confirmMealChange(context, day: d, option: o)) return;
+    if (!mounted) return;
+    setState(() {
+      _jobRound++;
+      _job = (day: d, option: o, url: mealWeekPageUrl(w, d.day, widget.url));
+    });
+  }
+
+  void _done(MealOrderResult r, MealWeek shown) {
+    final job = _job;
+    if (!mounted || job == null) return;
+    if (r.week case final w?) _cache.put(widget.owner, [w]);
+    setState(() => _job = null);
+    final t = context.t;
+    final dish = job.option?.name ?? job.day.ordered?.name ?? '';
+    final text = r.ok
+        ? (job.option == null ? t.mealCancelDone(dish) : t.mealOrderDone(dish))
+        : [t.mealChangeFailed, ?r.message].join('\n');
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(
+        content: Text(text),
+        duration: Duration(seconds: r.ok ? 4 : 10),
+        action: r.ok
+            ? null
+            : SnackBarAction(
+                label: t.mealOpenCaterer,
+                onPressed: () => _order(shown),
+              ),
+      ),
+    );
+  }
+
   void _unreadable() {
     _cache.markUnreadable(widget.owner);
     if (!mounted || _weeks.isNotEmpty) return;
@@ -127,80 +188,105 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
     final t = context.t;
     final name = widget.childName;
     final fetch = _fetch;
-    return Scaffold(
-      backgroundColor: k.p.bg,
-      appBar: AppBar(
+    // Während des Bestellens nicht verlassen: sonst bliebe offen, ob die
+    // Seite des Caterers die Bestellung angenommen hat.
+    return PopScope(
+      canPop: _job == null,
+      child: Scaffold(
         backgroundColor: k.p.bg,
-        surfaceTintColor: k.p.bg,
-        title: Text(
-          name == null || name.isEmpty
-              ? t.mealWeekTitle
-              : t.mealWeekTitleFor(name),
-          style: k.section,
-          overflow: TextOverflow.ellipsis,
-        ),
-        bottom: fetch == null
-            ? null
-            : const PreferredSize(
-                preferredSize: Size.fromHeight(Sz.progress),
-                child: LinearProgressIndicator(minHeight: Sz.progress),
-              ),
-      ),
-      body: Stack(
-        children: [
-          ValueListenableBuilder(
-            valueListenable: _cache.notifier,
-            builder: (context, _, _) {
-              final w = _week;
-              if (w != null) {
-                return MealWeekView(
-                  week: w,
-                  now: _now,
-                  colorIndex: widget.colorIndex,
-                  onPrev: w.prev == null ? null : () => _go(w, -1),
-                  onNext: w.next == null ? null : () => _go(w, 1),
-                  onOrder: () => _order(w),
-                );
-              }
-              return ListView(
-                padding: const EdgeInsets.all(Sp.page),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(Sp.xl),
-                    child: Text(
-                      fetch == null ? t.mealLoadFailed : t.mealLoading,
-                      style: k.meta,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  if (fetch == null)
-                    FilledButton.icon(
-                      onPressed: () => _order(null),
-                      icon: const Icon(Icons.open_in_new),
-                      label: Text(t.mealChange),
-                    ),
-                ],
-              );
-            },
+        appBar: AppBar(
+          backgroundColor: k.p.bg,
+          surfaceTintColor: k.p.bg,
+          title: Text(
+            name == null || name.isEmpty
+                ? t.mealWeekTitle
+                : t.mealWeekTitleFor(name),
+            style: k.section,
+            overflow: TextOverflow.ellipsis,
           ),
-          if (fetch != null)
-            Positioned(
-              left: 0,
-              top: 0,
-              child: MealFetcher(
-                key: ValueKey('$_round:$fetch'),
-                url: fetch,
-                owner: widget.owner,
-                want: _want,
-                weeks: _count,
-                onWeek: (w) => _cache.put(widget.owner, [w]),
-                onUnreadable: _unreadable,
-                onDone: () {
-                  if (mounted) setState(() => _fetch = null);
-                },
-              ),
+          bottom: fetch == null && _job == null
+              ? null
+              : const PreferredSize(
+                  preferredSize: Size.fromHeight(Sz.progress),
+                  child: LinearProgressIndicator(minHeight: Sz.progress),
+                ),
+        ),
+        body: Stack(
+          children: [
+            ValueListenableBuilder(
+              valueListenable: _cache.notifier,
+              builder: (context, _, _) {
+                final w = _week;
+                if (w != null) {
+                  return MealWeekView(
+                    week: w,
+                    now: _now,
+                    colorIndex: widget.colorIndex,
+                    onPrev: w.prev == null ? null : () => _go(w, -1),
+                    onNext: w.next == null ? null : () => _go(w, 1),
+                    onOrder: () => _order(w),
+                    // Während eines Vorgangs keine weiteren Knöpfe.
+                    onOrderOption: _job != null
+                        ? null
+                        : (d, o) => _change(w, d, o),
+                    onCancel: _job != null ? null : (d) => _change(w, d, null),
+                  );
+                }
+                return ListView(
+                  padding: const EdgeInsets.all(Sp.page),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(Sp.xl),
+                      child: Text(
+                        fetch == null ? t.mealLoadFailed : t.mealLoading,
+                        style: k.meta,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    if (fetch == null)
+                      FilledButton.icon(
+                        onPressed: () => _order(null),
+                        icon: const Icon(Icons.open_in_new),
+                        label: Text(t.mealChange),
+                      ),
+                  ],
+                );
+              },
             ),
-        ],
+            if (_job case final j?)
+              Positioned(
+                left: 0,
+                top: 0,
+                child: IgnorePointer(
+                  child: MealOrderRunner(
+                    key: ValueKey('job$_jobRound'),
+                    url: j.url,
+                    owner: widget.owner,
+                    day: j.day.day,
+                    option: j.option,
+                    onResult: (r) => _done(r, _week ?? _weeks.first),
+                  ),
+                ),
+              ),
+            if (fetch != null)
+              Positioned(
+                left: 0,
+                top: 0,
+                child: MealFetcher(
+                  key: ValueKey('$_round:$fetch'),
+                  url: fetch,
+                  owner: widget.owner,
+                  want: _want,
+                  weeks: _count,
+                  onWeek: (w) => _cache.put(widget.owner, [w]),
+                  onUnreadable: _unreadable,
+                  onDone: () {
+                    if (mounted) setState(() => _fetch = null);
+                  },
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -233,7 +319,14 @@ class MealWeekView extends StatelessWidget {
     this.onPrev,
     this.onNext,
     this.onOrder,
+    this.onOrderOption,
+    this.onCancel,
   });
+
+  /// Gericht bestellen bzw. Tag abbestellen in der App (Entwurf 27.10.26);
+  /// null = keine Knöpfe, nur „Bestellen oder ändern“.
+  final void Function(MealDay day, MealOption option)? onOrderOption;
+  final void Function(MealDay day)? onCancel;
 
   final MealWeek week;
   final DateTime now;
@@ -247,6 +340,8 @@ class MealWeekView extends StatelessWidget {
     final k = Kit.of(context);
     final t = context.t;
     final balance = week.balance;
+    // Unter 15 €: gelb mit „bitte Geld überweisen“ (mensa_store.dart).
+    final low = (week.balanceValue ?? mealLowBalance) < mealLowBalance;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -274,8 +369,10 @@ class MealWeekView extends StatelessWidget {
                     ),
                     if (balance != null)
                       Text(
-                        t.mealBalance(balance),
-                        style: k.meta,
+                        low
+                            ? '${t.mealBalance(balance)} · ${t.mealTransferShort}'
+                            : t.mealBalance(balance),
+                        style: low ? k.boxText(k.p.change) : k.meta,
                         textAlign: TextAlign.center,
                       ),
                   ],
@@ -296,7 +393,13 @@ class MealWeekView extends StatelessWidget {
             children: [
               for (final (i, d) in week.days.indexed) ...[
                 if (i > 0) const SizedBox(height: Sp.s),
-                _MealRow(day: d, now: now, colorIndex: colorIndex),
+                _MealRow(
+                  day: d,
+                  now: now,
+                  colorIndex: colorIndex,
+                  onOrderOption: onOrderOption,
+                  onCancel: onCancel,
+                ),
               ],
             ],
           ),
@@ -319,11 +422,19 @@ class MealWeekView extends StatelessWidget {
                   Sp.page,
                   Sp.m,
                 ),
-                child: FilledButton.icon(
-                  onPressed: onOrder,
-                  icon: const Icon(Icons.open_in_new),
-                  label: Text(t.mealChange),
-                ),
+                // Bestellt die App selbst, ist die Seite des Caterers nur
+                // noch der Ausweg (umrandet statt gefüllt).
+                child: onOrderOption != null
+                    ? OutlinedButton.icon(
+                        onPressed: onOrder,
+                        icon: const Icon(Icons.open_in_new),
+                        label: Text(t.mealOpenCaterer),
+                      )
+                    : FilledButton.icon(
+                        onPressed: onOrder,
+                        icon: const Icon(Icons.open_in_new),
+                        label: Text(t.mealChange),
+                      ),
               ),
             ),
           ),
@@ -353,7 +464,12 @@ class _MealRow extends StatefulWidget {
     required this.day,
     required this.now,
     required this.colorIndex,
+    this.onOrderOption,
+    this.onCancel,
   });
+
+  final void Function(MealDay day, MealOption option)? onOrderOption;
+  final void Function(MealDay day)? onCancel;
 
   final MealDay day;
   final DateTime now;
@@ -413,12 +529,25 @@ class _MealRowState extends State<_MealRow> {
               if (i > 0) Container(height: Sz.frame, color: k.p.line),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: Sp.s),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    if (x.line.isNotEmpty)
-                      Text(upperFor(t, x.line), style: k.planNowLabel),
-                    Text(x.name, style: k.planMeta(k.p.ink)),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (x.line.isNotEmpty)
+                            Text(upperFor(t, x.line), style: k.planNowLabel),
+                          Text(x.name, style: k.planMeta(k.p.ink)),
+                          if (x.price != null)
+                            Text(x.price!, style: k.planMeta(k.p.muted)),
+                        ],
+                      ),
+                    ),
+                    if (x.orderable && widget.onOrderOption != null)
+                      TextButton(
+                        onPressed: () => widget.onOrderOption!(d, x),
+                        child: Text(t.mealOrderAction, style: k.link),
+                      ),
                   ],
                 ),
               ),
@@ -501,6 +630,24 @@ class _MealRowState extends State<_MealRow> {
                   Text(title, style: k.planSubject(ink)),
                   for (final l in lines) Text(l, style: k.planMeta(k.p.muted)),
                   if (d.state == MealState.open) ..._openParts(k, t, d),
+                  if (d.state == MealState.ordered &&
+                      d.canCancel &&
+                      widget.onCancel != null)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, Sz.buttonTiny),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: () => widget.onCancel!(d),
+                        child: Text(
+                          t.mealCancelAction,
+                          style: k.link.copyWith(color: k.p.cancel.ink),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -530,4 +677,78 @@ class _MealRowState extends State<_MealRow> {
           : row,
     );
   }
+}
+
+/// Rückfrage vor dem Bestellen bzw. Abbestellen in der App; true = ja.
+///
+/// Ursache (Entwurf 27.10.26): Bestellen kostet Geld und geht auf der Seite
+/// des Caterers – deshalb immer mit Tag, Linie, Gericht und Preis bestätigen.
+Future<bool> confirmMealChange(
+  BuildContext context, {
+  required MealDay day,
+  MealOption? option,
+}) async {
+  final cancel = option == null;
+  final o = option ?? day.ordered;
+  final r = await showModalBottomSheet<bool>(
+    context: context,
+    useRootNavigator: true,
+    showDragHandle: true,
+    backgroundColor: Kit.of(context).p.card,
+    builder: (sheet) {
+      final k = Kit.of(sheet);
+      final t = sheet.t;
+      final until = day.cancelUntil;
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(Sp.xl, 0, Sp.xl, Sp.l),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                cancel ? t.mealCancelTitle : t.mealOrderTitle,
+                style: k.sheetTitle,
+              ),
+              const SizedBox(height: Sp.m),
+              Text(
+                [
+                  formatDate(t, t.dateShort, day.day),
+                  if (o != null && o.line.isNotEmpty) o.line,
+                ].join(' · '),
+                style: k.meta,
+              ),
+              if (o != null) Text(o.name, style: k.planSubject(k.p.ink)),
+              if (!cancel && o?.price != null) Text(o!.price!, style: k.meta),
+              if (until != null && cancel)
+                Text(t.mealCancelUntil(until), style: k.meta),
+              const SizedBox(height: Sp.m),
+              Text(t.mealChangeHint, style: k.meta),
+              const SizedBox(height: Sp.l),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(sheet).pop(false),
+                      child: Text(t.cancel),
+                    ),
+                  ),
+                  const SizedBox(width: Sp.m),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(sheet).pop(true),
+                      child: Text(
+                        cancel ? t.mealCancelAction : t.mealOrderAction,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+  return r ?? false;
 }

@@ -25,7 +25,11 @@ class MealEntry {
     required this.at,
     this.weeks = const [],
     this.unreadable = false,
+    this.balance,
   });
+
+  /// Guthaben beim letzten Abruf („18,00“); null = unbekannt.
+  final String? balance;
 
   final DateTime at;
   final List<MealWeek> weeks;
@@ -34,6 +38,7 @@ class MealEntry {
   Map<String, dynamic> toJson() => {
     'at': at.toIso8601String(),
     if (unreadable) 'unreadable': true,
+    'balance': ?balance,
     'weeks': [for (final w in weeks) w.toJson()],
   };
 
@@ -44,6 +49,7 @@ class MealEntry {
     return MealEntry(
       at: at,
       unreadable: j['unreadable'] == true,
+      balance: j['balance'] as String?,
       weeks: [
         for (final w in (j['weeks'] as List? ?? const []))
           if (MealWeek.fromJson(w) case final x?) x,
@@ -73,6 +79,20 @@ class MealEntry {
 }
 
 const mealCacheKey = 'fork-mensa/weeks';
+
+/// Unter diesem Guthaben (Euro) warnt Heute „bitte Geld überweisen“
+/// (Wunsch 27.10.26: „ab weniger als 15 EUR ein Hinweis“).
+const mealLowBalance = 15.0;
+
+/// Guthaben, wenn es unter [mealLowBalance] liegt und das Kind überhaupt
+/// bestellt (sonst wäre der Hinweis Dauerrauschen); null sonst.
+String? lowMealBalance(MealEntry? e) {
+  final v = parseEuro(e?.balance);
+  if (e == null || v == null || !e.ordersAtAll || v >= mealLowBalance) {
+    return null;
+  }
+  return e.balance;
+}
 
 /// Abruf nach so langer Zeit erneuern (beim Öffnen von Heute).
 const mealRefreshEvery = Duration(hours: 3);
@@ -119,6 +139,12 @@ class MealCache {
       owner,
       MealEntry(
         at: at ?? DateTime.now(),
+        balance:
+            [
+              for (final w in weeks)
+                if (w.balance != null) w.balance!,
+            ].lastOrNull ??
+            old?.balance,
         weeks: (keep.take(3).toList()
           ..sort((a, b) => a.start.compareTo(b.start))),
       ),
@@ -132,6 +158,7 @@ class MealCache {
       at: at ?? DateTime.now(),
       weeks: of(owner)?.weeks ?? const [],
       unreadable: true,
+      balance: of(owner)?.balance,
     ),
   );
 
