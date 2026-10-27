@@ -1687,5 +1687,19 @@
         "type": "int"
       }
     }
-  }
+  },
+  "substitutionsFailedTitle": "Der Vertretungsplan ließ sich nicht laden",
+  "substitutionsFailedText": "Ausfälle und Vertretungen fehlen.",
+  "chatFormattingTooltip": "Textformatierung",
+  "devPasswordTitle": "Passwort für {name} übernehmen?",
+  "@devPasswordTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "devPasswordText": "Auf dem anderen Gerät ist für dieses Konto ein anderes Passwort gespeichert. Übernehmen, wenn es das neuere ist.",
+  "devPasswordKeep": "Behalten",
+  "devPasswordTake": "Übernehmen"
 }

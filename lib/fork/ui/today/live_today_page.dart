@@ -274,10 +274,24 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
             }
           },
         );
+        final missing = substitutionsMissingNotice(
+          context,
+          substitutions: [
+            for (final (m, _) in shown)
+              if (m.snapshot.offers('vertretungsplan.php'))
+                m.snapshot.substitutions,
+          ],
+          onRetry: () {
+            for (final (m, _) in shown) {
+              m.snapshot.refresh();
+            }
+          },
+        );
         final page = TodayPage(
           notices: [
             ?demoNotice(context),
             ?stale,
+            ?missing,
             // Zustimmung zum automatischen Melden (auto_report_prompt.dart).
             if (autoReportPromptDue(
               ProviderScope.containerOf(

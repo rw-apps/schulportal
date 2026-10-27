@@ -41,3 +41,27 @@ Widget? staleNotice(
     onAction: onRetry,
   );
 }
+
+/// Hinweis „Der Vertretungsplan ließ sich nicht laden“ für Heute, wenn
+/// [substitutions] nie geladen wurde (kein gespeicherter Stand, Abruf
+/// gescheitert – Feed.failed).
+///
+/// Ursache (Prüfung 27.10.26): [staleNotice] meldet nur alte Stände; ohne
+/// jeden Stand sah Heute dann wie ein normaler Tag aus – ein Ausfall fehlte
+/// ohne Warnung. Grenze: Nur Konten, die den Vertretungsplan anbieten
+/// (Aufrufer); während des Ladens kein Hinweis.
+Widget? substitutionsMissingNotice(
+  BuildContext context, {
+  required Iterable<Feed<Object?>> substitutions,
+  required VoidCallback onRetry,
+}) {
+  if (!substitutions.any((f) => f.failed)) return null;
+  final t = context.t;
+  return HintCard(
+    icon: Icons.cloud_off_outlined,
+    title: t.substitutionsFailedTitle,
+    text: t.substitutionsFailedText,
+    action: t.staleRetry,
+    onAction: onRetry,
+  );
+}

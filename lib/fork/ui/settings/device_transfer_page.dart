@@ -17,6 +17,7 @@ import 'package:lanis/utils/safe_launch.dart';
 
 import '../../device_transfer.dart';
 import '../../error_log.dart';
+import '../../kid_name.dart';
 import '../../l10n/l10n.dart';
 import '../../onboarding/onboarding_kit.dart';
 import '../../onboarding/onboarding_pages.dart'
@@ -328,6 +329,30 @@ class _DeviceReceivePageState extends ConsumerState<DeviceReceivePage> {
     });
   }
 
+  /// Rückfrage „Passwort für … übernehmen?“; true = übernehmen.
+  Future<bool> _askPassword(String name) async {
+    final t = context.t;
+    final k = Kit.of(context);
+    final r = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text(t.devPasswordTitle(name)),
+        content: Text(t.devPasswordText),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: Text(t.devPasswordKeep, style: k.link),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: Text(t.devPasswordTake),
+          ),
+        ],
+      ),
+    );
+    return r ?? false;
+  }
+
   bool _known(TransferAccount a) =>
       _existing.contains(transferAccountKey(a.schoolId, a.username));
 
@@ -354,6 +379,29 @@ class _DeviceReceivePageState extends ConsumerState<DeviceReceivePage> {
       // Anmeldung fehlten, erneutes Anmelden meldete „Konto existiert“).
       if (widget.firstSetup) acceptPrivacyPolicy(shared);
       final added = <int>[];
+      // Schon vorhandene Konten mit anderem Passwort: einzeln fragen
+      // (Entscheidung 27.10.26). Ursache: Bisher übernahm die Übertragung
+      // das Passwort still nicht – genau dann, wenn es auf dem alten Gerät
+      // geändert worden war. Still überschreiben wäre ebenso falsch: Das
+      // neuere Passwort kann auf diesem Gerät liegen.
+      final local = await db.listAccounts();
+      final differ = <(int id, String name, String password)>[];
+      for (final a in data.accounts) {
+        if (!_known(a)) continue;
+        final key = transferAccountKey(a.schoolId, a.username);
+        for (final l in local) {
+          if (transferAccountKey(l.schoolID, l.username) != key) continue;
+          final have = (await db.getAccount(l.localId))?.password;
+          if (have != null && have != a.password) {
+            final kid = storedKidName(TypedSettings.account(db, l.localId));
+            differ.add((l.localId, kid.isEmpty ? a.username : kid, a.password));
+          }
+        }
+      }
+      for (final (id, name, pw) in differ) {
+        if (!mounted) return;
+        if (await _askPassword(name)) await accounts.updatePassword(id, pw);
+      }
       for (final a in data.accounts) {
         if (_known(a)) continue;
         added.add(

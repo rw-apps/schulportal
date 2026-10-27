@@ -653,5 +653,12 @@
         "type": "int"
       }
     }
-  }
+  },
+  "substitutionsFailedTitle": "The substitution plan could not be loaded",
+  "substitutionsFailedText": "Cancellations and substitutions are missing.",
+  "chatFormattingTooltip": "Text formatting",
+  "devPasswordTitle": "Use the password for {name}?",
+  "devPasswordText": "The other device has a different password saved for this account. Use it if it is the newer one.",
+  "devPasswordKeep": "Keep",
+  "devPasswordTake": "Use"
 }

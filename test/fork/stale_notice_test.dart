@@ -49,4 +49,36 @@ void main() {
     expect(find.text('Portal nicht erreichbar'), findsOneWidget);
     expect(find.text('Gespeicherter Stand von gestern 21:40'), findsOneWidget);
   });
+
+  testWidgets('Vertretungsplan nie geladen: eigener Hinweis', (t) async {
+    Widget? out;
+    Future<void> pump(List<Feed<Object?>> f) => t.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: ForkL10n.localizationsDelegates,
+        supportedLocales: ForkL10n.supportedLocales,
+        locale: const Locale('de'),
+        home: Builder(
+          builder: (c) {
+            out = substitutionsMissingNotice(
+              c,
+              substitutions: f,
+              onRetry: () {},
+            );
+            return Scaffold(body: out ?? const SizedBox());
+          },
+        ),
+      ),
+    );
+    await pump([const Feed<int>(error: 'x')]);
+    expect(out, isA<HintCard>());
+    expect(
+      find.text('Der Vertretungsplan ließ sich nicht laden'),
+      findsOneWidget,
+    );
+    // Gespeicherter Stand oder noch am Laden: kein solcher Hinweis.
+    await pump([Feed(content: 1, error: 'x', fetchedAt: now)]);
+    expect(out, isNull);
+    await pump([const Feed<int>(error: 'x', loading: true)]);
+    expect(out, isNull);
+  });
 }

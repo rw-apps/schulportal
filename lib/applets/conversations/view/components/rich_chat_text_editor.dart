@@ -107,6 +107,8 @@ class _RichChatTextEditorState extends State<RichChatTextEditor> {
                       });
                       _notifyHeightChange();
                     },
+                    // Fork: Beschriftung für Vorlesefunktion (Prüfung 27.10.26).
+                    tooltip: context.t.chatFormattingTooltip,
                     icon: Icon(Icons.format_textdirection_l_to_r_outlined),
                     color: Theme.of(context).colorScheme.onSecondary,
                     style: IconButton.styleFrom(
