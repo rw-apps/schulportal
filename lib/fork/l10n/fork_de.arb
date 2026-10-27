@@ -1668,5 +1668,6 @@
       }
     }
   },
-  "mealChangeFailed": "Hat nicht geklappt – die Seite des Caterers zeigt es nicht. Bitte dort prüfen."
+  "mealChangeFailed": "Unklar, ob es geklappt hat – bitte auf der Seite des Caterers prüfen.",
+  "mealChangeNotDone": "Nichts geändert – der Tag lässt sich gerade nicht ändern."
 }

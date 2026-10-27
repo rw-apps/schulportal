@@ -135,25 +135,36 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
   int _jobRound = 0;
 
   Future<void> _change(MealWeek w, MealDay d, MealOption? o) async {
-    if (_job != null) return;
+    // Nicht parallel zu einem Abruf: Beide Ansichten teilen die Anmeldung
+    // beim Caterer, und ein Wochenwechsel dort könnte das Speichern in eine
+    // andere Woche lenken (Prüfung 27.10.26).
+    if (_job != null || _fetch != null) return;
     if (!await confirmMealChange(context, day: d, option: o)) return;
-    if (!mounted) return;
+    if (!mounted || _job != null || _fetch != null) return;
     setState(() {
       _jobRound++;
       _job = (day: d, option: o, url: mealWeekPageUrl(w, d.day, widget.url));
     });
   }
 
-  void _done(MealOrderResult r, MealWeek shown) {
+  void Function(MealOrderResult) _onResultFor(int round) =>
+      (r) => _done(round, r);
+
+  void _done(int round, MealOrderResult r) {
     final job = _job;
-    if (!mounted || job == null) return;
+    // Nur das Ergebnis des laufenden Vorgangs zählt.
+    if (!mounted || job == null || round != _jobRound) return;
+    final shown = _week;
     if (r.week case final w?) _cache.put(widget.owner, [w]);
     setState(() => _job = null);
     final t = context.t;
     final dish = job.option?.name ?? job.day.ordered?.name ?? '';
-    final text = r.ok
-        ? (job.option == null ? t.mealCancelDone(dish) : t.mealOrderDone(dish))
-        : [t.mealChangeFailed, ?r.message].join('\n');
+    final text = switch (r.outcome) {
+      MealOrderOutcome.ok =>
+        job.option == null ? t.mealCancelDone(dish) : t.mealOrderDone(dish),
+      MealOrderOutcome.notDone => [t.mealChangeNotDone, ?r.message].join('\n'),
+      MealOrderOutcome.unclear => [t.mealChangeFailed, ?r.message].join('\n'),
+    };
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       SnackBar(
         content: Text(text),
@@ -222,14 +233,20 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
                     week: w,
                     now: _now,
                     colorIndex: widget.colorIndex,
-                    onPrev: w.prev == null ? null : () => _go(w, -1),
-                    onNext: w.next == null ? null : () => _go(w, 1),
+                    onPrev: w.prev == null || _job != null
+                        ? null
+                        : () => _go(w, -1),
+                    onNext: w.next == null || _job != null
+                        ? null
+                        : () => _go(w, 1),
                     onOrder: () => _order(w),
                     // Während eines Vorgangs keine weiteren Knöpfe.
-                    onOrderOption: _job != null
+                    onOrderOption: _job != null || fetch != null
                         ? null
                         : (d, o) => _change(w, d, o),
-                    onCancel: _job != null ? null : (d) => _change(w, d, null),
+                    onCancel: _job != null || fetch != null
+                        ? null
+                        : (d) => _change(w, d, null),
                   );
                 }
                 return ListView(
@@ -264,7 +281,7 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
                     owner: widget.owner,
                     day: j.day.day,
                     option: j.option,
-                    onResult: (r) => _done(r, _week ?? _weeks.first),
+                    onResult: _onResultFor(_jobRound),
                   ),
                 ),
               ),

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/l10n/l10n.dart';
+import 'package:lanis/fork/meal_order_js.dart';
 import 'package:lanis/fork/mensa.dart';
 import 'package:lanis/fork/mensa_store.dart';
 import 'package:lanis/fork/mensa_week.dart';
@@ -116,6 +117,24 @@ void main() {
       mealWeekPageUrl(a, DateTime(2026, 11, 3), 'https://a.example/k/'),
       'https://a.example/k/essen/2026/45/',
     );
+  });
+
+  test('Bestellskripte: Kennung, Woche, Rückfragen', () {
+    final day = DateTime(2026, 10, 28);
+    const o = MealOption(line: 'V', name: 'x', id: '1-201');
+    final a = mealOrderJs(MealLayout.dayList, day, o);
+    expect(a, contains('"1-201"'));
+    expect(a, contains('"plus"'));
+    expect(a, contains('if (used) return false'), reason: 'nur eine Rückfrage');
+    final b = mealOrderJs(
+      MealLayout.tabs,
+      day,
+      const MealOption(line: 'V', name: 'x', id: '31'),
+    );
+    expect(b, contains('"2026-10-28", "31", "2026_44"'));
+    expect(mealCancelJs(MealLayout.tabs, day, null), contains('"2026_44"'));
+    expect(mealModalJs, contains('data-fork-pre'));
+    expect(mealModalJs, isNot(contains('.btn-primary')));
   });
 
   test('unbekannte Seite: null', () {
