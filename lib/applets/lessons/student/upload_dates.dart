@@ -86,3 +86,47 @@ enum UploadWaitUnit { minute, hour, day }
   }
   return (difference.inHours, UploadWaitUnit.hour);
 }
+
+/// Fork: Zeitpunkt einer eigenen Abgabe aus dem Text des Portals
+/// (liblanis OwnFile.time, Selektor „small“), z. B. „26.10.2026 19:42“ oder
+/// „(hochgeladen am 26.10.26 um 19:42 Uhr)“. Ursache (Abnahme 27.10.26):
+/// Die neue Abgabeseite zeigt im Kopf „ABGEGEBEN Mo, 26. Oktober · 19:42“.
+/// Grenze: Das genaue Muster des Portals ist nicht festgeschrieben – gesucht
+/// wird das erste Datum „T.M.JJ(JJ)“ und eine Uhrzeit dahinter; ohne Datum
+/// null, dann zeigt die Seite den Text roh ([cleanOwnFileTime]).
+DateTime? parseOwnFileTime(String raw) {
+  final m = RegExp(
+    r'(\d{1,2})\.(\d{1,2})\.(\d{2,4})(?:\D{1,12}?(\d{1,2}):(\d{2}))?',
+  ).firstMatch(raw);
+  if (m == null) return null;
+  final day = int.parse(m.group(1)!);
+  final month = int.parse(m.group(2)!);
+  var year = int.parse(m.group(3)!);
+  if (year < 100) year += 2000;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return DateTime(
+    year,
+    month,
+    day,
+    int.tryParse(m.group(4) ?? '') ?? 0,
+    int.tryParse(m.group(5) ?? '') ?? 0,
+  );
+}
+
+/// Fork: Zeittext ohne Klammern und Leerraum am Rand (Anzeige, wenn
+/// [parseOwnFileTime] nichts erkennt).
+String cleanOwnFileTime(String raw) =>
+    raw.trim().replaceAll(RegExp(r'^\(+|\)+$'), '').trim();
+
+/// Fork: Dateigröße für die Abgabeliste („1,2 MB“, „350 KB“). Dezimal wie
+/// [parseMaxFileSizeBytes], damit „bis 10 MB“ und „10,2 MB“ dieselbe
+/// Einheit meinen. Grenze: unter 1 KB in Bytes.
+String formatUploadSize(num bytes, String locale) {
+  final f = NumberFormat('#,##0.#', locale);
+  if (bytes >= 1000000000) return '${f.format(bytes / 1000000000)} GB';
+  if (bytes >= 1000000) return '${f.format(bytes / 1000000)} MB';
+  if (bytes >= 1000) {
+    return '${NumberFormat('#,##0', locale).format(bytes / 1000)} KB';
+  }
+  return '${bytes.round()} B';
+}

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:lanis/fork/ui/kit.dart';
 import 'package:lanis/utils/file_operations.dart';
 import 'package:lanis/utils/logger.dart';
 import 'package:lanis/utils/root_nav.dart';
@@ -63,83 +64,63 @@ Future<List<PickedFile>> showPickerUI(
 ) async {
   List<PickedFile> pickedFiles = [];
   if (context.mounted) {
+    // Fork: Auswahl im Kit-Stil (Abnahme 27.10.26, Abgabeseite Entwurf 3):
+    // Grund k.p.bg, je Weg eine kompakte Zeile mit Symbol im runden Feld.
+    // Ursache: Die MenuItemButtons mit handgesetzten Abständen passten nicht
+    // zur neuen Abgabeseite. Ablauf (Wege, Schließen nach Auswahl) wie
+    // vorher.
+    final k = Kit.of(context);
     await showRootModalBottomSheet(
       context: context,
       showDragHandle: true,
+      backgroundColor: k.p.bg,
       builder: (context) {
+        Widget row(IconData icon, String label, Future<void> Function() pick) =>
+            _PickerRow(
+              icon: icon,
+              label: label,
+              onTap: () async {
+                await pick();
+                if (context.mounted && pickedFiles.isNotEmpty) {
+                  Navigator.pop(context);
+                }
+              },
+            );
         return SafeArea(
-          child: SizedBox(
-            width: double.infinity,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 20.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (allowedMethods[0])
-                    (MenuItemButton(
-                      onPressed: () async {
-                        pickedFiles.addAll(
-                          await pickFileUsingDocumentsUI(allowedExtensions),
-                        );
-                        if (context.mounted && pickedFiles.isNotEmpty) {
-                          Navigator.pop(context);
-                        }
-                      },
-                      child: Row(
-                        children: [
-                          Padding(padding: EdgeInsets.only(left: 10.0)),
-                          Icon(Icons.file_open_rounded),
-                          Padding(padding: EdgeInsets.only(right: 8.0)),
-                          Text(AppLocalizations.of(context).fileManager),
-                        ],
-                      ),
-                    )),
-                  if (allowedMethods[1])
-                    (MenuItemButton(
-                      onPressed: () async {
-                        final result = await pickFileUsingCamera(context);
-                        if (result != null) {
-                          pickedFiles.add(result);
-                        }
-
-                        if (context.mounted && pickedFiles.isNotEmpty) {
-                          Navigator.pop(context);
-                        }
-                      },
-                      child: Row(
-                        children: [
-                          Padding(padding: EdgeInsets.only(left: 10.0)),
-                          Icon(Icons.camera_alt_rounded),
-                          Padding(padding: EdgeInsets.only(right: 8.0)),
-                          Text(AppLocalizations.of(context).camera),
-                        ],
-                      ),
-                    )),
-                  if (allowedMethods[2] &&
-                      Platform
-                          .isIOS) // DocumentsUI supports galleries and the photo picker is horrible (from a user perspective)
-                    (MenuItemButton(
-                      onPressed: () async {
-                        pickedFiles.addAll(
-                          await pickFilesUsingGallery(context),
-                        );
-
-                        if (context.mounted && pickedFiles.isNotEmpty) {
-                          Navigator.pop(context);
-                        }
-                      },
-                      child: Row(
-                        children: [
-                          Padding(padding: EdgeInsets.only(left: 10.0)),
-                          Icon(Icons.photo_library_rounded),
-                          Padding(padding: EdgeInsets.only(right: 8.0)),
-                          Text(AppLocalizations.of(context).gallery),
-                        ],
-                      ),
-                    )),
-                ],
-              ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(Sp.page, 0, Sp.page, Sp.l),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (allowedMethods[0])
+                  row(
+                    Icons.folder_open_outlined,
+                    AppLocalizations.of(context).fileManager,
+                    () async => pickedFiles.addAll(
+                      await pickFileUsingDocumentsUI(allowedExtensions),
+                    ),
+                  ),
+                if (allowedMethods[1])
+                  row(
+                    Icons.photo_camera_outlined,
+                    AppLocalizations.of(context).camera,
+                    () async {
+                      final result = await pickFileUsingCamera(context);
+                      if (result != null) pickedFiles.add(result);
+                    },
+                  ),
+                // DocumentsUI supports galleries and the photo picker is
+                // horrible (from a user perspective)
+                if (allowedMethods[2] && Platform.isIOS)
+                  row(
+                    Icons.photo_library_outlined,
+                    AppLocalizations.of(context).gallery,
+                    () async => pickedFiles.addAll(
+                      await pickFilesUsingGallery(context),
+                    ),
+                  ),
+              ],
             ),
           ),
         );
@@ -346,4 +327,53 @@ Future<String?> askFileName(BuildContext context) async {
   );
 
   return result;
+}
+
+/// Fork: eine Zeile der Auswahl (showPickerUI): Karte, Symbol im runden
+/// Feld, Beschriftung tileTitle – wie „Datei oder Foto hinzufügen“ auf der
+/// Abgabeseite (upload_view.dart, _AddRow).
+class _PickerRow extends StatelessWidget {
+  const _PickerRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Sp.s),
+      child: Material(
+        color: k.p.card,
+        borderRadius: BorderRadius.circular(Rad.card),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(Rad.card),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(Sp.m),
+            child: Row(
+              children: [
+                Container(
+                  width: Sz.avatar,
+                  height: Sz.avatar,
+                  decoration: BoxDecoration(
+                    color: k.p.inset,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: k.p.ink, size: Sz.navIcon),
+                ),
+                const SizedBox(width: Sp.m),
+                Expanded(child: Text(label, style: k.tileTitle)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

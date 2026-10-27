@@ -1701,5 +1701,131 @@
   },
   "devPasswordText": "Auf dem anderen Gerät ist für dieses Konto ein anderes Passwort gespeichert. Übernehmen, wenn es das neuere ist.",
   "devPasswordKeep": "Behalten",
-  "devPasswordTake": "Übernehmen"
+  "devPasswordTake": "Übernehmen",
+  "uploadKind": "Abgabe",
+  "uploadDueCaps": "Abgabe bis",
+  "uploadDoneCaps": "Abgegeben",
+  "uploadLeftDays": "{count, plural, =1{noch 1 Tag} other{noch {count} Tage}}",
+  "@uploadLeftDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadLeftHours": "noch {count} Std.",
+  "@uploadLeftHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadLeftMinutes": "noch {count} Min.",
+  "@uploadLeftMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadStartsDays": "{count, plural, =1{in 1 Tag} other{in {count} Tagen}}",
+  "@uploadStartsDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadStartsHours": "in {count} Std.",
+  "@uploadStartsHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadStartsMinutes": "in {count} Min.",
+  "@uploadStartsMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadOverdue": "Frist vorbei",
+  "uploadClosed": "geschlossen",
+  "uploadDoneChip": "erledigt",
+  "uploadSince": "Seit {date}",
+  "@uploadSince": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadStarts": "Beginnt {date}",
+  "@uploadStarts": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadDeadlineWas": "Frist bis {date}",
+  "@uploadDeadlineWas": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadOneFile": "1 Datei",
+  "uploadUpToFiles": "bis {count} Dateien",
+  "@uploadUpToFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadOnce": "1 Abgabe",
+  "uploadRepeat": "mehrmals",
+  "uploadTeacherOnly": "nur Lehrkraft",
+  "uploadYours": "Deine Abgabe",
+  "uploadAdd": "Datei oder Foto hinzufügen",
+  "uploadAddMore": "Weitere Datei hinzufügen",
+  "uploadMaxSize": "bis {size}",
+  "@uploadMaxSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadReady": "bereit zum Abgeben",
+  "uploadUploadedAt": "abgegeben {date}",
+  "@uploadUploadedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadOnceNote": "Nach dem Abgeben ist keine weitere Abgabe möglich.",
+  "uploadDeletesOn": "Dateien werden am {date} automatisch gelöscht.",
+  "@uploadDeletesOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadSubmit": "Abgeben",
+  "uploadSubmitting": "Wird abgegeben …",
+  "uploadTeacherNote": "Hinweis der Lehrkraft",
+  "uploadPublicFiles": "Dateien der Lerngruppe",
+  "uploadOnlyOneFile": "Bei dieser Abgabe ist nur eine Datei erlaubt.",
+  "uploadNoSubmission": "Nichts abgegeben.",
+  "uploadHeroDate": "ccc, d. MMMM"
 }

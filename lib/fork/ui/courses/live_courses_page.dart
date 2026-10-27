@@ -298,6 +298,10 @@ Widget liveCourseDetail(
                 url: u.url.toString(),
                 name: u.name,
                 status: u.status,
+                // Fach unter dem Titel und Kinderfarbe für „erledigt“
+                // (Abgabeseite Entwurf 3, Abnahme 27.10.26).
+                subject: i.title,
+                colorIndex: kidColor,
               ),
             );
           }

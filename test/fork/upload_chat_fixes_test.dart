@@ -9,6 +9,9 @@ import 'package:lanis/applets/conversations/view/shared.dart'
 import 'package:lanis/applets/conversations/view/components/rich_chat_text_editor.dart';
 import 'package:lanis/applets/conversations/view/send.dart';
 import 'package:lanis/applets/lessons/student/upload_dates.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
+import 'package:lanis/fork/ui/courses/upload_view.dart';
+import 'package:liblanis/liblanis.dart' show OwnFile;
 import 'package:lanis/generated/l10n.dart';
 import 'package:lanis/utils/file_picker.dart' show pickedPhotoName;
 
@@ -217,5 +220,93 @@ void main() {
     expect(c(private: true, own: true).replyTo, 'all');
     expect(c(private: true, sender: null).replyTo, 'all');
     expect(c(private: true, sender: '').replyTo, 'all');
+  });
+
+  // Abgabeseite Entwurf 3 (Abnahme 27.10.26): Ein-Datei-Regel, Zustände,
+  // Hilfen der Anzeige (upload_view.dart, upload_dates.dart).
+  group('UploadInfo (Ein-Datei-Regel)', () {
+    final now = DateTime(2026, 10, 27, 10);
+    final dates = UploadDates(
+      start: DateTime(2026, 10, 26, 8),
+      deadline: DateTime(2026, 10, 30, 18),
+    );
+    OwnFile own() =>
+        OwnFile(name: 'a.pdf', url: 'u', index: '1', time: '26.10.2026 19:42');
+
+    test('nur eine Datei → Höchstzahl 1, erste Abgabe möglich', () {
+      final i = UploadInfo(dates: dates, open: true);
+      expect(i.maxFiles, 1);
+      expect(i.done, isFalse);
+      expect(i.canSubmit(now), isTrue);
+    });
+
+    test('einmalig und schon abgegeben → erledigt, kein Abgeben', () {
+      final i = UploadInfo(dates: dates, open: true, ownFiles: [own()]);
+      expect(i.done, isTrue);
+      expect(i.canSubmit(now), isFalse);
+    });
+
+    test('beliebig oft → nach Abgabe weiter offen, bis 5 Dateien', () {
+      final i = UploadInfo(
+        dates: dates,
+        open: true,
+        multipleFiles: true,
+        anyNumberOfTimes: true,
+        ownFiles: [own()],
+      );
+      expect(i.maxFiles, 5);
+      expect(i.done, isFalse);
+      expect(i.canSubmit(now), isTrue);
+    });
+
+    test('vor dem Start und nach der Frist kein Abgeben', () {
+      final i = UploadInfo(dates: dates, open: true);
+      expect(i.canSubmit(DateTime(2026, 10, 25)), isFalse);
+      expect(i.canSubmit(DateTime(2026, 10, 30, 18)), isFalse);
+    });
+
+    test('fromPortal: fehlende Felder → strenge Ersatzwerte', () {
+      final i = UploadInfo.fromPortal({
+        'allowed_file_types': ['PDF', ' JPG'],
+        'additional_text': '  ',
+      });
+      expect(i.multipleFiles, isFalse);
+      expect(i.anyNumberOfTimes, isFalse);
+      expect(i.open, isFalse);
+      expect(i.allowedTypes, ['PDF', 'JPG']);
+      expect(i.additionalText, isNull);
+      expect(i.ownFiles, isEmpty);
+    });
+  });
+
+  group('Anzeige-Hilfen der Abgabe', () {
+    test('parseOwnFileTime: verschiedene Schreibweisen', () {
+      expect(
+        parseOwnFileTime('26.10.2026 19:42'),
+        DateTime(2026, 10, 26, 19, 42),
+      );
+      expect(
+        parseOwnFileTime('(hochgeladen am 6.1.27 um 8:05 Uhr)'),
+        DateTime(2027, 1, 6, 8, 5),
+      );
+      expect(parseOwnFileTime('gestern'), isNull);
+      expect(cleanOwnFileTime(' (gestern) '), 'gestern');
+    });
+
+    test('formatUploadSize dezimal wie parseMaxFileSizeBytes', () {
+      expect(formatUploadSize(1200000, 'de'), '1,2 MB');
+      expect(formatUploadSize(10000000, 'de'), '10 MB');
+      expect(formatUploadSize(350000, 'en'), '350 KB');
+      expect(formatUploadSize(512, 'de'), '512 B');
+    });
+
+    test('Sichtbarkeit: nur der eindeutige Lehrkraft-Fall wird kurz', () {
+      final t = forkL10nFor('de');
+      expect(uploadVisibilityLabel(t, 'Lehrkraft'), 'nur Lehrkraft');
+      expect(
+        uploadVisibilityLabel(t, 'Lehrkraft und Kursteilnehmer'),
+        'Lehrkraft und Kursteilnehmer',
+      );
+    });
   });
 }
