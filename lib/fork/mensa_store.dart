@@ -118,7 +118,7 @@ void setMealRemindDays(TypedSettings s, String owner, Set<int> days) {
 /// 08:30“); null, wenn die Seite keine nennt.
 DateTime? mealDeadline(MealDay d) {
   final m = RegExp(
-    r'bis:?\s*(\d{1,2})\.(\d{1,2})\.(\d{2,4})\s+(\d{1,2}):(\d{2})',
+    r'bis:?\s*(\d{1,2})\.(\d{1,2})\.(\d{2,4}),?\s+(\d{1,2})[:.](\d{2})',
   ).firstMatch(d.note ?? '');
   if (m == null) return null;
   var y = int.parse(m[3]!);
@@ -229,6 +229,28 @@ String? lowMealBalance(MealEntry? e) {
 /// Abruf nach so langer Zeit erneuern (beim Öffnen von Heute).
 const mealRefreshEvery = Duration(hours: 3);
 
+/// Gespeicherte Wochen aller Kinder direkt aus den Einstellungen lesen.
+///
+/// Für den Hintergrund (notify_task.dart): Dort darf [MealCache] nicht
+/// gebunden werden – läuft der Abruf bei offener App im Haupt-Isolate,
+/// hinge der Speicher danach an der schon geschlossenen Datenbank des
+/// Hintergrund-Containers (unabhängige Prüfung 27.10.26).
+Map<String, MealEntry> readMealEntries(TypedSettings s) {
+  final out = <String, MealEntry>{};
+  try {
+    final raw = s.getString(mealCacheKey);
+    final v = raw == null ? null : jsonDecode(raw);
+    if (v is Map) {
+      for (final e in v.entries) {
+        if (MealEntry.fromJson(e.value) case final x?) out['${e.key}'] = x;
+      }
+    }
+  } catch (_) {
+    // Unlesbar – wie leer; der nächste Abruf schreibt neu.
+  }
+  return out;
+}
+
 /// Gemeinsamer Speicher; [attach] einmal mit den geräteweiten Einstellungen.
 class MealCache {
   MealCache._();
@@ -249,18 +271,7 @@ class MealCache {
   void attach(TypedSettings s) {
     if (identical(s, _settings)) return;
     _settings = s;
-    final out = <String, MealEntry>{};
-    try {
-      final raw = s.getString(mealCacheKey);
-      final v = raw == null ? null : jsonDecode(raw);
-      if (v is Map) {
-        for (final e in v.entries) {
-          if (MealEntry.fromJson(e.value) case final x?) out['${e.key}'] = x;
-        }
-      }
-    } catch (_) {
-      // Unlesbar – wie leer; der nächste Abruf schreibt neu.
-    }
+    final out = readMealEntries(s);
     // Aufruf aus initState (MealRefresh, MealWeekPage) fällt in den Aufbau;
     // Heute hört auf [notifier] – erst nach dem Bild melden, sonst
     // „setState() called during build“ (Demo-Test 27.10.26).
@@ -273,6 +284,10 @@ class MealCache {
       notifier.value = out;
     }
   }
+
+  /// Nach einer Einstellungsänderung (z. B. Erinnerungstage) Heute neu
+  /// aufbauen lassen, ohne die Daten zu ändern.
+  void touch() => notifier.value = {...notifier.value};
 
   MealEntry? of(String owner) => demo?.call(owner) ?? notifier.value[owner];
 

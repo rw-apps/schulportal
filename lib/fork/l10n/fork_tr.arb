@@ -648,9 +648,9 @@
   "mealChangeNotDone": "Hiçbir şey değişmedi – bu gün şu anda değiştirilemiyor.",
   "summaryMore": "+ {count} tane daha",
   "summaryMessage": "{from} mesajı: {subject}",
-  "summaryMeal": "{day}: yemek henüz sipariş edilmedi",
   "summaryTitle": "{count, plural, other{{count} bildirim}}",
   "mealRemindTitle": "Yemek hatırlatıcısı",
   "mealRemindText": "Bir gün için henüz sipariş yoksa ve süre dolmak üzereyse Bugün'de not ve bildirim.",
-  "mealRemindAll": "Sipariş yoksa hatırlat"
+  "mealRemindAll": "Sipariş yoksa hatırlat",
+  "summaryMealOpen": "yemek henüz sipariş edilmedi"
 }

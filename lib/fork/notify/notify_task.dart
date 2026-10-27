@@ -25,6 +25,7 @@ import '../data_storage.dart';
 import '../portal_extras.dart';
 import '../ui/today/today_from_lanis.dart'
     show classFromCourses, weekItemsFromCalendar;
+import '../mensa.dart' show MensaAddresses;
 import '../mensa_store.dart';
 import '../ui/today/kid_hints.dart' show nextSchoolDay;
 import '../ui/today/today_from_lanis.dart' show applySubstitutions;
@@ -175,10 +176,11 @@ Future<void> _run(
   final courses = [for (final l in lessons) l.name];
 
   // Sammel-Benachrichtigung (summary.dart, Wunsch 27.10.26): Ausfälle und
-  // Vertretungen von heute und dem nächsten Schultag sowie nicht bestelltes
-  // Essen als aktueller Stand dieses Kontos. Die Einzelmeldungen zu
-  // Änderungen entfallen dafür (buildNotices bekommt keine Vertretungen
-  // mehr und meldet nur noch große Termine am Vorabend).
+  // Vertretungen von heute und dem nächsten Schultag als aktueller Stand
+  // dieses Kontos. Die Einzelmeldungen zu Änderungen entfallen dafür
+  // (buildNotices bekommt keine Vertretungen mehr und meldet nur noch große
+  // Termine am Vorabend). Essen: showForkSummary (je Konto, unabhängig vom
+  // Vertretungsplan).
   try {
     final shared = container.read(sharedOverAccountSettingsProvider);
     final r = applySubstitutions(
@@ -205,27 +207,6 @@ Future<void> _run(
         },
       ),
     );
-    final cache = MealCache.instance..attach(shared);
-    final meals = <SummaryItem>[];
-    for (final e in cache.notifier.value.entries) {
-      if (!e.key.startsWith('${tools.accountId}:')) continue;
-      final kidKey = e.key.substring('${tools.accountId}:'.length);
-      final kid = kids.where((k) => k.pupilId == kidKey).firstOrNull;
-      meals.addAll(
-        mealSummaryItems(
-          name: kid == null ? firstName : shortFirstName(kid.firstName),
-          owner: e.key,
-          days: mealReminderDays(
-            e.value,
-            now,
-            weekdays: mealRemindDays(shared, e.key),
-          ),
-          now: now,
-          t: t,
-        ),
-      );
-    }
-    putSummaryItems(shared, '${tools.accountId}/meals', meals);
   } catch (e) {
     backgroundLogger.w('Sammelmeldung übersprungen: ${e.runtimeType}');
   }
@@ -542,15 +523,34 @@ String _keySubject(String k) {
   return i < 0 ? '' : k.substring(i + 1);
 }
 
-/// Nach allen Konten: Sammel-Benachrichtigung zeigen bzw. entfernen
-/// (summary.dart). [accounts]: Konten mit erlaubten Benachrichtigungen –
-/// Einträge anderer (gelöschter, abgeschalteter) Konten fallen weg.
+/// Themen der Sammelmeldung, die für ein Konto erlaubt sind: Konto
+/// nicht abgeschaltet (`notifications-allow`), „plan“ und „messages“ nur
+/// mit eingeschalteter Applet-Benachrichtigung, „meals“ immer.
+Set<String> summaryTopicsFor(TypedSettings account) {
+  if (account.getBool('notifications-allow') == false) return const {};
+  return {
+    if (account.getBool('notification-vertretungsplan.php') ?? true) 'plan',
+    if (account.getBool('notification-nachrichten.php') ?? true) 'messages',
+    'meals',
+  };
+}
+
+/// Nach allen Konten (bzw. bei einem abgebrochenen Lauf mit [alert]
+/// false): Essens-Einträge bilden, Erlaubtes merken, Sammel-Benachrichtigung
+/// zeigen bzw. entfernen (summary.dart).
+///
+/// Essen (Prüfung 27.10.26): direkt aus den gespeicherten Wochen
+/// (readMealEntries, MealCache bleibt ungebunden); nur Kinder mit
+/// eingetragener Bestellseite und einem Stand jünger als 48 h – ein
+/// verwaister oder alter Eintrag erinnert sonst ewig.
 Future<void> showForkSummary(
   ProviderContainer container,
-  Set<int> accounts,
-) async {
+  List<int> accounts, {
+  bool alert = true,
+}) async {
   try {
     final shared = container.read(sharedOverAccountSettingsProvider);
+    final db = container.read(lanisDatabaseProvider);
     String? chosen;
     try {
       chosen = shared.getString(languageKey);
@@ -558,8 +558,42 @@ Future<void> showForkSummary(
     final t = forkL10nFor(
       resolveLanguage(chosen, PlatformDispatcher.instance.locale.languageCode),
     );
-    pruneSummarySources(shared, {for (final a in accounts) '$a'});
-    await showSummary(shared, t);
+    final now = DateTime.now();
+    final meals = readMealEntries(shared);
+    final allowed = <String, Set<String>>{};
+    for (final id in accounts) {
+      final acc = TypedSettings.account(db, id);
+      final topics = summaryTopicsFor(acc);
+      if (topics.isEmpty) continue;
+      allowed['$id'] = topics;
+      final mensa = MensaAddresses.decode(
+        acc.getString('fork/$mensaUrlsSetting'),
+        legacy: acc.getString('fork/$mensaUrlSetting'),
+      );
+      final items = <SummaryItem>[];
+      for (final e in meals.entries) {
+        if (!e.key.startsWith('$id:')) continue;
+        final kid = e.key.substring('$id:'.length);
+        if (mensa.of(kid) == null) continue;
+        if (now.difference(e.value.at) > const Duration(hours: 48)) continue;
+        items.addAll(
+          mealSummaryItems(
+            name: storedKidName(acc),
+            owner: e.key,
+            days: mealReminderDays(
+              e.value,
+              now,
+              weekdays: mealRemindDays(shared, e.key),
+            ),
+            t: t,
+          ),
+        );
+      }
+      putSummaryItems(shared, '$id/meals', items);
+    }
+    writeSummaryAllowed(shared, allowed);
+    pruneSummarySources(shared, allowed);
+    await showSummary(shared, t, alert: alert);
   } catch (e) {
     backgroundLogger.w('Sammelmeldung: ${e.runtimeType}');
   }

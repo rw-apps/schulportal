@@ -41,6 +41,7 @@ Future<void> conversationsBackgroundTask(
     shared,
     '${toolkit.accountId}/messages',
     messageSummaryItems(
+      scope: '${toolkit.accountId}',
       name: kid,
       unread: [
         for (final m in unreadMessages)

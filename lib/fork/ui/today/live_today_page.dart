@@ -386,8 +386,10 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
           },
         );
         // Sammel-Benachrichtigung mit dem Stand der offenen App abgleichen
-        // (summary.dart): Ausfälle/Vertretungen, Essen; Nachrichten nur
-        // leeren, wenn keine ungelesenen mehr da sind.
+        // (summary.dart). Nur Geladenes (Prüfung 27.10.26: sonst leerte ein
+        // App-Start die Zeilen, und der nächste Hintergrundlauf meldete sie
+        // mit Ton als neu). Name nur bei mehreren Konten – wie im
+        // Hintergrund.
         final shared = MealCache.instance.settings;
         if (shared != null && !demoActive) {
           final t = context.t;
@@ -396,33 +398,35 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
           for (final (m, kid) in shown) {
             if (m.accountId < 0) continue;
             final s = m.snapshot;
-            sources['${m.accountId}/plan'] = changeSummaryItems(
-              scope: '${m.accountId}',
-              name: kid.firstName,
-              changes: kid.changes,
-              now: now,
-              next: next,
-              t: t,
-              endOf: {
-                for (final l in kid.lessons)
-                  l.slot: hasTime(l) ? minutesOf(l.end).minutes : 24 * 60,
-              },
-            );
+            final name = shown.length > 1 ? kid.firstName : '';
+            if (s.substitutions.content != null) {
+              sources['${m.accountId}/plan'] = changeSummaryItems(
+                scope: '${m.accountId}',
+                name: name,
+                changes: kid.changes,
+                now: now,
+                next: next,
+                t: t,
+                endOf: {
+                  for (final l in kid.lessons)
+                    l.slot: hasTime(l) ? minutesOf(l.end).minutes : 24 * 60,
+                },
+              );
+            }
             if (s.mensaUrl != null) {
               final owner = s.mensaOwner(s.mensaKid);
               sources['${m.accountId}/meals'] = mealSummaryItems(
-                name: kid.firstName,
+                name: name,
                 owner: owner,
                 days: mealReminderDays(
                   MealCache.instance.of(owner),
                   now,
                   weekdays: mealRemindDays(shared, owner),
                 ),
-                now: now,
                 t: t,
               );
             }
-            if (liveUnreadMessages(s) == 0) {
+            if (s.conversations.content != null && liveUnreadMessages(s) == 0) {
               sources['${m.accountId}/messages'] = const [];
             }
           }

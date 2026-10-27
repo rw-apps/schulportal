@@ -1689,14 +1689,6 @@
       }
     }
   },
-  "summaryMeal": "{day}: Essen noch nicht bestellt",
-  "@summaryMeal": {
-    "placeholders": {
-      "day": {
-        "type": "String"
-      }
-    }
-  },
   "summaryTitle": "{count, plural, =1{1 Hinweis} other{{count} Hinweise}}",
   "@summaryTitle": {
     "placeholders": {
@@ -1707,5 +1699,6 @@
   },
   "mealRemindTitle": "Essens-Erinnerung",
   "mealRemindText": "Hinweis auf Heute und Benachrichtigung, wenn für einen Tag noch nichts bestellt ist und die Frist bald abläuft.",
-  "mealRemindAll": "Erinnern, wenn nichts bestellt ist"
+  "mealRemindAll": "Erinnern, wenn nichts bestellt ist",
+  "summaryMealOpen": "Essen noch nicht bestellt"
 }

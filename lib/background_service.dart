@@ -79,6 +79,12 @@ Future<void> setupBackgroundService() async {
         disabledCount++;
       }
     }
+    // Fork: Erlaubte Konten/Themen der Sammelmeldung merken und still
+    // aufräumen – auch wenn gleich alles abgeschaltet wird und kein
+    // Hintergrundlauf mehr kommt (Prüfung 27.10.26).
+    await showForkSummary(container, [
+      for (final a in accounts) a.localId,
+    ], alert: false);
     if (accounts.isNotEmpty && disabledCount == accounts.length) {
       await _stopBackgroundFetch();
       return;
@@ -154,11 +160,14 @@ Future<void> callbackDispatcher() async {
     try {
       if (!await isTaskWithinConstraints(container)) {
         backgroundLogger.w('Task not within constraints... aborting');
+        // Fork: still aufräumen (vergangene Tage, abgeschaltete Konten).
+        await _quietSummary(container);
         return;
       }
 
       if (!await container.read(connectionCheckerProvider).connected) {
         backgroundLogger.w('No network connection, aborting background fetch');
+        await _quietSummary(container);
         return;
       }
 
@@ -262,15 +271,7 @@ Future<void> callbackDispatcher() async {
       }
 
       // Fork: Sammel-Benachrichtigung aus allen Konten (summary.dart).
-      final allowed = <int>{};
-      for (final a in accounts) {
-        final st = TypedSettings.account(
-          container.read(lanisDatabaseProvider),
-          a.localId,
-        );
-        if (st.getBool('notifications-allow') != false) allowed.add(a.localId);
-      }
-      await showForkSummary(container, allowed);
+      await showForkSummary(container, [for (final a in accounts) a.localId]);
 
       backgroundLogger.i('Background fetch completed');
     } finally {
@@ -285,6 +286,18 @@ Future<void> callbackDispatcher() async {
 /// Kanal aller Hinweise (bestehende Installationen behalten ihre
 /// Kanal-Einstellungen); auch für die Sammelmeldung (fork/notify/summary).
 const notificationChannelId = 'io.github.alessioc42.sphplan';
+
+/// Fork: Sammelmeldung ohne neuen Abruf still neu zeichnen bzw. entfernen
+/// (abgebrochener Lauf: Zeitfenster, kein Netz) – sonst stünde nachts noch
+/// „Morgen …“ für den heutigen Tag da (Prüfung 27.10.26).
+Future<void> _quietSummary(ProviderContainer container) async {
+  try {
+    final accounts = await container.read(accountsProvider.future);
+    await showForkSummary(container, [
+      for (final a in accounts) a.localId,
+    ], alert: false);
+  } catch (_) {}
+}
 
 class BackgroundTaskToolkit {
   final int accountId;

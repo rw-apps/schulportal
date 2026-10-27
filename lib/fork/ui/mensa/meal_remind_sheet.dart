@@ -36,7 +36,11 @@ class _MealRemindSheetState extends State<_MealRemindSheet> {
   void _set(Set<int> d) {
     setState(() => _days = d);
     final s = _s;
-    if (s != null) setMealRemindDays(s, widget.owner, d);
+    if (s != null) {
+      setMealRemindDays(s, widget.owner, d);
+      // Heute und Sammelmeldung gleich nachziehen (Prüfung 27.10.26).
+      MealCache.instance.touch();
+    }
   }
 
   @override
