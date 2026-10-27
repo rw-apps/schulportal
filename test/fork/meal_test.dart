@@ -7,7 +7,8 @@ import 'package:lanis/fork/meal_order_js.dart';
 import 'package:lanis/fork/mensa.dart';
 import 'package:lanis/fork/mensa_store.dart';
 import 'package:lanis/fork/mensa_week.dart';
-import 'package:lanis/fork/ui/mensa/meal_fetcher.dart' show MealTrace;
+import 'package:lanis/fork/ui/mensa/meal_fetcher.dart'
+    show MealTrace, loginNextUrl;
 import 'package:lanis/fork/ui/mensa/meal_week_page.dart';
 import 'package:lanis/fork/ui/today/kid_hints.dart';
 import 'package:lanis/fork/ui/today/live_today_page.dart' show mealUnorderedDay;
@@ -360,5 +361,30 @@ void main() {
       'essen.beispiel.example/kunden/2026/44/',
     );
     expect(MealTrace.path(null), '');
+  });
+
+  test('Nach der Anmeldung: Ziel aus next der Anmeldeseite', () {
+    expect(
+      loginNextUrl(
+        'https://essen.beispiel.example/kunde/login'
+        '?next=%2Fkunde%2Fspeiseplan.php%3Fweek%3D2026_44',
+      ),
+      'https://essen.beispiel.example/kunde/speiseplan.php?week=2026_44',
+    );
+    expect(
+      loginNextUrl('https://essen.beispiel.example/kunde/login'),
+      'https://essen.beispiel.example/kunde/login',
+    );
+    // Fremder Host im Rücksprung: bleibt die eingetragene Seite.
+    expect(
+      loginNextUrl(
+        'https://essen.beispiel.example/login?next=https://x.example/',
+      ),
+      'https://essen.beispiel.example/login?next=https://x.example/',
+    );
+    expect(
+      loginNextUrl('https://essen.beispiel.example/kunde/2026/44/'),
+      'https://essen.beispiel.example/kunde/2026/44/',
+    );
   });
 }

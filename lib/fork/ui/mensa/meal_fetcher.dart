@@ -181,8 +181,10 @@ class _MealFetcherState extends State<MealFetcher> {
     _loading = url;
     _trace('load ${MealTrace.path(url)}');
     _watchdog?.cancel();
+    _stalled = false;
     _watchdog = Timer(_watch, () {
       _trace('no finish event');
+      _stalled = true;
       _onPage();
     });
     _c.loadRequest(Uri.parse(url)).catchError((Object e) {
@@ -229,6 +231,7 @@ class _MealFetcherState extends State<MealFetcher> {
       'read ${MealTrace.path(url)} html=${src?.length ?? '-'} '
       'week=${week == null ? 'no' : week.label}',
     );
+    if (week == null && await _unstick(src)) return;
     if (week == null && await _login()) return;
     if (week == null) {
       // Zwischenseite einer Weiterleitung? Nur die erste Seite zählt als
@@ -292,6 +295,41 @@ class _MealFetcherState extends State<MealFetcher> {
     _finish();
   }
 
+  /// Seitenende blieb aus und das Dokument ist leer ([_stalled]).
+  var _stalled = false;
+
+  /// Einmal je App-Start: Cookies und Zwischenspeicher der eingebetteten
+  /// Ansichten leeren und neu laden.
+  static var _resetDone = false;
+
+  /// Hängt schon das erste Dokument (Abrufverlauf 27.10.26, zweiter
+  /// Caterer: nach 10 s weder Seitenende noch Inhalt, `html=39` = leeres
+  /// Gerüst; dieselbe Seite lud ohne Cookies in gut einer Sekunde, und auch
+  /// MensaPage blieb schwarz bei 10 %), liegt es wahrscheinlich an der
+  /// gespeicherten Sitzung beim Caterer. Dann einmal Cookies und
+  /// Zwischenspeicher leeren und neu laden; die gemerkte Anmeldung
+  /// (mensa_login.dart) meldet wieder an. Grenze: Cookies lassen sich nur
+  /// für alle Seiten leeren – auch das andere Kind wird abgemeldet und
+  /// beim nächsten Abruf selbst wieder angemeldet. Höchstens einmal je
+  /// App-Start ([_resetDone]), damit eine langsame Seite nicht jedes Mal
+  /// abmeldet.
+  Future<bool> _unstick(String? src) async {
+    if (!_stalled || _resetDone || (src != null && src.length > 200)) {
+      return false;
+    }
+    _resetDone = true;
+    _trace('stuck: clearing cookies and cache');
+    try {
+      await WebViewCookieManager().clearCookies();
+      await _c.clearCache();
+    } catch (e) {
+      _trace('clear failed ${e.runtimeType}');
+    }
+    if (_done || !mounted) return true;
+    _load(widget.url);
+    return true;
+  }
+
   /// true = Anmeldung läuft bzw. Woche wird neu geladen; auf die nächste
   /// Seite warten.
   Future<bool> _login() async {
@@ -301,7 +339,7 @@ class _MealFetcherState extends State<MealFetcher> {
       // Nach der Anmeldung leitet der Caterer meist auf seine Startseite.
       _afterLogin = false;
       _trace('reload after login');
-      _load(_loading ?? widget.url);
+      _load(loginNextUrl(_loading ?? widget.url));
       return true;
     }
     if (_triedLogin) return false;
@@ -361,3 +399,24 @@ class _MealFetcherState extends State<MealFetcher> {
 Widget hiddenWebView(Widget view) => IgnorePointer(
   child: ExcludeSemantics(child: SizedBox.expand(child: view)),
 );
+
+/// Nach der Anmeldung die eigentliche Seite laden: Ist [url] selbst eine
+/// Anmeldeseite mit Rücksprung (`…/login?next=/…/speiseplan.php…`), das
+/// Ziel aus `next`, sonst [url].
+///
+/// Ursache (Abrufverlauf 27.10.26): Für ein Kind war die Anmeldeseite als
+/// Adresse eingetragen; die Seite leitet nach der Anmeldung auf ihr
+/// Dashboard, nicht auf `next`, und erneutes Laden von [url] führte wieder
+/// zur Anmeldeseite. Grenze: nur der Parameter `next` (bzw. `redirect`,
+/// `returnUrl`) und nur auf derselben Seite (relativ aufgelöst).
+String loginNextUrl(String url) {
+  final u = Uri.tryParse(url);
+  if (u == null || !u.path.toLowerCase().contains('login')) return url;
+  for (final k in const ['next', 'redirect', 'returnUrl']) {
+    final n = u.queryParameters[k];
+    if (n == null || n.isEmpty) continue;
+    final t = u.resolve(n);
+    if (t.host == u.host) return t.toString();
+  }
+  return url;
+}
