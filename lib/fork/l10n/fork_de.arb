@@ -345,7 +345,7 @@
   "allowNotifications": "Benachrichtigungen erlauben",
   "notificationsBlocked": "Das Gerät blockiert sie gerade für diese App",
   "forThisAccount": "Für dieses Konto",
-  "notifySubstitutions": "Ausfall, Vertretung, große Termine",
+  "notifySubstitutions": "Ausfall und Vertretung",
   "notifySubstitutionsDetail": "Heute sofort, für morgen ab 19 Uhr",
   "notifyMessages": "Neue Nachrichten",
   "timeWindow": "Zeitfenster",
@@ -1729,5 +1729,12 @@
         "type": "String"
       }
     }
-  }
+  },
+  "moreInfo": "Mehr dazu",
+  "understood": "Verstanden",
+  "notifyEvents": "Große Termine",
+  "notifyEventsDetail": "Am Vorabend ab 19 Uhr",
+  "notifyEventsInfo": "Am Abend vor dem Schultag (ab 19 Uhr) eine Meldung zu Arbeiten und Tests, Abgabefristen, schulfreien Tagen sowie zu Elternabend, Sprechtag, Ausflug, Wandertag, Klassenfahrt, Festen, Zeugnissen und Projekttagen.\n\nAndere Einträge stehen nur im Kalender.",
+  "notifyNight": "Nachrichten auch nachts",
+  "notifyNightDetail": "Dann ohne Ton"
 }

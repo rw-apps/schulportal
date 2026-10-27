@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/fork/kid_name.dart';
 import 'package:lanis/fork/login_guard.dart';
+import 'package:lanis/fork/notify/notify_keys.dart';
 import 'package:lanis/fork/notify/notify_task.dart' show showForkSummary;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:lanis/applets/definitions.dart';
@@ -158,7 +159,16 @@ Future<void> callbackDispatcher() async {
     final overrides = await bootstrapLanisClient();
     final container = ProviderContainer(overrides: overrides);
     try {
-      if (!await isTaskWithinConstraints(container)) {
+      // Fork: Außerhalb des Zeitfensters nur Nachrichten, still, wenn
+      // „Nachrichten auch nachts“ an ist (notify_keys.dart, Abnahme
+      // 27.10.26). Sonst wie bisher: nichts abrufen, still aufräumen.
+      final inWindow = await isTaskWithinConstraints(container);
+      final night =
+          !inWindow &&
+          notifyNightMessages(
+            container.read(sharedOverAccountSettingsProvider),
+          );
+      if (!inWindow && !night) {
         backgroundLogger.w('Task not within constraints... aborting');
         // Fork: still aufräumen (vergangene Tage, abgeschaltete Konten).
         await _quietSummary(container);
@@ -208,8 +218,16 @@ Future<void> callbackDispatcher() async {
             (a) => a.notificationTask != null,
           )) {
             final accountType = account.accountType ?? AccountType.student;
+            // Nachts nur die Nachrichten (siehe oben).
+            if (night && applet.appletPhpUrl != 'nachrichten.php') continue;
+            // Fork: Der Vertretungsplan-Abruf liefert auch die großen
+            // Termine am Vorabend – er läuft, wenn einer der beiden
+            // Schalter an ist (notify_keys.dart).
             final enabled =
-                settings.getBool('notification-${applet.appletPhpUrl}') ?? true;
+                (settings.getBool('notification-${applet.appletPhpUrl}') ??
+                    true) ||
+                (applet.appletPhpUrl == 'vertretungsplan.php' &&
+                    notifyEventsOn(settings));
             if (!applet.supportedAccountTypes.contains(accountType) ||
                 !enabled) {
               continue;
@@ -271,7 +289,9 @@ Future<void> callbackDispatcher() async {
       }
 
       // Fork: Sammel-Benachrichtigung aus allen Konten (summary.dart).
-      await showForkSummary(container, [for (final a in accounts) a.localId]);
+      await showForkSummary(container, [
+        for (final a in accounts) a.localId,
+      ], alert: !night);
 
       backgroundLogger.i('Background fetch completed');
     } finally {

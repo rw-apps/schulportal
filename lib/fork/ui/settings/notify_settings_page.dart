@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
 
 import '../../l10n/l10n.dart';
+import '../../notify/notify_keys.dart';
 import '../kit.dart';
 import '../live/family.dart';
 import 'settings_widgets.dart';
@@ -51,7 +52,8 @@ notifyAccounts(BuildContext context, WidgetRef ref) {
 }
 
 /// „Was und wann“ (Entwurf 20.10.26 „verdichtet“): Zeitfenster und je Kind
-/// die Bereiche.
+/// die Bereiche; seit 27.10.26 „Nachrichten auch nachts“ und große Termine
+/// als eigener Schalter mit Erklärung (notify_keys.dart).
 ///
 /// Ursache für „je Kind“: Vorher galten die Schalter nur für das oben
 /// aktive Konto; die übrigen Kinder ließen sich nicht einstellen, obwohl
@@ -112,6 +114,15 @@ class _NotifySettingsPageState extends ConsumerState<NotifySettingsPage> {
                 ],
               ),
             ),
+            // Abnahme 27.10.26: außerhalb des Zeitfensters nur Nachrichten,
+            // still (background_service.dart, notifyNightMessages).
+            SettingsSwitchRow(
+              label: t.notifyNight,
+              detail: t.notifyNightDetail,
+              value: notifyNightMessages(shared),
+              onChanged: (v) =>
+                  setState(() => shared.setBool(notifyNightMessagesKey, v)),
+            ),
           ],
         ),
         for (final (id, name, _, offered) in accounts)
@@ -136,6 +147,24 @@ class _NotifySettingsPageState extends ConsumerState<NotifySettingsPage> {
                                   v,
                                 ),
                               )
+                            : null,
+                      ),
+                    // Eigener Schalter (notify_keys.dart): große Termine
+                    // kommen aus dem Kalender, hängen im Hintergrund aber am
+                    // Vertretungsplan-Abruf – deshalb nur, wo es den gibt.
+                    if (offered.contains('vertretungsplan.php'))
+                      SettingsSwitchRow(
+                        label: t.notifyEvents,
+                        detail: t.notifyEventsDetail,
+                        value: allow && notifyEventsOn(s),
+                        onInfo: () => showSettingsInfo(
+                          context,
+                          title: t.notifyEvents,
+                          text: t.notifyEventsInfo,
+                        ),
+                        onChanged: allow
+                            ? (v) =>
+                                  setState(() => s.setBool(notifyEventsKey, v))
                             : null,
                       ),
                     if (offered.contains('nachrichten.php'))

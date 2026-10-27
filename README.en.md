@@ -15,7 +15,7 @@ The app is a fork of [Lanis-Mobile](https://github.com/lanis-mobile/lanis) and, 
 - **Family** – several accounts side by side, also at different schools (parent and student accounts).
 - **Meals** – the week's ordered meals, ordering and cancelling in the app, hints for missing orders and low balance (for known caterer pages; otherwise the caterer's page opens).
 - **Offline** – shows the last saved state and when it is from.
-- **Notifications** – one summary of what matters (cancellations, substitutions, room changes, new messages, lunch not ordered) that only appears when something is due and clears itself.
+- **Notifications** – one summary of what matters (cancellations, substitutions, room changes, new messages, lunch not ordered) that only appears when something is due and clears itself; major events the evening before can be switched separately, messages optionally at night too (silent).
 - **Demo** – “Try the demo” on the start page shows the app with a made-up school, no login needed.
 
 ## Installation

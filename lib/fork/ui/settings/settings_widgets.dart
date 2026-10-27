@@ -178,7 +178,11 @@ class SettingsRow extends StatelessWidget {
     this.trailing,
     this.ink,
     this.chevron = true,
+    this.onInfo,
   });
+
+  /// „i“ hinter dem Titel: erklärt die Zeile (showSettingsInfo).
+  final VoidCallback? onInfo;
 
   final String label;
   final IconData? icon;
@@ -209,7 +213,29 @@ class SettingsRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: k.planSubject(c)),
+                  if (onInfo == null)
+                    Text(label, style: k.planSubject(c))
+                  else
+                    Row(
+                      children: [
+                        Flexible(child: Text(label, style: k.planSubject(c))),
+                        IconButton(
+                          onPressed: onInfo,
+                          tooltip: context.t.moreInfo,
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: Sz.buttonTiny,
+                            minHeight: Sz.buttonTiny,
+                          ),
+                          icon: Icon(
+                            Icons.info_outline,
+                            size: Sz.icon,
+                            color: k.p.onNavSelected,
+                          ),
+                        ),
+                      ],
+                    ),
                   if (detail != null && detail!.isNotEmpty)
                     Text(detail!, style: k.planMeta(k.p.muted)),
                   if (extra != null && extra!.isNotEmpty)
@@ -236,6 +262,7 @@ class SettingsSwitchRow extends StatelessWidget {
     required this.onChanged,
     this.icon,
     this.detail,
+    this.onInfo,
   });
 
   final String label;
@@ -243,6 +270,7 @@ class SettingsSwitchRow extends StatelessWidget {
   final String? detail;
   final bool value;
   final ValueChanged<bool>? onChanged;
+  final VoidCallback? onInfo;
 
   @override
   Widget build(BuildContext context) {
@@ -254,6 +282,7 @@ class SettingsSwitchRow extends StatelessWidget {
       detail: detail,
       ink: off ? k.p.muted : null,
       onTap: off ? null : () => onChanged!(!value),
+      onInfo: onInfo,
       trailing: Switch(value: value, onChanged: onChanged),
     );
   }
@@ -323,3 +352,38 @@ class SettingsChoiceRow extends StatelessWidget {
     );
   }
 }
+
+/// Erklärblatt zu einer Einstellung („i“ in SettingsRow.onInfo): Titel und
+/// Text, unten „Verstanden“.
+Future<void> showSettingsInfo(
+  BuildContext context, {
+  required String title,
+  required String text,
+}) => showModalBottomSheet<void>(
+  context: context,
+  useRootNavigator: true,
+  showDragHandle: true,
+  backgroundColor: Kit.of(context).p.bg,
+  builder: (c) {
+    final k = Kit.of(c);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(Sp.page, 0, Sp.page, Sp.l),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(title, style: k.sheetTitle),
+            const SizedBox(height: Sp.s),
+            Text(text, style: k.body),
+            const SizedBox(height: Sp.l),
+            FilledButton(
+              onPressed: () => Navigator.of(c).pop(),
+              child: Text(c.t.understood),
+            ),
+          ],
+        ),
+      ),
+    );
+  },
+);

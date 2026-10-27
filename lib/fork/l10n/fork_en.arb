@@ -125,7 +125,7 @@
   "allowNotifications": "Allow notifications",
   "notificationsBlocked": "Your device is currently blocking them for this app",
   "forThisAccount": "For this account",
-  "notifySubstitutions": "Cancellations, substitutions, big events",
+  "notifySubstitutions": "Cancellations and substitutions",
   "notifySubstitutionsDetail": "Today right away, for tomorrow from 7 pm",
   "notifyMessages": "New messages",
   "timeWindow": "Time window",
@@ -660,5 +660,12 @@
   "hwOverdue": "was due {day} · done?",
   "hwNotTickedTitle": "Not ticked off",
   "hwDoneTitle": "Done",
-  "hwWasDue": "was due {day}"
+  "hwWasDue": "was due {day}",
+  "moreInfo": "More info",
+  "understood": "Got it",
+  "notifyEvents": "Major events",
+  "notifyEventsDetail": "The evening before, from 7 pm",
+  "notifyEventsInfo": "The evening before a school day (from 7 pm), a notification about tests, deadlines, days off and events such as parents' evenings, consultation days, trips, hiking days, class trips, celebrations, report cards and project days.\n\nOther entries only appear in the calendar.",
+  "notifyNight": "Messages at night too",
+  "notifyNightDetail": "Then without sound"
 }

@@ -125,7 +125,7 @@
   "allowNotifications": "Bildirimlere izin ver",
   "notificationsBlocked": "Cihazınız şu anda bu uygulama için bildirimleri engelliyor",
   "forThisAccount": "Bu hesap için",
-  "notifySubstitutions": "İptaller, ders değişiklikleri, önemli etkinlikler",
+  "notifySubstitutions": "İptal ve vekâlet",
   "notifySubstitutionsDetail": "Bugün için hemen, yarın için saat 19'dan itibaren",
   "notifyMessages": "Yeni mesajlar",
   "timeWindow": "Zaman aralığı",
@@ -660,5 +660,12 @@
   "hwOverdue": "son gün {day} idi · yapıldı mı?",
   "hwNotTickedTitle": "İşaretlenmedi",
   "hwDoneTitle": "Tamamlandı",
-  "hwWasDue": "son gün {day} idi"
+  "hwWasDue": "son gün {day} idi",
+  "moreInfo": "Daha fazla bilgi",
+  "understood": "Anladım",
+  "notifyEvents": "Önemli etkinlikler",
+  "notifyEventsDetail": "Bir önceki akşam, saat 19'dan itibaren",
+  "notifyEventsInfo": "Okul gününden önceki akşam (saat 19'dan itibaren) sınavlar, teslim tarihleri, tatil günleri ve veli toplantısı, görüşme günü, gezi, yürüyüş günü, sınıf gezisi, kutlamalar, karneler ve proje günleri hakkında bir bildirim.\n\nDiğer kayıtlar yalnızca takvimde görünür.",
+  "notifyNight": "Mesajlar gece de",
+  "notifyNightDetail": "O zaman sessiz"
 }

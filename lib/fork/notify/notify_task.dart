@@ -31,6 +31,7 @@ import '../ui/today/kid_hints.dart' show nextSchoolDay;
 import '../ui/today/today_from_lanis.dart' show applySubstitutions;
 import '../ui/today/today_model.dart' show hasTime, minutesOf;
 import 'notices.dart';
+import 'notify_keys.dart';
 import 'summary.dart';
 
 /// Schlüssel der schon gemeldeten Einträge (je Konto).
@@ -191,21 +192,26 @@ Future<void> _run(
       t: t,
       subjectName: (c) => subjectFullName(c, courses),
     );
+    // Läuft die Aufgabe nur für die großen Termine (notify_keys.dart),
+    // bleiben Ausfälle und Vertretungen aus der Sammelmeldung.
+    final subsOn = s.getBool('notification-vertretungsplan.php') ?? true;
     putSummaryItems(
       shared,
       '${tools.accountId}/plan',
-      changeSummaryItems(
-        scope: '${tools.accountId}',
-        name: firstName,
-        changes: r.changes,
-        now: now,
-        next: nextSchoolDay(now),
-        t: t,
-        endOf: {
-          for (final l in r.today)
-            l.slot: hasTime(l) ? minutesOf(l.end).minutes : 24 * 60,
-        },
-      ),
+      !subsOn
+          ? const []
+          : changeSummaryItems(
+              scope: '${tools.accountId}',
+              name: firstName,
+              changes: r.changes,
+              now: now,
+              next: nextSchoolDay(now),
+              t: t,
+              endOf: {
+                for (final l in r.today)
+                  l.slot: hasTime(l) ? minutesOf(l.end).minutes : 24 * 60,
+              },
+            ),
     );
   } catch (e) {
     backgroundLogger.w('Sammelmeldung übersprungen: ${e.runtimeType}');
@@ -214,21 +220,24 @@ Future<void> _run(
   final sent = [
     for (final k in s.getJsonList(sentNoticesSetting) ?? const []) '$k',
   ];
-  final notices = buildNotices(
-    plan: plan.withTeacherNames(ownNames),
-    choice: effectiveChoice(auto, userChoice),
-    substitutions: const [],
-    events: events,
-    now: now,
-    t: t,
-    parent: accountType == AccountType.parent,
-    // Eigener Eintrag (class_choice.dart), sonst nur aus den Kursnamen: Die
-    // Anmeldung im Hintergrund lädt keine Benutzerdaten
-    // (authenticate(withoutData: true), background_service).
-    className: storedClass(s)?.name ?? classFromCourses(courses),
-    sent: sent.toSet(),
-    subjectName: (c) => subjectFullName(c, courses),
-  );
+  // Große Termine am Vorabend: eigener Schalter (notify_keys.dart).
+  final notices = !notifyEventsOn(s)
+      ? const <Notice>[]
+      : buildNotices(
+          plan: plan.withTeacherNames(ownNames),
+          choice: effectiveChoice(auto, userChoice),
+          substitutions: const [],
+          events: events,
+          now: now,
+          t: t,
+          parent: accountType == AccountType.parent,
+          // Eigener Eintrag (class_choice.dart), sonst nur aus den Kursnamen: Die
+          // Anmeldung im Hintergrund lädt keine Benutzerdaten
+          // (authenticate(withoutData: true), background_service).
+          className: storedClass(s)?.name ?? classFromCourses(courses),
+          sent: sent.toSet(),
+          subjectName: (c) => subjectFullName(c, courses),
+        );
   var remembered = sent;
   for (final n in notices) {
     await tools.sendMessage(
