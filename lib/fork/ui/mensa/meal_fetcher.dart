@@ -6,6 +6,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../mensa.dart' show mensaAllows;
 import '../../mensa_login.dart';
+import '../../mensa_store.dart' show mealNavJs;
 import '../../mensa_week.dart';
 import '../today/today_page.dart' show schoolWeek;
 
@@ -84,6 +85,7 @@ class _MealFetcherState extends State<MealFetcher> {
   Timer? _timer;
   var _read = 0;
   var _loads = 0;
+  var _hops = 0;
   final _seen = <DateTime>{};
   List<DateTime>? _targets;
   var _done = false;
@@ -133,6 +135,24 @@ class _MealFetcherState extends State<MealFetcher> {
       await Future<void>.delayed(const Duration(milliseconds: 600));
       if (_done || !mounted) return;
       if ((await _c.currentUrl()) != url) return;
+      // Start- oder Hinweisseite nach der Anmeldung: dem Link zur
+      // Essensbestellung folgen (mealNavJs), höchstens zweimal.
+      if (_hops < 2) {
+        try {
+          var h = '${await _c.runJavaScriptReturningResult(mealNavJs)}';
+          if (h.startsWith('"')) h = jsonDecode(h) as String;
+          final target = Uri.tryParse(h);
+          if (h.isNotEmpty &&
+              target != null &&
+              mensaAllows(_home, target) &&
+              h != url) {
+            _hops++;
+            _load(h);
+            return;
+          }
+        } catch (_) {}
+      }
+      if (_done || !mounted) return;
       if (_read == 0) widget.onUnreadable?.call();
       _finish();
       return;
@@ -150,8 +170,8 @@ class _MealFetcherState extends State<MealFetcher> {
       for (final x in targets)
         if (!_seen.contains(x)) x,
     ];
-    // Höchstens vier Seiten je Abruf (zurück, dann vor).
-    if (missing.isNotEmpty && _loads < 4) {
+    // Höchstens sechs Seiten je Abruf (Anmeldung, Startseite, zurück, vor).
+    if (missing.isNotEmpty && _loads < 6) {
       final link = missing.first.isBefore(ws) ? week.prev : week.next;
       if (link != null) {
         final target = Uri.parse(url ?? _loading ?? widget.url).resolve(link);

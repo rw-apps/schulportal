@@ -209,11 +209,32 @@ class _MensaPageState extends ConsumerState<MensaPage> {
     final src = await pageHtml(_c);
     final url = await _c.currentUrl();
     final w = (src == null ? null : parseMealWeek(src))?.withUrl(url);
-    if (w == null || !mounted) return;
+    if (!mounted) return;
+    if (w == null) return _hop(url);
+    _hopDone = true;
     try {
       MealCache.instance
         ..attach(ref.read(sharedOverAccountSettingsProvider))
         ..put(widget.owner, [w]);
+    } catch (_) {}
+  }
+
+  /// Erste Seite ohne Woche und ohne Anmeldemaske (Hinweisseite nach der
+  /// Anmeldung): einmal dem Link zur Essensbestellung folgen (mealNavJs).
+  /// Ursache (Bildschirmfoto 27.10.26): Sonst musste man über die Figur
+  /// oben rechts und „Kundenbereich“ gehen. Grenze: nur beim Öffnen, nicht
+  /// wenn man danach selbst auf die Startseite wechselt.
+  bool _hopDone = false;
+
+  Future<void> _hop(String? url) async {
+    if (_hopDone || _afterLogin || await _hasPasswordField()) return;
+    _hopDone = true;
+    try {
+      var h = '${await _c.runJavaScriptReturningResult(mealNavJs)}';
+      if (h.startsWith('"')) h = jsonDecode(h) as String;
+      final t = Uri.tryParse(h);
+      if (h.isEmpty || t == null || h == url || !mensaAllows(_home, t)) return;
+      if (mounted) await _c.loadRequest(t);
     } catch (_) {}
   }
 

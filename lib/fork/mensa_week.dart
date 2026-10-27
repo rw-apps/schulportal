@@ -437,14 +437,19 @@ MealWeek? _parseDayList(Document doc) {
       if (name == null) continue;
       final form = r.querySelector('form');
       final plus = r.querySelector('button[data-method="plus"]');
+      // Gegenprobe in der breiten Tabelle (`td#mo-…`): Dort ist der Knopf
+      // maßgeblich, wenn die Tagesliste ihn anders auszeichnet.
+      final widePlus = doc
+          .getElementById(r.id.replaceFirst('smo-', 'mo-'))
+          ?.querySelector('button[data-method="plus"]');
+      bool open(Element? b) => b != null && !b.classes.contains('disabled');
       final o = MealOption(
         line: _text(r.querySelector('b')),
         name: _tidy(_dish(name)),
         allergens: _text(r.querySelector('small')).isEmpty
             ? null
             : _text(r.querySelector('small')),
-        orderable:
-            form != null && plus != null && !plus.classes.contains('disabled'),
+        orderable: form != null && (open(plus) || open(widePlus)),
         id: r.id.startsWith('smo-') ? r.id.substring(4) : null,
       );
       if (form == null) {

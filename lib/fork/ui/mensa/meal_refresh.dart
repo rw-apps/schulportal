@@ -86,7 +86,7 @@ class _MealRefreshState extends ConsumerState<MealRefresh> {
                 child: MealFetcher(
                   key: ValueKey(c.owner),
                   url: mensaUrlForWeek(
-                    c.url,
+                    mealBaseUrl(c.url, _cache.of(c.owner)),
                     isoWeek(schoolWeek(widget.now).first),
                   ),
                   owner: c.owner,

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart' show sharedOverAccountSettingsProvider;
 
 import '../../l10n/l10n.dart';
-import '../../mensa.dart' show isoWeek, mensaUrlForWeek;
+import '../../mensa.dart' show isoWeek, mensaUrlForWeek, mensaWeekUrl;
 import '../../mensa_store.dart';
 import '../../mensa_week.dart';
 import '../kit.dart';
@@ -72,6 +72,9 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
 
   DateTime get _thisWeek => schoolWeek(_now).first;
 
+  /// Zuletzt gelesene Wochenseite statt Startseite (mealBaseUrl).
+  String get _base => mealBaseUrl(widget.url, _cache.of(widget.owner));
+
   @override
   void initState() {
     super.initState();
@@ -83,7 +86,7 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
 
   void _refresh() => setState(() {
     _round++;
-    _fetch = mensaUrlForWeek(widget.url, isoWeek(_thisWeek));
+    _fetch = mensaUrlForWeek(_base, isoWeek(_thisWeek));
     _want = _thisWeek;
     _count = 2;
   });
@@ -109,7 +112,7 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
       if (link != null) {
         setState(() {
           _round++;
-          _fetch = Uri.parse(widget.url).resolve(link).toString();
+          _fetch = Uri.parse(_base).resolve(link).toString();
           _want = schoolWeek(target).first;
           _count = 1;
         });
@@ -122,7 +125,9 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
       context,
       (_) => MensaPage(
         url: widget.url,
-        open: w == null ? null : mensaUrlForWeek(widget.url, isoWeek(w.start)),
+        open: w == null
+            ? (_base == widget.url ? null : mensaWeekUrl(_base, DateTime.now()))
+            : mealWeekPageUrl(w, w.start, _base),
         owner: widget.owner,
         childName: widget.childName,
       ),
@@ -143,7 +148,7 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
     if (!mounted || _job != null || _fetch != null) return;
     setState(() {
       _jobRound++;
-      _job = (day: d, option: o, url: mealWeekPageUrl(w, d.day, widget.url));
+      _job = (day: d, option: o, url: mealWeekPageUrl(w, d.day, _base));
     });
   }
 
@@ -186,6 +191,9 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
       MaterialPageRoute<void>(
         builder: (_) => MensaPage(
           url: widget.url,
+          open: _base == widget.url
+              ? null
+              : mensaWeekUrl(_base, DateTime.now()),
           owner: widget.owner,
           childName: widget.childName,
         ),
@@ -500,80 +508,65 @@ class _MealRowState extends State<_MealRow> {
   var _open = false;
 
   /// Offener Tag in drei Ebenen (Rückmeldung 27.10.26: „stärker
-  /// differenzieren“): Zustand als gelbe Marke „noch bestellbar“, daneben
-  /// in Linkfarbe die Zahl zur Wahl (antippbar), aufgeklappt die Gerichte
-  /// in einem eigenen Kasten – Menülinie klein darüber, Gericht darunter.
-  List<Widget> _openParts(Kit k, ForkL10n t, MealDay d) => [
-    const SizedBox(height: Sp.xs),
-    Wrap(
-      spacing: Sp.s,
-      runSpacing: Sp.xs,
-      crossAxisAlignment: WrapCrossAlignment.center,
+  /// differenzieren“): „Nichts bestellt“ mit gelber Marke „noch
+  /// bestellbar“ in einer Zeile, darunter in Linkfarbe die Zahl zur Wahl
+  /// mit Pfeil; aufgeklappt die Gerichte in einem Kasten über die ganze
+  /// Kartenbreite (Rückmeldung 27.10.26 früh: „Platz nicht optimal
+  /// genutzt“ – vorher standen Kasten und Pfeil neben der Datumsspalte).
+  Widget _pill(Kit k, ForkL10n t) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: Sp.s, vertical: Sp.xxs),
+    decoration: BoxDecoration(
+      color: k.p.change.bg,
+      borderRadius: BorderRadius.circular(Rad.pill),
+    ),
+    child: Text(
+      t.mealStillOpen,
+      style: k.tileCaption.copyWith(color: k.p.change.ink),
+    ),
+  );
+
+  Widget _openBox(Kit k, ForkL10n t, MealDay d) => Container(
+    decoration: BoxDecoration(
+      color: k.p.inset,
+      borderRadius: BorderRadius.circular(Rad.bar),
+    ),
+    padding: const EdgeInsets.only(left: Sp.m, right: Sp.xs),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Sp.s,
-            vertical: Sp.xxs,
+        for (final (i, x) in d.options.indexed) ...[
+          if (i > 0) Container(height: Sz.frame, color: k.p.line),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: Sp.s),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        [
+                          if (x.line.isNotEmpty) upperFor(t, x.line),
+                          ?x.price,
+                        ].join(' · '),
+                        style: k.planNowLabel,
+                      ),
+                      Text(x.name, style: k.planMeta(k.p.ink)),
+                    ],
+                  ),
+                ),
+                if (x.orderable && widget.onOrderOption != null)
+                  TextButton(
+                    onPressed: () => widget.onOrderOption!(d, x),
+                    child: Text(t.mealOrderAction, style: k.link),
+                  ),
+              ],
+            ),
           ),
-          decoration: BoxDecoration(
-            color: k.p.change.bg,
-            borderRadius: BorderRadius.circular(Rad.pill),
-          ),
-          child: Text(
-            t.mealStillOpen,
-            style: k.tileCaption.copyWith(color: k.p.change.ink),
-          ),
-        ),
-        if (d.options.isNotEmpty)
-          Text(
-            t.mealChoices(d.options.length),
-            style: k.planMeta(k.p.onNavSelected),
-          ),
+        ],
       ],
     ),
-    if (_open && d.options.isNotEmpty) ...[
-      const SizedBox(height: Sp.s),
-      Container(
-        decoration: BoxDecoration(
-          color: k.p.inset,
-          borderRadius: BorderRadius.circular(Rad.bar),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: Sp.m),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final (i, x) in d.options.indexed) ...[
-              if (i > 0) Container(height: Sz.frame, color: k.p.line),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: Sp.s),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (x.line.isNotEmpty)
-                            Text(upperFor(t, x.line), style: k.planNowLabel),
-                          Text(x.name, style: k.planMeta(k.p.ink)),
-                          if (x.price != null)
-                            Text(x.price!, style: k.planMeta(k.p.muted)),
-                        ],
-                      ),
-                    ),
-                    if (x.orderable && widget.onOrderOption != null)
-                      TextButton(
-                        onPressed: () => widget.onOrderOption!(d, x),
-                        child: Text(t.mealOrderAction, style: k.link),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    ],
-  ];
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -588,17 +581,14 @@ class _MealRowState extends State<_MealRow> {
     };
     final o = d.ordered;
     final until = d.cancelUntil;
-    final String title;
-    final Color ink;
-    final lines = <String>[];
     final canOpen = d.state == MealState.open && d.options.isNotEmpty;
+    final lines = <String>[];
+    final List<Widget> content;
     switch (d.state) {
       case MealState.ordered:
-        title = o!.name;
-        ink = k.p.ink;
         lines.add(
           [
-            if (o.line.isNotEmpty) o.line,
+            if (o!.line.isNotEmpty) o.line,
             t.mealOrdered,
             if (until != null) t.mealCancelUntil(_shortUntil(until, d.day)),
           ].join(' · '),
@@ -606,77 +596,90 @@ class _MealRowState extends State<_MealRow> {
         if (d.sides.isNotEmpty) {
           lines.add(t.mealSides(d.sides.map((s) => s.name).join(', ')));
         }
+        content = [
+          Text(o.name, style: k.planSubject(k.p.ink)),
+          for (final l in lines) Text(l, style: k.planMeta(k.p.muted)),
+          if (d.canCancel && widget.onCancel != null)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, Sz.buttonTiny),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () => widget.onCancel!(d),
+                child: Text(
+                  t.mealCancelAction,
+                  style: k.link.copyWith(color: k.p.cancel.ink),
+                ),
+              ),
+            ),
+        ];
       case MealState.open:
-        title = t.mealNothing;
-        ink = k.p.change.ink;
+        content = [
+          Wrap(
+            spacing: Sp.s,
+            runSpacing: Sp.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(t.mealNothing, style: k.planSubject(k.p.change.ink)),
+              _pill(k, t),
+            ],
+          ),
+          if (d.options.isNotEmpty) ...[
+            const SizedBox(height: Sp.xxs),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  t.mealChoices(d.options.length),
+                  style: k.planMeta(k.p.onNavSelected),
+                ),
+                Icon(
+                  _open ? Icons.expand_less : Icons.expand_more,
+                  size: Sz.icon,
+                  color: k.p.onNavSelected,
+                ),
+              ],
+            ),
+          ],
+        ];
       case MealState.missed:
-        title = t.mealNothing;
-        ink = k.p.muted;
-        lines.add(t.mealMissed);
+        content = [
+          Text(t.mealNothing, style: k.planSubject(k.p.muted)),
+          Text(t.mealMissed, style: k.planMeta(k.p.muted)),
+        ];
       case MealState.closed:
-        title = d.note ?? t.mealClosed;
-        ink = k.p.muted;
+        content = [
+          Text(d.note ?? t.mealClosed, style: k.planSubject(k.p.muted)),
+        ];
     }
-    final row = IntrinsicHeight(
+    final head = Padding(
+      padding: const EdgeInsets.all(Sp.m),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(width: Sp.xs, color: accent),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(Sp.m, Sp.m, 0, Sp.m),
-            child: SizedBox(
-              width: Sz.slotColumn,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    today ? t.dayToday : formatDate(t, 'ccc', d.day),
-                    style: k.timeStart,
-                  ),
-                  Text(formatDate(t, t.dateDayMonth, d.day), style: k.timeEnd),
-                ],
-              ),
+          SizedBox(
+            width: Sz.slotColumn,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  today ? t.dayToday : formatDate(t, 'ccc', d.day),
+                  style: k.timeStart,
+                ),
+                Text(formatDate(t, t.dateDayMonth, d.day), style: k.timeEnd),
+              ],
             ),
           ),
+          const SizedBox(width: Sp.s),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(Sp.s, Sp.m, Sp.m, Sp.m),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: k.planSubject(ink)),
-                  for (final l in lines) Text(l, style: k.planMeta(k.p.muted)),
-                  if (d.state == MealState.open) ..._openParts(k, t, d),
-                  if (d.state == MealState.ordered &&
-                      d.canCancel &&
-                      widget.onCancel != null)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton(
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(0, Sz.buttonTiny),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        onPressed: () => widget.onCancel!(d),
-                        child: Text(
-                          t.mealCancelAction,
-                          style: k.link.copyWith(color: k.p.cancel.ink),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: content,
             ),
           ),
-          if (canOpen)
-            Padding(
-              padding: const EdgeInsets.only(right: Sp.s),
-              child: Icon(
-                _open ? Icons.expand_less : Icons.expand_more,
-                color: k.p.muted,
-              ),
-            ),
         ],
       ),
     );
@@ -689,9 +692,33 @@ class _MealRowState extends State<_MealRow> {
             : BorderSide.none,
       ),
       clipBehavior: Clip.antiAlias,
-      child: canOpen
-          ? InkWell(onTap: () => setState(() => _open = !_open), child: row)
-          : row,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(width: Sp.xs, color: accent),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (canOpen)
+                    InkWell(
+                      onTap: () => setState(() => _open = !_open),
+                      child: head,
+                    )
+                  else
+                    head,
+                  if (canOpen && _open)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(Sp.m, 0, Sp.m, Sp.m),
+                      child: _openBox(k, t, d),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

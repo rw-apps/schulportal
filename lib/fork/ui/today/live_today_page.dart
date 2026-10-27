@@ -22,6 +22,7 @@ import '../../demo/demo_entry.dart';
 import 'hint_card.dart';
 import '../portal_link.dart';
 import 'login_failure_card.dart';
+import '../../mensa.dart' show mensaWeekUrl;
 import '../../mensa_store.dart';
 import '../../mensa_week.dart' show MealState;
 import '../mensa/meal_refresh.dart';
@@ -50,7 +51,15 @@ Future<void> openMensa(
   await pushFullScreen<void>(
     context,
     (_) => unreadable
-        ? MensaPage(url: url, owner: owner, childName: name)
+        ? MensaPage(
+            url: url,
+            owner: owner,
+            childName: name,
+            open: switch (mealBaseUrl(url, MealCache.instance.of(owner))) {
+              final b when b != url => mensaWeekUrl(b, DateTime.now()),
+              _ => null,
+            },
+          )
         : MealWeekPage(
             url: url,
             owner: owner,

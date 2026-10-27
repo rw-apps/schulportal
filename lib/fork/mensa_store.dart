@@ -80,6 +80,46 @@ class MealEntry {
 
 const mealCacheKey = 'fork-mensa/weeks';
 
+/// Adresse, von der aus die App die Wochen liest: die zuletzt gelesene
+/// Wochenseite (MealWeek.url), sonst die eingetragene Adresse.
+///
+/// Ursache (Bildschirmfoto 27.10.26): Eingetragen ist oft die Startseite
+/// des Caterers (Anmeldung). Nach der Anmeldung landet man dort auf einer
+/// Hinweisseite; die Wochen kommen erst über „Kundenbereich“. Mit der
+/// gemerkten Wochenseite (…/2026/46/) setzt mensaUrlForWeek die Woche
+/// direkt ein. Grenze: Vor dem ersten erfolgreichen Lesen gilt die
+/// eingetragene Adresse; dann hilft mealNavJs weiter.
+String mealBaseUrl(String stored, MealEntry? e) {
+  MealWeek? best;
+  for (final w in e?.weeks ?? const <MealWeek>[]) {
+    if (w.url == null) continue;
+    if (best == null || w.start.isAfter(best.start)) best = w;
+  }
+  return best?.url ?? stored;
+}
+
+/// Sucht auf einer Seite ohne Woche (Start- oder Hinweisseite) den Link
+/// zur Essensbestellung („Essenbestellung“, „Speiseplan“, „Kundenbereich“,
+/// „Menübestellung“) und gibt seine Adresse zurück, sonst ''. Grenze: nur
+/// sichtbare Linktexte dieser Art; andere Wörter erkennt es nicht.
+const mealNavJs = r'''
+(function () {
+  var re = /(essen\s*bestellung|essenbestellung|essensbestellung|speiseplan|kundenbereich|men(ü|ue)\s*bestellung)/i;
+  var as = document.querySelectorAll('a[href]');
+  for (var k = 0; k < 2; k++) {
+    for (var i = 0; i < as.length; i++) {
+      var a = as[i], t = (a.textContent || '').trim();
+      if (!re.test(t)) continue;
+      // Erst die direkte Bestellung, dann der Kundenbereich.
+      if (k === 0 && /kundenbereich/i.test(t)) continue;
+      var h = a.href || '';
+      if (h.indexOf('http') === 0 && h.indexOf('#') !== h.length - 1) return h;
+    }
+  }
+  return '';
+})()
+''';
+
 /// Unter diesem Guthaben (Euro) warnt Heute „bitte Geld überweisen“
 /// (Wunsch 27.10.26: „ab weniger als 15 EUR ein Hinweis“).
 const mealLowBalance = 15.0;
