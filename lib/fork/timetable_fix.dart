@@ -43,6 +43,7 @@ TimeTable parseTimetableKeepingFirstRow(Document document) {
       'stunden': document.querySelectorAll('.stunde').length,
       'vonbis': document.querySelectorAll('.VonBis').length,
       'inserted': inserted,
+      ...emptyTimetablePageKind(document),
     });
   }
   return tt;
@@ -76,4 +77,22 @@ class ForkTimetableParser extends TimetableStudentParser {
     }
     return tt;
   }
+}
+
+/// Art einer Stundenplanseite ohne Plan, nur als Zahlen fürs
+/// Fehlerprotokoll: `login` = Anmeldeformular (Passwortfeld) – Sitzung
+/// abgelaufen; `wartung` = Text nennt Wartung; `text` = Textlänge in 100
+/// Zeichen (gekappt bei 99). Ursache (Fehlerbericht 27.10.26, 9412:
+/// „EmptyTimetable(all=0 own=0 rows=1 …)“ 2× um 06:35): Die Zählwerte
+/// zeigten nur, DASS keine Plantabelle kam, nicht WAS stattdessen – ob
+/// Sitzungsende, Wartung oder Fehlerseite, ließ sich nicht unterscheiden.
+/// Grenze: keine Inhalte, nur diese drei Werte; eine Fehlerseite ohne
+/// Passwortfeld und ohne „Wartung“ bleibt nur an der Länge erkennbar.
+Map<String, int> emptyTimetablePageKind(Document document) {
+  final text = (document.body?.text ?? '').replaceAll(RegExp(r'\s+'), ' ');
+  return {
+    'login': document.querySelector('input[type=password]') == null ? 0 : 1,
+    'wartung': text.toLowerCase().contains('wartung') ? 1 : 0,
+    'text': (text.trim().length / 100).ceil().clamp(0, 99),
+  };
 }

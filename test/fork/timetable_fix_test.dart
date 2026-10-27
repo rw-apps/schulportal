@@ -94,4 +94,21 @@ void main() {
     );
     expect(empty.planForAll, isEmpty);
   });
+
+  // Fehlerbericht 27.10.26: Art der Seite ohne Plan, ohne Inhalte.
+  test('Seite ohne Plan: Anmeldung, Wartung, Länge', () {
+    final login = emptyTimetablePageKind(
+      parse('<html><body><form><input type="password"></form></body></html>'),
+    );
+    expect(login, {'login': 1, 'wartung': 0, 'text': 0});
+    final down = emptyTimetablePageKind(
+      parse(
+        '<html><body><p>Das Schulportal ist wegen Wartung nicht '
+        'erreichbar.</p></body></html>',
+      ),
+    );
+    expect(down['wartung'], 1);
+    expect(down['login'], 0);
+    expect(down['text'], 1);
+  });
 }
