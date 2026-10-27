@@ -599,6 +599,7 @@ String? coursePage(DemoUser u, String courseId, DemoClock c) {
           '${homework == null ? '' : '<br /><span class="homework">Hausaufgabe</span>'
                     '<br /><span class="markup">${_esc(homework)}</span>'
                     '${done ? '' : '<span class="done hidden"></span>'}'}'
+          '${n == 1 ? _uploadButtons(p, s.subject, c) : ''}'
           '</td><td>$presence</td></tr>';
       final exam = s.subject == 'M'
           ? '<li>${dmy(c.schoolDay(4))} Klassenarbeit, 1. - 2. Std.</li>'
@@ -631,6 +632,220 @@ String? coursePage(DemoUser u, String courseId, DemoClock c) {
     }
   }
   return null;
+}
+
+// ---- Abgaben ----------------------------------------------------------------
+
+/// Erfundene Abgabe einer Kursstunde (Lena, 7b). Ursache (Wunsch
+/// 27.10.26): Die neue Abgabeseite (upload_view.dart) war in der Demo nicht
+/// zu sehen – keine Kursmappe hatte eine Abgabe. Je ein Beispiel für die
+/// drei Zustände: offen mit einer Datei (G), schon abgegeben (INF), mehrere
+/// Dateien beliebig oft mit Hinweis und Dateien der Lerngruppe (KU).
+/// Grenze: Hochladen und Löschen sperrt die Demo (blockedInDemo); die
+/// Dateien sind ein leeres Demo-PDF ([demoPdf]).
+class DemoUpload {
+  const DemoUpload({
+    required this.subject,
+    required this.name,
+    required this.startBack,
+    required this.dueIn,
+    required this.dueTime,
+    this.multiple = false,
+    this.repeat = false,
+    this.visibility = 'Lehrkraft',
+    this.types = 'pdf, docx, jpg',
+    this.ownFile,
+    this.note,
+    this.publicFiles = const [],
+  });
+  final String subject;
+  final String name;
+
+  /// Start [startBack] Schultage zurück, 08:00.
+  final int startBack;
+
+  /// Frist in [dueIn] Schultagen um [dueTime].
+  final int dueIn;
+  final String dueTime;
+  final bool multiple;
+  final bool repeat;
+  final String visibility;
+  final String types;
+
+  /// Schon abgegebene eigene Datei (gestern, 19:42).
+  final String? ownFile;
+  final String? note;
+
+  /// (Datei, Person) – erfundene Mitschüler.
+  final List<(String, String)> publicFiles;
+}
+
+const demoUploads = [
+  DemoUpload(
+    subject: 'G',
+    name: 'Referat Mittelalter',
+    startBack: 1,
+    dueIn: 3,
+    dueTime: '18:00',
+  ),
+  DemoUpload(
+    subject: 'INF',
+    name: 'Algorithmus aus dem Alltag',
+    startBack: 4,
+    dueIn: 2,
+    dueTime: '20:00',
+    ownFile: 'Algorithmus_Fruehstueck.pdf',
+  ),
+  DemoUpload(
+    subject: 'KU',
+    name: 'Fotos Farbkreis',
+    startBack: 2,
+    dueIn: 6,
+    dueTime: '23:59',
+    multiple: true,
+    repeat: true,
+    visibility: 'Lehrkraft und Kursteilnehmer',
+    types: 'jpg, png, pdf',
+    note: 'Bitte fotografiert euren Farbkreis bei Tageslicht.',
+    publicFiles: [
+      ('Farbkreis_Tim.pdf', 'Tim K.'),
+      ('Farbkreis_Ella.pdf', 'Ella S.'),
+    ],
+  ),
+];
+
+String _uploadId(DemoPupil p, DemoUpload u) => '${demoCourseId(p, u.subject)}9';
+
+Iterable<DemoUpload> _uploadsOf(DemoPupil p, String subject) =>
+    p.className.startsWith('07')
+    ? demoUploads.where((u) => u.subject == subject)
+    : const [];
+
+const _weekdays = [
+  'Montag',
+  'Dienstag',
+  'Mittwoch',
+  'Donnerstag',
+  'Freitag',
+  'Samstag',
+  'Sonntag',
+];
+
+/// Wie das Portal: „Freitag, den 30.10.26 18:00 Uhr“ (UploadDates.tryParse,
+/// Muster „EEEE d.M.yy H:mm“ nach Entfernen von „,“, „ den“, „ Uhr“).
+String _portalDateTime(DateTime d, String time) =>
+    '${_weekdays[d.weekday - 1]}, den ${_two(d.day)}.${_two(d.month)}.'
+    '${_two(d.year % 100)} $time Uhr';
+
+/// Abgabe-Knöpfe in der Kursmappe (liblanis StudentParser
+/// .getDetailedCourseView: `div.btn-group` mit `.btn-warning`, Name als
+/// drittes Kind, `span.badge` = abgegeben, `small` = Frist, Adresse aus
+/// `ul.dropdown-menu li a`).
+String _uploadButtons(DemoPupil p, String subject, DemoClock c) =>
+    _uploadsOf(p, subject).map((u) {
+      final due = c.schoolDay(u.dueIn);
+      final badge = u.ownFile == null
+          ? ''
+          : '<span class="badge">1 Datei</span> ';
+      return '<div class="btn-group"><button type="button" '
+          'class="btn btn-warning btn-xs dropdown-toggle"> '
+          '<i class="fa fa-upload"></i> ${_esc(u.name)} $badge'
+          '<small>bis ${dmy(due)} ${u.dueTime}</small></button>'
+          '<ul class="dropdown-menu"><li><a href="meinunterricht.php?'
+          'a=sus_abgabe&amp;id=${_uploadId(p, u)}">Abgabe öffnen</a></li>'
+          '</ul></div>';
+    }).join();
+
+/// meinunterricht.php?a=sus_abgabe&id=… – Abgabeseite (liblanis
+/// StudentParser.getUploadInfo): `#content .row .col-md-12` [1] Vorgaben,
+/// [2] eigene Dateien; `.col-md-7 form` mit b/e/id (fehlt nach der
+/// einzigen Abgabe); `.col-md-5` Dateien der Lerngruppe. Grenze: Die beiden
+/// Haken stehen immer als `label-success` da – der Parser liest sie per
+/// Index, ein anderes Label würde die Seite brechen.
+String? uploadPage(DemoUser user, String id, DemoClock c) {
+  for (final p in user.pupils) {
+    for (final u in demoUploads) {
+      if (_uploadId(p, u) != id || _uploadsOf(p, u.subject).isEmpty) continue;
+      final course = demoCourseId(p, u.subject);
+      final start = c.pastSchoolDay(u.startBack);
+      final due = c.schoolDay(u.dueIn);
+      final deletion = DateTime(due.year, due.month + 3, due.day);
+      String flag(bool on) =>
+          '<i class="fa fa-check-square-o fa-fw"></i>'
+          '<span class="label label-success">${on ? 'erlaubt' : 'nicht erlaubt'}</span>';
+      final eye = u.visibility == 'Lehrkraft' ? 'fa-eye-slash' : 'fa-eye';
+      final own = u.ownFile == null
+          ? ''
+          : '<li><a href="meinunterricht.php?a=download&amp;f=1">'
+                '${_esc(u.ownFile!)}</a> <small>(hochgeladen am '
+                '${dmy(c.pastSchoolDay(1))} um 19:42 Uhr)</small></li>';
+      final closed = u.ownFile != null && !u.repeat;
+      final form = closed
+          ? ''
+          : '<form><input name="b" value="$course" />'
+                '<input name="e" value="${course}1" />'
+                '<input name="id" value="$id" /></form>';
+      final public = u.publicFiles.isEmpty
+          ? ''
+          : '<div class="col-md-5"><h3>Dateien der Lerngruppe</h3><ul>'
+                '${[for (final (i, (f, who)) in u.publicFiles.indexed) '<li><a href="meinunterricht.php?a=download&amp;f=${i + 2}">${_esc(f)}</a> <span class="label label-info">${_esc(who)}</span></li>'].join()}'
+                '</ul></div>';
+      return _page(
+        u.name,
+        '<div id="content">'
+        '<div class="row"><div class="col-md-12"><h1>${_esc(u.name)}</h1>'
+        '</div></div>'
+        '<div class="row"><div class="col-md-12">'
+        '<p>Abgabe ab <span class="editable">${_portalDateTime(start, '08:00')} ab</span></p>'
+        '<p>Abgabe bis <b><span class="editable">${_portalDateTime(due, u.dueTime)}  spätestens</span></b></p>'
+        '<p>Mehrere Dateien ${flag(u.multiple)}</p>'
+        '<p>Beliebig oft abgeben ${flag(u.repeat)}</p>'
+        '<p>Sichtbar für <i class="fa $eye fa-fw"></i><span class="label">${u.visibility}</span></p>'
+        '<p>Löschung <i class="fa fa-trash-o fa-fw"></i><span class="label label-info">${dmy(deletion)}</span></p>'
+        '<p>Dateitypen <i class="fa fa-file fa-fw"></i><span class="label label-warning">${u.types}</span></p>'
+        '<p>Größe <i class="fa fa-file fa-fw"></i><span class="label label-warning">10 MB</span></p>'
+        '${u.note == null ? '' : '<div class="alert alert-info"><b>Hinweis:</b>\n${_esc(u.note!)}\n</div>'}'
+        '</div></div>'
+        '<div class="row"><div class="col-md-12"><h3>Eigene Dateien</h3>'
+        '<ul>$own</ul></div></div>'
+        '<div class="row"><div class="col-md-7">$form</div>$public</div>'
+        '</div>',
+      );
+    }
+  }
+  return null;
+}
+
+/// Kleines gültiges PDF mit einer Zeile Text, für jede Datei einer
+/// Demo-Abgabe (meinunterricht.php?a=download). Versätze der xref-Tabelle
+/// werden mitgerechnet, damit Betrachter es ohne Reparatur öffnen.
+String demoPdf() {
+  const text = 'Beispieldatei der Demo';
+  final stream = 'BT /F1 18 Tf 72 720 Td ($text) Tj ET';
+  final objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] '
+        '/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>',
+    '<< /Length ${stream.length} >>\nstream\n$stream\nendstream',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  final b = StringBuffer('%PDF-1.4\n');
+  final offsets = <int>[];
+  for (final (i, o) in objects.indexed) {
+    offsets.add(b.length);
+    b.write('${i + 1} 0 obj\n$o\nendobj\n');
+  }
+  final xref = b.length;
+  b.write('xref\n0 ${objects.length + 1}\n0000000000 65535 f \n');
+  for (final o in offsets) {
+    b.write('${o.toString().padLeft(10, '0')} 00000 n \n');
+  }
+  b.write(
+    'trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n'
+    'startxref\n$xref\n%%EOF\n',
+  );
+  return b.toString();
 }
 
 // ---- Nachrichten ----------------------------------------------------------

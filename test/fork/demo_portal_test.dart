@@ -10,6 +10,7 @@ import 'package:html/parser.dart' show parse;
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/fork/demo/demo_portal.dart';
 import 'package:lanis/fork/demo/demo_school.dart';
+import 'package:lanis/fork/ui/courses/upload_view.dart';
 import 'package:lanis/fork/lessons_parent.dart';
 import 'package:lanis/fork/timetable_fix.dart';
 
@@ -134,6 +135,68 @@ void main() {
       'meinunterricht.php?a=sus_view&id=${math.courseID}',
     );
     expect(page, contains('Klassenarbeit'));
+  });
+
+  // Abgaben in der Demo (Wunsch 27.10.26): die echten Leser von liblanis
+  // (getDetailedCourseView, getUploadInfo) gegen die erfundenen Seiten.
+  test('Abgaben: offen, abgegeben, mehrere Dateien', () async {
+    final s = await _login('demo.lena');
+    final db = LanisDatabase.open();
+    addTearDown(db.dispose);
+    final parser = LessonsStudentParser(
+      AppletContext(
+        session: s,
+        database: db,
+        account: s.account,
+        accountSettings: TypedSettings.shared(db),
+      ),
+      isConnected: () async => true,
+    );
+    Future<(LessonUpload, UploadInfo)> open(String subject) async {
+      final d = await parser.getDetailedCourseView(
+        'meinunterricht.php?a=sus_view&id=${demoCourseId(demoLena, subject)}',
+      );
+      final u = d.history.expand((e) => e.uploads).single;
+      expect(u.status, 'open');
+      final info = UploadInfo.fromPortal(
+        await parser.getUploadInfo(u.url.toString()) as Map,
+      );
+      return (u, info);
+    }
+
+    final (g, gi) = await open('G');
+    expect(g.name, 'Referat Mittelalter');
+    expect(g.uploaded, isNull);
+    expect(g.date, '30.10.2026 18:00');
+    expect(gi.maxFiles, 1);
+    expect(gi.done, isFalse);
+    expect(gi.open, isTrue);
+    expect(gi.dates.deadline, DateTime(2026, 10, 30, 18));
+    expect(gi.dates.start, DateTime(2026, 10, 26, 8));
+    expect(gi.canSubmit(_now), isTrue);
+    expect(gi.visibility, 'Lehrkraft');
+
+    final (inf, ii) = await open('INF');
+    expect(inf.uploaded, isNotNull);
+    expect(ii.done, isTrue);
+    expect(ii.ownFiles.single.name, 'Algorithmus_Fruehstueck.pdf');
+    expect(ii.canSubmit(_now), isFalse);
+
+    final (_, ki) = await open('KU');
+    expect(ki.maxFiles, 5);
+    expect(ki.anyNumberOfTimes, isTrue);
+    expect(ki.publicFiles.map((f) => f.person), ['Tim K.', 'Ella S.']);
+    expect(ki.additionalText, contains('Tageslicht'));
+
+    // Kurse ohne Abgabe bleiben ohne.
+    final m = await parser.getDetailedCourseView(
+      'meinunterricht.php?a=sus_view&id=${demoCourseId(demoLena, 'M')}',
+    );
+    expect(m.history.expand((e) => e.uploads), isEmpty);
+
+    final pdf = await _get(s, 'meinunterricht.php?a=download&f=1');
+    expect(pdf, startsWith('%PDF-1.4'));
+    expect(pdf, endsWith('%%EOF\n'));
   });
 
   test('Nachrichten: verschlüsselte Liste lässt sich entschlüsseln', () async {

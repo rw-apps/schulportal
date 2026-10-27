@@ -118,6 +118,11 @@ class DemoPortal implements HttpClientAdapter {
       case '/meinunterricht.php' when q['a'] == 'sus_view':
         final page = coursePage(user, q['id'] ?? '', _clock);
         return page == null ? _status(404) : _html(page);
+      case '/meinunterricht.php' when q['a'] == 'sus_abgabe':
+        final page = uploadPage(user, q['id'] ?? '', _clock);
+        return page == null ? _status(404) : _html(page);
+      case '/meinunterricht.php' when q['a'] == 'download':
+        return _reply(demoPdf(), 'application/pdf');
       case '/meinunterricht.php' when q['a'] == null:
         return _html(lessonsPage(user, _clock));
       case '/nachrichten.php' when q['a'] == 'searchRecipt':
