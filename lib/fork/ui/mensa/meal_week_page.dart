@@ -576,7 +576,7 @@ class _MealRowState extends State<_MealRow> {
                       Text(
                         [
                           if (x.line.isNotEmpty) upperFor(t, x.line),
-                          ?x.price,
+                          ?_nbsp(x.price),
                         ].join(' · '),
                         style: k.planNowLabel,
                       ),
@@ -792,7 +792,8 @@ Future<bool> confirmMealChange(
                 style: k.meta,
               ),
               if (o != null) Text(o.name, style: k.planSubject(k.p.ink)),
-              if (!cancel && o?.price != null) Text(o!.price!, style: k.meta),
+              if (!cancel && o?.price != null)
+                Text(_nbsp(o!.price)!, style: k.meta),
               if (until != null && cancel)
                 Text(t.mealCancelUntil(until), style: k.meta),
               const SizedBox(height: Sp.m),
@@ -825,3 +826,8 @@ Future<bool> confirmMealChange(
   );
   return r ?? false;
 }
+
+/// Preis ohne Umbruch zwischen Betrag und „€“. Ursache (Bildschirmfoto
+/// 27.10.26): Bei langen Menülinien („VEGETARISCHER BRATLING · 3,00 €“)
+/// stand das „€“ allein in der nächsten Zeile.
+String? _nbsp(String? price) => price?.replaceAll(' ', '\u00A0');
