@@ -133,6 +133,13 @@ class _MealFetcherState extends State<MealFetcher> {
   var _done = false;
   var _triedLogin = false;
   var _afterLogin = false;
+
+  /// Begonnene Seiten (onPageStarted) – insgesamt und beim Ausfüllen der
+  /// Anmeldung; siehe [_login].
+  var _starts = 0;
+  var _fillStarts = 0;
+  var _loginWaitOver = false;
+  Timer? _loginWatch;
   String? _loading;
 
   @override
@@ -148,6 +155,7 @@ class _MealFetcherState extends State<MealFetcher> {
                 ? NavigationDecision.navigate
                 : NavigationDecision.prevent;
           },
+          onPageStarted: (_) => _starts++,
           onPageFinished: (u) {
             _trace('finished ${MealTrace.path(u)}');
             _onPage();
@@ -336,10 +344,29 @@ class _MealFetcherState extends State<MealFetcher> {
     final owner = widget.owner;
     if (owner == null) return false;
     if (_afterLogin) {
-      // Nach der Anmeldung leitet der Caterer meist auf seine Startseite.
+      // Abrufverlauf 27.10.26: Android meldet das Seitenende der
+      // Anmeldeseite doppelt; das zweite Lesen lief noch vor dem Klick
+      // (50 ms Verzug in mensaLoginFillJs) und lud die Anmeldeseite neu –
+      // die laufende Anmeldung brach ab. Erst eine neu begonnene Seite
+      // (onPageStarted) gilt als Ergebnis der Anmeldung, sonst weiter warten
+      // bis [_loginWatch].
+      if (_starts <= _fillStarts && !_loginWaitOver) {
+        _trace('same page, waiting for login');
+        return true;
+      }
+      _loginWatch?.cancel();
       _afterLogin = false;
+      final target = loginNextUrl(_loading ?? widget.url);
+      if (_isLoginUrl(target)) {
+        // Eingetragen ist die Anmeldeseite ohne Rücksprungziel; der
+        // Caterer landet nach der Anmeldung auf seiner Übersicht. Die
+        // Anmeldeseite neu zu laden führte wieder zur Maske – stattdessen
+        // dem Link zum Speiseplan folgen (mealNavJs in [_readPage]).
+        _trace('after login: follow link');
+        return false;
+      }
       _trace('reload after login');
-      _load(loginNextUrl(_loading ?? widget.url));
+      _load(target);
       return true;
     }
     if (_triedLogin) return false;
@@ -360,9 +387,11 @@ class _MealFetcherState extends State<MealFetcher> {
         // mensaLoginFillJs); bleibt die Weiterleitung aus (falsches
         // Passwort, Fehlermeldung auf der Seite), nach 15 s trotzdem
         // weiter – sonst endete der Abruf erst am timeout, ohne Befund.
-        _watchdog?.cancel();
-        _watchdog = Timer(const Duration(seconds: 15), () {
+        _fillStarts = _starts;
+        _loginWatch?.cancel();
+        _loginWatch = Timer(const Duration(seconds: 15), () {
           _trace('no page after login');
+          _loginWaitOver = true;
           _onPage();
         });
         return true;
@@ -376,6 +405,7 @@ class _MealFetcherState extends State<MealFetcher> {
     _done = true;
     _timer?.cancel();
     _watchdog?.cancel();
+    _loginWatch?.cancel();
     _trace('done, weeks read: $_read');
     widget.onDone();
   }
@@ -384,6 +414,7 @@ class _MealFetcherState extends State<MealFetcher> {
   void dispose() {
     _timer?.cancel();
     _watchdog?.cancel();
+    _loginWatch?.cancel();
     super.dispose();
   }
 
@@ -399,6 +430,9 @@ class _MealFetcherState extends State<MealFetcher> {
 Widget hiddenWebView(Widget view) => IgnorePointer(
   child: ExcludeSemantics(child: SizedBox.expand(child: view)),
 );
+
+bool _isLoginUrl(String url) =>
+    Uri.tryParse(url)?.path.toLowerCase().contains('login') ?? false;
 
 /// Nach der Anmeldung die eigentliche Seite laden: Ist [url] selbst eine
 /// Anmeldeseite mit Rücksprung (`…/login?next=/…/speiseplan.php…`), das

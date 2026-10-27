@@ -192,16 +192,19 @@ String mealBaseUrl(String stored, MealEntry? e) {
 
 /// Sucht auf einer Seite ohne Woche (Start- oder Hinweisseite) den Link
 /// zur Essensbestellung („Essenbestellung“, „Speiseplan“, „Kundenbereich“,
-/// „Menübestellung“) und gibt seine Adresse zurück, sonst ''. Grenze: nur
-/// sichtbare Linktexte dieser Art; andere Wörter erkennt es nicht.
+/// „Menübestellung“), zuletzt einen Link, dessen Adresse „speiseplan“
+/// enthält, und gibt seine Adresse zurück, sonst ''. Grenze: andere Wörter
+/// erkennt es nicht.
 const mealNavJs = r'''
 (function () {
   var re = /(essen\s*bestellung|essenbestellung|essensbestellung|speiseplan|kundenbereich|men(ü|ue)\s*bestellung)/i;
   var as = document.querySelectorAll('a[href]');
-  for (var k = 0; k < 2; k++) {
+  for (var k = 0; k < 3; k++) {
     for (var i = 0; i < as.length; i++) {
       var a = as[i], t = (a.textContent || '').trim();
-      if (!re.test(t)) continue;
+      // Zuletzt: Link auf eine Speiseplan-Seite, auch mit anderem Text
+      // (Übersicht nach der Anmeldung, Abrufverlauf 27.10.26).
+      if (k === 2 ? !/speiseplan/i.test(a.getAttribute('href') || '') : !re.test(t)) continue;
       // Erst die direkte Bestellung, dann der Kundenbereich.
       if (k === 0 && /kundenbereich/i.test(t)) continue;
       var h = a.href || '';

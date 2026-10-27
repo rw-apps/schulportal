@@ -86,6 +86,9 @@ class _MealOrderRunnerState extends State<MealOrderRunner> {
   var _polling = false;
   var _triedLogin = false;
   var _afterLogin = false;
+
+  /// Seitenzähler beim Ausfüllen der Anmeldung (siehe _onPage).
+  var _fillPage = 0;
   var _verifies = 0;
   var _verifyFrom = 0;
   var _verifyErrors = 0;
@@ -200,6 +203,11 @@ class _MealOrderRunnerState extends State<MealOrderRunner> {
       await Future<void>.delayed(const Duration(milliseconds: 600));
       if (stale() || _phase != _Phase.load) return;
       if (_afterLogin) {
+        // Doppelt gemeldetes Seitenende der Anmeldeseite (Abrufverlauf
+        // 27.10.26, MealFetcher._login): nur eine neu begonnene Seite ist
+        // das Ergebnis der Anmeldung; sonst brach das Neuladen die
+        // laufende Anmeldung ab.
+        if (page <= _fillPage) return;
         _afterLogin = false;
         await _c.loadRequest(Uri.parse(widget.url));
         return;
@@ -328,6 +336,7 @@ class _MealOrderRunnerState extends State<MealOrderRunner> {
       final r = await _c.runJavaScriptReturningResult(mensaLoginFillJs(l));
       if ('$r'.contains('filled')) {
         _afterLogin = true;
+        _fillPage = _page;
         return true;
       }
     } catch (_) {}
