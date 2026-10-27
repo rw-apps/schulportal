@@ -22,10 +22,7 @@ void main() {
       isEmpty,
       reason: 'Mittwoch ist morgen und damit offen',
     );
-    expect(
-      mealUnorderedDay(e, now, DateTime(2026, 10, 28)),
-      DateTime(2026, 10, 28),
-    );
+    expect(mealUnorderedDay(e, now), DateTime(2026, 10, 28));
     expect(lowMealBalance(e), '12,50');
     expect(normalizeMensaUrl(demoMensaUrl), demoMensaUrl);
   });

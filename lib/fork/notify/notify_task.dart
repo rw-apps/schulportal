@@ -25,7 +25,12 @@ import '../data_storage.dart';
 import '../portal_extras.dart';
 import '../ui/today/today_from_lanis.dart'
     show classFromCourses, weekItemsFromCalendar;
+import '../mensa_store.dart';
+import '../ui/today/kid_hints.dart' show nextSchoolDay;
+import '../ui/today/today_from_lanis.dart' show applySubstitutions;
+import '../ui/today/today_model.dart' show hasTime, minutesOf;
 import 'notices.dart';
+import 'summary.dart';
 
 /// Schlüssel der schon gemeldeten Einträge (je Konto).
 const sentNoticesSetting = 'fork-notify/sent';
@@ -168,13 +173,70 @@ Future<void> _run(
     lessonTimes: storedLessonTimes(s),
   );
   final courses = [for (final l in lessons) l.name];
+
+  // Sammel-Benachrichtigung (summary.dart, Wunsch 27.10.26): Ausfälle und
+  // Vertretungen von heute und dem nächsten Schultag sowie nicht bestelltes
+  // Essen als aktueller Stand dieses Kontos. Die Einzelmeldungen zu
+  // Änderungen entfallen dafür (buildNotices bekommt keine Vertretungen
+  // mehr und meldet nur noch große Termine am Vorabend).
+  try {
+    final shared = container.read(sharedOverAccountSettingsProvider);
+    final r = applySubstitutions(
+      plan: plan.withTeacherNames(ownNames),
+      choice: effectiveChoice(auto, userChoice),
+      days: subs.days,
+      now: now,
+      t: t,
+      subjectName: (c) => subjectFullName(c, courses),
+    );
+    putSummaryItems(
+      shared,
+      '${tools.accountId}/plan',
+      changeSummaryItems(
+        scope: '${tools.accountId}',
+        name: firstName,
+        changes: r.changes,
+        now: now,
+        next: nextSchoolDay(now),
+        t: t,
+        endOf: {
+          for (final l in r.today)
+            l.slot: hasTime(l) ? minutesOf(l.end).minutes : 24 * 60,
+        },
+      ),
+    );
+    final cache = MealCache.instance..attach(shared);
+    final meals = <SummaryItem>[];
+    for (final e in cache.notifier.value.entries) {
+      if (!e.key.startsWith('${tools.accountId}:')) continue;
+      final kidKey = e.key.substring('${tools.accountId}:'.length);
+      final kid = kids.where((k) => k.pupilId == kidKey).firstOrNull;
+      meals.addAll(
+        mealSummaryItems(
+          name: kid == null ? firstName : shortFirstName(kid.firstName),
+          owner: e.key,
+          days: mealReminderDays(
+            e.value,
+            now,
+            weekdays: mealRemindDays(shared, e.key),
+          ),
+          now: now,
+          t: t,
+        ),
+      );
+    }
+    putSummaryItems(shared, '${tools.accountId}/meals', meals);
+  } catch (e) {
+    backgroundLogger.w('Sammelmeldung übersprungen: ${e.runtimeType}');
+  }
+
   final sent = [
     for (final k in s.getJsonList(sentNoticesSetting) ?? const []) '$k',
   ];
   final notices = buildNotices(
     plan: plan.withTeacherNames(ownNames),
     choice: effectiveChoice(auto, userChoice),
-    substitutions: subs.days,
+    substitutions: const [],
     events: events,
     now: now,
     t: t,
@@ -478,4 +540,27 @@ DateTime _keyDay(String k) =>
 String _keySubject(String k) {
   final i = k.indexOf('|');
   return i < 0 ? '' : k.substring(i + 1);
+}
+
+/// Nach allen Konten: Sammel-Benachrichtigung zeigen bzw. entfernen
+/// (summary.dart). [accounts]: Konten mit erlaubten Benachrichtigungen –
+/// Einträge anderer (gelöschter, abgeschalteter) Konten fallen weg.
+Future<void> showForkSummary(
+  ProviderContainer container,
+  Set<int> accounts,
+) async {
+  try {
+    final shared = container.read(sharedOverAccountSettingsProvider);
+    String? chosen;
+    try {
+      chosen = shared.getString(languageKey);
+    } catch (_) {}
+    final t = forkL10nFor(
+      resolveLanguage(chosen, PlatformDispatcher.instance.locale.languageCode),
+    );
+    pruneSummarySources(shared, {for (final a in accounts) '$a'});
+    await showSummary(shared, t);
+  } catch (e) {
+    backgroundLogger.w('Sammelmeldung: ${e.runtimeType}');
+  }
 }

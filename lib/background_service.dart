@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/fork/kid_name.dart';
 import 'package:lanis/fork/login_guard.dart';
+import 'package:lanis/fork/notify/notify_task.dart' show showForkSummary;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:lanis/applets/definitions.dart';
 import 'package:lanis/bridge/lanis_bootstrap.dart';
@@ -260,6 +261,17 @@ Future<void> callbackDispatcher() async {
         }
       }
 
+      // Fork: Sammel-Benachrichtigung aus allen Konten (summary.dart).
+      final allowed = <int>{};
+      for (final a in accounts) {
+        final st = TypedSettings.account(
+          container.read(lanisDatabaseProvider),
+          a.localId,
+        );
+        if (st.getBool('notifications-allow') != false) allowed.add(a.localId);
+      }
+      await showForkSummary(container, allowed);
+
       backgroundLogger.i('Background fetch completed');
     } finally {
       container.dispose();
@@ -269,6 +281,10 @@ Future<void> callbackDispatcher() async {
     backgroundLogger.e(e, stackTrace: s);
   }
 }
+
+/// Kanal aller Hinweise (bestehende Installationen behalten ihre
+/// Kanal-Einstellungen); auch für die Sammelmeldung (fork/notify/summary).
+const notificationChannelId = 'io.github.alessioc42.sphplan';
 
 class BackgroundTaskToolkit {
   final int accountId;
@@ -323,7 +339,7 @@ class BackgroundTaskToolkit {
     }
     try {
       final androidDetails = AndroidNotificationDetails(
-        'io.github.alessioc42.sphplan',
+        notificationChannelId,
         'Schulportal',
         channelDescription: 'Applet notifications',
         importance: Importance.high,

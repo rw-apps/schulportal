@@ -12,6 +12,7 @@ import '../today/today_page.dart' show dayDiff, schoolWeek;
 import '../../demo/demo_entry.dart' show blockedInDemo;
 import 'meal_fetcher.dart';
 import 'meal_order.dart';
+import 'meal_remind_sheet.dart';
 import 'mensa_page.dart';
 
 /// Seite der Woche zum Bestellen: gelesene Adresse, auf die Woche von
@@ -229,6 +230,16 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
             style: k.section,
             overflow: TextOverflow.ellipsis,
           ),
+          actions: [
+            IconButton(
+              tooltip: t.mealRemindTitle,
+              icon: const Icon(Icons.notifications_outlined),
+              onPressed: () async {
+                await showMealRemindSheet(context, widget.owner);
+                if (mounted) setState(() {});
+              },
+            ),
+          ],
           bottom: fetch == null && _job == null
               ? null
               : const PreferredSize(

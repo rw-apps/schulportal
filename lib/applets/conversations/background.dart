@@ -1,9 +1,13 @@
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lanis/background_service.dart';
 import 'package:lanis/l10n/account_type_ui.dart';
 import 'package:liblanis/liblanis.dart';
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:lanis/fork/kid_name.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
+import 'package:lanis/fork/notify/summary.dart';
+import 'package:lanis/fork/ui/language.dart' show languageKey;
 
 Future<void> conversationsBackgroundTask(
   ProviderContainer container,
@@ -22,15 +26,27 @@ Future<void> conversationsBackgroundTask(
   final kid = toolkit.multiAccount || accountType == AccountType.parent
       ? storedKidName(toolkit.settings)
       : '';
-  for (final unreadMessage in unreadMessages) {
-    await toolkit.sendMessage(
-      id: (unreadMessage.id.hashCode & 0x7fffffff) % 10000,
-      title: kid.isEmpty
-          ? unreadMessage.fullName
-          : '${unreadMessage.fullName} · $kid',
-      message: unreadMessage.title,
-      avoidDuplicateSending: true,
-      importance: Importance.high,
-    );
-  }
+  // Fork: statt einer Meldung je Nachricht eine Zeile in der
+  // Sammel-Benachrichtigung (summary.dart, Wunsch 27.10.26) – aktueller
+  // Stand: Gelesenes fällt beim nächsten Lauf heraus.
+  final shared = container.read(sharedOverAccountSettingsProvider);
+  String? chosen;
+  try {
+    chosen = shared.getString(languageKey);
+  } catch (_) {}
+  final t = forkL10nFor(
+    resolveLanguage(chosen, PlatformDispatcher.instance.locale.languageCode),
+  );
+  putSummaryItems(
+    shared,
+    '${toolkit.accountId}/messages',
+    messageSummaryItems(
+      name: kid,
+      unread: [
+        for (final m in unreadMessages)
+          (id: m.id, from: m.fullName, subject: m.title),
+      ],
+      t: t,
+    ),
+  );
 }

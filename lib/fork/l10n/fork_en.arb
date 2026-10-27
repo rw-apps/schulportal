@@ -645,5 +645,12 @@
   "mealOrderDone": "Ordered: {dish}",
   "mealCancelDone": "Cancelled: {dish}",
   "mealChangeFailed": "Not sure it worked – please check on the caterer's page.",
-  "mealChangeNotDone": "Nothing changed – this day can't be changed right now."
+  "mealChangeNotDone": "Nothing changed – this day can't be changed right now.",
+  "summaryMore": "+ {count} more",
+  "summaryMessage": "Message from {from}: {subject}",
+  "summaryMeal": "{day}: lunch not ordered yet",
+  "summaryTitle": "{count, plural, =1{1 notice} other{{count} notices}}",
+  "mealRemindTitle": "Lunch reminder",
+  "mealRemindText": "A note on Today and a notification when nothing is ordered for a day and the deadline is near.",
+  "mealRemindAll": "Remind when nothing is ordered"
 }

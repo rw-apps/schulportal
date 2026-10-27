@@ -24,7 +24,8 @@ import '../portal_link.dart';
 import 'login_failure_card.dart';
 import '../../mensa.dart' show mensaWeekUrl;
 import '../../mensa_store.dart';
-import '../../mensa_week.dart' show MealState;
+import '../../demo/demo_mode.dart' show demoActive;
+import '../../notify/summary.dart';
 import '../mensa/meal_refresh.dart';
 import '../mensa/meal_week_page.dart';
 import 'kid_hints.dart' show nextSchoolDay;
@@ -69,14 +70,15 @@ Future<void> openMensa(
   );
 }
 
-/// Tag (heute bzw. [next]), für den nichts bestellt ist, obwohl es noch
-/// ginge; null sonst oder wenn das Kind nie bestellt.
-DateTime? mealUnorderedDay(MealEntry? e, DateTime now, DateTime next) {
-  if (e == null || !e.ordersAtAll) return null;
-  for (final d in [DateTime(now.year, now.month, now.day), next]) {
-    if (e.dayOf(d)?.state == MealState.open) return d;
-  }
-  return null;
+/// Erster Tag, an den jetzt erinnert wird (mealReminderDays, mit den
+/// eingeschalteten Wochentagen); null sonst oder wenn das Kind nie bestellt.
+DateTime? mealUnorderedDay(
+  MealEntry? e,
+  DateTime now, {
+  Set<int> weekdays = const {1, 2, 3, 4, 5},
+}) {
+  final days = mealReminderDays(e, now, weekdays: weekdays);
+  return days.isEmpty ? null : days.first;
 }
 
 /// Krankmeldung über der neuen Oberfläche öffnen.
@@ -178,7 +180,14 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
           : const {},
       lunch: meals?.dayOf(at)?.ordered?.name,
       mealUnordered: day == null
-          ? mealUnorderedDay(meals, now, nextSchoolDay(now))
+          ? mealUnorderedDay(
+              meals,
+              now,
+              weekdays: mealRemindDays(
+                MealCache.instance.settings,
+                s.mensaOwner(s.mensaKid),
+              ),
+            )
           : null,
       lowBalance: day == null ? lowMealBalance(meals) : null,
     );
@@ -376,6 +385,51 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
             await Future.wait([for (final m in members) m.snapshot.refresh()]);
           },
         );
+        // Sammel-Benachrichtigung mit dem Stand der offenen App abgleichen
+        // (summary.dart): Ausfälle/Vertretungen, Essen; Nachrichten nur
+        // leeren, wenn keine ungelesenen mehr da sind.
+        final shared = MealCache.instance.settings;
+        if (shared != null && !demoActive) {
+          final t = context.t;
+          final next = nextSchoolDay(now);
+          final sources = <String, List<SummaryItem>>{};
+          for (final (m, kid) in shown) {
+            if (m.accountId < 0) continue;
+            final s = m.snapshot;
+            sources['${m.accountId}/plan'] = changeSummaryItems(
+              scope: '${m.accountId}',
+              name: kid.firstName,
+              changes: kid.changes,
+              now: now,
+              next: next,
+              t: t,
+              endOf: {
+                for (final l in kid.lessons)
+                  l.slot: hasTime(l) ? minutesOf(l.end).minutes : 24 * 60,
+              },
+            );
+            if (s.mensaUrl != null) {
+              final owner = s.mensaOwner(s.mensaKid);
+              sources['${m.accountId}/meals'] = mealSummaryItems(
+                name: kid.firstName,
+                owner: owner,
+                days: mealReminderDays(
+                  MealCache.instance.of(owner),
+                  now,
+                  weekdays: mealRemindDays(shared, owner),
+                ),
+                now: now,
+                t: t,
+              );
+            }
+            if (liveUnreadMessages(s) == 0) {
+              sources['${m.accountId}/messages'] = const [];
+            }
+          }
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => syncSummaryFromApp(shared, t, sources),
+          );
+        }
         // Essen im Hintergrund lesen (meal_refresh.dart).
         return MealRefresh(
           targets: [

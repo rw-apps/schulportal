@@ -15,7 +15,7 @@ Die App ist eine Abwandlung von [Lanis-Mobile](https://github.com/lanis-mobile/l
 - **Familie** – mehrere Konten nebeneinander, auch an verschiedenen Schulen (Eltern- und Schülerkonten).
 - **Essen** – bestellte Gerichte der Woche, bestellen und abbestellen in der App, Hinweise bei fehlender Bestellung und niedrigem Guthaben (für die bekannten Bestellseiten; sonst öffnet sich die Seite des Caterers).
 - **Ohne Netz** – zeigt den zuletzt gespeicherten Stand und sagt, von wann er ist.
-- **Benachrichtigungen** – bei Ausfällen, Vertretungen und neuen Nachrichten.
+- **Benachrichtigungen** – eine Sammelmeldung mit dem Wichtigsten (Ausfälle, Vertretungen, neue Nachrichten, nicht bestelltes Essen), die nur erscheint, wenn etwas ansteht, und von selbst verschwindet.
 - **Demo** – „Demo ansehen“ auf der Startseite zeigt die App mit einer erfundenen Schule, ohne Anmeldung.
 
 ## Installation

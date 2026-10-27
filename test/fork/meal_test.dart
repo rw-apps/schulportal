@@ -191,7 +191,7 @@ void main() {
     final e = MealEntry(at: DateTime(2026, 10, 29), weeks: [w]);
     // Do 29.10. abends: Fr 30.10. ist offen.
     expect(
-      mealUnorderedDay(e, DateTime(2026, 10, 29, 17), DateTime(2026, 10, 30)),
+      mealUnorderedDay(e, DateTime(2026, 10, 29, 17)),
       DateTime(2026, 10, 30),
     );
     final never = MealEntry(
@@ -203,10 +203,7 @@ void main() {
         ),
       ],
     );
-    expect(
-      mealUnorderedDay(never, DateTime(2026, 10, 29), DateTime(2026, 10, 30)),
-      isNull,
-    );
+    expect(mealUnorderedDay(never, DateTime(2026, 10, 29)), isNull);
   });
 
   test('Guthaben unter 15 €: Hinweis, nur wenn bestellt wird', () {
@@ -246,6 +243,48 @@ void main() {
     expect(h.kind, HintKind.balance);
     expect(h.title, 'Guthaben 12,50 €');
     expect(h.detail, 'unter 15 € – bitte Geld überweisen');
+  });
+
+  test('Erinnerung: Frist in 24 h, Wochentage, ohne Frist zwei Schultage', () {
+    final w = load('meal_daylist.html');
+    final e = MealEntry(at: DateTime(2026, 10, 29), weeks: [w]);
+    // Frist Fr 08:30: Do 9:00 noch nicht (23,5 h), Do 8:00 zu früh (24,5 h).
+    expect(mealReminderDays(e, DateTime(2026, 10, 29, 9)), [
+      DateTime(2026, 10, 30),
+    ]);
+    expect(mealReminderDays(e, DateTime(2026, 10, 29, 8)), isEmpty);
+    expect(
+      mealReminderDays(e, DateTime(2026, 10, 30, 9)),
+      isEmpty,
+      reason: 'Frist vorbei',
+    );
+    expect(
+      mealReminderDays(e, DateTime(2026, 10, 29, 9), weekdays: {1, 2, 3, 4}),
+      isEmpty,
+      reason: 'Freitag abgeschaltet',
+    );
+    final noDeadline = MealEntry(
+      at: DateTime(2026, 10, 26),
+      weeks: [
+        MealWeek(
+          label: 'x',
+          days: [
+            MealDay(
+              day: DateTime(2026, 10, 26),
+              state: MealState.ordered,
+              ordered: const MealOption(line: 'a', name: 'b'),
+            ),
+            MealDay(day: DateTime(2026, 10, 28), state: MealState.open),
+            MealDay(day: DateTime(2026, 10, 29), state: MealState.open),
+          ],
+        ),
+      ],
+    );
+    // Mo: heute + zwei Schultage = bis Mi.
+    expect(mealReminderDays(noDeadline, DateTime(2026, 10, 26, 10)), [
+      DateTime(2026, 10, 28),
+    ]);
+    expect(mealRemindDays(null, 'k'), {1, 2, 3, 4, 5});
   });
 
   test('Hinweis „Kein Essen bestellt“ für morgen', () {

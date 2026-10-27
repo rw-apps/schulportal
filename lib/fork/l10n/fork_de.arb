@@ -1669,5 +1669,43 @@
     }
   },
   "mealChangeFailed": "Unklar, ob es geklappt hat – bitte auf der Seite des Caterers prüfen.",
-  "mealChangeNotDone": "Nichts geändert – der Tag lässt sich gerade nicht ändern."
+  "mealChangeNotDone": "Nichts geändert – der Tag lässt sich gerade nicht ändern.",
+  "summaryMore": "+ {count} weitere",
+  "@summaryMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "summaryMessage": "Nachricht von {from}: {subject}",
+  "@summaryMessage": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryMeal": "{day}: Essen noch nicht bestellt",
+  "@summaryMeal": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "summaryTitle": "{count, plural, =1{1 Hinweis} other{{count} Hinweise}}",
+  "@summaryTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mealRemindTitle": "Essens-Erinnerung",
+  "mealRemindText": "Hinweis auf Heute und Benachrichtigung, wenn für einen Tag noch nichts bestellt ist und die Frist bald abläuft.",
+  "mealRemindAll": "Erinnern, wenn nichts bestellt ist"
 }

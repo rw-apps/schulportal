@@ -81,6 +81,97 @@ class MealEntry {
 
 const mealCacheKey = 'fork-mensa/weeks';
 
+/// Wochentage (1 = Mo … 5 = Fr), an denen die Essens-Erinnerung gilt, je
+/// Kind; fehlt der Eintrag, alle Schultage (Wunsch 27.10.26: „für alle
+/// oder einzelne Wochentage deaktivieren“). Gilt für die Benachrichtigung
+/// und den gelben Hinweis auf Heute.
+const mealRemindKey = 'fork-mensa/remind';
+
+const _allDays = {1, 2, 3, 4, 5};
+
+Set<int> mealRemindDays(TypedSettings? s, String owner) {
+  try {
+    final raw = s?.getString(mealRemindKey);
+    final v = raw == null ? null : jsonDecode(raw);
+    final l = v is Map ? v[owner] : null;
+    if (l is List)
+      return {
+        for (final x in l)
+          if (x is int) x,
+      };
+  } catch (_) {}
+  return _allDays;
+}
+
+void setMealRemindDays(TypedSettings s, String owner, Set<int> days) {
+  Map<String, dynamic> all = {};
+  try {
+    final raw = s.getString(mealRemindKey);
+    final v = raw == null ? null : jsonDecode(raw);
+    if (v is Map<String, dynamic>) all = v;
+  } catch (_) {}
+  all[owner] = (days.toList()..sort());
+  s.setString(mealRemindKey, jsonEncode(all));
+}
+
+/// Bestellfrist aus dem Hinweis der Seite („Bestellbar bis: 29.10.26
+/// 08:30“); null, wenn die Seite keine nennt.
+DateTime? mealDeadline(MealDay d) {
+  final m = RegExp(
+    r'bis:?\s*(\d{1,2})\.(\d{1,2})\.(\d{2,4})\s+(\d{1,2}):(\d{2})',
+  ).firstMatch(d.note ?? '');
+  if (m == null) return null;
+  var y = int.parse(m[3]!);
+  if (y < 100) y += 2000;
+  return DateTime(
+    y,
+    int.parse(m[2]!),
+    int.parse(m[1]!),
+    int.parse(m[4]!),
+    int.parse(m[5]!),
+  );
+}
+
+DateTime _nextSchoolDay(DateTime d) {
+  var x = DateTime(d.year, d.month, d.day + 1);
+  while (x.weekday > DateTime.friday) {
+    x = DateTime(x.year, x.month, x.day + 1);
+  }
+  return x;
+}
+
+/// Tage, für die jetzt an die Bestellung erinnert wird: noch offen
+/// (MealState.open), Wochentag eingeschaltet, Kind bestellt überhaupt.
+///
+/// Zeitpunkt (Abnahme 27.10.26): Nennt die Seite eine Frist, nur wenn sie
+/// in den nächsten 24 Stunden abläuft – bei einem Caterer der Familie endet sie um
+/// 08:30 am Vortag, eine Erinnerung am Vortagnachmittag käme zu spät. Ohne
+/// Frist: heute und die nächsten zwei Schultage. Grenze: Der Stand ist der
+/// zuletzt gelesene (MealEntry.at).
+List<DateTime> mealReminderDays(
+  MealEntry? e,
+  DateTime now, {
+  Set<int> weekdays = _allDays,
+}) {
+  if (e == null || !e.ordersAtAll) return const [];
+  final today = DateTime(now.year, now.month, now.day);
+  final second = _nextSchoolDay(_nextSchoolDay(today));
+  final out = <DateTime>[];
+  for (final w in e.weeks) {
+    for (final d in w.days) {
+      if (d.state != MealState.open) continue;
+      if (!weekdays.contains(d.day.weekday)) continue;
+      if (d.day.isBefore(today)) continue;
+      final dl = mealDeadline(d);
+      final due = dl != null
+          ? now.isBefore(dl) && dl.difference(now) <= const Duration(hours: 24)
+          : !d.day.isAfter(second);
+      if (due) out.add(d.day);
+    }
+  }
+  return out..sort();
+}
+
 /// Adresse, von der aus die App die Wochen liest: die zuletzt gelesene
 /// Wochenseite (MealWeek.url), sonst die eingetragene Adresse.
 ///
@@ -144,6 +235,10 @@ class MealCache {
   static final instance = MealCache._();
 
   TypedSettings? _settings;
+
+  /// Geräteweite Einstellungen, an die der Speicher gebunden ist
+  /// (z. B. für mealRemindDays).
+  TypedSettings? get settings => _settings;
 
   /// Demo (demo_meals.dart): fester Stand für jedes Kind, nichts wird
   /// gespeichert oder neu gelesen. null = echte Daten.
