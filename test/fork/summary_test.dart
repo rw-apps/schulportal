@@ -20,7 +20,7 @@ void main() {
   final now = DateTime(2026, 10, 27, 10);
   final next = DateTime(2026, 10, 28);
 
-  test('Änderungen: heute nur Offenes, morgen alles, kein Raumwechsel', () {
+  test('Änderungen: heute nur Offenes, morgen alles, mit Raumwechsel', () {
     final items = changeSummaryItems(
       scope: '1',
       name: 'Jonas',
@@ -63,7 +63,9 @@ void main() {
         ),
       ],
     );
-    expect(items.length, 2);
+    expect(items.length, 3);
+    expect(items[2].kind, SummaryKind.room);
+    expect(items[2].line(de, now), contains('Morgen: 4. Ethik'));
     expect(items[0].line(de, now), startsWith('Jonas · Heute: 5. Sport – '));
     expect(items[0].kind, SummaryKind.cancelled);
     expect(items[1].line(de, now), contains('Morgen: 3. Musik'));

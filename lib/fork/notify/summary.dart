@@ -16,7 +16,8 @@ import '../ui/today/today_page.dart' show dayDiff, relativeDay;
 /// und sind auf dem Sperrbildschirm von Handys nicht erlaubt; eine
 /// Benachrichtigung erscheint nur bei Bedarf, steht auf dem Sperrbildschirm
 /// und verschwindet wieder. Inhalt nur: Ausfall, Vertretung, neue
-/// Nachrichten, nicht bestelltes Essen.
+/// Nachrichten, nicht bestelltes Essen, dazu Raumwechsel (Entscheidung
+/// 27.10.26: „Ja“ – sie kamen vorher als Einzelmeldung).
 ///
 /// Aufbau: Jede Quelle (`<Konto>/plan`, `<Konto>/messages`,
 /// `<Konto>/meals`) legt ihren AKTUELLEN Stand ab ([putSummaryItems]);
@@ -29,7 +30,7 @@ import '../ui/today/today_page.dart' show dayDiff, relativeDay;
 ///
 /// Grenze: Aktualisiert im Hintergrund (alle 15–60 Minuten, Android) und
 /// beim Öffnen von Heute; dazwischen kann ein Eintrag veraltet sein.
-enum SummaryKind { cancelled, substitution, message, meal }
+enum SummaryKind { cancelled, substitution, room, message, meal }
 
 class SummaryItem {
   const SummaryItem({
@@ -256,8 +257,8 @@ Future<void> showSummary(
 /// Minuten nach Mitternacht je Stunde) und vom nächsten Schultag.
 /// Schlüssel aus Konto, Tag, Stunde und Art – ohne Fachnamen: App und
 /// Hintergrund nennen Fächer teils verschieden (Kürzel ohne Kursliste),
-/// der Eintrag bleibt derselbe. Raumwechsel gehören nicht dazu (Abnahme
-/// 27.10.26: nur Ausfall, Vertretung, Nachrichten, Essen).
+/// der Eintrag bleibt derselbe. Raumwechsel gehören dazu (Entscheidung
+/// 27.10.26).
 List<SummaryItem> changeSummaryItems({
   required String scope,
   required String name,
@@ -277,12 +278,12 @@ List<SummaryItem> changeSummaryItems({
     final kind = switch (c.kind) {
       ChangeKind.cancelled => SummaryKind.cancelled,
       ChangeKind.substitution || ChangeKind.unclear => SummaryKind.substitution,
-      ChangeKind.roomChange => null,
+      ChangeKind.roomChange => SummaryKind.room,
     };
-    if (kind == null) continue;
     final what = switch (c.kind) {
       ChangeKind.cancelled => t.lessonCancelled,
       ChangeKind.unclear => '${t.changeUnclear} ${c.detail ?? ''}'.trim(),
+      ChangeKind.roomChange => '${t.changeRoom} ${c.detail ?? ''}'.trim(),
       _ => '${t.changeSubstitution} ${c.detail ?? ''}'.trim(),
     };
     out.add(
