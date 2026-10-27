@@ -567,28 +567,52 @@ class _MealRowState extends State<_MealRow> {
           if (i > 0) Container(height: Sz.frame, color: k.p.line),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: Sp.s),
-            child: Row(
+            // Aufbau (Wunsch 27.10.26): rechts der Preis direkt über einem
+            // umrandeten „Bestellen“. Zwei Zeilen statt zwei Spalten: Die
+            // Menülinie (Großbuchstaben, gesperrt) läuft bis zum Preis über
+            // fast die ganze Breite – in einer schmalen linken Spalte brach
+            // „VEGETARISCHER BRATLING“ um (Entwurf 27.10.26). Grenze: Sehr
+            // lange Linien brechen weiterhin um.
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        [
-                          if (x.line.isNotEmpty) upperFor(t, x.line),
-                          ?_nbsp(x.price),
-                        ].join(' · '),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        x.line.isEmpty ? '' : upperFor(t, x.line),
                         style: k.planNowLabel,
                       ),
-                      Text(x.name, style: k.planMeta(k.p.ink)),
+                    ),
+                    if (_nbsp(x.price) case final p?) ...[
+                      const SizedBox(width: Sp.s),
+                      Text(p, style: k.planNowLabel),
                     ],
-                  ),
+                  ],
                 ),
-                if (x.orderable && widget.onOrderOption != null)
-                  TextButton(
-                    onPressed: () => widget.onOrderOption!(d, x),
-                    child: Text(t.mealOrderAction, style: k.link),
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(child: Text(x.name, style: k.planMeta(k.p.ink))),
+                    if (x.orderable && widget.onOrderOption != null) ...[
+                      const SizedBox(width: Sp.m),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, Sz.buttonTiny),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: Sp.l,
+                            vertical: Sp.xs,
+                          ),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          side: BorderSide(color: k.p.onNavSelected),
+                        ),
+                        onPressed: () => widget.onOrderOption!(d, x),
+                        child: Text(t.mealOrderAction, style: k.link),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
           ),
