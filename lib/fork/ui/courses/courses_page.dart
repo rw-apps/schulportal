@@ -35,7 +35,11 @@ class HomeworkBoard {
     required this.onReopen,
     this.onOpenArchive,
     this.done = const [],
+    this.expiredCount = 0,
   });
+
+  /// Abgelaufene, nicht abgehakte (HomeworkSection.expiredCount).
+  final int expiredCount;
 
   final List<HomeworkItem> open;
 
@@ -242,6 +246,7 @@ class _CoursesPageState extends State<CoursesPage> {
             ),
         ],
         doneTotal: hw?.doneCount,
+        expiredCount: hw?.expiredCount ?? 0,
         emptyText: widget.loading && items.isEmpty
             ? t.loading
             : t.noOpenHomework,
@@ -572,6 +577,7 @@ class AllCoursesView extends StatelessWidget {
     required this.now,
     this.doneHomework = const [],
     this.doneCount = 0,
+    this.expiredCount = 0,
     this.onOpenArchive,
     this.loading = false,
     this.onRefresh,
@@ -589,6 +595,9 @@ class AllCoursesView extends StatelessWidget {
   final List<AllMissing> missing;
   final DateTime now;
   final int doneCount;
+
+  /// Abgelaufene aller Kinder (HomeworkSection.expiredCount).
+  final int expiredCount;
   final VoidCallback? onOpenArchive;
   final bool loading;
   final Future<void> Function()? onRefresh;
@@ -644,6 +653,7 @@ class AllCoursesView extends StatelessWidget {
               ),
           ],
           doneTotal: doneCount,
+          expiredCount: expiredCount,
           emptyText: loading ? t.loading : t.noOpenHomework,
           onShowAll: onOpenArchive,
         ),

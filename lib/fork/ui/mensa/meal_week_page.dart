@@ -39,8 +39,8 @@ String mealWeekPageUrl(MealWeek w, DateTime day, String base) {
 
 /// Seite „Essen · Kind“: gespeicherte Wochen sofort, im Hintergrund neu
 /// gelesen (MealFetcher). Lässt sich die Seite des Caterers nicht lesen und
-/// ist nichts gespeichert, ersetzt sie sich durch die Seite selbst
-/// (MensaPage) – so bleibt es für unbekannte Caterer wie bisher.
+/// ist nichts gespeichert, bleibt der Hinweis mit „Bestellen oder ändern“
+/// (öffnet MensaPage) und „Details zum Abruf“ stehen (seit 9420).
 class MealWeekPage extends ConsumerStatefulWidget {
   const MealWeekPage({
     super.key,
@@ -185,7 +185,11 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
             ? null
             : SnackBarAction(
                 label: t.mealOpenCaterer,
-                onPressed: () => _order(shown),
+                // Die Meldung kann die Seite überdauern (10 s, äußerer
+                // ScaffoldMessenger) – dann nichts mehr öffnen.
+                onPressed: () {
+                  if (mounted) _order(shown);
+                },
               ),
       ),
     );
@@ -195,10 +199,10 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
   /// Hinweis mit „Bestellen oder ändern“ und „Details“ stehen.
   ///
   /// Bis 9419 ersetzte sich die Ansicht dann gleich durch MensaPage. Grenze
-  /// der Änderung (27.10.26): Für einen unbekannten Caterer ist das ein
-  /// Tipp mehr – ab dem zweiten Öffnen geht Heute wegen
-  /// MealEntry.unreadable ohnehin direkt zur Seite. Dafür bleibt der Verlauf
-  /// des Abrufs (MealTrace) sichtbar, um Fehler auf dem Gerät zu finden.
+  /// der Änderung (27.10.26): Für einen unbekannten Caterer ist das jedes
+  /// Mal ein Tipp mehr (Heute öffnet seit 9421 immer diese Ansicht). Dafür
+  /// bleibt der Verlauf des Abrufs (MealTrace) sichtbar, um Fehler auf dem
+  /// Gerät zu finden.
   void _unreadable() => _cache.markUnreadable(widget.owner);
 
   bool _details = false;
@@ -362,8 +366,9 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
 /// = bestellt, Gelb = nichts bestellt, aber noch möglich (Essen ist laut
 /// Farbregel Gelb), Grau = vorbei bzw. geschlossen.
 ///
-/// Grenze: Nur lesen. „Bestellen oder ändern“ öffnet die Seite des
-/// Caterers für diese Woche ([onOrder]).
+/// Bestellen und Abbestellen je Tag über [onOrderOption]/[onCancel]
+/// (MealOrderRunner); „Seite des Caterers“ bzw. „Bestellen oder ändern“
+/// öffnet die Seite für diese Woche ([onOrder]).
 class MealWeekView extends StatelessWidget {
   const MealWeekView({
     super.key,

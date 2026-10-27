@@ -101,3 +101,23 @@ Future<T> guardedLogin<T>(
     rethrow;
   }
 }
+
+/// last_login eines Kontos auf den Wert vor einer Anmeldung zurücksetzen
+/// ([before] null = vorher nie angemeldet).
+///
+/// Ursache: Session.authenticate (liblanis) setzt last_login bei JEDER
+/// Anmeldung, und die App startet mit dem jüngsten Konto
+/// (getPreferredStartupAccount). Anmeldungen, die der Nutzer nicht als
+/// Wechsel gemeint hat – weitere Konten der Familie, Hintergrundlauf
+/// (background_service.dart) –, machten sonst ein anderes Konto „aktiv“.
+Future<void> restoreLastLogin(
+  LanisDatabase db,
+  int id,
+  DateTime? before,
+) async {
+  if (before == null) {
+    await db.clearLastLogin(id);
+  } else {
+    await db.updateLastLogin(id, at: before);
+  }
+}

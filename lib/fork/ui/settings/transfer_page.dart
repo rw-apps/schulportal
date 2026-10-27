@@ -29,6 +29,27 @@ class TransferPage extends ConsumerStatefulWidget {
 class _TransferPageState extends ConsumerState<TransferPage> {
   bool _busy = false;
 
+  /// Datei zum Teilen; liegt unverschlüsselt im Zwischenspeicher. Ursache
+  /// (Prüfung 27.10.26): Sie blieb dort nach dem Teilen liegen – mit
+  /// Lehrernamen, Klasse, Mensa-Adressen aller Konten. Jetzt gelöscht beim
+  /// Verlassen der Seite und vor jedem neuen Senden, wie anon_export_page.
+  /// Grenze: Nicht direkt nach dem Teilen – manche Ziel-Apps lesen die
+  /// Datei erst, nachdem das Teilen-Fenster schon zurückgekehrt ist.
+  File? _file;
+
+  void _deleteFile() {
+    try {
+      _file?.deleteSync();
+    } catch (_) {}
+    _file = null;
+  }
+
+  @override
+  void dispose() {
+    _deleteFile();
+    super.dispose();
+  }
+
   Future<List<AccountSummary>> _accounts() => ref.read(accountsProvider.future);
 
   Future<void> _send() async {
@@ -40,7 +61,9 @@ class _TransferPageState extends ConsumerState<TransferPage> {
         await _accounts(),
       );
       final dir = await getTemporaryDirectory();
+      _deleteFile();
       final f = File('${dir.path}/schulportal-eingaben.json');
+      _file = f;
       await f.writeAsString(buildTransfer(values, now: DateTime.now()));
       await SharePlus.instance.share(
         ShareParams(

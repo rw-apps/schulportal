@@ -9,7 +9,16 @@
 /// der App-Sprache.
 abstract final class PortalRules {
   /// Vertretungsplan, Spalte „Art“ (klein geschrieben): Stunde fällt aus.
-  static final cancelKind = RegExp(r'entfall|ausfall|fällt aus|entfällt|frei');
+  ///
+  /// „frei“ nur am Wortende („frei“, „Klasse frei“, „unterrichtsfrei“) oder
+  /// als „Freistunde“/„Freisetzung“/„freigesetzt“. Ursache (Prüfung
+  /// 27.10.26): Als bloße Teilzeichenkette traf „frei“ auch „Freiarbeit“ –
+  /// ein sicherer Ausfall für eine Stunde, die stattfindet. Buchstaben mit
+  /// Umlaut zählen mit, weil \b in Dart nur ASCII kennt.
+  static final cancelKind = RegExp(
+    r'entfall|ausfall|fällt aus|entfällt|frei(?![a-zäöüß])|'
+    r'freistunde|freisetzung|freigesetzt',
+  );
 
   /// Vertretungsplan, Spalte „Hinweis“: Stunde fällt aus.
   static final cancelHint = RegExp(r'entfällt|fällt aus');

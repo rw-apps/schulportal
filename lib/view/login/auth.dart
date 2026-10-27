@@ -129,8 +129,14 @@ class LoginFormState extends ConsumerState<LoginForm> {
       final schoolId = int.parse(schoolID);
       final accounts = await ref.read(accountsProvider.future);
       final firstSetup = accounts.isEmpty || _added.isNotEmpty;
+      // Fork: Benutzername ohne Groß/Klein und Leerzeichen vergleichen, wie
+      // transferAccountKey (settings_transfer.dart). Ursache (Prüfung
+      // 27.10.26): „Max.M“ und „max.m“ wurden zwei Konten derselben Person;
+      // die Eingaben-Übertragung ordnete beide demselben Schlüssel zu.
+      final wanted = username.trim().toLowerCase();
       if (accounts.any(
-        (a) => a.schoolID == schoolId && a.username == username,
+        (a) =>
+            a.schoolID == schoolId && a.username.trim().toLowerCase() == wanted,
       )) {
         throw AccountAlreadyExistsException();
       }

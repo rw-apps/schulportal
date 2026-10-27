@@ -77,6 +77,7 @@ class LiveCoursesPage extends ConsumerWidget {
           s.lessons.content ?? const [],
           ownNames: s.ownNames,
           plan: live?.plan,
+          kids: s.kids,
         );
         final titles = {for (final i in raw) i.id: i.title};
         final hw = homeworkLists(
@@ -85,8 +86,12 @@ class LiveCoursesPage extends ConsumerWidget {
           subjectOf: (l) => titles[l.courseID] ?? courseTitle(l.name),
           dueOf: liveHomeworkDue(s),
         );
-        // Abgehakt in der App gilt auch für die Marke an der Kurszeile.
-        final doneKeys = {for (final h in hw.done) h.key};
+        // Abgehakt in der App gilt auch für die Marke an der Kurszeile;
+        // abgelaufene ebenso (zählen wie auf Heute nicht mehr als offen,
+        // Prüfung 27.10.26).
+        final doneKeys = {
+          for (final h in [...hw.done, ...hw.expired]) h.key,
+        };
         final items = [
           for (final i in raw)
             if (i.homework != null && i.entry != null)
@@ -113,6 +118,7 @@ class LiveCoursesPage extends ConsumerWidget {
             open: hw.open,
             done: hw.done,
             doneCount: hw.done.length,
+            expiredCount: hw.expired.length,
             onDone: (h) => toggle(h, true),
             onReopen: (h) => toggle(h, false),
             onOpenArchive: () => pushInTab<void>(
@@ -216,19 +222,23 @@ Widget liveCourseDetail(
   return CourseDetailPage(
     course: CourseContext(
       kidColor: kidColor,
+      // Abgelaufene sind nicht erledigt: auf der Kursseite weiter als offen
+      // (nicht abgehakt), nicht mit Haken (Prüfung 27.10.26).
       openHomework: {
-        for (final h in hw.open)
+        for (final h in [...hw.open, ...hw.expired])
           if (h.course == i.id) h.entry,
       },
       title: i.title,
       fullName: i.fullName,
       teachers: teachers,
-      nextLesson: live == null
+      // Fach ohne Kindnamen (CourseItem.subject); Kurse der Geschwister
+      // haben im gezeigten Plan keine Stunde (CourseItem.inShownPlan).
+      nextLesson: live == null || !i.inShownPlan
           ? null
           : nextLessonOf(
               live.plan,
               effectiveChoice(live.auto, s.userChoice),
-              i.title,
+              i.subject,
               codes,
               now,
               free: s.offers('kalender.php')
@@ -311,6 +321,7 @@ class LiveAllCoursesPage extends ConsumerWidget {
     final missing = <AllMissing>[];
     final withDone = <FamilyMember>[];
     var done = 0;
+    var expired = 0;
     var loading = false;
     final shown = [
       for (final m in members)
@@ -327,6 +338,7 @@ class LiveAllCoursesPage extends ConsumerWidget {
         s.lessons.content ?? const [],
         ownNames: s.ownNames,
         plan: live?.plan,
+        kids: s.kids,
       );
       final byId = {for (final i in raw) i.id: i};
       final hw = homeworkLists(
@@ -375,8 +387,9 @@ class LiveAllCoursesPage extends ConsumerWidget {
       for (final h in hw.done) {
         doneHomework.add((h.done ?? h.given ?? DateTime(2000), entry(h)));
       }
-      if (hw.done.isNotEmpty) {
+      if (hw.done.isNotEmpty || hw.expired.isNotEmpty) {
         done += hw.done.length;
+        expired += hw.expired.length;
         withDone.add(m);
       }
       for (final e in upcomingExamsOf(
@@ -418,6 +431,7 @@ class LiveAllCoursesPage extends ConsumerWidget {
       exams: exams,
       missing: missing,
       doneCount: done,
+      expiredCount: expired,
       loading: loading,
       onRefresh: refreshAll,
       notices: [

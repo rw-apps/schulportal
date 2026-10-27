@@ -77,6 +77,20 @@ class SubstitutionHistory {
     return SubstitutionHistory(out);
   }
 
+  /// Tage für Heute und die Sammelmeldung: wie [withPast], aber erst ab
+  /// heute. Ursache (Prüfung 27.10.26): Heute und der Hintergrund nahmen nur
+  /// die gelieferten Tage – nimmt das Portal den heutigen Tag nachmittags
+  /// heraus, verschwand die Änderung dort, während der Kalender sie
+  /// weiter zeigte. Grenze: Vergangene Tage bleiben draußen, sonst meldete
+  /// die Sammelmeldung alte Änderungen erneut.
+  List<SubstitutionDay> fromToday(List<SubstitutionDay> live, DateTime now) {
+    final today = _date(now);
+    return [
+      for (final d in withPast(live, now))
+        if (!_date(d.dateTime).isBefore(today)) d,
+    ];
+  }
+
   /// Tage für den Kalender: die gelieferten, dazu gespeicherte Tage bis
   /// heute, die das Portal nicht mehr liefert.
   List<SubstitutionDay> withPast(List<SubstitutionDay> live, DateTime now) {

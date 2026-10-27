@@ -7,6 +7,7 @@ import '../../absences.dart';
 import '../../data/message_templates.dart';
 import '../../error_log.dart';
 import '../../l10n/l10n.dart';
+import '../../lessons_parent.dart';
 import '../kid_chips.dart';
 import '../kit.dart';
 import '../live/live_data.dart';
@@ -98,9 +99,10 @@ class _LiveAbsencesPageState extends ConsumerState<LiveAbsencesPage> {
       if (a.day != null) DateFormat('EEEE, d.M.yyyy', 'de').format(a.day!),
       if (a.hours != null && a.hours!.isNotEmpty) '(${a.hours} Stunde)',
     ].join(' ');
+    final who = excuseChildAndSubject(a, s.kids, s.firstName);
     final m = absenceExcuse(
-      child: s.firstName.isEmpty ? 'Unser Kind' : s.firstName,
-      subject: a.subject,
+      child: who.child.isEmpty ? 'Unser Kind' : who.child,
+      subject: who.subject,
       when: when,
     );
     final settings = ref.read(accountSpecificSettingsProvider);
@@ -144,6 +146,26 @@ class _LiveAbsencesPageState extends ConsumerState<LiveAbsencesPage> {
       onExcuse: parent ? (a) => _excuse(s, a) : null,
     );
   }
+}
+
+/// Kind und Fach für den Text der Entschuldigung zu [a].
+///
+/// Ursache (Prüfung 27.10.26): Der Text nannte immer LiveSnapshot.firstName,
+/// also das ERSTE Kind – die Entschuldigung für das Geschwisterkind trug den
+/// falschen Namen, das Fach dazu den Vorsatz „Lena: …“. Jetzt das Kind aus
+/// der Kurs-ID (`&p=`, kidOfCourse) und das Fach ohne Vorsatz
+/// (courseNameWithoutKid). Grenze: Ohne passendes Kind (Schülerkonto, ein
+/// Kind, Kinder nicht geladen) bleibt [fallbackName].
+({String child, String subject}) excuseChildAndSubject(
+  AbsenceItem a,
+  List<ChildLessons> kids,
+  String fallbackName,
+) {
+  final kid = kids.length > 1 ? kidOfCourse(a.course, kids) : null;
+  return (
+    child: kid == null ? fallbackName : shortFirstName(kid.firstName),
+    subject: courseNameWithoutKid(a.subject, a.course, kids),
+  );
 }
 
 /// Anzeige ohne Datenquelle (Tests).

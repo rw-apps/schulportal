@@ -8,18 +8,9 @@
   "dayToday": "Heute",
   "dayTomorrow": "Morgen",
   "demoNote": "Vorschau mit erfundenen Beispieldaten",
-  "importantTitle": "Wichtig heute und morgen",
   "lessonCancelled": "fällt aus",
   "changeRoom": "Raumwechsel",
   "changeSubstitution": "Vertretung",
-  "homeworkCount": "{count, plural, =1{1 Hausaufgabe} other{{count} Hausaufgaben}}",
-  "@homeworkCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "unreadCount": "{count, plural, =1{1 Nachricht} other{{count} Nachrichten}}",
   "@unreadCount": {
     "placeholders": {
@@ -102,8 +93,6 @@
     }
   },
   "lessonRunning": "läuft",
-  "dayCollapse": "Tag zuklappen",
-  "dayExpand": "Ganzen Tag zeigen",
   "upcoming": "Demnächst",
   "allEvents": "Alle Termine",
   "forEveryone": "Alle",
@@ -160,14 +149,6 @@
       }
     }
   },
-  "noticeTodayFor": "Heute bei {name}",
-  "@noticeTodayFor": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "noticeTomorrowFor": "Morgen bei {name}",
   "@noticeTomorrowFor": {
     "placeholders": {
@@ -176,9 +157,7 @@
       }
     }
   },
-  "noticeTodaySchool": "Heute in der Schule",
   "noticeTomorrowSchool": "Morgen in der Schule",
-  "noticeTodayChild": "Heute bei deinem Kind",
   "noticeTomorrowChild": "Morgen bei deinem Kind",
   "navToday": "Heute",
   "navCalendar": "Kalender",
@@ -336,7 +315,6 @@
   "studentAccount": "Schülerkonto",
   "teacherAccount": "Lehrkraft",
   "back": "Zurück",
-  "sectionAccount": "Konto",
   "userData": "Benutzerdaten",
   "userDataDetail": "Was das Portal über dieses Konto führt",
   "switchAccount": "Konto wechseln oder hinzufügen",
@@ -344,9 +322,8 @@
   "sectionNotifications": "Benachrichtigungen",
   "allowNotifications": "Benachrichtigungen erlauben",
   "notificationsBlocked": "Das Gerät blockiert sie gerade für diese App",
-  "forThisAccount": "Für dieses Konto",
   "notifySubstitutions": "Ausfall und Vertretung",
-  "notifySubstitutionsDetail": "Heute sofort, für morgen ab 19 Uhr",
+  "notifySubstitutionsDetail": "Heute und für den nächsten Schultag, sobald bekannt",
   "notifyMessages": "Neue Nachrichten",
   "timeWindow": "Zeitfenster",
   "timeWindowDetail": "Außerhalb ist Ruhe",
@@ -391,17 +368,8 @@
   "homeworkEntered": "Hausaufgabe eingetragen",
   "homework": "Hausaufgaben",
   "loading": "Wird geladen …",
-  "noHomework": "Keine Hausaufgaben eingetragen.",
   "courses": "Kurse",
   "noCourses": "Keine Kurse gefunden.",
-  "fromDate": "vom {date}",
-  "@fromDate": {
-    "placeholders": {
-      "date": {
-        "type": "String"
-      }
-    }
-  },
   "homeworkOpen": "offen",
   "homeworkDone": "erledigt",
   "coursesFailed": "Der Unterricht ließ sich nicht laden.",
@@ -592,10 +560,7 @@
   "blockMarks": "Leistungen",
   "blockExams": "Leistungskontrollen",
   "withoutGrades": "ohne Noten",
-  "openInPortal": "Im Portal öffnen",
   "courseLoadFailed": "Die Kursseite ließ sich nicht laden.",
-  "showMore": "mehr",
-  "showLess": "weniger",
   "moreTeachers": "+ {count} weitere",
   "@moreTeachers": {
     "placeholders": {
@@ -635,14 +600,6 @@
     "placeholders": {
       "count": {
         "type": "int"
-      }
-    }
-  },
-  "lessonOfDay": "{slot} Std.",
-  "@lessonOfDay": {
-    "placeholders": {
-      "slot": {
-        "type": "String"
       }
     }
   },
@@ -830,14 +787,6 @@
       }
     }
   },
-  "mensaChangeFor": "Mensa-Adresse ändern · {name}",
-  "@mensaChangeFor": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "mensaInherited": "gleiche Seite wie bisher – eigene eintragen",
   "chooseChild": "Für welches Kind?",
   "errorsFound": "{count, plural, =1{1 Problem erkannt} other{{count} Probleme erkannt}}",
@@ -860,9 +809,6 @@
   "debugUnlocked": "Debug-Export freigeschaltet (unter Fehlersuche)",
   "debugExportWarning": "Enthält echte Portalseiten mit Namen und Noten – nur an die Person geben, die die App betreut.",
   "mensaSuggested": "Vorschlag aus der App-Liste der Schule – bitte prüfen.",
-  "accountAdded": "Konto eingerichtet",
-  "accountsSoFar": "Bisher eingerichtet:",
-  "addAnotherText": "Geht ein weiteres Kind auf eine andere Schule? Dann richte gleich dessen Zugang ein. Geschwister an derselben Schule sieht das Elternkonto schon.",
   "addAnotherAccount": "Weiteres Konto hinzufügen",
   "done": "Fertig",
   "anotherAccountTitle": "Weiteres Konto",
@@ -1006,7 +952,6 @@
       }
     }
   },
-  "homeworkMarkDone": "Als erledigt abhaken",
   "homeworkPortalFailed": "Im Schulportal nicht gespeichert – der Haken gilt nur in der App.",
   "givenDate": "aufgegeben {date}",
   "@givenDate": {
@@ -1309,8 +1254,6 @@
   "noUpcomingExams": "Keine Arbeiten in den nächsten Wochen bekannt.",
   "coursesAllHint": "Fächer, Noten und Kursmappen stehen beim einzelnen Kind – oben antippen.",
   "archiveForWhom": "Hausaufgaben-Archiv von …",
-  "kidColorsTitle": "Farben der Kinder",
-  "kidColorsHint": "Die Farbe gilt überall in der App und wird beim Übertragen der Eingaben mitgenommen.",
   "kidColorPick": "Farbe {n}",
   "@kidColorPick": {
     "placeholders": {
@@ -1736,5 +1679,13 @@
   "notifyEventsDetail": "Am Vorabend ab 19 Uhr",
   "notifyEventsInfo": "Am Abend vor dem Schultag (ab 19 Uhr) eine Meldung zu Arbeiten und Tests, Abgabefristen, schulfreien Tagen sowie zu Elternabend, Sprechtag, Ausflug, Wandertag, Klassenfahrt, Festen, Zeugnissen und Projekttagen.\n\nAndere Einträge stehen nur im Kalender.",
   "notifyNight": "Nachrichten auch nachts",
-  "notifyNightDetail": "Dann ohne Ton"
+  "notifyNightDetail": "Dann ohne Ton",
+  "hwExpiredLink": "{count, plural, =1{1 nicht abgehakte im Archiv} other{{count} nicht abgehakte im Archiv}}",
+  "@hwExpiredLink": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

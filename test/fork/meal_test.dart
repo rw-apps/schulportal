@@ -11,6 +11,7 @@ import 'package:lanis/fork/ui/mensa/meal_fetcher.dart'
     show MealTrace, loginNextUrl;
 import 'package:lanis/fork/ui/mensa/meal_week_page.dart';
 import 'package:lanis/fork/ui/today/kid_hints.dart';
+import 'package:liblanis/liblanis.dart' show TypedSettings;
 import 'package:lanis/fork/ui/today/live_today_page.dart' show mealUnorderedDay;
 import 'package:lanis/fork/ui/today/today_model.dart';
 
@@ -386,5 +387,50 @@ void main() {
       loginNextUrl('https://essen.beispiel.example/kunde/2026/44/'),
       'https://essen.beispiel.example/kunde/2026/44/',
     );
+  });
+
+  test('Erinnerung nur mit frischem Stand (readAt, 48 h)', () {
+    final now = DateTime(2026, 10, 27, 15);
+    final w = MealWeek(
+      label: 'x',
+      days: [
+        MealDay(day: DateTime(2026, 10, 27), state: MealState.ordered),
+        MealDay(day: DateTime(2026, 10, 28), state: MealState.open),
+      ],
+    );
+    final fresh = MealEntry(at: now, weeks: [w]);
+    expect(mealReminderDays(fresh, now), [DateTime(2026, 10, 28)]);
+    // Abgemeldet: letzter Versuch jetzt, gelesen vor drei Tagen.
+    final stale = MealEntry(
+      at: now,
+      weeks: [w],
+      unreadable: true,
+      readAt: now.subtract(const Duration(days: 3)),
+    );
+    expect(mealReminderDays(stale, now), isEmpty);
+    final back = MealEntry.fromJson(stale.toJson())!;
+    expect(back.readAt, stale.readAt);
+    // Alte Einträge ohne 'r': gelesen = at, außer nicht lesbar.
+    expect(MealEntry(at: now).readAt, now);
+    expect(MealEntry(at: now, unreadable: true).readAt, isNull);
+  });
+
+  test('Zuletzt angemeldetes Kind je Seite', () {
+    final m = <String, String?>{};
+    final s = TypedSettings(
+      read: (k) => m[k],
+      write: (k, v) => m[k] = v,
+      delete: m.remove,
+    );
+    expect(mensaLastOwner(s, 'essen.example'), isNull);
+    setMensaLastOwner(s, 'essen.example', '1:a', name: 'Mika');
+    setMensaLastOwner(s, 'andere.example', '1:b');
+    expect(mensaLastOwner(s, 'essen.example'), '1:a');
+    expect(mensaLastName(s, 'essen.example'), 'Mika');
+    // Gleiches Kind ohne Namen: Name bleibt.
+    setMensaLastOwner(s, 'essen.example', '1:a');
+    expect(mensaLastName(s, 'essen.example'), 'Mika');
+    setMensaLastOwner(s, 'essen.example', '1:c');
+    expect(mensaLastName(s, 'essen.example'), '');
   });
 }

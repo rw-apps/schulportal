@@ -96,6 +96,8 @@ class AbsenceForm {
     required this.rules,
     this.entries = const [],
     this.commentWarning,
+    this.selectedBlockFrom,
+    this.selectedBlockTo,
   });
 
   final List<AbsencePupil> pupils;
@@ -118,6 +120,13 @@ class AbsenceForm {
   /// Warnung des Portals am Kommentarfeld („Bitte keine Gesundheitsdaten
   /// eingeben.“, `#kommentarHinweis`).
   final String? commentWarning;
+
+  /// Vorauswahl des Portals in `stundenVon`/`stundenBis` (`option[selected]`,
+  /// sonst die erste Option – so schickt der Browser das Feld ab); null, wenn
+  /// das Feld fehlt. Gebraucht für die verborgenen Felder bei Abwesenheit
+  /// (AbsenceDraft.toFields).
+  final String? selectedBlockFrom;
+  final String? selectedBlockTo;
 
   List<AbsencePupil> get allowedPupils =>
       pupils.where((p) => p.allowed).toList();
@@ -160,7 +169,14 @@ class AbsenceDraft {
   /// den Speichern-Knopf; dessen name/value ist daher nicht im Formular.
   /// `selectedPupils` = IDs mit Komma (Skript: `selectedPupils.join(',')`).
   /// Bei Abwesenheit tragen die verborgenen Block-Felder die Vorauswahl des
-  /// Portals (erster Block); bei Verspätung ist `bis` gleich `von`.
+  /// Portals (AbsenceForm.selectedBlockFrom/-To); bei Verspätung ist `bis`
+  /// gleich `von`.
+  ///
+  /// Ursache (Prüfung 27.10.26): Bisher stand dort immer der ERSTE Block der
+  /// Liste. Wählt das Portal etwas anderes vor (`selected`, z. B. den
+  /// letzten Block für „bis“), schickt der Browser diesen Wert – die App
+  /// wich vom Portal ab. Grenze: Ohne gelesene Vorauswahl (Formular von
+  /// Hand gebaut) bleibt der erste Block.
   Map<String, String> toFields(AbsenceForm form) {
     final firstBlock = form.blocks.isEmpty ? '' : form.blocks.first.value;
     return {
@@ -168,8 +184,8 @@ class AbsenceDraft {
       'art': kind,
       'von': formatGermanDate(from),
       'bis': formatGermanDate(isLate ? from : to),
-      'stundenVon': isLate ? blockFrom : firstBlock,
-      'stundenBis': isLate ? blockTo : firstBlock,
+      'stundenVon': isLate ? blockFrom : form.selectedBlockFrom ?? firstBlock,
+      'stundenBis': isLate ? blockTo : form.selectedBlockTo ?? firstBlock,
       'kommentar': comment,
     };
   }
@@ -264,14 +280,20 @@ AbsenceForm? parseAbsenceForm(Document doc) {
         ),
   ];
 
+  // Platzhalter („Bitte wählen“, value="") nicht als Wahl übernehmen.
+  // Ursache (Prüfung 27.10.26): Ein leerer Eintrag wurde zur ersten Art bzw.
+  // zum ersten Block – die Maske startete mit einer Art, die das Portal
+  // ablehnt, und als „verspätet“ beschriftet. Grenze: Eine Option ohne
+  // value-Attribut gilt wie im Browser mit ihrem Text.
   final kinds = [
     for (final o in form.querySelectorAll('select[name="art"] option'))
-      AbsenceChoice(o.attributes['value'] ?? o.text.trim(), _clean(o.text)),
+      if (_optionValue(o).isNotEmpty)
+        AbsenceChoice(_optionValue(o), _clean(o.text)),
   ];
 
   final blocks = [
     for (final o in form.querySelectorAll('select[name="stundenVon"] option'))
-      _block(o),
+      if (_optionValue(o).isNotEmpty) _block(o),
   ];
 
   final scripts = doc.querySelectorAll('script').map((s) => s.text).join('\n');
@@ -309,7 +331,21 @@ AbsenceForm? parseAbsenceForm(Document doc) {
       final w = doc.querySelector('#kommentarHinweis')?.text;
       return w == null || _clean(w).isEmpty ? null : _clean(w);
     }(),
+    selectedBlockFrom: _selectedValue(form, 'stundenVon'),
+    selectedBlockTo: _selectedValue(form, 'stundenBis'),
   );
+}
+
+/// Wert einer Option wie im Browser: `value`, sonst der Text.
+String _optionValue(Element o) => o.attributes['value'] ?? _clean(o.text);
+
+/// Wert, den der Browser für `select[name=…]` abschickt: die Option mit
+/// `selected` (bei mehreren die letzte), sonst die erste; null ohne Feld.
+String? _selectedValue(Element form, String name) {
+  final options = form.querySelectorAll('select[name="$name"] option');
+  if (options.isEmpty) return null;
+  final selected = options.where((o) => o.attributes.containsKey('selected'));
+  return _optionValue(selected.isEmpty ? options.first : selected.last);
 }
 
 AbsenceBlock _block(Element o) {
@@ -323,7 +359,7 @@ AbsenceBlock _block(Element o) {
       .replaceAllMapped(RegExp(r'^(\d+)\.\s*'), (m) => '${m[1]}. ')
       .trim();
   return AbsenceBlock(
-    value: o.attributes['value'] ?? '',
+    value: _optionValue(o),
     label: label,
     start: hm(o.attributes['data-von']) ?? times?.group(1),
     end: hm(o.attributes['data-bis']) ?? times?.group(2),

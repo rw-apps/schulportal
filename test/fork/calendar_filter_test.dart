@@ -5,7 +5,6 @@ import 'package:lanis/fork/ui/plan/plan_page.dart';
 import 'package:lanis/fork/ui/preview/demo_plan.dart';
 import 'package:lanis/fork/ui/today/today_from_lanis.dart';
 import 'package:lanis/fork/ui/today/today_model.dart';
-import 'package:lanis/fork/ui/word_fit.dart';
 import 'package:liblanis/liblanis.dart';
 
 // Synthetisch: Kinder aus demoPlans (Lena, Jonas), erfundene Termine.
@@ -56,19 +55,6 @@ void main() {
       ],
       ['Projekttag'],
     );
-  });
-
-  testWidgets('Langes Wort: Schrift wird kleiner statt zu trennen', (t) async {
-    const style = TextStyle(fontSize: 20);
-    expect(WordFitText.scaleFor('Kurz', style, 200, TextScaler.noScaling), 1);
-    final f = WordFitText.scaleFor(
-      'Reformationstagungsunterlagen',
-      style,
-      120,
-      TextScaler.noScaling,
-    );
-    expect(f, lessThan(1));
-    expect(f, greaterThanOrEqualTo(0.7));
   });
 
   testWidgets('Termine: Filter je Kind, Name am Termin, Ansicht von außen', (

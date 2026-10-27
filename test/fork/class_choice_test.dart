@@ -16,6 +16,10 @@ void main() {
     expect(schoolYearEnd(DateTime(2026, 10, 20)).year, 2027);
     expect(schoolYearEnd(DateTime(2027, 3, 1)).year, 2027);
     expect(schoolYearEnd(DateTime(2027, 8, 1)).year, 2028);
+    // Juli = Sommerferien: Eintrag meint das neue Schuljahr (Prüfung
+    // 27.10.26, vorher lief er am 31.07. desselben Jahres ab).
+    expect(schoolYearEnd(DateTime(2027, 7, 10)).year, 2028);
+    expect(schoolYearEnd(DateTime(2027, 6, 30)).year, 2027);
   });
 
   test('Eintrag gilt bis 31. Juli, danach abgelaufen', () {

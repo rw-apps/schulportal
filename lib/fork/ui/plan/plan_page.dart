@@ -13,6 +13,15 @@ import 'plan_model.dart';
 /// Tag und Woche zeigen Stunden, [events] die Termine der Schule.
 enum PlanView { day, week, events }
 
+/// Schulwoche [offset] Wochen vor (+) bzw. zurück (−) ab der von [now].
+///
+/// Kalendertage statt Duration. Ursache (Prüfung 27.10.26): `now.add(7 ×
+/// 24 h)` über eine Zeitumstellung verschiebt die Uhrzeit um eine Stunde –
+/// Freitag 23:30 wurde zu Samstag 0:30, schoolWeek sprang dann eine Woche
+/// zu weit (Samstag zählt zur nächsten Woche).
+List<DateTime> weekAtOffset(DateTime now, int offset) =>
+    schoolWeek(DateTime(now.year, now.month, now.day + 7 * offset));
+
 /// Bereich „Kalender“ im Stil A + C: Stunden je Kind als Tag oder Woche
 /// (mit Gruppenwahl), dazu die Termine der Schule als Liste. Ursache für die
 /// Zusammenlegung (Konzept 17.10.26): Plan und Termine sind beide „was ist
@@ -140,8 +149,7 @@ class _PlanPageState extends State<PlanPage> {
   /// die App nicht, Vertretungen nur, soweit das Portal sie schon zeigt.
   int _weekOffset = 0;
 
-  List<DateTime> get _week =>
-      schoolWeek(widget.now.add(Duration(days: 7 * _weekOffset)));
+  List<DateTime> get _week => weekAtOffset(widget.now, _weekOffset);
 
   List<KidPlan> get _plans => _weekOffset == 0
       ? widget.plans

@@ -41,16 +41,6 @@ class HomeworkRecord {
   bool get isDone => done != null;
   String get key => homeworkKey(course, entry);
 
-  HomeworkRecord withDone(DateTime? when, DateTime now) => HomeworkRecord(
-    course: course,
-    entry: entry,
-    subject: subject,
-    text: text,
-    given: given,
-    done: when,
-    changed: now,
-  );
-
   Map<String, dynamic> toJson() => {
     'c': course,
     'e': entry,
@@ -107,12 +97,6 @@ class HomeworkLedger {
     for (final r in byKey.values)
       if (r.isDone) r,
   ]..sort((a, b) => b.done!.compareTo(a.done!));
-
-  /// Wieder geöffnete Aufgaben (über „Wieder offen“).
-  List<HomeworkRecord> get reopened => [
-    for (final r in byKey.values)
-      if (!r.isDone) r,
-  ];
 
   HomeworkLedger put(HomeworkRecord r, DateTime now) {
     final next = {...byKey, r.key: r};
@@ -272,26 +256,30 @@ const homeworkExpireDays = 28;
 ///
 /// Abnahme 27.10.26: zum früheren von (a) vier Wochen nach der vermuteten
 /// Frist [due] und (b) dem nächsten Halbjahreswechsel (1. Februar bzw.
-/// 1. August) nach dem Aufgeben – danach ändern sich die Kurse, und
+/// 1. August) nach der Frist (ohne Frist: nach dem Aufgeben) – danach
+/// ändern sich die Kurse, und
 /// Aufgaben aus nicht mehr belieferten Kursen blieben sonst ewig stehen.
 /// Ohne Frist gilt nur (b). Wieder geöffnet ([reopened], im Archiv oder
-/// unter „Erledigt“): Zählung neu ab diesem Tag – vier Wochen bzw. bis zum
-/// nächsten Halbjahreswechsel danach. Grenze: Die Halbjahresgrenzen sind
+/// unter „Erledigt“): vier Wochen ab diesem Tag, ohne Halbjahresgrenze
+/// (bewusst zurückgeholt). Grenze: Die Halbjahresgrenzen sind
 /// feste Tage, nicht die der Schule (Zeugnistermine kennt die App nicht).
 DateTime? homeworkExpiry({DateTime? given, DateTime? due, DateTime? reopened}) {
   final base = reopened ?? given;
   if (base == null) return null;
-  final half = halfYearAfter(base);
-  // Kalendertage statt Duration: über die Zeitumstellung hinweg sonst eine
-  // Stunde daneben (Test 27.10.26: 17.11. 23:00 statt 18.11.).
-  DateTime plus(DateTime d) =>
-      DateTime(d.year, d.month, d.day + homeworkExpireDays, d.hour, d.minute);
-  final limit = reopened != null
-      ? plus(reopened)
-      : (due == null ? null : plus(due));
+  // Halbjahr ab der Frist, nicht ab dem Aufgeben: Aufgegeben 29.01.,
+  // fällig 02.02. lief sonst am 01.02. ab – vor der Frist (Prüfung
+  // 27.10.26). Wieder geöffnet zählen nur die vier Wochen danach.
+  if (reopened != null) return _plusDays(reopened, homeworkExpireDays);
+  final half = halfYearAfter(due ?? base);
+  final limit = due == null ? null : _plusDays(due, homeworkExpireDays);
   if (limit == null) return half;
   return limit.isBefore(half) ? limit : half;
 }
+
+/// Kalendertage statt Duration: über die Zeitumstellung hinweg sonst eine
+/// Stunde daneben (Test 27.10.26: 17.11. 23:00 statt 18.11.).
+DateTime _plusDays(DateTime d, int days) =>
+    DateTime(d.year, d.month, d.day + days, d.hour, d.minute);
 
 /// Nächster Halbjahreswechsel (1. Februar, 1. August) nach [d].
 DateTime halfYearAfter(DateTime d) {

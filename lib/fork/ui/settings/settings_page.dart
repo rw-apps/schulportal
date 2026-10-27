@@ -36,6 +36,7 @@ import '../live/live_data.dart'
 import 'class_sheet.dart';
 import '../today/today_from_lanis.dart' show shortSchoolName;
 import 'about_page.dart';
+import '../../notify/notify_keys.dart';
 import 'notify_settings_page.dart';
 import 'settings_widgets.dart';
 import 'device_transfer_page.dart';
@@ -547,9 +548,19 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
         : [
             [
               if (anyArea('vertretungsplan.php')) t.notifyShortSubs,
+              // Seit 9429 eigene Schalter (notify_keys.dart); ohne sie sah
+              // ein Konto mit nur Terminen wie ausgeschaltet aus (Prüfung
+              // 27.10.26).
+              if (allowed.any(
+                (a) =>
+                    a.$4.contains('vertretungsplan.php') &&
+                    notifyEventsOn(TypedSettings.account(db, a.$1)),
+              ))
+                t.notifyEvents,
               if (anyArea('nachrichten.php')) t.notifyShortMessages,
             ].join(', '),
             '${hourMinute(start)}–${hourMinute(end)}',
+            if (notifyNightMessages(shared)) t.notifyNight,
           ].where((x) => x.isNotEmpty).join(' · ');
 
     final langName =

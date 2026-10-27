@@ -14,18 +14,14 @@ import '../../mensa_login.dart';
 import '../kit.dart';
 import '../../mensa_store.dart';
 import '../../mensa_week.dart';
-import 'meal_fetcher.dart' show pageHtml;
+import 'meal_fetcher.dart' show jsText, pageHtml;
 import 'mensa_unclip.dart';
 
-/// Wer zuletzt auf welcher Bestellseite war (geräteweit, Host → Kind).
-///
-/// Ursache: Die eingebettete Seite teilt sich mit allen anderen in der App
-/// einen Cookie-Speicher (Android-WebView). Öffnet man nach einem Kind die
-/// gleiche Seite für ein anderes, wäre noch das erste angemeldet – und man
-/// bestellte unbemerkt fürs falsche Kind. Deshalb erscheint dann ein Hinweis
-/// mit „Abmelden“. Grenze: Teilen sich Geschwister EIN Konto beim Caterer,
-/// ist der Hinweis überflüssig und lässt sich einfach schließen.
-const mensaLastKey = 'fork-mensa/last';
+// Wer zuletzt auf welcher Bestellseite war: mensaLastKey (mensa_store.dart).
+// Öffnet man nach einem Kind die gleiche Seite für ein anderes, wäre noch das
+// erste angemeldet – deshalb erscheint dann ein Hinweis mit „Abmelden“.
+// Grenze: Teilen sich Geschwister EIN Konto beim Caterer, ist der Hinweis
+// überflüssig und lässt sich einfach schließen.
 
 /// Bestellseite in der App; die Anmeldung bleibt gespeichert, bis man sich
 /// in der App abmeldet (Einstellungen → Abmelden löscht alle Web-Cookies).
@@ -86,6 +82,7 @@ class _MensaPageState extends ConsumerState<MensaPage> {
             if (mounted) setState(() => _progress = p);
           },
           onPageStarted: (_) {
+            _starts++;
             if (mounted) setState(() => _failed = false);
           },
           // Abgeschnittene Gerichte aufheben (mensa_unclip.dart). Fehler
@@ -138,26 +135,42 @@ class _MensaPageState extends ConsumerState<MensaPage> {
   /// Abgelaufene Sitzung: gemerkte Anmeldung einsetzen. Danach leitet der
   /// Caterer meist auf seine Startseite – dann einmal die gewünschte Woche
   /// neu laden.
+  ///
+  /// Doppelt gemeldetes Seitenende (Android, Abrufverlauf 27.10.26): Ein
+  /// zweites Ausfüllen läuft nicht parallel ([_filling]), und erst eine neu
+  /// begonnene Seite ([_starts] > [_fillStarts]) gilt als Ergebnis der
+  /// Anmeldung – sonst verbrauchte das zweite Ereignis [_afterLogin] noch
+  /// auf der Anmeldeseite, und die gewünschte Woche kam nie.
   Future<void> _autoLogin() async {
     if (_afterLogin) {
+      if (_starts <= _fillStarts) return;
       _afterLogin = false;
       if (!await _hasPasswordField() && mounted) {
         await _c.loadRequest(Uri.parse(_start));
       }
       return;
     }
-    if (_triedLogin) return;
-    final l = await readMensaLogin(widget.owner);
-    final host = Uri.tryParse(await _c.currentUrl() ?? '')?.host;
-    if (l == null || host != l.host || !mounted) return;
+    if (_triedLogin || _filling) return;
+    _filling = true;
     try {
+      final l = await readMensaLogin(widget.owner);
+      final host = Uri.tryParse(await _c.currentUrl() ?? '')?.host;
+      if (l == null || host != l.host || !mounted) return;
       final r = await _c.runJavaScriptReturningResult(mensaLoginFillJs(l));
       if ('$r'.contains('filled')) {
         _triedLogin = true;
         _afterLogin = true;
+        _fillStarts = _starts;
       }
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      _filling = false;
+    }
   }
+
+  var _filling = false;
+  var _starts = 0;
+  var _fillStarts = 0;
 
   /// Anmeldung eingegeben: einmal fragen, ob die App sie merken soll.
   Future<void> _onLogin(String message) async {
@@ -231,38 +244,25 @@ class _MensaPageState extends ConsumerState<MensaPage> {
     if (_hopDone || _afterLogin || await _hasPasswordField()) return;
     _hopDone = true;
     try {
-      var h = '${await _c.runJavaScriptReturningResult(mealNavJs)}';
-      if (h.startsWith('"')) h = jsonDecode(h) as String;
+      final h = jsText(await _c.runJavaScriptReturningResult(mealNavJs));
       final t = Uri.tryParse(h);
       if (h.isEmpty || t == null || h == url || !mensaAllows(_home, t)) return;
       if (mounted) await _c.loadRequest(t);
     } catch (_) {}
   }
 
-  Map<String, dynamic> _readLast() {
-    try {
-      final raw = ref
-          .read(sharedOverAccountSettingsProvider)
-          .getString(mensaLastKey);
-      final v = raw == null ? null : jsonDecode(raw);
-      return v is Map<String, dynamic> ? v : {};
-    } catch (_) {
-      return {};
-    }
-  }
-
   void _checkOwner() {
-    final last = _readLast();
-    final prev = last[_home.host];
-    if (prev is Map && prev['owner'] != widget.owner) {
-      _otherName = '${prev['name'] ?? ''}';
+    final shared = ref.read(sharedOverAccountSettingsProvider);
+    final prev = mensaLastOwner(shared, _home.host);
+    if (prev != null && prev != widget.owner) {
+      _otherName = mensaLastName(shared, _home.host);
     }
-    last[_home.host] = {'owner': widget.owner, 'name': widget.childName ?? ''};
-    try {
-      ref
-          .read(sharedOverAccountSettingsProvider)
-          .setString(mensaLastKey, jsonEncode(last));
-    } catch (_) {}
+    setMensaLastOwner(
+      shared,
+      _home.host,
+      widget.owner,
+      name: widget.childName ?? '',
+    );
   }
 
   Future<void> _logout() async {

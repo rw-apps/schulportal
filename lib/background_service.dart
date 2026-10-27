@@ -10,6 +10,7 @@ import 'package:lanis/fork/kid_name.dart';
 import 'package:lanis/fork/login_guard.dart';
 import 'package:lanis/fork/notify/notify_keys.dart';
 import 'package:lanis/fork/notify/notify_task.dart' show showForkSummary;
+import 'package:lanis/fork/notify/notify_window.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:lanis/applets/definitions.dart';
 import 'package:lanis/bridge/lanis_bootstrap.dart';
@@ -27,21 +28,27 @@ void backgroundFetchHeadlessTask(HeadlessEvent event) async {
 }
 
 Future<void> _onBackgroundFetch(String taskId) async {
-  await _runFetchTask(taskId, timeout: false);
+  await _runFetchTask(taskId, timeout: false, inApp: true);
 }
 
 Future<void> _onBackgroundFetchTimeout(String taskId) async {
   await _runFetchTask(taskId, timeout: true);
 }
 
-Future<void> _runFetchTask(String taskId, {required bool timeout}) async {
+/// [inApp]: Lauf im Prozess der geöffneten App (BackgroundFetch.configure,
+/// auch der Einmal-Lauf 10 s nach dem Start), nicht headless.
+Future<void> _runFetchTask(
+  String taskId, {
+  required bool timeout,
+  bool inApp = false,
+}) async {
   debugPrint('[Lanis BG] fetch taskId=$taskId timeout=$timeout');
   if (timeout) {
     await BackgroundFetch.finish(taskId);
     return;
   }
   try {
-    await callbackDispatcher();
+    await callbackDispatcher(inApp: inApp);
   } finally {
     await BackgroundFetch.finish(taskId);
     debugPrint('[Lanis BG] fetch finished taskId=$taskId');
@@ -66,7 +73,7 @@ Future<void> setupBackgroundService() async {
   }
 
   await removeLegacyV3StorageArtifacts();
-  final overrides = await bootstrapLanisClient();
+  final overrides = await bootstrapLanisClient(forApp: false);
   final container = ProviderContainer(overrides: overrides);
   try {
     final accounts = await container.read(accountsProvider.future);
@@ -83,9 +90,12 @@ Future<void> setupBackgroundService() async {
     // Fork: Erlaubte Konten/Themen der Sammelmeldung merken und still
     // aufräumen – auch wenn gleich alles abgeschaltet wird und kein
     // Hintergrundlauf mehr kommt (Prüfung 27.10.26).
-    await showForkSummary(container, [
-      for (final a in accounts) a.localId,
-    ], alert: false);
+    await showForkSummary(
+      container,
+      [for (final a in accounts) a.localId],
+      alert: false,
+      parents: _parentIds(accounts),
+    );
     if (accounts.isNotEmpty && disabledCount == accounts.length) {
       await _stopBackgroundFetch();
       return;
@@ -147,8 +157,9 @@ Future<void> initializeNotifications() async {
   }
 }
 
+/// [inApp]: Lauf im Prozess der geöffneten App (siehe _runFetchTask).
 @pragma('vm:entry-point')
-Future<void> callbackDispatcher() async {
+Future<void> callbackDispatcher({bool inApp = false}) async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
     backgroundLogger.i('Background fetch triggered');
@@ -156,15 +167,22 @@ Future<void> callbackDispatcher() async {
     await initializeNotifications();
 
     await removeLegacyV3StorageArtifacts();
-    final overrides = await bootstrapLanisClient();
+    // Fork: forApp: false – siehe bootstrapLanisClient (Demo-Modus der
+    // geöffneten App bleibt unberührt).
+    final overrides = await bootstrapLanisClient(forApp: false);
     final container = ProviderContainer(overrides: overrides);
     try {
-      // Fork: Außerhalb des Zeitfensters nur Nachrichten, still, wenn
+      // Fork: Außerhalb der Uhrzeiten nur Nachrichten, still, wenn
       // „Nachrichten auch nachts“ an ist (notify_keys.dart, Abnahme
-      // 27.10.26). Sonst wie bisher: nichts abrufen, still aufräumen.
-      final inWindow = await isTaskWithinConstraints(container);
+      // 27.10.26); an einem abgewählten Tag gar nichts (notify_window.dart,
+      // Prüfung 27.10.26). Sonst wie bisher: nichts abrufen, still aufräumen.
+      final window = notifyWindowAt(
+        container.read(sharedOverAccountSettingsProvider),
+        DateTime.now(),
+      );
+      final inWindow = window == NotifyWindow.open;
       final night =
-          !inWindow &&
+          window == NotifyWindow.offHours &&
           notifyNightMessages(
             container.read(sharedOverAccountSettingsProvider),
           );
@@ -199,19 +217,34 @@ Future<void> callbackDispatcher() async {
       // und das Abmelden (deAuthenticate) entfiel. Jetzt: Fehler protokollieren,
       // dieses Konto abmelden, mit dem nächsten weitermachen. Ein Konto mit
       // abgelehntem Passwort überspringt guardedLogin (login_guard.dart).
+      //
+      // Fork: je Konto ein eigener Container (gleiche Datenbank). Ursache
+      // (Prüfung 27.10.26): Im Prozess der geöffneten App ([inApp]) meldete
+      // der Lauf jedes Konto am Ende ab (Session.deAuthenticate,
+      // `index.php?logout=all`) – auch beim Wechsel zum nächsten Konto
+      // (ActiveAccount.select meldet das vorige ab). Ob das Portal damit
+      // auch die Sitzung der App für dasselbe Konto beendet, ist nicht
+      // belegt; „all“ legt es nahe. Mit eigenem Container entfällt das
+      // Abmelden beim Wechsel, und [inApp] meldet gar nicht ab – die
+      // Sitzung des Laufs verfällt im Portal von selbst. Grenze: headless
+      // (App geschlossen) wird wie bisher abgemeldet.
+      final db = container.read(lanisDatabaseProvider);
       for (final summary in accounts) {
-        final db = container.read(lanisDatabaseProvider);
         final settings = TypedSettings.account(db, summary.localId);
         if (settings.getBool('notifications-allow') == false) {
           continue;
         }
 
+        final c = ProviderContainer(
+          overrides: [
+            ...overrides,
+            lanisDatabaseProvider.overrideWithValue(db),
+          ],
+        );
         var authenticated = false;
         try {
-          await container
-              .read(activeAccountProvider.notifier)
-              .select(summary.localId);
-          final account = container.read(activeAccountProvider);
+          await c.read(activeAccountProvider.notifier).select(summary.localId);
+          final account = c.read(activeAccountProvider);
           if (account == null) continue;
 
           for (final applet in AppDefinitions.applets.where(
@@ -237,17 +270,24 @@ Future<void> callbackDispatcher() async {
               // Fork: nie mit einem schon abgelehnten Passwort und nie
               // während einer Sperre des Portals (login_guard.dart) – sonst
               // verlängerte jeder Lauf die Sperre, auch für die Webseite.
+              // Fork: last_login wie vorher. Ursache (Prüfung 27.10.26):
+              // Session.authenticate setzt ihn für jedes Konto; nach jedem
+              // Lauf startete die App mit dem zuletzt geprüften Konto (bei
+              // zwei Konten abwechselnd). Gleiche Lösung wie family.dart
+              // (_start, restoreLastLogin).
+              final before = (await db.getAccount(account.localId))?.lastLogin;
               await guardedLogin(
                 settings,
                 account.password,
-                () => container
+                () => c
                     .read(sessionProvider.notifier)
                     .authenticate(withoutData: true),
               );
               authenticated = true;
+              await restoreLastLogin(db, account.localId, before);
             }
 
-            final session = container.read(sessionProvider).asData?.value;
+            final session = c.read(sessionProvider).asData?.value;
             if (session == null) continue;
             if (!session.doesSupportFeature(
               Applets.byPhpUrl(applet.appletPhpUrl),
@@ -260,7 +300,7 @@ Future<void> callbackDispatcher() async {
             // Fork: eine fehlerhafte Aufgabe stoppt die übrigen nicht.
             try {
               await applet.notificationTask!(
-                container,
+                c,
                 accountType,
                 BackgroundTaskToolkit(
                   accountId: account.localId,
@@ -280,18 +320,22 @@ Future<void> callbackDispatcher() async {
           backgroundLogger.e('Account ${summary.localId} skipped');
           backgroundLogger.e(e, stackTrace: s);
         } finally {
-          if (authenticated) {
+          if (authenticated && !inApp) {
             try {
-              await container.read(sessionProvider.notifier).deAuthenticate();
+              await c.read(sessionProvider.notifier).deAuthenticate();
             } catch (_) {}
           }
+          c.dispose();
         }
       }
 
       // Fork: Sammel-Benachrichtigung aus allen Konten (summary.dart).
-      await showForkSummary(container, [
-        for (final a in accounts) a.localId,
-      ], alert: !night);
+      await showForkSummary(
+        container,
+        [for (final a in accounts) a.localId],
+        alert: !night,
+        parents: _parentIds(accounts),
+      );
 
       backgroundLogger.i('Background fetch completed');
     } finally {
@@ -307,15 +351,25 @@ Future<void> callbackDispatcher() async {
 /// Kanal-Einstellungen); auch für die Sammelmeldung (fork/notify/summary).
 const notificationChannelId = 'io.github.alessioc42.sphplan';
 
+/// Fork: Elternkonten für den Namen in der Sammelmeldung (summaryName,
+/// fork/notify/summary.dart).
+Set<int> _parentIds(Iterable<AccountSummary> accounts) => {
+  for (final a in accounts)
+    if (a.accountType == AccountType.parent) a.localId,
+};
+
 /// Fork: Sammelmeldung ohne neuen Abruf still neu zeichnen bzw. entfernen
 /// (abgebrochener Lauf: Zeitfenster, kein Netz) – sonst stünde nachts noch
 /// „Morgen …“ für den heutigen Tag da (Prüfung 27.10.26).
 Future<void> _quietSummary(ProviderContainer container) async {
   try {
     final accounts = await container.read(accountsProvider.future);
-    await showForkSummary(container, [
-      for (final a in accounts) a.localId,
-    ], alert: false);
+    await showForkSummary(
+      container,
+      [for (final a in accounts) a.localId],
+      alert: false,
+      parents: _parentIds(accounts),
+    );
   } catch (_) {}
 }
 
@@ -409,25 +463,12 @@ class BackgroundTaskToolkit {
   }
 }
 
-Future<bool> isTaskWithinConstraints(ProviderContainer container) async {
-  final shared = container.read(sharedOverAccountSettingsProvider);
-  // Fork: ohne eigene Auswahl alle Tage. Ursache: Die Sammelmeldung für
-  // Montag kommt Sonntagabend (fork/notify/notices.dart); mit dem Lanis-
-  // Standard Mo–Fr wäre sie nie gelaufen. Eine eigene Auswahl in den
-  // Einstellungen gilt weiter.
-  final days =
-      shared.getJsonList('notifications-allowed-days') ??
-      [true, true, true, true, true, true, true];
-  final start = shared.getJsonList('notifications-start-time') ?? [6, 0];
-  final end = shared.getJsonList('notifications-end-time') ?? [21, 0];
-
-  final now = TimeOfDay.now();
-  final startMinutes = (start[0] as int) * 60 + (start[1] as int);
-  final endMinutes = (end[0] as int) * 60 + (end[1] as int);
-  final nowMinutes = now.hour * 60 + now.minute;
-  if (nowMinutes < startMinutes || nowMinutes > endMinutes) {
-    return false;
-  }
-  final currentDayIndex = DateTime.now().weekday - 1;
-  return days[currentDayIndex] == true;
-}
+/// Liegt jetzt im Zeitfenster (erlaubter Tag UND Uhrzeit)? Fork: Die Regel
+/// steht in notifyWindowAt (notify_window.dart), die Tag und Uhrzeit für
+/// „Nachrichten auch nachts“ getrennt meldet.
+Future<bool> isTaskWithinConstraints(ProviderContainer container) async =>
+    notifyWindowAt(
+      container.read(sharedOverAccountSettingsProvider),
+      DateTime.now(),
+    ) ==
+    NotifyWindow.open;

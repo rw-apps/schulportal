@@ -100,4 +100,34 @@ void main() {
     await guardedLogin(s, 'pw', () async => 1, userInitiated: true);
     expect(passwordRejected(s, 'pw'), isFalse);
   });
+
+  test('restoreLastLogin: Anmeldung ändert das Startkonto nicht', () async {
+    // Ursache (Prüfung 27.10.26): Session.authenticate setzt last_login je
+    // Konto; nach jedem Hintergrundlauf startete die App mit dem zuletzt
+    // geprüften Konto.
+    final db = LanisDatabase.open();
+    final a = await db.addAccount(
+      schoolId: 1,
+      schoolName: 'Schule A',
+      username: 'anna',
+      password: 'x',
+    );
+    final b = await db.addAccount(
+      schoolId: 2,
+      schoolName: 'Schule B',
+      username: 'ben',
+      password: 'x',
+    );
+    await db.updateLastLogin(a, at: DateTime(2026, 10, 27, 7));
+    final beforeB = (await db.getAccount(b))?.lastLogin;
+    await db.updateLastLogin(b, at: DateTime(2026, 10, 27, 9));
+    await restoreLastLogin(db, b, beforeB);
+    expect((await db.getPreferredStartupAccount())?.localId, a);
+
+    final beforeA = (await db.getAccount(a))?.lastLogin;
+    await db.updateLastLogin(a, at: DateTime(2026, 10, 27, 10));
+    await restoreLastLogin(db, a, beforeA);
+    expect((await db.getAccount(a))?.lastLogin, DateTime(2026, 10, 27, 7));
+    db.dispose();
+  });
 }

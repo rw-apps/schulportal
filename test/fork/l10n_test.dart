@@ -51,8 +51,8 @@ void main() {
     final tr = forkL10nFor('tr');
     expect(relativeDay(tr, DateTime(2026, 10, 21), now), 'Yarın');
     expect(greetingFor(forkL10nFor('en'), now), 'Good morning');
-    expect(tr.homeworkCount(3), '3 ödev');
-    expect(forkL10nFor('de').homeworkCount(1), '1 Hausaufgabe');
+    expect(tr.homeworkShort(3), '3 ödev');
+    expect(forkL10nFor('de').homeworkShort(1), '1 Aufgabe');
     expect(forkL10nFor('en').unreadCount(2), '2 messages');
   });
 }

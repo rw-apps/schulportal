@@ -48,11 +48,16 @@ class PlanLesson {
   /// Kennung der Gruppe innerhalb des Fachs.
   String get groupKey => teacher ?? room ?? subject;
 
+  /// Gleiche Stunde für das Zusammenfassen zur Doppelstunde (dayBlocks).
+  /// Mit [changeDetail]: Ursache (Prüfung 27.10.26) – eine Doppelstunde mit
+  /// zwei verschiedenen Vertretungen (1. Stunde FFF, 2. Stunde GGG) wurde
+  /// sonst ein Abschnitt mit nur der ersten Vertretung.
   bool sameAs(PlanLesson o) =>
       short == o.short &&
       room == o.room &&
       teacher == o.teacher &&
-      change == o.change;
+      change == o.change &&
+      changeDetail == o.changeDetail;
 }
 
 /// Inhalt einer Stunde an einem Tag: keine, eine oder mehrere Gruppen.

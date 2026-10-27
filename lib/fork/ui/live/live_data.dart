@@ -11,6 +11,7 @@ import 'package:lanis/utils/applet_settings.dart';
 
 import '../../courses_scan.dart';
 import '../../homework_ledger.dart';
+import '../../login_guard.dart';
 import '../../offline_store.dart';
 import '../../substitution_history.dart';
 import '../../lessons_parent.dart';
@@ -81,13 +82,28 @@ Map<String, String> settingStrings(Object? m) => <String, String>{
 /// Plan eines Kindes aus Stundenplan und Unterricht, dazu die automatisch
 /// erkannte Gruppenwahl. Gemeinsam für alle Seiten, damit „Heute“,
 /// „Kalender“ und „Unterricht“ dieselben Stunden, Gruppen und Namen zeigen.
+///
+/// [kids]: Kinder des Elternkontos. Bei Geschwistern zählen für Fachnamen und
+/// Gruppenwahl nur die Kurse des Kindes, dessen Plan gezeigt wird
+/// (shownPlanKid), ohne den vorangestellten Vornamen
+/// (courseNameWithoutKid). Ursache (Prüfung 27.10.26): Sonst hieß ein Fach
+/// im Plan „Lena: Mathematik“ (subjectFullName nimmt den Kursnamen), und die
+/// Lehrkräfte des Geschwisterkinds entschieden über die Gruppenwahl mit.
+/// Grenze: Ohne [kids] (Hintergrund, Offline-Seite) wie bei einem Kind.
 ({KidPlan plan, GroupChoice auto}) livePlan({
   required TimeTable tt,
   required Lessons lessons,
   required String firstName,
   int colorIndex = 0,
   LessonTimes? lessonTimes,
+  List<ChildLessons> kids = const [],
 }) {
+  final planKid = shownPlanKid(kids);
+  final own = <Lesson>[
+    for (final l in lessons)
+      if (planKid == null || kidOfCourseId(l.courseID) == planKid) l,
+  ];
+  String plain(Lesson l) => courseNameWithoutKid(l.name, l.courseID, kids);
   final names = <String, String>{};
   for (final l in lessons) {
     for (final t in l.teachers) {
@@ -99,8 +115,11 @@ Map<String, String> settingStrings(Object? m) => <String, String>{
     }
   }
   final courses = <CourseRef>[
-    for (final l in lessons)
-      (name: l.name, teachers: {for (final t in l.teachers) ?t.teacherKuerzel}),
+    for (final l in own)
+      (
+        name: plain(l),
+        teachers: {for (final t in l.teachers) ?t.teacherKuerzel},
+      ),
   ];
   final plan = kidPlanFromTimetable(
     tt,
@@ -108,7 +127,7 @@ Map<String, String> settingStrings(Object? m) => <String, String>{
     colorIndex: colorIndex,
     lessonTimes: lessonTimes,
     teacherNames: names,
-    courseNames: [for (final l in lessons) l.name],
+    courseNames: [for (final l in own) plain(l)],
     courses: courses,
   );
   final auto = autoGroupChoice(plan, courses);
@@ -179,10 +198,19 @@ class LiveSnapshot {
   final SubstitutionHistory substitutionHistory;
 
   /// Vertretungstage für den Kalender: gelieferte plus gespeicherte bis
-  /// heute. Nur für die Anzeige – Benachrichtigungen und „Heute“ arbeiten
-  /// mit dem gelieferten Plan, sonst meldeten sie alte Änderungen erneut.
+  /// heute.
   List<SubstitutionDay> substitutionDaysWithPast(DateTime now) =>
       substitutionHistory.withPast(
+        substitutions.content?.days ?? const [],
+        now,
+      );
+
+  /// Vertretungstage für Heute und die Sammelmeldung: dieselbe Quelle wie
+  /// der Kalender ([substitutionDaysWithPast]), aber erst ab heute
+  /// (SubstitutionHistory.fromToday) – sonst meldeten sie alte Änderungen
+  /// erneut. Der Hintergrund (notify_task.dart) liest dieselbe Ablage.
+  List<SubstitutionDay> substitutionDaysFromToday(DateTime now) =>
+      substitutionHistory.fromToday(
         substitutions.content?.days ?? const [],
         now,
       );
@@ -330,6 +358,18 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
   DateTime? _electionChecked;
   MensaAddresses _mensa = const MensaAddresses({});
   int? _settingsFor;
+
+  /// Konto, zu dem [_photo] und [_electionOpen] gehören ([_readSettings]).
+  int? _extrasFor;
+
+  /// Nächster Durchgang kommt vom Ziehen zum Aktualisieren ([_run]).
+  bool _userPass = false;
+
+  /// Zuletzt gemerkter Vorname (rememberKidName in build). Ursache (Prüfung
+  /// 27.10.26): build las ihn bei jedem Aufbau synchron aus der Datenbank,
+  /// um nur bei Änderung zu schreiben. Grenze: Neu gelesen nach
+  /// Kontowechsel oder übernommenen Einstellungen ([_readSettings]).
+  String? _namedAs;
   late final _loader = SerialLoader((force, only) async {
     await _run(_supported, force, only);
     _scheduleRetry();
@@ -442,6 +482,19 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
   void _readSettings(int accountId) {
     if (_settingsFor == accountId) return;
     _settingsFor = accountId;
+    _namedAs = null;
+    // Foto und Wahltool gehören dem Konto. Ursache (Prüfung 27.10.26): Nach
+    // einem Kontowechsel blieben Foto und Wahl-Hinweis des vorigen Kindes
+    // stehen, bis _loadExtras etwas Neues brachte – beim Elternkonto (kein
+    // Foto) dauerhaft, und das Wahltool galt bis zu electionCheckEvery als
+    // schon gefragt. Grenze: Neu eingelesene Einstellungen desselben Kontos
+    // (_onSettingsReplaced) behalten beides.
+    if (_extrasFor != accountId) {
+      _extrasFor = accountId;
+      _photo = null;
+      _electionOpen = false;
+      _electionChecked = null;
+    }
     final s = ref.read(accountSpecificSettingsProvider);
     if (s == null) return;
     _choice = settingStrings(
@@ -498,19 +551,54 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
   /// Ein Durchgang: Quellen nacheinander, wichtigste zuerst (Reihenfolge
   /// und Grund bei SerialLoader). Wirft ein Parser (Neuanmeldung
   /// fehlgeschlagen), gilt das nur für diese Quelle; die übrigen werden
-  /// trotzdem geladen.
+  /// trotzdem geladen – außer die Anmeldung selbst wurde abgelehnt.
+  ///
+  /// Anmeldeschutz (login_guard.dart). Ursache (Prüfung 27.10.26):
+  /// AppletParser.fetchData (liblanis, applet_parser.dart) meldet sich bei
+  /// JEDEM Fehler neu an (secondTry) – am Schutz vorbei. Mit einem auf der
+  /// Webseite geänderten Passwort hieß das: eine falsche Anmeldung je Quelle
+  /// (bis zu fünf je Durchgang), dazu die Wiederholversuche ([retryDelays])
+  /// und der 10-Minuten-Takt, für jedes Konto der Familie – das Portal
+  /// sperrte das Konto immer länger, auch für die Webseite. Jetzt: vor dem
+  /// Durchgang [checkLoginAllowed]; lehnt das Portal ab
+  /// (WrongCredentialsException) oder sperrt (LoginTimeoutException), wird
+  /// das festgehalten ([noteLoginResult]) und der Durchgang endet. Grenze:
+  /// Ziehen zum Aktualisieren ([_userPass]) darf ein abgelehntes Passwort
+  /// noch einmal versuchen (wie „Erneut versuchen“), eine Sperre nicht.
   Future<void> _run(
     Set<String> supported,
     bool force,
     Set<String>? only,
   ) async {
-    for (final s in [_tt, _lessons, _subs, _cal, _conv]) {
-      final p = s.parser;
-      if (p == null || !supported.contains(s.phpUrl)) continue;
-      if (only != null && !only.contains(s.phpUrl)) continue;
+    final user = _userPass;
+    _userPass = false;
+    if (!mounted) return;
+    final sources = [
+      for (final s in [_tt, _lessons, _subs, _cal, _conv])
+        if (s.parser != null &&
+            supported.contains(s.phpUrl) &&
+            (only == null || only.contains(s.phpUrl)))
+          s,
+    ];
+    final settings = ref.read(accountSpecificSettingsProvider);
+    final password = ref.read(activeAccountProvider)?.password ?? '';
+    if (settings != null && sources.isNotEmpty) {
       try {
-        await p.fetchData(forceRefresh: force);
+        checkLoginAllowed(settings, password, userInitiated: user);
       } catch (e) {
+        _failAll(sources, e);
+        return;
+      }
+    }
+    for (final (i, s) in sources.indexed) {
+      try {
+        await s.parser!.fetchData(forceRefresh: force);
+      } catch (e) {
+        if (e is WrongCredentialsException || e is LoginTimeoutException) {
+          if (settings != null) noteLoginResult(settings, password, e);
+          if (mounted) _failAll(sources.skip(i), e);
+          return;
+        }
         s.fail(e);
         _changed();
       }
@@ -518,8 +606,20 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
     }
     if (only == null) {
       _lastLoad = DateTime.now();
-      await _loadExtras(force);
+      // Foto nur beim Ziehen zum Aktualisieren erzwingen, sonst gilt
+      // photoMaxAge. Ursache (Prüfung 27.10.26): Auch der Durchgang beim
+      // Zurückkehren nach mehr als 10 Minuten lief mit force – das Foto kam
+      // jedes Mal neu vom Portal.
+      await _loadExtras(user);
     }
+  }
+
+  /// [sources] mit dem Fehler [e] markieren (Anmeldung abgelehnt/gesperrt).
+  void _failAll(Iterable<FeedSource<Object?>> sources, Object e) {
+    for (final s in sources) {
+      s.fail(e);
+    }
+    _changed();
   }
 
   /// Nach jedem Durchgang: Sind Quellen fehlgeschlagen, nach
@@ -641,6 +741,7 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
       },
       refresh: () {
         _rereadScan();
+        _userPass = true;
         return _loader.run(force: true);
       },
       mensa: _mensa,
@@ -704,9 +805,12 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
     // Vorname für die Hinweise im Hintergrund merken (kid_name.dart);
     // schreibt nur bei Änderung.
     final name = snapshot.firstName;
-    if (name.isNotEmpty) {
+    if (name.isNotEmpty && name != _namedAs) {
       final st = ref.read(accountSpecificSettingsProvider);
-      if (st != null) rememberKidName(st, name);
+      if (st != null) {
+        rememberKidName(st, name);
+        _namedAs = name;
+      }
     }
     return LiveData(snapshot: snapshot, child: widget.child);
   }
@@ -760,6 +864,7 @@ extension on String {
     firstName: s.firstName.isEmpty ? fallbackName : s.firstName,
     colorIndex: colorIndex,
     lessonTimes: s.lessonTimes,
+    kids: s.kids,
   );
   return (plan: r.plan.withTeacherNames(s.ownNames), auto: r.auto);
 }

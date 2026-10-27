@@ -19,15 +19,27 @@ import 'mensa_week.dart';
 /// - Stand = letzter Abruf ([MealEntry.at]); ändert jemand die Bestellung
 ///   anderswo, sieht die App das erst beim nächsten Abruf (spätestens nach
 ///   [mealRefreshEvery] beim Öffnen von Heute).
-/// - [MealEntry.unreadable]: Die Seite ließ sich nicht lesen (anderer
-///   Caterer, abgemeldet). Dann öffnet „Essen“ gleich die Seite selbst.
+/// - [MealEntry.unreadable]: Der letzte Versuch ließ sich nicht lesen
+///   (anderer Caterer, abgemeldet); die gespeicherten Wochen bleiben, bis
+///   [MealEntry.readAt] zu alt ist (mealStaleAfter).
 class MealEntry {
   const MealEntry({
     required this.at,
     this.weeks = const [],
     this.unreadable = false,
     this.balance,
-  });
+    DateTime? readAt,
+  }) : _readAt = readAt;
+
+  final DateTime? _readAt;
+
+  /// Letztes erfolgreiches Lesen; [at] ist der letzte Versuch.
+  ///
+  /// Ursache (Prüfung 27.10.26): markUnreadable setzte [at] auf jetzt und
+  /// behielt die alten Wochen – bei abgelaufener Anmeldung galt der alte
+  /// Stand damit immer als frisch, und Heute wie die Sammelmeldung
+  /// erinnerten an längst anderswo bestellte Tage (mealReminderDays).
+  DateTime? get readAt => _readAt ?? (unreadable ? null : at);
 
   /// Guthaben beim letzten Abruf („18,00“); null = unbekannt.
   final String? balance;
@@ -39,6 +51,7 @@ class MealEntry {
   Map<String, dynamic> toJson() => {
     'at': at.toIso8601String(),
     if (unreadable) 'unreadable': true,
+    if (readAt case final r?) 'r': r.toIso8601String(),
     'balance': ?balance,
     'weeks': [for (final w in weeks) w.toJson()],
   };
@@ -51,6 +64,7 @@ class MealEntry {
       at: at,
       unreadable: j['unreadable'] == true,
       balance: j['balance'] as String?,
+      readAt: DateTime.tryParse('${j['r']}'),
       weeks: [
         for (final w in (j['weeks'] as List? ?? const []))
           if (MealWeek.fromJson(w) case final x?) x,
@@ -154,6 +168,11 @@ List<DateTime> mealReminderDays(
   Set<int> weekdays = _allDays,
 }) {
   if (e == null || !e.ordersAtAll) return const [];
+  // Nur mit frischem Stand (readAt): Älter als [mealStaleAfter] kann
+  // anderswo längst bestellt sein – lieber keine Erinnerung als eine
+  // falsche. Gilt gleich für Heute, App-Abgleich und Hintergrund.
+  final read = e.readAt;
+  if (read == null || now.difference(read) > mealStaleAfter) return const [];
   final today = DateTime(now.year, now.month, now.day);
   final second = _nextSchoolDay(_nextSchoolDay(today));
   final out = <DateTime>[];
@@ -229,6 +248,10 @@ String? lowMealBalance(MealEntry? e) {
   return e.balance;
 }
 
+/// Älter als das (letztes erfolgreiches Lesen) erinnert die App nicht mehr
+/// an offene Tage (mealReminderDays).
+const mealStaleAfter = Duration(hours: 48);
+
 /// Abruf nach so langer Zeit erneuern (beim Öffnen von Heute).
 const mealRefreshEvery = Duration(hours: 3);
 
@@ -252,6 +275,58 @@ Map<String, MealEntry> readMealEntries(TypedSettings s) {
     // Unlesbar – wie leer; der nächste Abruf schreibt neu.
   }
   return out;
+}
+
+/// Wer zuletzt auf welcher Seite eines Caterers angemeldet bzw. geöffnet
+/// war (geräteweit, Host → `{owner, name}`; Schlüssel wie MensaPage).
+///
+/// Ursache (Prüfung 27.10.26): Alle eingebetteten Ansichten teilen einen
+/// Cookie-Speicher. Haben Geschwister beim selben Caterer getrennte Konten,
+/// las der unsichtbare Abruf für B die noch gültige Sitzung von A und
+/// speicherte A's Woche unter B – und hätte auf A's Konto bestellt.
+/// MealFetcher und MealOrderRunner prüfen deshalb diesen Eintrag.
+const mensaLastKey = 'fork-mensa/last';
+
+Map<String, dynamic> _readLast(TypedSettings? s) {
+  try {
+    final raw = s?.getString(mensaLastKey);
+    final v = raw == null ? null : jsonDecode(raw);
+    return v is Map<String, dynamic> ? v : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+/// Kind, das zuletzt auf [host] war; null = unbekannt.
+String? mensaLastOwner(TypedSettings? s, String host) {
+  final e = _readLast(s)[host];
+  return e is Map ? e['owner'] as String? : null;
+}
+
+/// Name des Kindes, das zuletzt auf [host] war ('' = unbekannt).
+String mensaLastName(TypedSettings? s, String host) {
+  final e = _readLast(s)[host];
+  return e is Map ? '${e['name'] ?? ''}' : '';
+}
+
+void setMensaLastOwner(
+  TypedSettings? s,
+  String host,
+  String owner, {
+  String? name,
+}) {
+  if (s == null) return;
+  final last = _readLast(s);
+  final old = last[host];
+  last[host] = {
+    'owner': owner,
+    'name':
+        name ??
+        (old is Map && old['owner'] == owner ? '${old['name'] ?? ''}' : ''),
+  };
+  try {
+    s.setString(mensaLastKey, jsonEncode(last));
+  } catch (_) {}
 }
 
 /// Gemeinsamer Speicher; [attach] einmal mit den geräteweiten Einstellungen.
@@ -304,10 +379,12 @@ class MealCache {
     };
     final keep = byStart.values.toList()
       ..sort((a, b) => b.start.compareTo(a.start));
+    final when = at ?? DateTime.now();
     _store(
       owner,
       MealEntry(
-        at: at ?? DateTime.now(),
+        at: when,
+        readAt: when,
         balance:
             [
               for (final w in weeks)
@@ -328,6 +405,7 @@ class MealCache {
       weeks: of(owner)?.weeks ?? const [],
       unreadable: true,
       balance: of(owner)?.balance,
+      readAt: of(owner)?.readAt,
     ),
   );
 

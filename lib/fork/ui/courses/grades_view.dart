@@ -122,7 +122,13 @@ class GradesViewState extends State<GradesView> {
   void didUpdateWidget(GradesView oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Kursliste kam nach (erstes Laden) oder änderte sich: fehlende holen.
-    if (oldWidget.source.courses.length != widget.source.courses.length) {
+    // Verglichen werden die Kurs-IDs, nicht die Anzahl. Ursache (Prüfung
+    // 27.10.26): Tauschte das Portal einen Kurs gegen einen anderen (gleiche
+    // Anzahl, neue ID – z. B. nach dem Halbjahreswechsel), blieb der neue
+    // ungeladen und stand ohne Noten da.
+    final before = {for (final c in oldWidget.source.courses) c.id};
+    final now = {for (final c in widget.source.courses) c.id};
+    if (before.length != now.length || !before.containsAll(now)) {
       _load();
     }
   }
@@ -189,7 +195,20 @@ class GradesViewState extends State<GradesView> {
       setState(() => _done++);
     }
     if (mounted && run == _run) setState(() => _loading = false);
-    if (!firstHalf && todo.isNotEmpty) {
+    // Nach JEDEM vollständigen Durchgang im laufenden Halbjahr melden, auch
+    // wenn alles schon im Zwischenspeicher lag. Ursache (Prüfung 27.10.26):
+    // Mit „nur wenn etwas zu laden war“ blieb die gespeicherte Auswertung
+    // (courses_scan.dart) nach dem ersten Mal stehen – „Heute“ zählte die
+    // Arbeiten nach dem Datum der alten Auswertung.
+    // Erst nach einem Mikrotask: Ohne Ladevorgang läuft _load bis hier
+    // synchron, auch aus initState/didUpdateWidget heraus; der Empfänger
+    // (LiveDataScope.setCourseScan) ruft setState und darf das nicht während
+    // des Bauens. Keine Schleife: Das neue Bild bringt dieselben Kurs-IDs,
+    // didUpdateWidget lädt dann nicht neu. Grenze: Ein überholter Durchgang
+    // (Halbjahr gewechselt, neu geladen) meldet nichts.
+    if (!firstHalf) {
+      await Future<void>.value();
+      if (!mounted || run != _run) return;
       widget.source.onCurrentLoaded?.call(Map.of(pages));
     }
   }

@@ -1,53 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:lanis/fork/notify/notices.dart';
-import 'package:lanis/fork/ui/plan/plan_model.dart';
 import 'package:lanis/fork/ui/today/today_model.dart';
 import 'package:liblanis/liblanis.dart';
 
 final de = forkL10nFor('de');
-
-/// Erfundener Plan: Mo und Di je 1.–2. Block Mathe/Deutsch.
-KidPlan _plan() {
-  const slots = [
-    PlanSlot(label: '1. Block', start: '09:00', end: '10:15'),
-    PlanSlot(label: '2. Block', start: '10:30', end: '11:45'),
-  ];
-  const m = PlanLesson(
-    subject: 'Mathematik',
-    short: 'M',
-    room: 'R1',
-    teacher: 'AAA',
-  );
-  const d = PlanLesson(
-    subject: 'Deutsch',
-    short: 'D',
-    room: 'R1',
-    teacher: 'BBB',
-  );
-  PlanCell c(PlanLesson l) => PlanCell([l]);
-  return KidPlan(
-    firstName: 'Kind',
-    colorIndex: 0,
-    slots: slots,
-    days: [
-      [c(m), c(d)],
-      [c(m), c(d)],
-      [c(m), c(d)],
-      [c(m), c(d)],
-      [c(m), c(d)],
-    ],
-  );
-}
-
-SubstitutionDay _day(String date, List<(String, String)> rows) =>
-    SubstitutionDay(
-      parsedDate: date,
-      substitutions: [
-        for (final (stunde, art) in rows)
-          Substitution(tag: date, tag_en: '', stunde: stunde, art: art),
-      ],
-    );
 
 CalendarEvent _ev(String title, DateTime a, {String? cat}) => CalendarEvent(
   startTime: a,
@@ -66,25 +23,26 @@ CalendarEvent _ev(String title, DateTime a, {String? cat}) => CalendarEvent(
 );
 
 void main() {
-  final plan = _plan();
-  // Montag 19.10.26
-  final subs = [
-    _day('19.10.2026', [('1', 'Entfall'), ('2', 'Raumänderung')]),
-    _day('20.10.2026', [('1', 'Entfall')]),
+  // Montag 19.10.26; Dienstag mit großen Terminen.
+  final ev = [
+    _ev('Lernkontrolle NaWi', DateTime(2026, 10, 20, 9), cat: 'Arbeiten'),
+    _ev('Elternabend 6', DateTime(2026, 10, 20, 19)),
+    _ev('Präsentation Prüfung', DateTime(2026, 10, 20, 8)),
   ];
 
   List<Notice> at(
     DateTime now, {
     Set<String> sent = const {},
-    List<CalendarEvent> ev = const [],
+    List<CalendarEvent>? events,
+    String name = 'Kind',
+    bool parent = false,
   }) => buildNotices(
     t: de,
-    plan: plan,
-    choice: const {},
-    substitutions: subs,
-    events: ev,
+    events: events ?? ev,
     now: now,
     sent: sent,
+    name: name,
+    parent: parent,
   );
 
   // Das Zeitfenster prüft background_service.dart (isTaskWithinConstraints);
@@ -93,75 +51,28 @@ void main() {
     expect(at(DateTime(2026, 10, 19, 21, 30)), isNotEmpty);
   });
 
-  test(
-    'heute: nur kommende Stunden, nicht doppelt, Neues ersetzt vollständig',
-    () {
-      final morning = at(DateTime(2026, 10, 19, 8));
-      expect(morning.single.id, 1);
-      expect(morning.single.title, 'Heute bei Kind');
-      expect(morning.single.lines, hasLength(2));
-      final after1 = at(DateTime(2026, 10, 19, 10, 20));
-      expect(
-        after1.single.lines.single,
-        startsWith('2. Block Deutsch – Raumwechsel'),
-      );
-      expect(
-        at(DateTime(2026, 10, 19, 8), sent: morning.single.keys.toSet()),
-        isEmpty,
-      );
-      expect(
-        at(
-          DateTime(2026, 10, 19, 8),
-          sent: {morning.single.keys.first},
-        ).single.lines,
-        hasLength(2),
-        reason: 'eine neue → vollständige Meldung',
-      );
-    },
-  );
-
-  test('Vorabend ab 19 Uhr für den nächsten Schultag, mit großen Terminen', () {
-    expect(at(DateTime(2026, 10, 19, 18, 59)).where((n) => n.id == 2), isEmpty);
-    final ev = [
-      _ev('Lernkontrolle NaWi', DateTime(2026, 10, 20, 9), cat: 'Arbeiten'),
-      _ev('Elternabend 6', DateTime(2026, 10, 20, 19)),
-      _ev('Präsentation Prüfung', DateTime(2026, 10, 20, 8)),
-    ];
-    final n = at(
-      DateTime(2026, 10, 19, 19, 30),
-      ev: ev,
-    ).firstWhere((n) => n.id == 2);
+  test('Vorabend ab 19 Uhr für den nächsten Schultag: große Termine', () {
+    expect(at(DateTime(2026, 10, 19, 18, 59)), isEmpty);
+    final n = at(DateTime(2026, 10, 19, 19, 30)).single;
+    expect(n.id, 2);
     expect(n.title, 'Morgen bei Kind');
-    expect(n.lines, [
-      '1. Block Mathematik – fällt aus',
-      'Lernkontrolle NaWi · 09:00',
-      'Elternabend 6 · 19:00',
-    ]);
+    expect(n.lines, ['Lernkontrolle NaWi · 09:00', 'Elternabend 6 · 19:00']);
+    // Schon gemeldet: nichts; ein neuer Termin: vollständige Meldung.
+    expect(at(DateTime(2026, 10, 19, 19, 30), sent: n.keys.toSet()), isEmpty);
+    expect(
+      at(DateTime(2026, 10, 19, 19, 30), sent: {n.keys.first}).single.lines,
+      hasLength(2),
+    );
   });
 
   test('Freitagabend nichts für Samstag, Sonntagabend für Montag', () {
-    final fri = buildNotices(
-      t: de,
-      plan: plan,
-      choice: const {},
-      substitutions: [
-        _day('24.10.2026', [('1', 'Entfall')]),
-      ],
-      events: const [],
-      now: DateTime(2026, 10, 23, 19, 30),
+    final sat = [_ev('Sportfest', DateTime(2026, 10, 24, 9))];
+    expect(at(DateTime(2026, 10, 23, 19, 30), events: sat), isEmpty);
+    final mon = [_ev('Sportfest', DateTime(2026, 10, 26, 9))];
+    expect(
+      at(DateTime(2026, 10, 25, 19, 30), events: mon).single.title,
+      'Morgen bei Kind',
     );
-    expect(fri, isEmpty);
-    final sun = buildNotices(
-      t: de,
-      plan: plan,
-      choice: const {},
-      substitutions: [
-        _day('26.10.2026', [('1', 'Entfall')]),
-      ],
-      events: const [],
-      now: DateTime(2026, 10, 25, 19, 30),
-    );
-    expect(sun.single.title, 'Morgen bei Kind');
   });
 
   test('große Termine', () {
@@ -182,22 +93,13 @@ void main() {
     expect(keys, ['k3', 'k4', 'k1', 'n']);
   });
 
-  test('ohne Kindernamen (Schülerkonto): „in der Schule“', () {
-    final p = _plan();
-    final anon = KidPlan(
-      firstName: '',
-      colorIndex: 0,
-      slots: p.slots,
-      days: p.days,
+  test('ohne Kindernamen: Schülerkonto „in der Schule“, Elternkonto '
+      '„bei deinem Kind“', () {
+    final eve = DateTime(2026, 10, 19, 19, 30);
+    expect(at(eve, name: '').single.title, 'Morgen in der Schule');
+    expect(
+      at(eve, name: '', parent: true).single.title,
+      'Morgen bei deinem Kind',
     );
-    final n = buildNotices(
-      t: de,
-      plan: anon,
-      choice: const {},
-      substitutions: subs,
-      events: const [],
-      now: DateTime(2026, 10, 19, 8),
-    );
-    expect(n.single.title, 'Heute in der Schule');
   });
 }

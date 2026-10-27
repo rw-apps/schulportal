@@ -87,8 +87,15 @@ class ComposePage extends StatefulWidget {
 }
 
 class _ComposePageState extends State<ComposePage> {
-  /// Gewählte Empfänger: Portal-ID → Anzeigename.
+  /// Gewählte Empfänger: Portal-ID → Anzeigename (Knopf „Senden an …“).
   final _chosen = <String, String>{};
+
+  /// Portal-ID → Name, wie das Portal den Empfänger nennt (ReceiverEntry
+  /// .name). Ursache (Prüfung 27.10.26): Die Rückfrage vor dem Senden zeigte
+  /// unseren Anzeigenamen aus dem Unterricht – ging die Zuordnung schief,
+  /// stand dort trotzdem der erwartete Name. Jetzt bestätigt man den echten
+  /// Empfänger. Grenze: Fehlt ein Eintrag, gilt der Anzeigename.
+  final _portalName = <String, String>{};
 
   /// Welche Portal-ID zu welcher Lehrkraft (Kürzel) gehört.
   final _idOf = <String, String>{};
@@ -99,6 +106,9 @@ class _ComposePageState extends State<ComposePage> {
   List<ReceiverEntry> _found = const [];
   bool _searching = false;
   bool _sending = false;
+
+  /// Rückfrage vor dem Senden ist offen oder wird gerade geöffnet.
+  bool _confirming = false;
 
   @override
   void initState() {
@@ -125,12 +135,16 @@ class _ComposePageState extends State<ComposePage> {
       _chosen.isNotEmpty &&
       _subject.text.trim().isNotEmpty &&
       _text.text.trim().isNotEmpty &&
-      !_sending;
+      !_sending &&
+      !_confirming;
 
   Future<void> _toggle(RecipientCandidate c) async {
     final id = _idOf[c.kuerzel];
     if (id != null && _chosen.containsKey(id)) {
-      setState(() => _chosen.remove(id));
+      setState(() {
+        _chosen.remove(id);
+        _portalName.remove(id);
+      });
       return;
     }
     setState(() => _state[c.kuerzel] = _State.resolving);
@@ -141,10 +155,12 @@ class _ComposePageState extends State<ComposePage> {
       hits = const [];
     }
     if (!mounted) return;
+    // Ohne Rückfrage nur ein sicherer Treffer (isSureReceiver); ein
+    // einzelner, der nur im Nachnamen passt, geht in die Auswahl.
     ReceiverEntry? pick;
-    if (hits.length == 1) {
+    if (hits.length == 1 && isSureReceiver(hits.single, c)) {
       pick = hits.single;
-    } else if (hits.length > 1) {
+    } else if (hits.isNotEmpty) {
       pick = await _choose(c.display, hits);
     }
     if (!mounted) return;
@@ -156,6 +172,7 @@ class _ComposePageState extends State<ComposePage> {
       _state[c.kuerzel] = _State.idle;
       _idOf[c.kuerzel] = pick.id;
       _chosen[pick.id] = c.display;
+      _portalName[pick.id] = pick.name;
     });
   }
 
@@ -209,10 +226,18 @@ class _ComposePageState extends State<ComposePage> {
   }
 
   Future<void> _send() async {
+    // Sperre VOR dem ersten await. Ursache (Prüfung 27.10.26): Zwei schnelle
+    // Tipps öffneten zwei Rückfragen – zweimal „Senden“ hieß zwei
+    // Nachrichten. _confirming macht den Knopf sofort unbedienbar (_ready),
+    // auch der zweite Tipp desselben Bildes läuft hier ins Leere.
+    if (_confirming || _sending) return;
     if (blockedInDemo(context)) return;
     final k = Kit.of(context);
     final t = context.t;
-    final names = _chosen.values.join(', ');
+    final names = [
+      for (final e in _chosen.entries) _portalName[e.key] ?? e.value,
+    ].join(', ');
+    setState(() => _confirming = true);
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -230,8 +255,15 @@ class _ComposePageState extends State<ComposePage> {
         ],
       ),
     );
-    if (ok != true || !mounted) return;
-    setState(() => _sending = true);
+    if (!mounted) return;
+    if (ok != true) {
+      setState(() => _confirming = false);
+      return;
+    }
+    setState(() {
+      _confirming = false;
+      _sending = true;
+    });
     var sent = false;
     try {
       sent = await widget.backend.send(
@@ -352,8 +384,10 @@ class _ComposePageState extends State<ComposePage> {
               onChanged: (v) => setState(() {
                 if (v == true) {
                   _chosen[r.id] = r.name;
+                  _portalName[r.id] = r.name;
                 } else {
                   _chosen.remove(r.id);
+                  _portalName.remove(r.id);
                 }
               }),
               title: Text(r.name, style: k.planSubject(k.p.ink)),

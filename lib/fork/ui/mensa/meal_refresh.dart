@@ -7,6 +7,7 @@ import '../../mensa_store.dart';
 import '../today/today_page.dart' show schoolWeek;
 import '../kit.dart';
 import 'meal_fetcher.dart';
+import 'meal_order.dart' show MealOrderRunner;
 
 /// Liest auf Heute die Essenswochen der Kinder nach (laufende und nächste
 /// Woche), wenn der gespeicherte Stand älter als [mealRefreshEvery] ist –
@@ -62,6 +63,9 @@ class _MealRefreshState extends ConsumerState<MealRefresh> {
     // eingebettete Ansicht die erfundene Caterer-Adresse (Demo-Prüfung
     // 27.10.26, Bildschirmtest der Demo).
     if (!mounted || _current != null || _cache.demo != null) return;
+    // Nicht während einer Bestellung (MealOrderRunner.running): gemeinsame
+    // Sitzung beim Caterer. Danach holt didUpdateWidget es nach.
+    if (MealOrderRunner.running > 0) return;
     for (final t in widget.targets) {
       if (_tried.contains(t.owner)) continue;
       final e = _cache.of(t.owner);

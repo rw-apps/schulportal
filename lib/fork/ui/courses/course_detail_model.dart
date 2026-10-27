@@ -74,6 +74,19 @@ List<TopicGroup> groupHistory(List<CurrentEntry> history, {String? noTopic}) {
   return out;
 }
 
+/// Schlüssel einer Themengruppe für den Aufklapp-Zustand: Titel und erster
+/// (frühester) Tag.
+///
+/// Ursache (Prüfung 27.10.26): Die Kursseite merkte sich aufgeklappte
+/// Gruppen nach ihrer Nummer. Kam beim Aktualisieren eine neue Stunde mit
+/// neuem Thema dazu, rutschten alle Gruppen um eins – aufgeklappt war dann
+/// die falsche. Der früheste Tag bleibt stabil, wenn oben neue Stunden zum
+/// selben Thema dazukommen, und trennt ein wiederkehrendes Thema
+/// (groupHistory) von seinem ersten Auftreten. Grenze: Ändert die Lehrkraft
+/// den Titel oder löscht die erste Stunde, ist die Gruppe wieder zu.
+String topicGroupKey(TopicGroup g) =>
+    '${g.title}|${g.from?.toIso8601String() ?? ''}';
+
 /// Zählung der Anwesenheit aus der Tabelle des Portals.
 typedef AttendanceCounts = ({int present, int excused, int missing});
 

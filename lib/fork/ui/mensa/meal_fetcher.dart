@@ -6,23 +6,34 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../mensa.dart' show mensaAllows;
 import '../../mensa_login.dart';
-import '../../mensa_store.dart' show mealNavJs;
+import '../../mensa_store.dart'
+    show MealCache, mealNavJs, mensaLastOwner, setMensaLastOwner;
+import 'meal_order.dart' show MealOrderRunner;
 import '../../mensa_week.dart';
 import '../today/today_page.dart' show schoolWeek;
 
+/// Ergebnis von runJavaScriptReturningResult als Text: Android liefert
+/// Zeichenketten JSON-kodiert („"<html…"“), iOS roh. Ein Helfer statt
+/// vier gleicher Stellen (Prüfung 27.10.26).
+String jsText(Object? r) {
+  final s = '$r';
+  if (!s.startsWith('"')) return s;
+  try {
+    final v = jsonDecode(s);
+    return v is String ? v : s;
+  } catch (_) {
+    return s;
+  }
+}
+
 /// Quelltext der geladenen Seite aus einer eingebetteten Ansicht; null bei
-/// Fehler. Android liefert Zeichenketten JSON-kodiert („"<html…"“).
+/// Fehler.
 Future<String?> pageHtml(WebViewController c) async {
   try {
     final r = await c.runJavaScriptReturningResult(
       'document.documentElement.outerHTML',
     );
-    if (r is! String) return null;
-    if (r.startsWith('"')) {
-      final v = jsonDecode(r);
-      return v is String ? v : null;
-    }
-    return r;
+    return r is String ? jsText(r) : null;
   } catch (_) {
     return null;
   }
@@ -180,6 +191,32 @@ class _MealFetcherState extends State<MealFetcher> {
       _trace('timeout');
       _finish();
     });
+    _begin();
+  }
+
+  /// Vor dem ersten Laden: War zuletzt ein anderes Kind auf dieser Seite
+  /// (mensaLastOwner), gilt dessen Sitzung noch – dann erst abmelden und mit
+  /// der gemerkten Anmeldung dieses Kindes neu anmelden; ohne gemerkte
+  /// Anmeldung nicht lesen (sonst stünde die Woche des anderen Kindes hier).
+  /// Ursache und Grenze: mensaLastKey (mensa_store.dart). Während einer
+  /// Bestellung (MealOrderRunner.running) nie abmelden.
+  Future<void> _begin() async {
+    final owner = widget.owner;
+    final last = mensaLastOwner(MealCache.instance.settings, _home.host);
+    if (owner != null && last != null && last != owner) {
+      final l = await readMensaLogin(owner);
+      if (_done || !mounted) return;
+      if (l == null || MealOrderRunner.running > 0) {
+        _trace('other child logged in, not reading');
+        widget.onUnreadable?.call();
+        return _finish();
+      }
+      _trace('other child logged in: clearing cookies');
+      try {
+        await WebViewCookieManager().clearCookies();
+      } catch (_) {}
+      if (_done || !mounted) return;
+    }
     _load(widget.url);
   }
 
@@ -254,8 +291,7 @@ class _MealFetcherState extends State<MealFetcher> {
       // Essensbestellung folgen (mealNavJs), höchstens zweimal.
       if (_hops < 2) {
         try {
-          var h = '${await _c.runJavaScriptReturningResult(mealNavJs)}';
-          if (h.startsWith('"')) h = jsonDecode(h) as String;
+          final h = jsText(await _c.runJavaScriptReturningResult(mealNavJs));
           final target = Uri.tryParse(h);
           if (h.isNotEmpty &&
               target != null &&
@@ -275,6 +311,16 @@ class _MealFetcherState extends State<MealFetcher> {
       }
       _finish();
       return;
+    }
+    // Woche gelesen: Eine laufende Anmeldung ist erledigt (Prüfung
+    // 27.10.26: sonst lud der 15-s-Wächter danach eine halb geladene Seite
+    // neu).
+    _loginWatch?.cancel();
+    _afterLogin = false;
+    // Erstes Lesen ohne Eintrag: Diese Sitzung gehört jetzt diesem Kind.
+    if (widget.owner case final o?
+        when mensaLastOwner(MealCache.instance.settings, _home.host) == null) {
+      setMensaLastOwner(MealCache.instance.settings, _home.host, o);
     }
     _read++;
     widget.onWeek(week.withUrl(url));
@@ -322,7 +368,10 @@ class _MealFetcherState extends State<MealFetcher> {
   /// App-Start ([_resetDone]), damit eine langsame Seite nicht jedes Mal
   /// abmeldet.
   Future<bool> _unstick(String? src) async {
-    if (!_stalled || _resetDone || (src != null && src.length > 200)) {
+    if (!_stalled ||
+        _resetDone ||
+        MealOrderRunner.running > 0 ||
+        (src != null && src.length > 200)) {
       return false;
     }
     _resetDone = true;
@@ -382,6 +431,9 @@ class _MealFetcherState extends State<MealFetcher> {
       if ('$r'.contains('filled')) {
         _triedLogin = true;
         _afterLogin = true;
+        if (widget.owner case final o?) {
+          setMensaLastOwner(MealCache.instance.settings, _home.host, o);
+        }
         // Manche Anmeldeseiten melden sich per Skript an und leiten erst
         // danach weiter (React, bis zu 6 s Warten auf das Hydrieren in
         // mensaLoginFillJs); bleibt die Weiterleitung aus (falsches
@@ -412,6 +464,10 @@ class _MealFetcherState extends State<MealFetcher> {
 
   @override
   void dispose() {
+    // Späte Ereignisse (Ladefehler, Timer) dürfen nach dem Abbau kein
+    // onDone mehr melden – MealWeekPage hätte sonst einen neueren Abruf
+    // beendet (Prüfung 27.10.26).
+    _done = true;
     _timer?.cancel();
     _watchdog?.cancel();
     _loginWatch?.cancel();

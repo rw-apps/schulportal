@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemNavigator;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:liblanis/liblanis.dart' show sharedOverAccountSettingsProvider;
+import 'package:liblanis/liblanis.dart'
+    show activeAccountProvider, sharedOverAccountSettingsProvider;
 
 import 'package:lanis/applets/external_definitions.dart';
 import 'package:lanis/fork/start.dart';
@@ -154,6 +155,14 @@ class _PreviewShellState extends State<PreviewShell> {
     }
     Navigator.of(context).maybePop();
     router?.go(path);
+  }
+
+  /// Alle Unterseiten der Reiter schließen (Kontowechsel, siehe
+  /// [_AccountSwitchWatch]).
+  void _closeSubpages() {
+    for (final k in _navKeys.values) {
+      k.currentState?.popUntil((r) => r.isFirst);
+    }
   }
 
   /// Reiter wählen; erneutes Antippen des aktiven führt an seinen Anfang.
@@ -498,7 +507,10 @@ class _PreviewShellState extends State<PreviewShell> {
             if (!didPop) _back();
           },
           child: widget.liveData
-              ? LiveDataScope(child: FamilyScope(child: scaffold))
+              ? _AccountSwitchWatch(
+                  onSwitch: _closeSubpages,
+                  child: LiveDataScope(child: FamilyScope(child: scaffold)),
+                )
               : scaffold,
         ),
       ),
@@ -777,6 +789,35 @@ class _TabNavigatorState extends State<_TabNavigator> {
       ),
     ),
   );
+}
+
+/// Schließt beim Wechsel des aktiven Kontos alle Unterseiten der Reiter.
+///
+/// Ursache (Prüfung 27.10.26): Nach „Konto wechseln“ (Einstellungen →
+/// Konten, danach zurück zur Startseite) bleiben PreviewShell, der
+/// IndexedStack und die Navigatoren der Reiter samt offener Unterseiten
+/// bestehen. Eine Unterseite des bisher weiteren Kontos B hing an dessen
+/// Familien-Container, den FamilyScope gleich darauf entsorgt (Absturz
+/// „disposed container“); eine Seite des bisher aktiven Kontos A las über
+/// `ref` plötzlich die Sitzung von B. Jetzt beginnt jeder Reiter wieder bei
+/// seiner Übersicht. Grenze: Seiten über der ganzen App (pushFullScreen)
+/// bleiben – sie sind während der Einstellungen nicht offen.
+class _AccountSwitchWatch extends ConsumerWidget {
+  const _AccountSwitchWatch({required this.onSwitch, required this.child});
+
+  final VoidCallback onSwitch;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen<int?>(activeAccountProvider.select((a) => a?.localId), (
+      before,
+      now,
+    ) {
+      if (before != null && before != now) onSwitch();
+    });
+    return child;
+  }
 }
 
 /// Meldet jeden Neuaufbau der Leiste an die Startseiten der Reiter.

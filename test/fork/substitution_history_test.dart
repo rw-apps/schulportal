@@ -62,6 +62,20 @@ void main() {
     );
   });
 
+  test('Heute und Sammelmeldung: gespeicherter heutiger Tag, kein '
+      'vergangener (Prüfung 27.10.26)', () {
+    final h = SubstitutionHistory.empty.record([
+      day('20.10.2026', 'D'),
+      day('21.10.2026', 'M'),
+    ], DateTime(2026, 10, 20, 8));
+    // Nachmittags liefert das Portal den 21.10. nicht mehr.
+    final days = h.fromToday([day('22.10.2026', 'E')], now);
+    expect([for (final d in days) d.parsedDate]..sort(), [
+      '21.10.2026',
+      '22.10.2026',
+    ]);
+  });
+
   test('Speichern und Lesen; Unlesbares ergibt eine leere Ablage', () {
     final h = SubstitutionHistory.empty.record([day('20.10.2026', 'D')], now);
     final back = SubstitutionHistory.decode(h.encode());

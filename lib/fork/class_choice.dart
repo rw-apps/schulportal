@@ -42,9 +42,16 @@ class ClassChoice {
   }
 }
 
-/// Ende des laufenden Schuljahres: 31. Juli, ab August das des Folgejahres.
+/// Ende des Schuljahres, für das ein Eintrag gilt: 31. Juli, ab Juli das des
+/// Folgejahres.
+///
+/// Ursache für Juli (Prüfung 27.10.26): In Hessen ist der Juli (fast) ganz
+/// Sommerferien. Wer die Klasse dann einträgt, meint die neue – vorher lief
+/// der Eintrag schon am 31.07. wieder ab.
+/// Grenze: Wer in den ersten Julitagen vor Ferienbeginn noch die alte
+/// Klasse einträgt, behält sie bis zum Juli darauf (dann von Hand ändern).
 DateTime schoolYearEnd(DateTime now) =>
-    DateTime(now.month >= 8 ? now.year + 1 : now.year, 7, 31, 23, 59, 59);
+    DateTime(now.month >= 7 ? now.year + 1 : now.year, 7, 31, 23, 59, 59);
 
 /// Gültiger Eintrag des Kontos, sonst null.
 ClassChoice? storedClass(TypedSettings s, {DateTime? now}) {

@@ -77,29 +77,81 @@ List<RecipientCandidate> candidatesFrom(Lessons lessons) {
   ];
 }
 
+/// Kommt [word] in [text] als ganzes Wort vor (Groß-/Kleinschreibung egal)?
+///
+/// Wortgrenze ist alles außer Buchstaben, Ziffern und Bindestrich. Ursache
+/// (Prüfung 27.10.26): Mit `contains` traf der Nachname „Alt“ auch „Altmann“
+/// und „Walther“. Der Bindestrich zählt zum Wort, damit „Alt“ nicht den
+/// Doppelnamen „Bau-Alt“ trifft. Grenze: Mehrteilige Namen („von Alt“)
+/// müssen als Ganzes in derselben Schreibweise (Leerzeichen) vorkommen.
+bool _hasWord(String text, String word) {
+  final w = word.trim();
+  if (w.isEmpty) return false;
+  return RegExp(
+    '(^|[^\\p{L}\\p{N}-])${RegExp.escape(w)}(\$|[^\\p{L}\\p{N}-])',
+    caseSensitive: false,
+    unicode: true,
+  ).hasMatch(text);
+}
+
+/// Nachname des Portal-Treffers stimmt mit dem der Lehrkraft überein.
+///
+/// Steht ein Komma im Treffer, gilt die Form „Nachname, Vorname“ des Portals
+/// (Lehrkraft im Unterricht: „Alt, Anna“, candidatesFrom): Dann muss der Teil
+/// VOR dem Komma der ganze Nachname sein – sonst träfe „Alt“ auch „Bau, Alt“
+/// (Vorname Alt). Ohne Komma („Anna Alt“) reicht der Nachname als ganzes Wort.
+bool _lastNameMatches(String portal, String lastName) {
+  final comma = portal.indexOf(',');
+  if (comma >= 0) {
+    return portal.substring(0, comma).trim().toLowerCase() ==
+        lastName.trim().toLowerCase();
+  }
+  return _hasWord(portal, lastName);
+}
+
+/// Vorname (erster Teil) oder Kürzel der Lehrkraft als ganzes Wort im
+/// Portal-Treffer.
+bool _firstOrCodeMatches(String portal, RecipientCandidate c) {
+  final first = c.firstName?.trim().split(RegExp(r'\s+')).first ?? '';
+  return (first.isNotEmpty && _hasWord(portal, first)) ||
+      _hasWord(portal, c.kuerzel);
+}
+
 /// Passende Einträge der Portal-Suche (nachrichten.php?a=searchRecipt) zu
 /// einer Lehrkraft.
 ///
 /// Gesucht wird mit dem Nachnamen; die Treffer kommen als Text, dessen Form
-/// das Portal vorgibt (nicht dokumentiert). Deshalb tolerant: Lehrkraft
-/// (`isTeacher`), Nachname enthalten, und – wenn vorhanden – Vorname oder
-/// Kürzel. Grenze: Gibt es danach mehrere, wählt der Nutzer; nie raten.
+/// das Portal vorgibt (nicht dokumentiert). Lehrkraft (`isTeacher`), der
+/// Nachname als ganzes Wort ([_lastNameMatches]) und – bei mehreren – Vorname
+/// oder Kürzel. Grenze: Ob ein einzelner Treffer ohne Rückfrage genommen
+/// wird, entscheidet [isSureReceiver]; nie raten.
 List<ReceiverEntry> matchReceivers(
   List<ReceiverEntry> results,
   RecipientCandidate c,
 ) {
-  String n(String s) => s.toLowerCase();
   final teachers = [
     for (final r in results)
-      if (r.isTeacher && n(r.name).contains(n(c.lastName))) r,
+      if (r.isTeacher && _lastNameMatches(r.name, c.lastName)) r,
   ];
   if (teachers.length <= 1) return teachers;
-  final first = c.firstName?.split(' ').first;
   final narrowed = [
     for (final r in teachers)
-      if ((first != null && n(r.name).contains(n(first))) ||
-          n(r.name).contains(n(c.kuerzel)))
-        r,
+      if (_firstOrCodeMatches(r.name, c)) r,
   ];
   return narrowed.isEmpty ? teachers : narrowed;
+}
+
+/// Darf [hit] ohne Rückfrage als Empfänger für [c] gelten?
+///
+/// Ursache (Prüfung 27.10.26): Der einzige Treffer wurde bisher immer
+/// genommen – fand das Portal nur „Alt, Bernd“, ging die Nachricht an ihn
+/// statt an Anna Alt. Jetzt nur, wenn neben dem Nachnamen auch der Vorname
+/// (oder das Kürzel) passt; kennt der Unterricht keinen Vornamen, reicht der
+/// ganze Nachname. Sonst fragt die Seite nach (compose_page.dart, _choose)
+/// und zeigt den Namen, wie das Portal ihn nennt.
+bool isSureReceiver(ReceiverEntry hit, RecipientCandidate c) {
+  if (!hit.isTeacher || !_lastNameMatches(hit.name, c.lastName)) return false;
+  final first = c.firstName?.trim() ?? '';
+  if (first.isEmpty) return true;
+  return _firstOrCodeMatches(hit.name, c);
 }

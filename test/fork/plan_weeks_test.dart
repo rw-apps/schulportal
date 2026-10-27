@@ -47,4 +47,21 @@ void main() {
     expect(find.text('12.10.–16.10. · KW 42'), findsOneWidget);
     expect(t.takeException(), isNull);
   });
+
+  test('Woche blättern über die Zeitumstellung (Prüfung 27.10.26)', () {
+    // Freitag 23:30 vor der Umstellung: 7 × 24 h später wäre Samstag
+    // 0:30 – eine Woche zu weit. Kalendertage bleiben richtig.
+    expect(
+      weekAtOffset(DateTime(2026, 3, 27, 23, 30), 1).first,
+      DateTime(2026, 3, 30),
+    );
+    expect(
+      weekAtOffset(DateTime(2026, 10, 30, 23, 30), -1).first,
+      DateTime(2026, 10, 19),
+    );
+    expect(
+      weekAtOffset(DateTime(2026, 10, 14, 9), 0).first,
+      DateTime(2026, 10, 12),
+    );
+  });
 }

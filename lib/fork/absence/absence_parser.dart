@@ -111,19 +111,81 @@ const _absenceUrl =
 /// `{success, errors}`; erst bei Erfolg sendet es das Formular ein zweites Mal
 /// OHNE `check` – erst das ist die Meldung. Dieses zweite Senden ist in der
 /// App bewusst nicht eingebaut (Entscheidung 16.10.26: vorerst nur prüfen).
+///
+/// Abgelaufene Sitzung: einmal neu anmelden und die PRÜFUNG wiederholen
+/// ([checkAbsenceWith]). Weiterleitungen folgt Dio hier nicht, damit eine
+/// 302 auf die Anmeldung als solche erkennbar bleibt.
 Future<AbsenceCheck> checkAbsence(
   LanisSession session,
   Map<String, String> fields,
-) async {
+) => checkAbsenceWith(
+  fields: fields,
+  post: (body) async {
+    final r = await session.dio.post(
+      _absenceUrl,
+      data: body,
+      options: Options(
+        contentType: Headers.formUrlEncodedContentType,
+        responseType: ResponseType.plain,
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+        followRedirects: false,
+        validateStatus: (s) => s != null && s < 400,
+      ),
+    );
+    return (status: r.statusCode, data: r.data);
+  },
+  reauth: () => session.authenticate(),
+);
+
+/// Antwort einer Prüf-Anfrage (HTTP-Status und Rumpf).
+typedef AbsencePostResult = ({int? status, Object? data});
+
+/// Sieht die Antwort nach verlorener Sitzung aus? Weiterleitung (3xx) oder
+/// kein JSON-Objekt (Anmeldeseite als HTML).
+bool _looksLoggedOut(AbsencePostResult r) {
+  final s = r.status;
+  if (s != null && s >= 300 && s < 400) return true;
+  final d = r.data;
+  if (d is Map) return false;
+  if (d is! String) return true;
+  try {
+    return jsonDecode(d) is! Map;
+  } on FormatException {
+    return true;
+  }
+}
+
+/// Kern von [checkAbsence], ohne Portal testbar.
+///
+/// Ursache (Prüfung 27.10.26): Nach längerer Pause antwortete das Portal
+/// auf `check=1` mit der Anmeldeseite bzw. einer Weiterleitung; die Maske
+/// meldete „nicht wie erwartet beantwortet“, ohne neu anzumelden. Jetzt:
+/// einmal [reauth], dann dieselbe Prüfung noch einmal. Grenze: höchstens ein
+/// zweiter Versuch; scheitert auch er, gilt die Antwort wie bisher
+/// (parseAbsenceCheck). Sicherheit: JEDE Anfrage hier trägt `check=1` – auch
+/// die Wiederholung –, und `save` ist ausgeschlossen; eine Meldung kann so
+/// nie entstehen (siehe [checkAbsence]).
+Future<AbsenceCheck> checkAbsenceWith({
+  required Map<String, String> fields,
+  required Future<AbsencePostResult> Function(Map<String, String> body) post,
+  required Future<void> Function() reauth,
+}) async {
   assert(!fields.containsKey('save'));
-  final r = await session.dio.post(
-    _absenceUrl,
-    data: {...fields, 'check': '1'},
-    options: Options(
-      contentType: Headers.formUrlEncodedContentType,
-      responseType: ResponseType.plain,
-      headers: {'X-Requested-With': 'XMLHttpRequest'},
-    ),
-  );
+  final body = {
+    for (final e in fields.entries)
+      if (e.key != 'save' && e.key != 'check') e.key: e.value,
+    'check': '1',
+  };
+  var r = await post(Map.of(body));
+  if (_looksLoggedOut(r)) {
+    await reauth();
+    r = await post(Map.of(body));
+  }
+  final s = r.status;
+  if (s != null && s >= 300 && s < 400) {
+    return const AbsenceCheck(false, [
+      'Das Portal hat die Prüfung nicht wie erwartet beantwortet.',
+    ]);
+  }
   return parseAbsenceCheck(r.data);
 }

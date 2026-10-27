@@ -7,9 +7,11 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../../meal_order_js.dart';
 import '../../mensa.dart' show mensaAllows;
 import '../../mensa_login.dart';
+import '../../mensa_store.dart'
+    show MealCache, mensaLastOwner, setMensaLastOwner;
 import '../../mensa_week.dart';
 import '../today/today_page.dart' show dayDiff;
-import 'meal_fetcher.dart' show hiddenWebView, pageHtml;
+import 'meal_fetcher.dart' show hiddenWebView, jsText, pageHtml;
 
 /// ok = die neu gelesene Seite zeigt den gewünschten Stand; notDone = vor
 /// dem Klick abgebrochen, nichts geändert; unclear = geklickt, aber die
@@ -31,7 +33,8 @@ class MealOrderResult {
 }
 
 /// Bestellt bzw. bestellt ab – unsichtbar auf der Seite des Caterers
-/// (1 × 1, wie MealFetcher) – und prüft danach durch neues Lesen.
+/// (volle Größe hinter der Seite, hiddenWebView) – und prüft danach durch
+/// neues Lesen.
 ///
 /// Ablauf: Woche [url] laden (bei Anmeldeseite einmal gemerkte Anmeldung,
 /// mensa_login.dart) → prüfen, dass der Tag noch im erwarteten Zustand ist
@@ -51,6 +54,12 @@ class MealOrderResult {
 /// Grenze: Ob der Caterer eine angezeigte Bestellung später verwirft,
 /// sieht die App erst beim nächsten Lesen.
 class MealOrderRunner extends StatefulWidget {
+  /// Laufende Bestellvorgänge (App-weit). Solange einer läuft, ruft
+  /// MealRefresh nichts ab und MealFetcher löscht keine Cookies – beides
+  /// teilt die Sitzung beim Caterer (Prüfung 27.10.26: Heute bleibt unter
+  /// der Seite „Essen“ aufgebaut und hätte parallel abgerufen).
+  static int running = 0;
+
   const MealOrderRunner({
     super.key,
     required this.url,
@@ -77,6 +86,8 @@ class MealOrderRunner extends StatefulWidget {
 enum _Phase { load, act, verify, done }
 
 class _MealOrderRunnerState extends State<MealOrderRunner> {
+  var _counted = false;
+
   late final Uri _home = Uri.parse(widget.url);
   late final WebViewController _c;
   var _phase = _Phase.load;
@@ -91,6 +102,7 @@ class _MealOrderRunnerState extends State<MealOrderRunner> {
   var _fillPage = 0;
   var _verifies = 0;
   var _verifyFrom = 0;
+  var _checkedPage = -1;
   var _verifyErrors = 0;
   String? _message;
   DateTime _lastActivity = DateTime.now();
@@ -103,6 +115,8 @@ class _MealOrderRunnerState extends State<MealOrderRunner> {
   @override
   void initState() {
     super.initState();
+    MealOrderRunner.running++;
+    _counted = true;
     _c = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
@@ -185,6 +199,11 @@ class _MealOrderRunnerState extends State<MealOrderRunner> {
 
     if (_phase == _Phase.verify) {
       if (page <= _verifyFrom) return; // noch die alte Seite
+      // Android meldet das Seitenende oft doppelt (Abrufverlauf 27.10.26);
+      // je Seite nur einmal prüfen – sonst verbrauchte das zweite Ereignis
+      // den einen Wiederholversuch in _check, während er noch wartete.
+      if (page == _checkedPage) return;
+      _checkedPage = page;
       try {
         final r = await _c.runJavaScriptReturningResult(mealIsStaleJs);
         if ('$r'.contains('stale')) return;
@@ -226,7 +245,12 @@ class _MealOrderRunnerState extends State<MealOrderRunner> {
             ? d.state == MealState.ordered && d.canCancel
             : d.state == MealState.open &&
                   d.options.any((x) => x.id == o.id && x.orderable));
-    if (!ready) {
+    // Gehört die Sitzung einem anderen Kind (mensaLastOwner; Geschwister
+    // mit getrennten Konten beim selben Caterer), nicht bestellen – sonst
+    // landete die Bestellung auf dessen Konto (Prüfung 27.10.26). Der Abruf
+    // beim Öffnen von „Essen“ meldet das richtige Kind vorher an.
+    final last = mensaLastOwner(MealCache.instance.settings, _home.host);
+    if (!ready || (last != null && last != widget.owner)) {
       return _finish(MealOrderResult(MealOrderOutcome.notDone, week: week));
     }
     // Genau einmal: zwischen Prüfung und Setzen kein await.
@@ -243,9 +267,7 @@ class _MealOrderRunnerState extends State<MealOrderRunner> {
       r = '';
     }
     if (_over) return;
-    var s = '$r';
-    if (s.startsWith('"')) s = s.substring(1, s.length - 1);
-    if (s != 'ok') {
+    if (jsText(r) != 'ok') {
       // Nichts gedrückt (Element fehlt, gesperrt) – sicher nichts geändert.
       return _finish(MealOrderResult(MealOrderOutcome.notDone, week: week));
     }
@@ -263,9 +285,7 @@ class _MealOrderRunnerState extends State<MealOrderRunner> {
       var pending = 0;
       try {
         final r = await _c.runJavaScriptReturningResult(mealModalJs);
-        var s = '$r';
-        if (s.startsWith('"')) s = jsonDecode(s) as String;
-        final m = jsonDecode(s);
+        final m = jsonDecode(jsText(r));
         if (m is Map) {
           pending = (m['p'] as num?)?.toInt() ?? 0;
           if (m['s'] != 'none') {
@@ -328,24 +348,39 @@ class _MealOrderRunnerState extends State<MealOrderRunner> {
   }
 
   Future<bool> _login() async {
+    // Vor dem ersten await: Ein doppelt gemeldetes Seitenende darf die
+    // Anmeldung nicht ein zweites Mal ausfüllen (Prüfung 27.10.26).
+    if (_triedLogin) return false;
+    _triedLogin = true;
     final l = await readMensaLogin(widget.owner);
     final host = Uri.tryParse(await _c.currentUrl() ?? '')?.host;
-    if (l == null || host != l.host || _over || _triedLogin) return false;
-    _triedLogin = true;
+    if (l == null || host != l.host || _over) return false;
     try {
       final r = await _c.runJavaScriptReturningResult(mensaLoginFillJs(l));
       if ('$r'.contains('filled')) {
         _afterLogin = true;
         _fillPage = _page;
+        setMensaLastOwner(
+          MealCache.instance.settings,
+          _home.host,
+          widget.owner,
+        );
         return true;
       }
     } catch (_) {}
     return false;
   }
 
+  void _release() {
+    if (!_counted) return;
+    _counted = false;
+    MealOrderRunner.running--;
+  }
+
   void _finish(MealOrderResult r) {
     if (_phase == _Phase.done) return;
     _phase = _Phase.done;
+    _release();
     _tick?.cancel();
     _timeout?.cancel();
     if (mounted) widget.onResult(r);
@@ -354,6 +389,7 @@ class _MealOrderRunnerState extends State<MealOrderRunner> {
   @override
   void dispose() {
     _phase = _Phase.done;
+    _release();
     _tick?.cancel();
     _timeout?.cancel();
     super.dispose();

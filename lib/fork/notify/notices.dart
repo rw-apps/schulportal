@@ -1,7 +1,6 @@
 import 'package:liblanis/liblanis.dart';
 
 import '../l10n/l10n.dart';
-import '../ui/plan/plan_model.dart';
 import '../ui/today/today_from_lanis.dart';
 import '../ui/today/today_model.dart';
 import '../data/portal_rules.dart';
@@ -15,8 +14,9 @@ class Notice {
     required this.keys,
   });
 
-  /// Platz der Benachrichtigung (BackgroundTaskToolkit.sendMessage): 1 =
-  /// heute, 2 = Vorabend. Gleicher Platz ersetzt die ältere Meldung.
+  /// Platz der Benachrichtigung (BackgroundTaskToolkit.sendMessage): 2 =
+  /// Vorabend (1 war die frühere Tagesmeldung, jetzt Sammelmeldung
+  /// summary.dart). Gleicher Platz ersetzt die ältere Meldung.
   final int id;
   final String title;
   final List<String> lines;
@@ -47,139 +47,65 @@ bool isBigEvent(WeekItem w) =>
     w.kind == WeekKind.deadline ||
     (w.kind == WeekKind.event && PortalRules.bigEvent.hasMatch(w.title));
 
-String _changeLine(ForkL10n t, ChangeItem c) {
-  final what = switch (c.kind) {
-    ChangeKind.cancelled => t.lessonCancelled,
-    ChangeKind.roomChange => '${t.changeRoom} ${c.detail ?? ''}'.trim(),
-    ChangeKind.substitution =>
-      '${t.changeSubstitution} ${c.detail ?? ''}'.trim(),
-    // Unsicher (ChangeKind.unclear): als Bitte um Prüfung, nie als Ausfall.
-    ChangeKind.unclear => '${t.changeUnclear}: ${c.detail ?? ''}'.trim(),
-  };
-  return '${c.slot} ${c.subject} – $what';
-}
-
-String _changeKey(ChangeItem c) =>
-    'c|${c.day.year}-${c.day.month}-${c.day.day}|${c.slot}|${c.kind.name}|${c.detail ?? ''}';
-
 String _eventKey(WeekItem w) =>
     'e|${w.day.year}-${w.day.month}-${w.day.day}|${w.title}';
 
-/// „Heute bei Lena“; ohne Namen beim Schülerkonto „Heute in der Schule“,
-/// beim Elternkonto (Kinder nicht geladen) „Heute bei deinem Kind“.
-String _title(
-  ForkL10n t, {
-  required bool today,
-  required String name,
-  required bool parent,
-}) {
-  if (name.trim().isNotEmpty) {
-    return today ? t.noticeTodayFor(name) : t.noticeTomorrowFor(name);
-  }
-  if (parent) return today ? t.noticeTodayChild : t.noticeTomorrowChild;
-  return today ? t.noticeTodaySchool : t.noticeTomorrowSchool;
+/// „Morgen bei Lena“; ohne Namen beim Schülerkonto „Morgen in der Schule“,
+/// beim Elternkonto (Kinder nicht geladen) „Morgen bei deinem Kind“.
+String _title(ForkL10n t, {required String name, required bool parent}) {
+  if (name.trim().isNotEmpty) return t.noticeTomorrowFor(name);
+  return parent ? t.noticeTomorrowChild : t.noticeTomorrowSchool;
 }
 
 bool _sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
-/// Was jetzt zu melden ist (höchstens zwei Meldungen).
+/// Was jetzt zu melden ist: große Termine des nächsten Tages am Vorabend
+/// (ab 19 Uhr), wenn er ein Schultag ist (Freitagabend nichts,
+/// Sonntagabend für Montag) – höchstens eine Meldung (id 2).
 ///
-/// - Heute: neue Ausfälle, Vertretungen und Raumwechsel, deren Stunde noch
-///   nicht vorbei ist – sofort.
-/// - Vorabend (ab 19 Uhr): Änderungen und große Termine des nächsten
-///   Tages, wenn er ein Schultag ist (Freitagabend nichts, Sonntagabend für
-///   Montag).
+/// Ausfälle, Vertretungen und Raumwechsel meldet die Sammelmeldung
+/// (summary.dart, changeSummaryItems). Ursache (Prüfung 27.10.26): Seit
+/// der Sammelmeldung (Wunsch 27.10.26) bekam diese Funktion nur noch eine
+/// leere Vertretungsliste; die Tagesmeldung (id 1) und die Änderungen am
+/// Vorabend waren toter Code. Grenze: [name] wie die übrige Meldung des
+/// Kontos (notify_task.dart).
 ///
 /// [sent]: schon gemeldete Schlüssel. Ohne neuen Eintrag keine Meldung;
 /// kommt einer hinzu, ersetzt eine vollständige Meldung die vorige.
-/// Grenze: Die Schlüssel enthalten den Angabentext (z. B. „R101 statt
-/// R106“); nach einem Sprachwechsel kann eine offene Änderung daher einmal
-/// erneut kommen.
 List<Notice> buildNotices({
-  required KidPlan plan,
-  required GroupChoice choice,
-  required List<SubstitutionDay> substitutions,
   required List<CalendarEvent> events,
   required DateTime now,
   required ForkL10n t,
+  String name = '',
   bool parent = false,
   String className = '',
   Set<String> sent = const {},
-  String Function(String code)? subjectName,
 }) {
-  final r = applySubstitutions(
-    plan: plan,
-    choice: choice,
-    days: substitutions,
-    now: now,
-    t: t,
-    subjectName: subjectName,
-  );
-  final out = <Notice>[];
-
-  // Heute: nur Stunden, die noch kommen oder laufen.
-  // Ohne Uhrzeit (Schule ohne Zeiten): bis Tagesende als „noch offen“.
-  final endOf = {
-    for (final l in r.today)
-      l.slot: hasTime(l) ? minutesOf(l.end).minutes : 24 * 60,
-  };
-  final nowMin = now.hour * 60 + now.minute;
-  // Meldet alle noch offenen Änderungen des Tages, sobald EINE neu ist –
-  // die Meldung ersetzt die vorige auf demselben Platz (id), darf also
-  // nichts weglassen.
-  final today = [
-    for (final c in r.changes)
-      if (_sameDay(c.day, now) && (endOf[c.slot] ?? 24 * 60) > nowMin) c,
-  ];
-  if (today.any((c) => !sent.contains(_changeKey(c)))) {
-    out.add(
-      Notice(
-        id: 1,
-        title: _title(t, today: true, name: plan.firstName, parent: parent),
-        lines: [for (final c in today) _changeLine(t, c)],
-        keys: [for (final c in today) _changeKey(c)],
-      ),
-    );
-  }
-
-  // Vorabend für den nächsten Schultag.
   final next = DateTime(now.year, now.month, now.day + 1);
-  if (now.hour >= eveningHour && next.weekday <= DateTime.friday) {
-    final changes = [
-      for (final c in r.changes)
-        if (_sameDay(c.day, next)) c,
-    ];
-    final big = [
-      for (final w in weekItemsFromCalendar(
-        events,
-        now,
-        className: className,
-        days: 2,
-      ))
-        if (_sameDay(w.day, next) && isBigEvent(w)) w,
-    ];
-    final fresh =
-        changes.any((c) => !sent.contains(_changeKey(c))) ||
-        big.any((w) => !sent.contains(_eventKey(w)));
-    if (fresh) {
-      out.add(
-        Notice(
-          id: 2,
-          title: _title(t, today: false, name: plan.firstName, parent: parent),
-          lines: [
-            for (final c in changes) _changeLine(t, c),
-            for (final w in big) [w.title, ?w.time].join(' · '),
-          ],
-          keys: [
-            for (final c in changes) _changeKey(c),
-            for (final w in big) _eventKey(w),
-          ],
-        ),
-      );
-    }
+  if (now.hour < eveningHour || next.weekday > DateTime.friday) {
+    return const [];
   }
-  return out;
+  final big = [
+    for (final w in weekItemsFromCalendar(
+      events,
+      now,
+      className: className,
+      days: 2,
+    ))
+      if (_sameDay(w.day, next) && isBigEvent(w)) w,
+  ];
+  if (!big.any((w) => !sent.contains(_eventKey(w)))) return const [];
+  return [
+    Notice(
+      id: 2,
+      title: _title(t, name: name, parent: parent),
+      lines: [
+        for (final w in big) [w.title, ?w.time].join(' · '),
+      ],
+      keys: [for (final w in big) _eventKey(w)],
+    ),
+  ];
 }
 
 /// Gemeldete Schlüssel begrenzt halten (die neuesten [max]).

@@ -129,6 +129,19 @@ void main() {
       ),
       DateTime(2026, 12, 29),
     );
+    // Aufgegeben 29.01., fällig 02.02.: nicht am 01.02. (vor der Frist).
+    expect(
+      homeworkExpiry(given: DateTime(2027, 1, 29), due: DateTime(2027, 2, 2)),
+      DateTime(2027, 3, 2),
+    );
+    // Wieder geöffnet am 31.01.: vier Wochen, nicht am nächsten Tag.
+    expect(
+      homeworkExpiry(
+        given: DateTime(2027, 1, 20),
+        reopened: DateTime(2027, 1, 31),
+      ),
+      DateTime(2027, 2, 28),
+    );
     expect(homeworkExpiry(), isNull);
   });
 

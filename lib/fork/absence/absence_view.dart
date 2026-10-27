@@ -185,6 +185,21 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
       ? '${b.label}  ${b.start}–${b.end}'
       : b.label;
 
+  /// Einträge der Block-Auswahl, je Wert einmal (doppelte Werte lösen in
+  /// DropdownButton eine Prüfung aus).
+  List<DropdownMenuItem<String>> _blockItems() {
+    final seen = <String>{};
+    return [
+      for (final b in f.blocks)
+        if (seen.add(b.value))
+          DropdownMenuItem(value: b.value, child: Text(_blockLabel(b))),
+    ];
+  }
+
+  /// [v], wenn es ihn in der Liste gibt, sonst null (Feld leer statt
+  /// Prüffehler).
+  String? _blockValue(String v) => f.blocks.any((b) => b.value == v) ? v : null;
+
   String _summary(ForkL10n t) {
     final names = f.pupils
         .where((p) => _pupils.contains(p.id))
@@ -347,13 +362,22 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
                   for (final k in f.kinds)
                     ButtonSegment(
                       value: k.value,
+                      // „Verspätet“ nur für absenceKindLate, „Abwesend“ nur
+                      // für „krank“; jede andere Art mit dem Text des
+                      // Portals. Ursache (Prüfung 27.10.26): Alles außer
+                      // „krank“ hieß „Verspätet“ – auch Arten, die als
+                      // Abwesenheit gesendet werden (AbsenceDraft.isLate).
                       label: Text(
-                        k.value == 'krank' ? t.absenceAbsent : t.absenceLate,
+                        k.value == 'krank'
+                            ? t.absenceAbsent
+                            : k.value == absenceKindLate
+                            ? t.absenceLate
+                            : k.label,
                       ),
                       icon: Icon(
-                        k.value == 'krank'
-                            ? Icons.sick_outlined
-                            : Icons.schedule,
+                        k.value == absenceKindLate
+                            ? Icons.schedule
+                            : Icons.sick_outlined,
                       ),
                     ),
                 ],
@@ -395,38 +419,38 @@ class _AbsenceFormViewState extends State<AbsenceFormView> {
               t.absenceLessons,
               Column(
                 children: [
+                  // Schlüssel = Wert: Ändert _clampToForm den Block nach dem
+                  // Neuladen (alle 5 Minuten), baut das Feld neu auf. Ursache
+                  // (Prüfung 27.10.26): initialValue gilt nur beim ersten Bau
+                  // – die Anzeige blieb beim alten Block, gesendet wurde der
+                  // neue; fehlte der alte in der neuen Liste, schlug die
+                  // Prüfung „genau ein Eintrag mit diesem Wert“ fehl.
                   DropdownButtonFormField<String>(
-                    initialValue: _blockFrom,
+                    key: ValueKey('absence-block-from-$_blockFrom'),
+                    initialValue: _blockValue(_blockFrom),
                     isExpanded: true,
                     decoration: InputDecoration(
                       labelText: t.absenceFromBlock,
                       border: const OutlineInputBorder(),
                     ),
-                    items: [
-                      for (final b in f.blocks)
-                        DropdownMenuItem(
-                          value: b.value,
-                          child: Text(_blockLabel(b)),
-                        ),
-                    ],
-                    onChanged: (v) => setState(() => _blockFrom = v!),
+                    items: _blockItems(),
+                    onChanged: (v) {
+                      if (v != null) setState(() => _blockFrom = v);
+                    },
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    initialValue: _blockTo,
+                    key: ValueKey('absence-block-to-$_blockTo'),
+                    initialValue: _blockValue(_blockTo),
                     isExpanded: true,
                     decoration: InputDecoration(
                       labelText: t.absenceToBlock,
                       border: const OutlineInputBorder(),
                     ),
-                    items: [
-                      for (final b in f.blocks)
-                        DropdownMenuItem(
-                          value: b.value,
-                          child: Text(_blockLabel(b)),
-                        ),
-                    ],
-                    onChanged: (v) => setState(() => _blockTo = v!),
+                    items: _blockItems(),
+                    onChanged: (v) {
+                      if (v != null) setState(() => _blockTo = v);
+                    },
                   ),
                 ],
               ),

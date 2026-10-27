@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:liblanis/liblanis.dart' show sharedOverAccountSettingsProvider;
+import 'package:liblanis/liblanis.dart'
+    show AccountType, sharedOverAccountSettingsProvider;
 
 import 'package:lanis/fork/absence/absence_view.dart';
 
@@ -154,7 +155,8 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
     return childTodayFromLanis(
       plan: live.plan,
       choice: effectiveChoice(live.auto, s.userChoice),
-      substitutions: s.substitutions.content?.days ?? const [],
+      // Dieselbe Quelle wie der Kalender, ab heute (Prüfung 27.10.26).
+      substitutions: s.substitutionDaysFromToday(now),
       now: at,
       school: shortSchoolName(s.schoolName),
       t: context.t,
@@ -167,7 +169,7 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
       unreadMessages: liveUnreadMessages(s),
       photo: s.photo,
       free: s.offers('kalender.php')
-          ? freeDaysFrom(events, at, className: className, days: 1)
+          ? freeDaysFrom(events, at, className: className, days: freeDaysAhead)
           : const {},
       lunch: meals?.dayOf(at)?.ordered?.name,
       mealUnordered: day == null
@@ -379,8 +381,8 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
         // Sammel-Benachrichtigung mit dem Stand der offenen App abgleichen
         // (summary.dart). Nur Geladenes (Prüfung 27.10.26: sonst leerte ein
         // App-Start die Zeilen, und der nächste Hintergrundlauf meldete sie
-        // mit Ton als neu). Name nur bei mehreren Konten – wie im
-        // Hintergrund.
+        // mit Ton als neu). Name nach summaryName (mehrere Konten oder
+        // Elternkonto) – dieselbe Regel wie im Hintergrund.
         final shared = MealCache.instance.settings;
         if (shared != null && !demoActive) {
           final t = context.t;
@@ -389,7 +391,11 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
           for (final (m, kid) in shown) {
             if (m.accountId < 0) continue;
             final s = m.snapshot;
-            final name = shown.length > 1 ? kid.firstName : '';
+            final name = summaryName(
+              kid.firstName,
+              multiAccount: family.length > 1,
+              parent: s.session.accountTypeOrNull == AccountType.parent,
+            );
             if (s.substitutions.content != null) {
               sources['${m.accountId}/plan'] = changeSummaryItems(
                 scope: '${m.accountId}',

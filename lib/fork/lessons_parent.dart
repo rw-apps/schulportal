@@ -58,7 +58,13 @@ List<ChildLessons> parseParentLessons(Document document) {
       final name = mappe.querySelector('h2')?.text.trim();
       if (link == null || name == null) continue;
       final url = Uri.parse(link);
-      final pureId = url.queryParameters['id'] ?? link;
+      // Ohne `id` kein Kurs. Ursache (Prüfung 27.10.26): Bisher galt dann der
+      // ganze Link als Kurs-ID – die Kursroute baute daraus
+      // „…&id=<Link>&p=<Kind>“, Einträge und Anwesenheit (byPureId, über
+      // `id` zugeordnet) fanden den Kurs nie. Grenze: Eine solche Kachel
+      // fehlt in der Liste; das Portal hat sie ohnehin nicht verlinkt.
+      final pureId = url.queryParameters['id'];
+      if (pureId == null || pureId.isEmpty) continue;
       final lesson = Lesson(
         name: name,
         teachers: mappe
@@ -155,12 +161,13 @@ DateTime? _parseGermanDate(String text) {
 }
 
 /// Alle Kinder in eine Liste, neueste Einträge zuerst. Bei mehreren Kindern
-/// steht der Vorname vor dem Kursnamen, damit die Liste eindeutig bleibt.
+/// steht der Vorname vor dem Kursnamen, damit die Liste eindeutig bleibt
+/// („Lena: Mathematik …“, [kidPrefix]; zurück mit [courseNameWithoutKid]).
 Lessons flattenChildLessons(List<ChildLessons> kids) {
   final all = <Lesson>[];
   for (final k in kids) {
     for (final l in k.lessons) {
-      if (kids.length > 1) l.name = '${k.firstName}: ${l.name}';
+      if (kids.length > 1) l.name = '${kidPrefix(k)}${l.name}';
       all.add(l);
     }
   }
@@ -172,6 +179,61 @@ Lessons flattenChildLessons(List<ChildLessons> kids) {
   });
   return all;
 }
+
+/// Vorsatz vor dem Kursnamen bei mehreren Kindern (flattenChildLessons).
+String kidPrefix(ChildLessons kid) => '${kid.firstName}: ';
+
+/// Kind-ID aus der Kurs-ID des Elternkontos (`<id>&p=<Kind>`,
+/// parseParentLessons); null bei Schülerkonten.
+String? kidOfCourseId(String courseId) {
+  final i = courseId.lastIndexOf('&p=');
+  if (i < 0) return null;
+  final kid = courseId.substring(i + 3);
+  return kid.isEmpty ? null : kid;
+}
+
+/// Das Kind zum Kurs [courseId] aus [kids]; null ohne Treffer.
+ChildLessons? kidOfCourse(String courseId, List<ChildLessons> kids) {
+  final id = kidOfCourseId(courseId);
+  if (id == null) return null;
+  for (final k in kids) {
+    if (k.pupilId == id) return k;
+  }
+  return null;
+}
+
+/// Kursname ohne den Vornamen, den [flattenChildLessons] bei mehreren
+/// Kindern voranstellt („Lena: Mathematik 06a“ → „Mathematik 06a“).
+///
+/// Ursache (Prüfung 27.10.26): Mit zwei Kindern trug jeder Kurs den
+/// Vorsatz, die Zuordnung zum Stundenplan (lessonBelongsTo,
+/// course_detail_model.dart) verglich „Lena: Mathematik“ mit „Mathematik“
+/// und fand nie etwas – alle Kurse standen unter „Weitere Angebote“, „Als
+/// Nächstes“ fehlte. Entfernt wird genau der Vorsatz des Kindes aus der
+/// Kurs-ID (`&p=`), nicht irgendein Text vor einem Doppelpunkt: Ein Kurs
+/// „Projekt: Text“ bleibt, wie er ist. Grenze: Ohne [kids] (z. B. im
+/// Hintergrund) bleibt der Name unverändert.
+String courseNameWithoutKid(
+  String name,
+  String courseId,
+  List<ChildLessons> kids,
+) {
+  if (kids.length < 2) return name;
+  final kid = kidOfCourse(courseId, kids);
+  if (kid == null) return name;
+  final prefix = kidPrefix(kid);
+  return name.startsWith(prefix) ? name.substring(prefix.length) : name;
+}
+
+/// Kind, dessen Stundenplan die App zeigt; null bei einem Kind oder
+/// Schülerkonto (dann gehört alles zum Plan).
+///
+/// Grenze: Wie LiveSnapshot.firstName und mensaKid (live_data.dart) gilt
+/// der Plan des Kontos als Plan des ERSTEN Kindes der Eltern-Ansicht; zeigt
+/// stundenplan.php bei Geschwistern einen anderen, ordnet die App die Kurse
+/// des falschen Kindes zu.
+String? shownPlanKid(List<ChildLessons> kids) =>
+    kids.length > 1 ? kids.first.pupilId : null;
 
 /// LessonsStudentParser mit Eltern-Übersicht.
 ///

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
@@ -44,24 +45,39 @@ class FamilyMember {
   /// Zeile stehen, obwohl gespeichert war. Grenze: Ohne [FamilyData] über
   /// der Seite (Vollbild über dem Navigator der App) bleibt es beim Stand
   /// vom Öffnen.
+  ///
+  /// Auch der Container kommt aus dem aktuellen Stand ([FamilyData]), nicht
+  /// der beim Öffnen. Ursache (Prüfung 27.10.26): Nach einem Kontowechsel
+  /// (Einstellungen → Konten) ist das bisher weitere Konto B aktiv, sein
+  /// Familien-Container ist entsorgt (_FamilyScopeState._drop, logout:
+  /// false). Eine noch offene Unterseite von B las weiter diesen Container –
+  /// Absturz „disposed container“. Jetzt liest sie den App-Container, sobald
+  /// B aktiv ist. Ein Wechsel des Containers baut die Seite neu auf
+  /// ([ObjectKey]), damit kein `ref` am alten Container hängen bleibt.
+  /// Grenze: Fehlt das Konto in [FamilyData] (gelöscht, noch nicht geladen),
+  /// bleibt es beim Stand vom Öffnen; die offenen Unterseiten schließt
+  /// PreviewShell beim Kontowechsel ohnehin (_AccountSwitchWatch).
   Widget scope(Widget child) {
-    final data = Builder(
+    return Builder(
       builder: (context) {
         final current =
             FamilyData.of(
               context,
             ).where((m) => m.accountId == accountId).firstOrNull ??
             this;
-        return LiveData(
+        final data = LiveData(
           snapshot: current.snapshot,
           child: _MemberMarker(member: current, child: child),
         );
+        final c = current.container;
+        return KeyedSubtree(
+          key: ObjectKey(c),
+          child: c == null
+              ? data
+              : UncontrolledProviderScope(container: c, child: data),
+        );
       },
     );
-    final c = container;
-    return c == null
-        ? data
-        : UncontrolledProviderScope(container: c, child: data);
   }
 
   /// Konto, in dessen Rahmen [context] liegt (null = aktives Konto ohne
@@ -153,7 +169,9 @@ class FamilyData extends InheritedWidget {
 ///
 /// Grenze: Jedes Konto meldet sich beim Start selbst an (einige Sekunden
 /// mehr); scheitert die Anmeldung (Passwort geändert, offline), fehlt dieses
-/// Kind, bis die App neu startet – vermerkt im Fehlerprotokoll („family“).
+/// Kind in den Ansichten. Stattdessen steht es in [FamilyData.failures] mit
+/// „Erneut versuchen“ ([FamilyData.onRetry]); nur unerwartete Fehler kommen
+/// ins Fehlerprotokoll („family“).
 class FamilyScope extends ConsumerStatefulWidget {
   const FamilyScope({super.key, required this.child});
 
@@ -196,7 +214,34 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
   }
 
   void _onSettings() {
+    _colors = null;
     if (mounted) setState(() {});
+  }
+
+  /// Farben je Konto, zuletzt gelesen für [_colorsFor] (Kontonummern in
+  /// Reihenfolge). Ursache (Prüfung 27.10.26): build las sie bei JEDEM
+  /// Aufbau synchron aus der Datenbank (ein SELECT je Konto) – und gebaut
+  /// wird bei jeder Änderung eines Kontos ([_report]). Neu gelesen wird
+  /// nur, wenn sich die Konten ändern oder eine Farbe gewählt bzw. Eingaben
+  /// übernommen wurden ([settingsRevision], settings_page.dart und
+  /// device_transfer_page.dart zählen hoch). Grenze: Wer die Farbe an
+  /// [settingsRevision] vorbei speichert, sieht sie erst nach dem nächsten
+  /// Kontowechsel.
+  Map<int, int>? _colors;
+  List<int> _colorsFor = const [];
+
+  Map<int, int> _colorsOf(List<int> ids) {
+    final cached = _colors;
+    if (cached != null && listEquals(ids, _colorsFor)) return cached;
+    final db = ref.read(lanisDatabaseProvider);
+    final assigned = assignKidColors(ids, {
+      for (final id in ids) id: storedKidColor(TypedSettings.account(db, id)),
+    });
+    for (final e in assigned.fresh.entries) {
+      storeKidColor(TypedSettings.account(db, e.key), e.value);
+    }
+    _colorsFor = ids;
+    return _colors = assigned.colors;
   }
 
   @override
@@ -259,12 +304,16 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
       // Anmelden setzt last_login; die App startet mit dem Konto mit dem
       // jüngsten Wert (getPreferredStartupAccount). Ohne Zurücksetzen wäre
       // nach jedem Start ein anderes Konto „aktiv“ (Einstellungen, Abmelden).
-      if (before == null) {
-        await db.clearLastLogin(id);
-      } else {
-        await db.updateLastLogin(id, at: before);
-      }
+      // Nicht, wenn das Konto inzwischen aktiv ist (Container verworfen):
+      // Dann hat die App es eben selbst angemeldet, und ihr frischer Wert
+      // muss bleiben (Prüfung 27.10.26).
+      if (_containers[id] == c) await restoreLastLogin(db, id, before);
     } catch (e, st) {
+      // Während der Anmeldung zum aktiven Konto geworden (build → _drop):
+      // Der Fehler ist dann nur „Container entsorgt“ (StateError) – weder
+      // Protokoll noch Fehlschlag. Ursache (Prüfung 27.10.26): Er stand als
+      // „family“-Fehler im Bericht, und das Kind galt als nicht angemeldet.
+      if (_containers[id] != c) return;
       // Nur unerwartete Fehler ins Protokoll – wie beim Hauptkonto
       // (AuthController._recordUnexpected). Ursache (Fehlerbericht 26.10.26:
       // „family · WrongCredentialsException“): Ein abgelehntes Passwort oder
@@ -273,10 +322,8 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
       if (portalFault(e).kind == FaultKind.other) {
         ErrorLog.instance.record('family', e, st);
       }
-      if (_containers[id] == c) {
-        _containers.remove(id);
-        c.dispose();
-      }
+      _containers.remove(id);
+      c.dispose();
       if (mounted) setState(() => _failed[id] = e);
       return;
     }
@@ -294,7 +341,12 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
 
   void _report(int id, LiveSnapshot s) {
     if (!mounted || !_containers.containsKey(id)) return;
-    if (identical(_snaps[id], s)) return;
+    final old = _snaps[id];
+    // Gleiche Daten: kein Neuaufbau der ganzen Familie. Ursache (Prüfung
+    // 27.10.26): LiveDataScope baut bei jedem Aufbau einen neuen
+    // LiveSnapshot – `identical` traf nie zu. Grenze: Jede echte Änderung
+    // (neuer Feed-Stand, Eingabe) baut weiterhin alles neu.
+    if (old != null && sameLiveData(old, s)) return;
     setState(() => _snaps[id] = s);
   }
 
@@ -345,19 +397,9 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
       ..sort((a, b) => a.localId.compareTo(b.localId));
     // Feste Farbe je Konto (kid_colors.dart); neue Konten bekommen die erste
     // freie und behalten sie.
-    final db = ref.read(lanisDatabaseProvider);
-    final assigned = assignKidColors(
-      [for (final a in ordered) a.localId],
-      {
-        for (final a in ordered)
-          a.localId: storedKidColor(TypedSettings.account(db, a.localId)),
-      },
-    );
-    for (final e in assigned.fresh.entries) {
-      storeKidColor(TypedSettings.account(db, e.key), e.value);
-    }
+    final colors = _colorsOf([for (final a in ordered) a.localId]);
     for (final a in ordered) {
-      final color = assigned.colors[a.localId]!;
+      final color = colors[a.localId]!;
       if (a.localId == activeId) {
         if (main != null) {
           members.add(
@@ -638,3 +680,28 @@ Future<FamilyMember?> pickFamilyMember(
     ),
   ),
 );
+
+/// Tragen zwei Stände dieselben Daten? Nur die Daten zählen (Feeds und
+/// Eingaben, je identisch), nicht die Rückruf-Funktionen – die sind je
+/// Aufbau neu, arbeiten aber auf dem Zustand desselben LiveDataScope.
+bool sameLiveData(LiveSnapshot a, LiveSnapshot b) =>
+    identical(a.session, b.session) &&
+    identical(a.supported, b.supported) &&
+    identical(a.timetable, b.timetable) &&
+    identical(a.lessons, b.lessons) &&
+    identical(a.substitutions, b.substitutions) &&
+    identical(a.calendar, b.calendar) &&
+    identical(a.conversations, b.conversations) &&
+    identical(a.substitutionHistory, b.substitutionHistory) &&
+    identical(a.userChoice, b.userChoice) &&
+    identical(a.ownNames, b.ownNames) &&
+    identical(a.lessonTimes, b.lessonTimes) &&
+    identical(a.courseScan, b.courseScan) &&
+    identical(a.homework, b.homework) &&
+    identical(a.mensa, b.mensa) &&
+    identical(a.kids, b.kids) &&
+    identical(a.classChoice, b.classChoice) &&
+    a.classExpired == b.classExpired &&
+    identical(a.photo, b.photo) &&
+    a.electionOpen == b.electionOpen &&
+    a.accountKey == b.accountKey;

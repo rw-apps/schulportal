@@ -430,6 +430,154 @@ void main() {
     });
   });
 
+  group('Zuordnung: unsicher heißt „bitte prüfen“ (Prüfung 27.10.26)', () {
+    ({List<ChangeItem> changes, List<DayLesson> today}) mo(
+      List<Substitution> rows, {
+      GroupChoice choice = const {'TXT': 'CCC'},
+      KidPlan? p,
+    }) => applySubstitutions(
+      t: de,
+      plan: p ?? plan,
+      choice: choice,
+      now: monday,
+      days: [_day('19.10.2026', rows)],
+    );
+
+    test('Zeile ohne Lehrerkürzel für mehrere Gruppen: unklar', () {
+      final r = mo([_sub('19.10.2026', '2', art: 'Entfall', fach: 'TXT')]);
+      expect(r.today[1].change, ChangeKind.unclear);
+      expect(r.today[1].cancelled, isFalse);
+      expect(r.today[1].changeDetail, 'Ausfall für Kurs TXT');
+      // Mit Kürzel der eigenen Gruppe bleibt es ein sicherer Ausfall.
+      final sure = mo([
+        _sub('19.10.2026', '2', art: 'Entfall', fach: 'TXT', lehrer: 'CCC'),
+      ]);
+      expect(sure.today[1].cancelled, isTrue);
+    });
+
+    test('Fachwechsel ohne altes Fach: Lehrkraft der Stunde zählt', () {
+      final r = mo([
+        _sub(
+          '19.10.2026',
+          '1',
+          art: 'Vertretung',
+          fach: 'D',
+          lehrer: 'AAA',
+          vertreter: 'FFF',
+        ),
+      ]);
+      expect(r.today[0].change, ChangeKind.substitution);
+      expect(r.today[0].changeDetail, 'Fritz Fink');
+    });
+
+    test('mehrere Kürzel in der Zeile; fremde Lehrkraft bei eigenem Fach', () {
+      // Beide Lehrkräfte der Doppelbesetzung fehlen: Ausfall.
+      final both = mo([
+        _sub('19.10.2026', '1', art: 'Entfall', fach: 'M', lehrer: 'AAA, BBB'),
+      ]);
+      expect(both.today[0].cancelled, isTrue);
+      // Zwei von dreien fehlen: Stunde findet statt.
+      final c = classifySubstitution(
+        _sub('x', '1', art: 'Entfall', lehrer: 'AAA, BBB'),
+        t: de,
+        lessonTeachers: const ['AAA', 'BBB', 'GGG'],
+      );
+      expect(c.kind, ChangeKind.substitution);
+      // Eigenes Fach, aber eine Lehrkraft, die der Plan nicht nennt.
+      final other = mo([
+        _sub('19.10.2026', '1', art: 'Entfall', fach: 'M', lehrer: 'GGG'),
+      ]);
+      expect(other.today[0].change, ChangeKind.unclear);
+      expect(other.changes.single.kind, ChangeKind.unclear);
+    });
+
+    test('Freistunde des Kindes, Klasse hat dort Unterricht: kein Hinweis', () {
+      // Persönlicher Plan: 2. Stunde frei; die Klasse hat dort WPU.
+      const m = PlanLesson(subject: 'Mathematik', short: 'M', teacher: 'AAA');
+      final own = KidPlan(
+        firstName: 'Kind',
+        colorIndex: 0,
+        slots: const [
+          PlanSlot(label: '1. Stunde', start: '08:00', end: '08:45'),
+          PlanSlot(label: '2. Stunde', start: '08:45', end: '09:30'),
+        ],
+        days: [
+          for (var d = 0; d < 5; d++)
+            [
+              const PlanCell([m]),
+              const PlanCell([]),
+            ],
+        ],
+        classCodes: [
+          for (var d = 0; d < 5; d++)
+            [
+              {'M'},
+              {'WPUX'},
+            ],
+        ],
+      );
+      final r = mo([
+        _sub(
+          '19.10.2026',
+          '2',
+          art: 'Vertretung',
+          fach: 'WPUX',
+          vertreter: 'FFF',
+        ),
+      ], p: own);
+      expect(r.changes, isEmpty);
+    });
+
+    test('Doppelstunde mit zwei Vertretungen bleibt zwei Abschnitte', () {
+      final r = applySubstitutions(
+        t: de,
+        plan: plan,
+        choice: const {},
+        now: DateTime(2026, 10, 20, 8),
+        days: [
+          _day('20.10.2026', [
+            _sub(
+              '20.10.2026',
+              '1',
+              art: 'Vertretung',
+              fach: 'SP',
+              lehrer: 'EEE',
+              vertreter: 'FFF',
+            ),
+            _sub(
+              '20.10.2026',
+              '2',
+              art: 'Vertretung',
+              fach: 'SP',
+              lehrer: 'EEE',
+              vertreter: 'GGG',
+            ),
+          ]),
+        ],
+      );
+      expect(
+        [for (final l in r.today) (l.slot, l.changeDetail)],
+        [('1. Block', 'Fritz Fink'), ('2. Block', 'GGG'), ('3. Block', null)],
+      );
+    });
+
+    test('„frei“ nur als Wort, „Freiarbeit“ ist kein Ausfall', () {
+      ChangeKind kind(String art) =>
+          classifySubstitution(_sub('x', '1', art: art), t: de).kind;
+      expect(kind('Freiarbeit'), ChangeKind.substitution);
+      for (final a in [
+        'frei',
+        'Klasse frei',
+        'unterrichtsfrei',
+        'Freistunde',
+        'Freisetzung',
+        'Entfall',
+      ]) {
+        expect(kind(a), ChangeKind.cancelled, reason: a);
+      }
+    });
+  });
+
   test('unbekannte Art gilt als Vertretung, nie als Ausfall', () {
     final c = classifySubstitution(
       t: de,
@@ -618,6 +766,43 @@ void main() {
       expect(items.single.until, DateTime(2026, 10, 23));
     });
 
+    test(
+      'Ende um 0 Uhr ist exklusiv: kein „bis morgen“ (Prüfung 27.10.26)',
+      () {
+        final oneDay = ev(
+          'Projekttag',
+          DateTime(2026, 10, 20),
+          DateTime(2026, 10, 21),
+          allDay: true,
+        );
+        expect(weekItemsFromCalendar([oneDay], now).single.until, isNull);
+        expect(lastDayOf(oneDay), DateTime(2026, 10, 20));
+        // Zwei Tage bis 0 Uhr: bis zum zweiten Tag.
+        final twoDays = ev(
+          'Projekttage',
+          DateTime(2026, 10, 20),
+          DateTime(2026, 10, 22),
+          allDay: true,
+        );
+        expect(
+          weekItemsFromCalendar([twoDays], now).single.until,
+          DateTime(2026, 10, 21),
+        );
+        // Essenshinweis gilt nur am Tag selbst, nicht am Folgetag.
+        final meal = ev(
+          'Kein Mittagessen',
+          DateTime(2026, 10, 20),
+          DateTime(2026, 10, 21),
+          allDay: true,
+        );
+        expect(
+          mealHintFor([meal], DateTime(2026, 10, 20, 9), t: de),
+          isNotNull,
+        );
+        expect(mealHintFor([meal], DateTime(2026, 10, 21, 9), t: de), isNull);
+      },
+    );
+
     test('ohne bekannte Klasse kein Jahrgangsfilter', () {
       final items = weekItemsFromCalendar([
         ev(
@@ -695,6 +880,30 @@ void main() {
       title: title,
     );
     final now = DateTime(2026, 10, 1, 8);
+
+    test('Spanne für Heute und Hintergrund reicht von Freitag bis Montag '
+        '(Prüfung 27.10.26)', () {
+      final fri = DateTime(2026, 10, 23, 14);
+      final mon = DateTime(2026, 10, 26);
+      final free = freeDaysFrom(
+        [ev('Unterrichtsfrei', mon, mon, allDay: true)],
+        fri,
+        days: freeDaysAhead,
+      );
+      expect(free.keys, [mon]);
+      // Änderung am freien Montag fällt aus der Liste – wie in der App.
+      final r = applySubstitutions(
+        t: de,
+        plan: _plan(),
+        choice: const {},
+        now: fri,
+        days: [
+          _day('26.10.2026', [_sub('26.10.2026', '1', art: 'Entfall')]),
+        ],
+        free: free,
+      );
+      expect(r.changes, isEmpty);
+    });
 
     test('Muster aus den Exporten: Ferien mit Uhrzeit, ganztägig mit '
         'Kategorie', () {

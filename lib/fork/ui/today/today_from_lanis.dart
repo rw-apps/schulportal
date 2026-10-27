@@ -133,9 +133,14 @@ Set<int> hoursOf(String stunde) {
     // Doppelbesetzung: Fehlt nur eine von zwei Lehrkräften, findet die
     // Stunde statt (Schule A: D, M, E zu zweit). Ohne diese Grenze zeigte „Heute“
     // einen Ausfall, obwohl die zweite Lehrkraft unterrichtet.
-    final others = lessonTeachers.where((t) => t != absent).toList();
+    // Mehrere Kürzel in der Zeile („AAA, BBB“) einzeln (KidPlan.kuerzelOf).
+    // Ursache (Prüfung 27.10.26): Verglichen wurde die ganze Angabe mit
+    // einzelnen Kürzeln; fehlten zwei von drei Lehrkräften, galt die
+    // Stunde als ausgefallen.
+    final gone = KidPlan.kuerzelOf(absent);
+    final others = lessonTeachers.where((t) => !gone.contains(t)).toList();
     if (absent != null &&
-        lessonTeachers.contains(absent) &&
+        gone.any(lessonTeachers.contains) &&
         others.isNotEmpty) {
       return (
         kind: ChangeKind.substitution,
@@ -212,10 +217,23 @@ bool _otherSubject(
 /// auch die Vertretungen der ANDEREN Gruppen im Klassenplan (Lehrkraft der
 /// anderen Gruppe fehlt). Grenze: Ohne Lehrerkürzel in der Zeile wird sie
 /// angenommen – sonst ginge ein echter Ausfall verloren.
+///
+/// Mehrere Kürzel („AAA, BBB“) werden einzeln verglichen (KidPlan.kuerzelOf),
+/// es genügt eines. Ursache (Prüfung 27.10.26): Die ganze Angabe wurde mit
+/// den einzelnen Kürzeln der Stunde verglichen – fehlte eine Doppelbesetzung
+/// ganz, ging der Ausfall still verloren.
 bool _concerns(Substitution s, PlanLesson? lesson) {
-  final absent = _plain(s.Lehrerkuerzel);
-  if (lesson == null || absent == null || lesson.teacher == null) return true;
-  return KidPlan.kuerzelOf(lesson.teacher).contains(absent);
+  final absent = KidPlan.kuerzelOf(_plain(s.Lehrerkuerzel));
+  if (lesson == null || absent.isEmpty || lesson.teacher == null) return true;
+  return _namesTeacher(absent, lesson);
+}
+
+/// Nennt die Zeile ([absent], Kürzel aus „Lehrer“) eine Lehrkraft der
+/// Stunde [o]? Dann gehört sie sicher zu dieser Stunde – auch wenn „Fach“
+/// ein anderes nennt (Fachwechsel ohne „altes Fach“, siehe [_overlay]).
+bool _namesTeacher(List<String> absent, PlanLesson o) {
+  final own = KidPlan.kuerzelOf(o.teacher);
+  return absent.any(own.contains);
 }
 
 /// Der Plan mit den Vertretungen der angezeigten Woche ([week], Mo–Fr) –
@@ -227,7 +245,8 @@ bool _concerns(Substitution s, PlanLesson? lesson) {
 /// Zuordnung je Stunde über die Stundennummer und die Lehrkraft der Gruppe
 /// (_concerns), Art über classifySubstitution. Grenze: Bei offener
 /// Gruppenwahl („2 Gruppen – wählen“) wird die Zeile jeder passenden Gruppe
-/// angehängt; Tage außerhalb von [week] bleiben unberührt.
+/// angehängt – ohne Lehrerkürzel als „bitte prüfen“, weil offen ist,
+/// welche gemeint ist; Tage außerhalb von [week] bleiben unberührt.
 ///
 /// [free]: schulfreie Tage (freeDaysFrom) – an ihnen bleibt der Tag leer.
 KidPlan planWithSubstitutions({
@@ -254,7 +273,12 @@ KidPlan planWithSubstitutions({
 /// Schule B hat keine Spalte Lehrerkürzel, also prüft [_concerns] nichts –
 /// der Ausfall des Ethikkurses erschien als Ausfall von Religion. Grenze:
 /// Ein unbekanntes Kürzel verwirft nichts (lieber ein Hinweis zu viel als
-/// ein verpasster Ausfall).
+/// ein verpasster Ausfall); nennt die Zeile eine Lehrkraft der Stunde,
+/// verwirft das Fach nichts (Fachwechsel ohne „altes Fach“).
+///
+/// Unsicher = „bitte prüfen“ (ChangeKind.unclear), nie sicherer Ausfall:
+/// Zeile ohne Lehrerkürzel für mehrere Gruppen, Einzelstunde mit eigenem
+/// Fach, aber fremder Lehrkraft, Parallelkurs nicht genannt.
 ({KidPlan plan, List<(DateTime, Substitution)> unmatched}) _overlay({
   required KidPlan plan,
   required List<SubstitutionDay> days,
@@ -300,24 +324,54 @@ KidPlan planWithSubstitutions({
         for (final c in [_plain(s.fach), _plain(s.fach_alt)])
           if (c != null) c.toUpperCase(),
       };
+      final absent = KidPlan.kuerzelOf(_plain(s.Lehrerkuerzel));
       var hit = false;
       for (var i = 0; i < plan.slots.length && i < out[wd].length; i++) {
         if (!hours.contains(slotNumber(plan.slots[i].label))) continue;
         final opts = out[wd][i];
+        final cls = plan.classCodesAt(wd, i);
+        // Erst alle passenden Gruppen sammeln, dann eintragen: Ob die Zeile
+        // eindeutig ist, hängt davon ab, wie viele sie trifft.
+        final fits = <(int, bool)>[];
         for (var j = 0; j < opts.length; j++) {
           final o = opts[j];
-          if (opts.length > 1 &&
-              codes.isNotEmpty &&
-              !codes.contains(o.short.toUpperCase())) {
+          final own = o.short.toUpperCase();
+          // Nennt die Zeile eine Lehrkraft der Stunde, gehört sie dazu –
+          // Fach und Kurs entscheiden dann nicht mehr. Ursache (Prüfung
+          // 27.10.26): Ein Fachwechsel ohne „altes Fach“ („D“ statt „M“,
+          // Lehrkraft der Mathestunde) fiel durch _otherSubject, landete
+          // bei den Zeilen ohne Stunde und entfiel dort (Klasse hat
+          // Unterricht).
+          final byTeacher = _namesTeacher(absent, o);
+          if (!byTeacher) {
+            if (opts.length > 1 && codes.isNotEmpty && !codes.contains(own)) {
+              continue;
+            }
+            if (opts.length == 1 &&
+                (_otherCourse(codes, o, cls) ||
+                    _otherSubject(codes, o, planNames))) {
+              continue;
+            }
+          }
+          // Lehrkraft passt nicht: bei einer einzelnen Stunde mit genau
+          // diesem Fach „bitte prüfen“ statt verwerfen (Prüfung 27.10.26 –
+          // der Plan kann eine andere Lehrkraft nennen als das Portal).
+          // Grenze: Parallelgruppen und Zeilen ohne eigenes Fach verwerfen
+          // weiter, dort gehört die Zeile zur Gruppe der genannten Lehrkraft.
+          if (!_concerns(s, o)) {
+            if (opts.length == 1 && codes.contains(own)) fits.add((j, true));
             continue;
           }
-          final cls = plan.classCodesAt(wd, i);
-          if (opts.length == 1 &&
-              (_otherCourse(codes, o, cls) ||
-                  _otherSubject(codes, o, planNames))) {
-            continue;
-          }
-          if (!_concerns(s, o)) continue;
+          fits.add((j, false));
+        }
+        // Trifft die Zeile ohne Lehrerkürzel mehrere Gruppen (Projekt Text
+        // bei CCC und DDD), ist offen, welche gemeint ist: „bitte prüfen“.
+        // Ursache (Prüfung 27.10.26): Jede Gruppe galt als sicher
+        // ausgefallen, damit auch die gewählte. Grenze: Nennt die Zeile ein
+        // Fach, das nur EINE Gruppe hat, bleibt sie eindeutig.
+        final ambiguous = fits.length > 1 && absent.isEmpty;
+        for (final (j, teacherOff) in fits) {
+          final o = opts[j];
           hit = true;
           final c = classifySubstitution(
             s,
@@ -329,12 +383,16 @@ KidPlan planWithSubstitutions({
           // Unsicher (ChangeKind.unclear): Die Klasse hat in dieser Stunde
           // Parallelkurse, die Zeile nennt aber nicht den des Kindes –
           // sondern keinen oder einen unbekannten (Rückmeldung 21.10.26:
-          // „als zu prüfen kennzeichnen“ statt sicherem Ausfall).
+          // „als zu prüfen kennzeichnen“ statt sicherem Ausfall). Nennt sie
+          // eine Lehrkraft der Stunde, ist sie sicher (_namesTeacher).
           final own = o.short.toUpperCase();
           final unclear =
-              opts.length == 1 &&
-              !codes.contains(own) &&
-              cls.any((x) => x != own);
+              ambiguous ||
+              teacherOff ||
+              (opts.length == 1 &&
+                  !_namesTeacher(absent, o) &&
+                  !codes.contains(own) &&
+                  cls.any((x) => x != own));
           final kind = unclear ? ChangeKind.unclear : c.kind;
           // Sichere Angabe schlägt unsichere, Ausfall schlägt alles; sonst
           // bleibt die erste.
@@ -481,8 +539,16 @@ KidPlan planWithSubstitutions({
         nameOf: (k) => plan.teacherFull(k) ?? k,
       );
       if (slotIdx.isNotEmpty) {
+        // Klassenplan: Stammt plan.days aus dem persönlichen Plan, stehen
+        // die Kurse der Klasse in KidPlan.classCodes. Ursache (Prüfung
+        // 27.10.26): Geprüft wurde nur plan.days – in einer Freistunde des
+        // Kindes, in der die Klasse WPU hat, erschien die Vertretung des
+        // WPU-Kurses als Zusatzstunde. Grenze: Ohne Klassenplan (leere
+        // classCodes) zählt weiter nur plan.days.
         final classHasLesson = slotIdx.any(
-          (i) => i < plan.days[wd].length && !plan.days[wd][i].isEmpty,
+          (i) =>
+              (i < plan.days[wd].length && !plan.days[wd][i].isEmpty) ||
+              plan.classCodesAt(wd, i).isNotEmpty,
         );
         if (classHasLesson || c.kind == ChangeKind.cancelled) continue;
       }
@@ -604,6 +670,20 @@ bool isPlainHoliday(String title) => PortalRules.plainHoliday.hasMatch(
   title.toLowerCase().trim().replaceAll(RegExp(r'[\s!.:]+$'), ''),
 );
 
+/// Letzter Tag eines Termins. Ganztägige Einträge enden oft um 0 Uhr des
+/// Folgetags (exklusiv) – dann zählt der Vortag. EINE Regel für
+/// [freeDaysFrom], [weekItemsFromCalendar] und [mealHintFor]. Ursache
+/// (Prüfung 27.10.26): Nur freeDaysFrom kannte sie; ein eintägiger Termin
+/// stand in „Demnächst“ als „bis morgen“, ein Essenshinweis galt einen Tag
+/// zu lang. Grenze: Endet ein Termin um 0 Uhr seines Anfangstags, bleibt
+/// es dieser Tag.
+DateTime lastDayOf(CalendarEvent e) {
+  final a = DateTime(e.startTime.year, e.startTime.month, e.startTime.day);
+  final b = DateTime(e.endTime.year, e.endTime.month, e.endTime.day);
+  final midnight = e.endTime.hour == 0 && e.endTime.minute == 0;
+  return midnight && b.isAfter(a) ? DateTime(b.year, b.month, b.day - 1) : b;
+}
+
 /// Schulfreie Schultage (Mo–Fr) ab heute laut Schulkalender: Tag → Titel
 /// des Eintrags („Herbstferien“). Heute, Kalender und Kursseite leeren an
 /// diesen Tagen den Stundenplan (planWithSubstitutions, applySubstitutions,
@@ -642,12 +722,8 @@ Map<DateTime, String> freeDaysFrom(
     if (PortalRules.partialDay.hasMatch(title)) continue;
     if (!forClass(title, className)) continue;
     final a = dayOf(e.startTime);
-    var b = dayOf(e.endTime);
+    final b = lastDayOf(e);
     final endsAtMidnight = e.endTime.hour == 0 && e.endTime.minute == 0;
-    // Ganztägige Einträge enden oft um 0 Uhr des Folgetags (exklusiv).
-    if (endsAtMidnight && b.isAfter(a)) {
-      b = DateTime(b.year, b.month, b.day - 1);
-    }
     final startsAtMidnight = e.startTime.hour == 0 && e.startTime.minute == 0;
     final whole =
         e.allDay ||
@@ -664,6 +740,14 @@ Map<DateTime, String> freeDaysFrom(
   }
   return out;
 }
+
+/// Spanne der schulfreien Tage (freeDaysFrom, `days`) für Heute und die
+/// Sammelmeldung: heute bis zum nächsten Schultag, auch Freitag → Montag.
+/// EIN Wert für die App (live_today_page.dart) und den Hintergrund
+/// (notify_task.dart). Ursache (Prüfung 27.10.26): Der Hintergrund rechnete
+/// ohne freie Tage – eine Änderung am freien Tag kam dort hinzu, die App
+/// nahm sie heraus, der nächste Lauf meldete sie mit Ton erneut.
+const freeDaysAhead = 3;
 
 /// Termine ab jetzt für die nächsten [days] Tage.
 ///
@@ -716,8 +800,7 @@ List<WeekItem> weekItemsFromCalendar(
     final day = start.isBefore(today)
         ? today
         : DateTime(start.year, start.month, start.day);
-    final end = e.endTime;
-    final endDay = DateTime(end.year, end.month, end.day);
+    final endDay = lastDayOf(e);
     final timed = !e.allDay && !(start.hour == 0 && start.minute == 0);
     out.add((
       start,
@@ -763,7 +846,7 @@ String? mealHintFor(
     if (!isMealNote(title)) continue;
     if (!forClass(title, className)) continue;
     final a = DateTime(e.startTime.year, e.startTime.month, e.startTime.day);
-    final b = DateTime(e.endTime.year, e.endTime.month, e.endTime.day);
+    final b = lastDayOf(e);
     if (target.isBefore(a) || target.isAfter(b)) continue;
     notes.add(title);
   }

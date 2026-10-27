@@ -92,6 +92,20 @@ class SummaryItem {
   }
 }
 
+/// Name des Kindes in den Zeilen der Sammelmeldung: nur bei mehreren
+/// Konten auf dem Gerät ([multiAccount]) oder beim Elternkonto ([parent]);
+/// allein auf dem eigenen Handy (Schülerkonto) ohne Namen. EINE Regel für
+/// die offene App (live_today_page.dart) und den Hintergrund
+/// (notify_task.dart, Nachrichten in conversations/background.dart).
+/// Ursache (Prüfung 27.10.26): Die App nannte den Namen nur bei mehreren
+/// Karten, der Hintergrund auch beim Elternkonto – jeder Lauf schrieb die
+/// Zeilen des anderen um („Lena · Heute: …“ ↔ „Heute: …“).
+String summaryName(
+  String name, {
+  required bool multiAccount,
+  required bool parent,
+}) => multiAccount || parent ? name.trim() : '';
+
 const summaryItemsKey = 'fork-summary/items';
 const summaryAlertedKey = 'fork-summary/alerted';
 

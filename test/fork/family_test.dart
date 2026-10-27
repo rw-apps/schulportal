@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:lanis/fork/ui/live/family.dart';
@@ -335,6 +336,99 @@ void main() {
     await t.tap(find.text('Alle').last);
     await t.pumpAndSettle();
     expect(find.text('Übersicht: alle'), findsOneWidget);
+    _disposeCheckers();
+  });
+
+  testWidgets('Rahmen folgt dem Container: Konto wird aktiv, alter entsorgt', (
+    t,
+  ) async {
+    // Ursache (Prüfung 27.10.26): Eine offene Unterseite von Konto B hielt
+    // den Familien-Container vom Öffnen; nach dem Kontowechsel (B aktiv)
+    // war er entsorgt – Absturz „disposed container“.
+    final who = Provider<String>((ref) => 'ohne');
+    final app = ProviderContainer(overrides: [who.overrideWithValue('App')]);
+    final familyB = ProviderContainer(
+      overrides: [who.overrideWithValue('Familie B')],
+    );
+    final a = _snap(1, 'Anna', 'Schule A');
+    final b = _snap(2, 'Ben', 'Schule B');
+    late BuildContext ctx;
+    Widget tree(List<FamilyMember> members) => UncontrolledProviderScope(
+      container: app,
+      child: MaterialApp(
+        home: LiveData(
+          snapshot: a,
+          child: FamilyData(
+            members: members,
+            child: Navigator(
+              onGenerateRoute: (_) => MaterialPageRoute<void>(
+                builder: (c) {
+                  ctx = c;
+                  return const SizedBox();
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await t.pumpWidget(
+      tree([
+        FamilyMember(accountId: 1, snapshot: a, colorIndex: 0),
+        FamilyMember(
+          accountId: 2,
+          snapshot: b,
+          colorIndex: 1,
+          container: familyB,
+        ),
+      ]),
+    );
+    final member = FamilyData.of(ctx).last;
+    Navigator.of(ctx).push(
+      MaterialPageRoute<void>(
+        builder: (_) => member.scope(
+          Consumer(builder: (c, ref, _) => Text('Sitzung ${ref.watch(who)}')),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    expect(find.text('Sitzung Familie B'), findsOneWidget);
+    // B ist jetzt aktiv (ohne eigenen Container), sein Familien-Container
+    // entsorgt.
+    await t.pumpWidget(
+      tree([FamilyMember(accountId: 2, snapshot: b, colorIndex: 1)]),
+    );
+    familyB.dispose();
+    await t.pumpAndSettle();
+    expect(t.takeException(), isNull);
+    expect(find.text('Sitzung App'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+    app.dispose();
+    _disposeCheckers();
+  });
+
+  test('sameLiveData: gleiche Daten trotz neuem Stand', () {
+    final a = _snap(1, 'Anna', 'Schule A');
+    LiveSnapshot copy(LiveSnapshot s, {Feed<TimeTable>? timetable}) =>
+        LiveSnapshot(
+          session: s.session,
+          supported: s.supported,
+          timetable: timetable ?? s.timetable,
+          lessons: s.lessons,
+          substitutions: s.substitutions,
+          calendar: s.calendar,
+          conversations: s.conversations,
+          userChoice: s.userChoice,
+          ownNames: s.ownNames,
+          setUserChoice: (_) {},
+          setOwnNames: (_) {},
+          refresh: () async {},
+          refreshMessages: () async {},
+          setMensaUrl: (_, _) {},
+        );
+    expect(sameLiveData(a, copy(a)), isTrue);
+    // ignore: prefer_const_constructors
+    expect(sameLiveData(a, copy(a, timetable: Feed(loading: true))), isFalse);
     _disposeCheckers();
   });
 }

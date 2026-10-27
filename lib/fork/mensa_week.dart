@@ -7,7 +7,8 @@ import 'package:html/parser.dart' as html;
 /// Ursache: Die eingebettete Bestellseite war auf dem Handy schwer lesbar
 /// (feste Zeilenhöhen, kleine Knöpfe). Die App liest deshalb nur, was
 /// bestellt ist, und zeigt es im eigenen Stil; bestellt und abbestellt
-/// wird weiter auf der Seite selbst (MensaPage).
+/// wird seit 9413 auch in der App (MealOrderRunner), sonst auf der Seite
+/// selbst (MensaPage).
 ///
 /// Zwei Aufbauten sind bekannt (parseMealWeek). Die Namen der Caterer
 /// stehen bewusst nirgends im Code (mensa.dart).

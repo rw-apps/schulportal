@@ -1,5 +1,6 @@
 import 'package:liblanis/liblanis.dart';
 
+import '../../lessons_parent.dart';
 import '../plan/plan_model.dart';
 import 'course_detail_model.dart';
 
@@ -21,7 +22,9 @@ class CourseItem {
     this.planOrder,
     this.extra = false,
     this.entry,
-  });
+    String? subject,
+    this.inShownPlan = true,
+  }) : subject = subject ?? title;
 
   /// Kopie mit anderem Erledigt-Stand (Protokoll der App, homework_ledger).
   CourseItem withHomeworkDone(bool done) => CourseItem(
@@ -40,6 +43,8 @@ class CourseItem {
     planOrder: planOrder,
     extra: extra,
     entry: entry,
+    subject: subject,
+    inShownPlan: inShownPlan,
   );
 
   /// Neuester Eintrag (CurrentEntry.entryID) – Schlüssel der Hausaufgabe.
@@ -51,6 +56,16 @@ class CourseItem {
 
   /// „Naturwissenschaften“ statt „Naturwissenschaften 06 xy (061NAWI05-IGS)“.
   final String title;
+
+  /// Fach für den Abgleich mit dem Stundenplan (nextLessonOf,
+  /// lessonBelongsTo): [title] ohne vorangestellten Kindnamen
+  /// (courseNameWithoutKid). Bei einem Kind gleich [title].
+  final String subject;
+
+  /// Gehört der Kurs zum Kind, dessen Stundenplan die App zeigt
+  /// (shownPlanKid)? false bei Geschwisterkursen im Elternkonto – dann
+  /// gibt es für ihn keine „nächste Stunde“ aus diesem Plan.
+  final bool inShownPlan;
   final String fullName;
 
   /// Ausgeschrieben („Anna Alt“), sonst das Kürzel.
@@ -119,12 +134,23 @@ String? attendanceLine(Map<String, String>? a) {
 /// Kurs seine Fachfarbe; Kurse ohne Platz im Plan gelten als weiteres
 /// Angebot. Eine Hausaufgabe ohne Text hat [CourseItem.homework] = '' (die
 /// Oberfläche schreibt dann „Hausaufgabe eingetragen“ in der Sprache).
+///
+/// [kids]: Kinder des Elternkontos (LiveSnapshot.kids). Ursache (Prüfung
+/// 27.10.26): Bei zwei Kindern trägt jeder Kursname den Vornamen
+/// (flattenChildLessons); ohne ihn zu entfernen traf kein Kurs den Plan.
+/// Abgeglichen werden nur die Kurse des Kindes, dessen Plan gezeigt wird
+/// (shownPlanKid) – Kurse der Geschwister bekommen keinen Platz im Plan,
+/// gelten aber auch nicht deshalb als weiteres Angebot (nur nach
+/// CourseRules.extraOfferMarkers). Grenze: Ohne [kids] (Hintergrund,
+/// notify_task.dart) bleibt alles wie bei einem Kind.
 List<CourseItem> courseItemsFrom(
   Lessons lessons, {
   Map<String, String> ownNames = const {},
   KidPlan? plan,
+  List<ChildLessons> kids = const [],
 }) {
   final slots = plan == null ? const <String, int>{} : subjectPlanOrder(plan);
+  final planKid = shownPlanKid(kids);
   // Überschriften, die mehrere Kurse mit VERSCHIEDENEN vollen Namen teilen.
   // Sind auch die vollen Namen gleich (Schule A: zweimal „Ganztagsangebot 06 …“),
   // hilft der volle Name nicht – dann bleibt die kurze Überschrift.
@@ -150,9 +176,12 @@ List<CourseItem> courseItemsFrom(
       if (name.isNotEmpty) pairs.add((kz, name));
     }
     final codes = [for (final p in pairs) p.$1];
-    final short = plan == null
+    final plain = courseNameWithoutKid(l.name, l.courseID, kids);
+    final subject = courseTitle(plain);
+    final mine = planKid == null || kidOfCourseId(l.courseID) == planKid;
+    final short = plan == null || !mine
         ? null
-        : courseShortIn(plan, courseTitle(l.name), codes.toSet()..remove(''));
+        : courseShortIn(plan, subject, codes.toSet()..remove(''));
     return CourseItem(
       id: l.courseID,
       entry: l.currentEntry?.entryID,
@@ -160,8 +189,11 @@ List<CourseItem> courseItemsFrom(
           ? l.name.trim()
           : courseTitle(l.name),
       teacherCodes: codes,
+      subject: subject,
+      inShownPlan: mine,
       planOrder: short == null ? null : slots[short],
-      extra: plan != null && isExtraOffer(l.name, inPlan: short != null),
+      extra:
+          plan != null && isExtraOffer(plain, inPlan: !mine || short != null),
       missing: attendanceCounts(l.attendances ?? const {})?.missing ?? 0,
       fullName: l.name.trim(),
       teachers: [for (final p in pairs) p.$2],

@@ -23,13 +23,15 @@ import '../ui/plan/plan_model.dart';
 import '../class_choice.dart';
 import '../data_storage.dart';
 import '../portal_extras.dart';
+import '../substitution_history.dart';
 import '../ui/today/today_from_lanis.dart'
-    show classFromCourses, weekItemsFromCalendar;
+    show classFromCourses, freeDaysAhead, freeDaysFrom, weekItemsFromCalendar;
 import '../mensa.dart' show MensaAddresses;
 import '../mensa_store.dart';
 import '../ui/today/kid_hints.dart' show nextSchoolDay;
 import '../ui/today/today_from_lanis.dart' show applySubstitutions;
-import '../ui/today/today_model.dart' show hasTime, minutesOf;
+import '../ui/today/today_model.dart'
+    show ChangeItem, DayLesson, hasTime, minutesOf;
 import 'notices.dart';
 import 'notify_keys.dart';
 import 'summary.dart';
@@ -42,9 +44,10 @@ const sentNoticesSetting = 'fork-notify/sent';
 /// Ursache (Konzept 17.10.26): Lanis meldete bei jeder Änderung ALLE Zeilen
 /// des Vertretungsplans der Klasse, auch die der anderen Gruppen und ohne
 /// Bezug zur eigenen Stunde. Jetzt: nur, was die Stunden des Kindes betrifft
-/// (gleiche Zuordnung wie „Heute“, applySubstitutions), heute sofort, für den
-/// nächsten Schultag gesammelt ab 19 Uhr, dazu große Termine; Zeitfenster
-/// aus den Einstellungen (isTaskWithinConstraints, background_service.dart).
+/// (gleiche Zuordnung wie „Heute“, applySubstitutions), als Zeilen der
+/// Sammelmeldung für heute und den nächsten Schultag (summary.dart), dazu
+/// große Termine am Vorabend (buildNotices); Zeitfenster aus den
+/// Einstellungen (isTaskWithinConstraints, background_service.dart).
 ///
 /// Grenze: Ohne Stundenplan im Portal (z. B. Lehrkräfte) läuft die
 /// bisherige Lanis-Aufgabe weiter. Android lässt die App nur etwa alle 15
@@ -79,7 +82,13 @@ Future<void> _run(
       forkSupportsApplet(a, accountType, session.travelMenu);
   final timetableMeta = Applets.byPhpUrl('stundenplan.php');
   if (!offers(timetableMeta)) {
-    await substitutionsBackgroundTask(container, accountType, tools);
+    // Ohne Stundenplan meldet die Lanis-Aufgabe Vertretungen einzeln – nur,
+    // wenn deren Schalter an ist. Seit 9429 läuft diese Aufgabe auch für
+    // „Große Termine“ allein (notify_keys.dart); dann sonst Vertretungen
+    // trotz Schalter „aus“ (Prüfung 27.10.26).
+    if (tools.settings.getBool('notification-vertretungsplan.php') ?? true) {
+      await substitutionsBackgroundTask(container, accountType, tools);
+    }
     return;
   }
   final now = DateTime.now();
@@ -137,21 +146,32 @@ Future<void> _run(
     resolveLanguage(chosen, PlatformDispatcher.instance.locale.languageCode),
   );
 
-  var events = const <CalendarEvent>[];
-  if (now.hour >= eveningHour) {
+  // Kalender: am Vorabend für die großen Termine (buildNotices), sonst nur,
+  // wenn es Änderungen gibt – für die schulfreien Tage (freeDaysFrom), wie
+  // in der App. Ursache (Prüfung 27.10.26): Ohne freie Tage kam eine
+  // Änderung am freien Tag in die Sammelmeldung, die offene App nahm sie
+  // heraus, der nächste Lauf meldete sie mit Ton erneut. Grenze: Ohne
+  // Kalender (Fehler, nicht angeboten) bleiben die Änderungen.
+  List<CalendarEvent>? events;
+  Future<List<CalendarEvent>> loadEvents() async {
+    if (events != null) return events!;
+    var out = const <CalendarEvent>[];
     try {
       if (offers(Applets.byPhpUrl('kalender.php'))) {
-        events = await container
+        out = await container
             .read(calendarParserProvider)
             .getCalendar(
               startDate: now,
-              endDate: now.add(const Duration(days: 3)),
+              endDate: now.add(const Duration(days: freeDaysAhead)),
             );
       }
     } catch (_) {
       // Ohne Kalender bleiben die Vertretungen.
     }
+    return events = out;
   }
+
+  if (now.hour >= eveningHour) await loadEvents();
 
   final s = tools.settings;
   final userChoice = settingStrings(
@@ -175,23 +195,47 @@ Future<void> _run(
     lessonTimes: storedLessonTimes(s),
   );
   final courses = [for (final l in lessons) l.name];
+  final className = storedClass(s)?.name ?? classFromCourses(courses);
+
+  // Dieselbe Quelle wie Heute und Kalender (substitution_history.dart):
+  // gelieferte Tage, dazu der gespeicherte heutige Tag, falls das Portal ihn
+  // nicht mehr liefert. Ursache (Prüfung 27.10.26): Nahm das Portal den
+  // Tag nachmittags heraus, fiel die Änderung hier aus der Sammelmeldung.
+  // Gelieferte Tage kommen in die Ablage, wie in der App
+  // (LiveData._recordSubstitutions). Grenze: Schreibt die offene App
+  // gleichzeitig, gilt der letzte Stand.
+  var history = SubstitutionHistory.decode(
+    s.getString(substitutionHistorySetting),
+  );
+  final recorded = history.record(subs.days, now);
+  if (recorded.encode() != history.encode()) {
+    history = recorded;
+    s.setString(substitutionHistorySetting, history.encode());
+  }
+  final subDays = history.fromToday(subs.days, now);
 
   // Sammel-Benachrichtigung (summary.dart, Wunsch 27.10.26): Ausfälle und
   // Vertretungen von heute und dem nächsten Schultag als aktueller Stand
   // dieses Kontos. Die Einzelmeldungen zu Änderungen entfallen dafür
-  // (buildNotices bekommt keine Vertretungen mehr und meldet nur noch große
-  // Termine am Vorabend). Essen: showForkSummary (je Konto, unabhängig vom
-  // Vertretungsplan).
+  // (buildNotices meldet nur noch große Termine am Vorabend). Essen:
+  // showForkSummary (je Konto, unabhängig vom Vertretungsplan).
   try {
     final shared = container.read(sharedOverAccountSettingsProvider);
-    final r = applySubstitutions(
+    ({List<ChangeItem> changes, List<DayLesson> today}) apply(
+      List<CalendarEvent> cal,
+    ) => applySubstitutions(
       plan: plan.withTeacherNames(ownNames),
       choice: effectiveChoice(auto, userChoice),
-      days: subs.days,
+      days: subDays,
       now: now,
       t: t,
       subjectName: (c) => subjectFullName(c, courses),
+      free: freeDaysFrom(cal, now, className: className, days: freeDaysAhead),
     );
+    var r = apply(events ?? const []);
+    if (r.changes.isNotEmpty && events == null) {
+      r = apply(await loadEvents());
+    }
     // Läuft die Aufgabe nur für die großen Termine (notify_keys.dart),
     // bleiben Ausfälle und Vertretungen aus der Sammelmeldung.
     final subsOn = s.getBool('notification-vertretungsplan.php') ?? true;
@@ -202,7 +246,11 @@ Future<void> _run(
           ? const []
           : changeSummaryItems(
               scope: '${tools.accountId}',
-              name: firstName,
+              name: summaryName(
+                firstName,
+                multiAccount: tools.multiAccount,
+                parent: accountType == AccountType.parent,
+              ),
               changes: r.changes,
               now: now,
               next: nextSchoolDay(now),
@@ -224,19 +272,16 @@ Future<void> _run(
   final notices = !notifyEventsOn(s)
       ? const <Notice>[]
       : buildNotices(
-          plan: plan.withTeacherNames(ownNames),
-          choice: effectiveChoice(auto, userChoice),
-          substitutions: const [],
-          events: events,
+          events: events ?? const [],
           now: now,
           t: t,
+          name: firstName,
           parent: accountType == AccountType.parent,
           // Eigener Eintrag (class_choice.dart), sonst nur aus den Kursnamen: Die
           // Anmeldung im Hintergrund lädt keine Benutzerdaten
           // (authenticate(withoutData: true), background_service).
-          className: storedClass(s)?.name ?? classFromCourses(courses),
+          className: className,
           sent: sent.toSet(),
-          subjectName: (c) => subjectFullName(c, courses),
         );
   var remembered = sent;
   for (final n in notices) {
@@ -282,7 +327,7 @@ Future<void> _run(
       tools: tools,
       now: now,
       withCalendar: offers(Applets.byPhpUrl('kalender.php')),
-      className: storedClass(s)?.name ?? classFromCourses(courses),
+      className: className,
     );
   }
 }
@@ -293,8 +338,8 @@ Future<void> _run(
 /// einen Tag zu spät.
 const courseScanHour = 15;
 
-/// Kennung der Meldung „Neu im Unterricht“ (notices.dart nutzt 1 und 2;
-/// sendMessage verlangt 0–10000).
+/// Kennung der Meldung „Neu im Unterricht“ (notices.dart nutzt 2, 1 war
+/// die frühere Tagesmeldung; sendMessage verlangt 0–10000).
 const courseNewsId = 3;
 
 /// Kennung der Meldung „Wahl offen“.
@@ -550,12 +595,17 @@ Set<String> summaryTopicsFor(TypedSettings account) {
 ///
 /// Essen (Prüfung 27.10.26): direkt aus den gespeicherten Wochen
 /// (readMealEntries, MealCache bleibt ungebunden); nur Kinder mit
-/// eingetragener Bestellseite und einem Stand jünger als 48 h – ein
+/// eingetragener Bestellseite und frischem Stand (mealStaleAfter, geprüft in
+/// mealReminderDays über MealEntry.readAt) – ein
 /// verwaister oder alter Eintrag erinnert sonst ewig.
+///
+/// [parents]: Elternkonten unter [accounts] – für den Namen in den Zeilen
+/// (summaryName, dieselbe Regel wie App und Vertretungen).
 Future<void> showForkSummary(
   ProviderContainer container,
   List<int> accounts, {
   bool alert = true,
+  Set<int> parents = const {},
 }) async {
   try {
     final shared = container.read(sharedOverAccountSettingsProvider);
@@ -584,10 +634,14 @@ Future<void> showForkSummary(
         if (!e.key.startsWith('$id:')) continue;
         final kid = e.key.substring('$id:'.length);
         if (mensa.of(kid) == null) continue;
-        if (now.difference(e.value.at) > const Duration(hours: 48)) continue;
+        // Alter prüft mealReminderDays selbst (MealEntry.readAt).
         items.addAll(
           mealSummaryItems(
-            name: storedKidName(acc),
+            name: summaryName(
+              storedKidName(acc),
+              multiAccount: accounts.length > 1,
+              parent: parents.contains(id),
+            ),
             owner: e.key,
             days: mealReminderDays(
               e.value,

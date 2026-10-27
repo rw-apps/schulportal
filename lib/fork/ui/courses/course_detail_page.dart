@@ -111,7 +111,9 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
   /// Halbjahr-Umschalter nur, wenn das Portal ein 1. Halbjahr anbietet
   /// (semester1URL beim Laden des laufenden Halbjahrs).
   bool _hasFirstHalf = false;
-  final _open = <int>{};
+
+  /// Aufgeklappte Themen, je topicGroupKey (Titel + erster Tag).
+  final _open = <String>{};
 
   /// Nummer der jüngsten Anfrage. Ursache (Prüfbefund 17.10.26): Wechselte
   /// man schnell zwischen den Halbjahren, konnte die langsamere, ältere
@@ -423,10 +425,11 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                     isOpen: widget.course.homeworkOpen,
                     tone: f,
                     first: i == 0,
-                    open: _open.contains(i),
-                    onToggle: () => setState(
-                      () => _open.contains(i) ? _open.remove(i) : _open.add(i),
-                    ),
+                    open: _open.contains(topicGroupKey(g)),
+                    onToggle: () => setState(() {
+                      final key = topicGroupKey(g);
+                      if (!_open.remove(key)) _open.add(key);
+                    }),
                     onOpenFile: widget.onOpenFile,
                   ),
               ],

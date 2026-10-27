@@ -70,11 +70,19 @@ DateTime halfYearEnd(DateTime now) => currentIsFirstHalf(now)
     : DateTime(now.year, 7, 31);
 
 /// Tage von heute bis [until] einschließlich – für weekItemsFromCalendar.
-int daysUntil(DateTime now, DateTime until) {
-  final today = DateTime(now.year, now.month, now.day);
-  return DateTime(until.year, until.month, until.day).difference(today).inDays +
-      1;
-}
+///
+/// Gerechnet in UTC-Kalendertagen wie dayDiff (today_page.dart). Ursache
+/// (Prüfung 27.10.26): Mit lokalen Mitternachten ist der Tag der Zeitumstellung
+/// 23 bzw. 25 Stunden lang; über die Umstellung Ende März hinweg ergab
+/// `difference().inDays` einen Tag zu wenig (23 h zählen als 0 Tage), und die
+/// letzte Kalender-Arbeit vor Halbjahresende fiel heraus.
+int daysUntil(DateTime now, DateTime until) =>
+    DateTime.utc(
+      until.year,
+      until.month,
+      until.day,
+    ).difference(DateTime.utc(now.year, now.month, now.day)).inDays +
+    1;
 
 /// Kalender-Arbeit als [UpcomingExam]: „Naturwissenschaften 06 xy
 /// Lernkontrolle“ → Fach „Naturwissenschaften“, Art „Lernkontrolle“.

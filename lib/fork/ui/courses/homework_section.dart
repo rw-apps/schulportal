@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../homework_ledger.dart';
 import '../../l10n/l10n.dart';
 import '../kit.dart';
+import '../today/today_page.dart' show dayDiff;
 import 'exam_card.dart' show KidLine, KidTag;
 
 /// Eine Hausaufgabe in [HomeworkSection]; [kid] nur in „Alle“.
@@ -54,7 +55,14 @@ class HomeworkSection extends StatefulWidget {
     this.onShowAll,
     this.readOnly = false,
     this.now,
+    this.expiredCount = 0,
   });
+
+  /// Abgelaufene, nicht abgehakte (homeworkLists.expired): eigener Link
+  /// zum Archiv, auch ohne erledigte. Ursache (Prüfung 27.10.26): Der Weg
+  /// ins Archiv erschien nur bei mehr als [shownDone] erledigten – „Nicht
+  /// abgehakt“ und „Wieder offen“ waren sonst unerreichbar.
+  final int expiredCount;
 
   /// Nur Tests/Entwürfe (Frist-Zeile).
   final DateTime? now;
@@ -251,6 +259,14 @@ class _HomeworkSectionState extends State<HomeworkSection> {
               ),
             ),
         ],
+        if (widget.expiredCount > 0 && widget.onShowAll != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: widget.onShowAll,
+              child: Text(t.hwExpiredLink(widget.expiredCount), style: k.link),
+            ),
+          ),
       ],
     );
   }
@@ -581,13 +597,8 @@ class _DueLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final t = context.t;
-    // In UTC rechnen: Über die Zeitumstellung hinweg ergäbe die Differenz
-    // lokaler Mitternächte 23 Stunden = 0 Tage („heute“ statt „morgen“).
-    final diff = DateTime.utc(
-      due.year,
-      due.month,
-      due.day,
-    ).difference(DateTime.utc(now.year, now.month, now.day)).inDays;
+    // dayDiff rechnet in UTC (Zeitumstellung: sonst „heute“ statt „morgen“).
+    final diff = dayDiff(now, due);
     final day = formatDate(t, t.dateShort, due);
     if (diff < 0) {
       final tone = k.p.change;

@@ -503,10 +503,8 @@ class Kit {
   TextStyle get planNowMeta => _s(13, FontWeight.w500, p.muted);
 
   // Aufgeklappte Tagesliste
-  TextStyle rowSlot(Color c) => _s(12, FontWeight.w700, c);
   TextStyle rowSubject(Color c, {bool strong = false}) =>
       _s(15, strong ? FontWeight.w800 : FontWeight.w600, c);
-  TextStyle rowTime(Color c) => _s(12, FontWeight.w500, c);
   TextStyle get rowPause => _s(12, FontWeight.w600, p.faint);
 
   TextStyle button(Color c) => _s(14, FontWeight.w700, c);
@@ -537,7 +535,6 @@ class Kit {
   /// Lehrkraft in der Tagesansicht: kräftiger als Raum/Zeit („mehr Kontur“,
   /// Rückmeldung 16.10.26).
   TextStyle planTeacher(Color c) => _s(14, FontWeight.w700, c);
-  TextStyle get planSlot => _s(12, FontWeight.w700, p.muted);
   TextStyle cellShort(Color c) => _s(13, FontWeight.w800, c);
   TextStyle cellRoom(Color c) => _s(11, FontWeight.w600, c);
   TextStyle cellTeacher(Color c) => _s(10, FontWeight.w700, c);

@@ -141,12 +141,19 @@ class _NotifySettingsPageState extends ConsumerState<NotifySettingsPage> {
                         detail: t.notifySubstitutionsDetail,
                         value: allow && area('vertretungsplan.php'),
                         onChanged: allow
-                            ? (v) => setState(
-                                () => s.setBool(
+                            ? (v) => setState(() {
+                                // Große Termine erben ohne eigenen Eintrag
+                                // diesen Schalter (notifyEventsOn): vorher
+                                // festschreiben, sonst ginge „Große Termine“
+                                // mit aus (Prüfung 27.10.26).
+                                if (s.getBool(notifyEventsKey) == null) {
+                                  s.setBool(notifyEventsKey, notifyEventsOn(s));
+                                }
+                                s.setBool(
                                   notifyAreaKey('vertretungsplan.php'),
                                   v,
-                                ),
-                              )
+                                );
+                              })
                             : null,
                       ),
                     // Eigener Schalter (notify_keys.dart): große Termine

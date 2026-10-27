@@ -168,6 +168,15 @@ void main() {
     expect(allSummaryItems(s, now).length, 2);
   });
 
+  test('Name in den Zeilen: eine Regel für App und Hintergrund '
+      '(Prüfung 27.10.26)', () {
+    String n({required bool multi, required bool parent}) =>
+        summaryName(' Lena ', multiAccount: multi, parent: parent);
+    expect(n(multi: false, parent: false), '');
+    expect(n(multi: true, parent: false), 'Lena');
+    expect(n(multi: false, parent: true), 'Lena');
+  });
+
   test('Erlaubt-Liste lesen und schreiben', () {
     final s = mem();
     writeSummaryAllowed(s, {

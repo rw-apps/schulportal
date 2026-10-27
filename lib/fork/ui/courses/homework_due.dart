@@ -20,7 +20,16 @@ import 'courses_model.dart';
 /// homeworkExpiry).
 DateTime? Function(String course, DateTime? given)? liveHomeworkDue(
   LiveSnapshot s,
-) {
+) => (_dueCache[s] ??= (_buildDue(s),)).$1;
+
+/// Je Stand (LiveSnapshot) einmal: Heute, Navigationszahl, Unterricht und
+/// Kursseite fragen denselben Stand mehrfach je Aufbau; livePlanOf und
+/// courseItemsFrom liefen sonst jedes Mal neu (Prüfung 27.10.26). Grenze:
+/// Ein neuer Stand (neue LiveSnapshot-Instanz) rechnet neu.
+final _dueCache =
+    Expando<(DateTime? Function(String course, DateTime? given)?,)>();
+
+DateTime? Function(String course, DateTime? given)? _buildDue(LiveSnapshot s) {
   final live = s.offers('stundenplan.php') && s.timetable.content != null
       ? livePlanOf(s)
       : null;
@@ -29,6 +38,7 @@ DateTime? Function(String course, DateTime? given)? liveHomeworkDue(
     s.lessons.content ?? const [],
     ownNames: s.ownNames,
     plan: live.plan,
+    kids: s.kids,
   );
   final byId = {for (final i in items) i.id: i};
   final choice = effectiveChoice(live.auto, s.userChoice);
@@ -40,7 +50,8 @@ DateTime? Function(String course, DateTime? given)? liveHomeworkDue(
   return (course, given) {
     if (given == null) return null;
     final i = byId[course];
-    if (i == null) return null;
+    // Geschwisterkurs: Der gezeigte Plan ist nicht seiner (inShownPlan).
+    if (i == null || !i.inShownPlan) return null;
     return cache.putIfAbsent('$course|${given.toIso8601String()}', () {
       // Spät am Tag des Aufgebens: Stunden dieses Tages zählen nicht mehr.
       final from = DateTime(given.year, given.month, given.day, 23, 59);
@@ -48,7 +59,7 @@ DateTime? Function(String course, DateTime? given)? liveHomeworkDue(
       return nextLessonOf(
         live.plan,
         choice,
-        i.title,
+        i.subject,
         codes,
         from,
         free: cal.isEmpty
