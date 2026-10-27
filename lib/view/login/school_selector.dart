@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -27,6 +28,12 @@ class SchoolSelector extends StatefulWidget {
   @visibleForTesting
   static bool skipNetworkLoad = false;
 
+  /// Fork (Prüfung 27.10.26): läuft vor jedem Ladeversuch; ein Test lässt
+  /// ihn werfen, um die Wiederholung nach einem Fehler zu prüfen
+  /// (test/fork/app_frame_fixes_test.dart). null im Betrieb.
+  @visibleForTesting
+  static Future<void> Function()? beforeLoadForTest;
+
   @override
   State<SchoolSelector> createState() => _SchoolSelectorState();
 
@@ -40,9 +47,18 @@ class _SchoolSelectorState extends State<SchoolSelector> {
   RemoteSchool? selectedSchool;
   TextEditingController searchController = TextEditingController();
 
+  /// Fork: Wiederholung nach Ladefehler als abbrechbarer Timer.
+  /// Ursache (Prüfung 27.10.26): vorher `Future.delayed(10 s, loadSchoolList)`
+  /// ohne mounted-Prüfung – nach Verlassen des Logins lief die Schulliste
+  /// endlos alle 10 s weiter und `setState` traf einen entsorgten State.
+  /// Grenze: nur die Wiederholung wird abgebrochen; eine bereits laufende
+  /// Anfrage endet regulär, ihr Ergebnis wird über `mounted` verworfen.
+  Timer? _retryTimer;
+
   Future<void> loadSchoolList() async {
-    if (SchoolSelector.skipNetworkLoad) return;
+    if (SchoolSelector.skipNetworkLoad || !mounted) return;
     try {
+      await SchoolSelector.beforeLoadForTest?.call();
       final packageInfo = await PackageInfo.fromPlatform();
       final dio = Dio();
       dio.httpClientAdapter = getNativeAdapterInstance();
@@ -78,6 +94,7 @@ class _SchoolSelectorState extends State<SchoolSelector> {
         }
         result.add(bezirk);
       }
+      if (!mounted) return; // Fork: siehe _retryTimer.
       setState(() {
         schoolBezirke = result;
       });
@@ -93,7 +110,10 @@ class _SchoolSelectorState extends State<SchoolSelector> {
           ),
         );
       }
-      Future.delayed(const Duration(seconds: 10), loadSchoolList);
+      // Fork: siehe _retryTimer – kein Neustart nach dispose.
+      if (!mounted) return;
+      _retryTimer?.cancel();
+      _retryTimer = Timer(const Duration(seconds: 10), loadSchoolList);
     }
   }
 
@@ -122,6 +142,13 @@ class _SchoolSelectorState extends State<SchoolSelector> {
   void initState() {
     super.initState();
     loadSchoolList();
+  }
+
+  @override
+  void dispose() {
+    // Fork: siehe _retryTimer.
+    _retryTimer?.cancel();
+    super.dispose();
   }
 
   @override

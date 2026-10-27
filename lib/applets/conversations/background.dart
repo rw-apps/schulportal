@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lanis/background_service.dart';
-import 'package:lanis/l10n/account_type_ui.dart';
 import 'package:liblanis/liblanis.dart';
 import 'dart:ui' show PlatformDispatcher;
 

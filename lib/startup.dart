@@ -7,10 +7,10 @@ import 'package:liblanis/liblanis.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:lanis/generated/l10n.dart';
+import 'package:lanis/background_service.dart' show refreshBackgroundService;
 import 'package:lanis/features/auth/auth_controller.dart';
 import 'package:lanis/utils/privacy_policy.dart';
 import 'package:lanis/fork/ui/offline/offline_page.dart';
-import 'package:lanis/widgets/reset_account_page.dart';
 import 'package:lanis/utils/safe_launch.dart';
 import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:lanis/fork/onboarding/onboarding_kit.dart';
@@ -82,7 +82,13 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
 
   void requestPermissions() async {
     final status = await Permission.notification.request();
-    if (status.isGranted) return;
+    if (status.isGranted) {
+      // Fork: Erlaubnis evtl. eben erst erteilt – Hintergrundabfrage
+      // einrichten (setupBackgroundService, Prüfung 27.10.26); schon
+      // eingerichtet, ist der Aufruf wirkungslos.
+      await refreshBackgroundService();
+      return;
+    }
     if (status.isPermanentlyDenied && mounted) {
       await showDialog(
         context: context,
@@ -266,18 +272,12 @@ class StartupAuthErrorContent extends ConsumerWidget {
                         safeLaunchUrl(Uri.parse(_statusUrl), context: context),
                     child: Text(t.loginStatusPage, style: k.link),
                   ),
-                  if (wrong)
-                    TextButton(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const ResetAccountPage(),
-                        ),
-                      ),
-                      child: Text(
-                        AppLocalizations.of(context).resetAccount,
-                        style: k.link,
-                      ),
-                    ),
+                  // Fork: Link „Konto zurücksetzen“ (ResetAccountPage) entfernt.
+                  // Ursache (Prüfung 27.10.26): Er bot neben „Passwort ändern“
+                  // (changeAccountPassword) einen zweiten, eigenen Passwort-
+                  // weg und entfernte das Konto ohne Rückfrage und ohne
+                  // Aufräumen (Cookies, Dateien). Grenze: Entfernen geht
+                  // weiter über Einstellungen bzw. die Kontenliste.
                 ],
               ),
               // Fork (17.10.26): statt der alten Lanis-Ansichten der zuletzt

@@ -45,9 +45,6 @@ class Themes {
   // Will be later set by DynamicColorBuilder in main.dart App().
   static Themes dynamicTheme = Themes(null, null);
 
-  // Will be set by ColorModeNotifier.init() or _getSchoolTheme() in client.dart.
-  static Themes schoolTheme = Themes(null, null);
-
   static Themes standardTheme = getNewTheme(Colors.deepPurple);
 
   static Themes getAmoledThemes(Themes themes) {

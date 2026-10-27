@@ -16,8 +16,8 @@ enum NotifyWindow {
 /// Zeitfenster aus den Einstellungen (Tage, Beginn, Ende) für [now].
 ///
 /// Ursache für die Trennung von Tag und Uhrzeit (Prüfung 27.10.26): Vorher
-/// hieß „nachts“ einfach „außerhalb des Fensters“ (isTaskWithinConstraints,
-/// background_service.dart) – dazu zählte auch ein abgewählter Wochentag.
+/// hieß „nachts“ einfach „außerhalb des Fensters“ (das inzwischen gelöschte
+/// isTaskWithinConstraints, background_service.dart) – dazu zählte auch ein abgewählter Wochentag.
 /// Mit „Nachrichten auch nachts“ kamen Nachrichten dann an einem
 /// abgewählten Samstag den ganzen Tag (still). Ein abgewählter Tag bleibt
 /// jetzt ganz ruhig.

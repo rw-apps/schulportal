@@ -6,17 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:liblanis/liblanis.dart';
 
 import '../../../utils/color_hash.dart';
-import '../../../utils/flutter_tagging.dart';
 import '../../../widgets/format_text.dart';
 
-extension ChatTypeUi on ChatType {
-  IconData get icon => switch (this) {
-    ChatType.noAnswerAllowed => Icons.speaker_notes_off,
-    ChatType.privateAnswerOnly => Icons.mic,
-    ChatType.groupOnly => Icons.forum,
-    ChatType.openChat => Icons.groups,
-  };
-}
+// Fork: entfernt (Prüfung 27.10.26, ohne Aufrufer in lib/): ChatTypeUi,
+// TagReceiverEntry samt utils/flutter_tagging.dart (Empfängerauswahl der
+// alten Neue-Nachricht-Seite), NewConversationSettings,
+// BubbleStyle.pressedColor/mainTextStyle (message_widget.dart liest nur
+// mainColor, dateTextStyle, textFormatStyle).
 
 extension PersonTypeUi on PersonType {
   IconData get icon => switch (this) {
@@ -27,23 +23,6 @@ extension PersonTypeUi on PersonType {
   };
 }
 
-/// UI wrapper so [ReceiverEntry] can be used with [FlutterTagging].
-class TagReceiverEntry extends Taggable {
-  final String id;
-  final String name;
-  final bool isTeacher;
-
-  const TagReceiverEntry(this.id, this.name, this.isTeacher);
-
-  TagReceiverEntry.from(ReceiverEntry entry)
-    : id = entry.id,
-      name = entry.name,
-      isTeacher = entry.isTeacher;
-
-  @override
-  List<Object> get props => [name];
-}
-
 class ConversationSettings {
   final String id; // uniqueId
   final bool groupChat;
@@ -52,6 +31,9 @@ class ConversationSettings {
   final bool own;
   final String? author;
 
+  /// Fork: „Sender“ der Kopfnachricht (liblanis 0.1.4, Conversation.sender).
+  final String? sender;
+
   const ConversationSettings({
     required this.id,
     required this.groupChat,
@@ -59,7 +41,22 @@ class ConversationSettings {
     required this.noReply,
     required this.own,
     this.author,
+    this.sender,
   });
+
+  /// Empfänger einer Antwort (Feld „to“ von replyToConversation).
+  ///
+  /// Fork: Ursache (Prüfung 27.10.26, liblanis 0.1.4 conversations/parser.dart
+  /// replyToConversation): Das Portal leitet die Antwort NUR nach diesem Wert.
+  /// Lanis schickte immer „all“ – in einer Unterhaltung „Antworten nur an
+  /// den Absender“ (z. B. Nachricht an alle Eltern einer Klasse) sahen damit
+  /// alle Beteiligten die Antwort. Jetzt dort an den Absender. Grenze: Ist
+  /// der Absender unbekannt (ältere Antwort des Portals), bleibt es „all“ –
+  /// dann warnt der Hinweis über dem Eingabefeld wie bisher.
+  String get replyTo =>
+      onlyPrivateAnswers && !own && (sender?.isNotEmpty ?? false)
+      ? sender!
+      : 'all';
 }
 
 class ParticipationStatistics {
@@ -74,13 +71,6 @@ class ParticipationStatistics {
     required this.countTeachers,
     required this.knownParticipants,
   });
-}
-
-class NewConversationSettings {
-  final Message firstMessage;
-  final ConversationSettings settings;
-
-  NewConversationSettings({required this.firstMessage, required this.settings});
 }
 
 class Message {
@@ -269,11 +259,6 @@ abstract class BubbleStyles {
     if (theme.brightness == Brightness.dark) {
       other = BubbleStyle(
         mainColor: theme.colorScheme.inversePrimary,
-        pressedColor: theme.colorScheme.inversePrimary.withValues(alpha: 0.65),
-        mainTextStyle: baseTextStyle.copyWith(
-          color: theme.colorScheme.onSurface,
-          decorationColor: theme.colorScheme.onPrimary,
-        ),
         dateTextStyle: dateTextStyle,
         textFormatStyle: FormatStyle(
           textStyle: baseTextStyle.copyWith(
@@ -290,11 +275,6 @@ abstract class BubbleStyles {
 
       own = BubbleStyle(
         mainColor: theme.colorScheme.surfaceContainerHighest,
-        pressedColor: theme.colorScheme.surfaceContainerHigh,
-        mainTextStyle: baseTextStyle.copyWith(
-          color: theme.colorScheme.onSurface,
-          decorationColor: theme.colorScheme.onSecondary,
-        ),
         dateTextStyle: dateTextStyle,
         textFormatStyle: FormatStyle(
           textStyle: baseTextStyle.copyWith(
@@ -311,11 +291,6 @@ abstract class BubbleStyles {
     } else {
       other = BubbleStyle(
         mainColor: theme.colorScheme.primaryFixed,
-        pressedColor: theme.colorScheme.primaryFixed.withValues(alpha: 0.65),
-        mainTextStyle: baseTextStyle.copyWith(
-          color: theme.colorScheme.onPrimaryFixedVariant,
-          decorationColor: theme.colorScheme.onPrimaryFixedVariant,
-        ),
         dateTextStyle: dateTextStyle,
         textFormatStyle: FormatStyle(
           textStyle: baseTextStyle.copyWith(
@@ -332,11 +307,6 @@ abstract class BubbleStyles {
 
       own = BubbleStyle(
         mainColor: theme.colorScheme.surfaceContainer,
-        pressedColor: theme.colorScheme.surfaceContainerLow,
-        mainTextStyle: baseTextStyle.copyWith(
-          color: theme.colorScheme.onSecondaryFixed,
-          decorationColor: theme.colorScheme.onSecondaryFixed,
-        ),
         dateTextStyle: dateTextStyle,
         textFormatStyle: FormatStyle(
           textStyle: baseTextStyle.copyWith(
@@ -360,8 +330,6 @@ abstract class BubbleStyles {
 
 class BubbleStyle {
   final Color mainColor;
-  final Color pressedColor;
-  final TextStyle mainTextStyle;
   final TextStyle dateTextStyle;
   final FormatStyle textFormatStyle;
 
@@ -403,8 +371,6 @@ class BubbleStyle {
 
   const BubbleStyle({
     required this.mainColor,
-    required this.pressedColor,
-    required this.mainTextStyle,
     required this.dateTextStyle,
     required this.textFormatStyle,
   });

@@ -42,9 +42,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         loc: state.matchedLocation,
         privacyAccepted: isPrivacyPolicyAccepted(shared),
         hasAccounts: accounts?.isNotEmpty ?? false,
-        isShellPath: false,
-        shellSupported: true,
-        deepLinkErrorPath: null,
         homePath: () => firstSupportedHomePathFromRef(ref),
       );
     },

@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/absence/absence_parser.dart';
 import 'package:lanis/fork/parent_support.dart';
-import 'package:lanis/utils/deep_link.dart';
 import 'package:liblanis/liblanis.dart';
 
 void main() {
@@ -56,32 +55,5 @@ void main() {
       forkSupportsApplet(Applets.timetable, AccountType.teacher, schoolA),
       isFalse,
     );
-  });
-
-  test('veralteter Schülerpfad wird für Eltern umgeschrieben', () {
-    // Ablauf vom 16.10.26: Zweig-Startpfad /student/… für ein Elternkonto.
-    expect(
-      rewriteAccountTypedPrefix('/student/timetable/home', AccountType.parent),
-      '/parent/timetable/home',
-    );
-    expect(
-      rewriteAccountTypedPrefix(
-        '/student/lessons/home?x=1',
-        AccountType.teacher,
-      ),
-      '/teacher/lessons/home?x=1',
-    );
-    expect(
-      rewriteAccountTypedPrefix('/parent/timetable/home', AccountType.parent),
-      isNull,
-    );
-    expect(
-      rewriteAccountTypedPrefix(
-        '/common/substitutions/home',
-        AccountType.parent,
-      ),
-      isNull,
-    );
-    expect(rewriteAccountTypedPrefix('/welcome', AccountType.parent), isNull);
   });
 }

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../class_choice.dart' show classLabel;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:lanis/background_service.dart' show refreshBackgroundService;
 
 import '../l10n/l10n.dart';
 import '../ui/kit.dart';
@@ -324,7 +327,10 @@ class NotifyIntroPage extends StatelessWidget {
             label: t.onbNotifyAllow,
             icon: Icons.notifications_active_outlined,
             onPressed: () async {
-              await Permission.notification.request();
+              final status = await Permission.notification.request();
+              // Fork: Hintergrundabfrage gleich einrichten, nicht erst beim
+              // nächsten Start (setupBackgroundService, Prüfung 27.10.26).
+              if (status.isGranted) unawaited(refreshBackgroundService());
               onDone();
             },
           ),

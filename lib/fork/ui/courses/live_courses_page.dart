@@ -9,6 +9,7 @@ import 'package:lanis/utils/file_operations.dart' as fo;
 
 import '../../courses_scan.dart';
 import '../../homework_ledger.dart';
+import '../../lessons_student.dart' show fixedLessonFileUrl;
 import '../../l10n/l10n.dart';
 import '../login_errors.dart';
 import '../live/page_report.dart';
@@ -274,9 +275,15 @@ Widget liveCourseDetail(
             ),
           )
         : null,
+    // Dateiname in der Adresse kodiert (fixedLessonFileUrl, Ursache dort:
+    // liblanis student_parser.dart:238 hängt ihn roh an).
     onOpenFile: (f) => fo.launchFile(
       context,
-      fo.DownloadableFile(name: f.name, size: f.size, url: f.url),
+      fo.DownloadableFile(
+        name: f.name,
+        size: f.size,
+        url: fixedLessonFileUrl(f.url, f.name),
+      ),
       () {},
     ),
     // Abgaben nur aus dem Schülerkonto und nur Adressen aus „Mein

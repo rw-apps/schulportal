@@ -150,6 +150,24 @@ class _CombinedAppletBuilderState<T>
       stream: widget.parser.stream,
       initialData: widget.parser.latestResponse,
       builder: (context, snapshot) {
+        // Fork: Fehler des Streams selbst (ohne Antwortobjekt) als Fehler-
+        // ansicht. Ursache (Prüfung 27.10.26): AsyncSnapshot.withError trägt
+        // keine Daten; `snapshot.data!` unten warf dann selbst einen Fehler
+        // (roter Bildschirm statt „Erneut versuchen“). Grenze: Fehler, die
+        // der Parser als FetcherResponse meldet, laufen wie bisher unten.
+        if (snapshot.hasError && snapshot.data == null) {
+          final error = snapshot.error;
+          return Scaffold(
+            body: AppletErrorView(
+              showAppBar: widget.showErrorAppBar,
+              error: error is Exception
+                  ? error
+                  : UnknownException(error.toString()),
+              stack: snapshot.stackTrace,
+              retry: () => widget.parser.fetchData(forceRefresh: true),
+            ),
+          );
+        }
         if (snapshot.hasError || snapshot.data?.status == FetcherStatus.error) {
           return Scaffold(
             body: AppletErrorView(

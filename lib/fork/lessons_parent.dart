@@ -2,6 +2,8 @@ import 'package:html/dom.dart';
 import 'package:html/parser.dart' show parse;
 import 'package:liblanis/liblanis.dart';
 
+import 'lessons_student.dart';
+
 /// Kurse eines Kindes aus der Eltern-Ansicht von meinunterricht.php.
 class ChildLessons {
   ChildLessons({
@@ -255,7 +257,16 @@ class LessonsParentAwareParser extends LessonsStudentParser {
 
   @override
   Future<Lessons> getHome() async {
-    if (!_isParent) return super.getHome();
+    // Schüler: dieselbe Seite wie LessonsStudentParser.getHome
+    // (student_parser.dart:31), aber zeilenweise fehlertolerant
+    // (parseStudentLessons, lessons_student.dart).
+    if (!_isParent) {
+      final response = await ctx.session.dio.get(
+        'https://start.schulportal.hessen.de/meinunterricht.php'
+        '?cacheBreaker=${DateTime.now().millisecondsSinceEpoch}',
+      );
+      return parseStudentLessons(parse(response.data.toString())).lessons;
+    }
     final response = await ctx.session.dio.get(
       'https://start.schulportal.hessen.de/meinunterricht.php'
       '?cacheBreaker=${DateTime.now().millisecondsSinceEpoch}',

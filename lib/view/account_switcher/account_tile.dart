@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/generated/l10n.dart';
 import 'package:lanis/l10n/account_type_ui.dart';
+import 'package:lanis/fork/account_removal.dart';
 import 'package:lanis/fork/start.dart';
 import 'package:lanis/features/auth/auth_controller.dart';
 import 'package:lanis/utils/random_color.dart';
@@ -101,10 +102,11 @@ class AccountTile extends ConsumerWidget {
             );
             if (result != true) return;
             final restart = isLoggedInAccount;
+            // Fork: Entfernen samt Dateicache und Cookies über den einen Weg
+            // (removeAccountFromDevice, fork/account_removal.dart). Ursache
+            // (Prüfung 27.10.26): Hier blieben beide zurück.
+            await removeAccountFromDevice(ref, account.localId);
             if (restart) {
-              await ref
-                  .read(authControllerProvider.notifier)
-                  .removeAccountAndContinue(account.localId);
               if (!context.mounted) return;
               final phase = ref.read(authControllerProvider).phase;
               context.go(
@@ -112,8 +114,6 @@ class AccountTile extends ConsumerWidget {
                     ? firstSupportedHomePath(ref)
                     : '/welcome',
               );
-            } else {
-              await ref.read(accountsProvider.notifier).remove(account.localId);
             }
           },
         ),

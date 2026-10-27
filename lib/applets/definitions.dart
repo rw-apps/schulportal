@@ -14,7 +14,6 @@ import '../background_service.dart';
 /// der Lanis-Bereiche nicht mehr erreichbar – rund 14 000 Zeilen. Geblieben
 /// sind nur die Felder, die background_service.dart braucht. Die Schlüssel
 /// „notification-<php>“ der Einstellungen bleiben dieselben.
-typedef StringBuildContextCallback = String Function(BuildContext context);
 typedef BackgroundTaskFunction =
     Future<void> Function(
       ProviderContainer container,
@@ -34,19 +33,16 @@ class AppletDefinition {
   final BackgroundTaskFunction? notificationTask;
 }
 
-/// Verknüpfung nach außen (Portal im Browser, Moodle).
+/// Verknüpfung nach außen (Portal im Browser).
+///
+/// Fork (Prüfung 27.10.26): label/icon und openMoodleDefinition entfernt –
+/// die Oberfläche (preview_shell.dart) ruft nur openLanisDefinition.action
+/// auf und setzt Text und Symbol selbst.
 class ExternalDefinition {
   final String id;
-  final StringBuildContextCallback label;
-  final Icon icon;
   final Function(BuildContext?)? action;
 
-  ExternalDefinition({
-    required this.id,
-    required this.label,
-    this.action,
-    this.icon = const Icon(Icons.open_in_new),
-  });
+  ExternalDefinition({required this.id, this.action});
 }
 
 class AppDefinitions {

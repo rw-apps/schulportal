@@ -68,15 +68,6 @@ class Logger {
   }
 
   String getHistory() => _history.join("\n");
-
-  void clearHistory() => _history.clear();
-
-  void testLogger() {
-    i('This is an info message');
-    e('This is an error message');
-    w('This is a warning message');
-    d('This is a debug message');
-  }
 }
 
 class MemoryLogger {

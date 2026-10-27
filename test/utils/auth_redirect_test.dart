@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/features/auth/auth_controller.dart';
 import 'package:lanis/utils/auth_redirect.dart';
-import 'package:lanis/utils/deep_link.dart';
 
 void main() {
   const home = '/common/substitutions/home';
@@ -11,18 +10,12 @@ void main() {
     required String loc,
     bool privacyAccepted = true,
     bool hasAccounts = true,
-    bool isShellPath = false,
-    bool shellSupported = true,
-    String? deepLinkErrorPath,
   }) {
     return resolveAuthRedirect(
       phase: phase,
       loc: loc,
       privacyAccepted: privacyAccepted,
       hasAccounts: hasAccounts,
-      isShellPath: isShellPath,
-      shellSupported: shellSupported,
-      deepLinkErrorPath: deepLinkErrorPath,
       homePath: () => home,
     );
   }
@@ -184,39 +177,28 @@ void main() {
       expect(resolve(phase: AuthPhase.authenticated, loc: '/login'), isNull);
     });
 
-    test('deep link error path wins', () {
+    // Fork (Prüfung 27.10.26): vorher Endlosschleife privacy ↔ home.
+    test('privacy not accepted with accounts stays on privacy', () {
       expect(
         resolve(
           phase: AuthPhase.authenticated,
-          loc: '/teacher/lessons/home',
-          deepLinkErrorPath: SettingsDeepLinks.deepLinkError,
-        ),
-        SettingsDeepLinks.deepLinkError,
-      );
-    });
-
-    test('unsupported shell path goes to deep-link error', () {
-      expect(
-        resolve(
-          phase: AuthPhase.authenticated,
-          loc: '/common/substitutions/home',
-          isShellPath: true,
-          shellSupported: false,
-        ),
-        SettingsDeepLinks.deepLinkError,
-      );
-    });
-
-    test('supported shell stays', () {
-      expect(
-        resolve(
-          phase: AuthPhase.authenticated,
-          loc: '/common/substitutions/home',
-          isShellPath: true,
-          shellSupported: true,
+          loc: '/privacy-policy',
+          privacyAccepted: false,
         ),
         isNull,
       );
+      expect(
+        resolve(
+          phase: AuthPhase.authenticated,
+          loc: home,
+          privacyAccepted: false,
+        ),
+        '/privacy-policy',
+      );
+    });
+
+    test('other authenticated locations stay', () {
+      expect(resolve(phase: AuthPhase.authenticated, loc: home), isNull);
     });
   });
 }

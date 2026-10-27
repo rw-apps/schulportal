@@ -173,9 +173,13 @@ class FormattedText extends StatelessWidget {
     String formattedText = lanisStyledText;
 
     // Escape special characters so that StyledText doesn't use them for parsing.
+    // Fork: `&` zuerst. Ursache (Prüfung 27.10.26): vorher kam `&` nach
+    // `<`/`>` und machte aus dem eben erzeugten `&lt;` ein `&amp;lt;` – in
+    // Nachrichten stand dann „&lt;“ statt „<“. Grenze: Entitäten, die Lanis
+    // selbst schon kodiert liefert, werden wie bisher wörtlich angezeigt.
+    formattedText = formattedText.replaceAll("&", "&amp;");
     formattedText = formattedText.replaceAll("<", "&lt;");
     formattedText = formattedText.replaceAll(">", "&gt;");
-    formattedText = formattedText.replaceAll("&", "&amp;");
     formattedText = formattedText.replaceAll('"', "&quot;");
     formattedText = formattedText.replaceAll("'", "&apos;");
 

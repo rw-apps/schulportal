@@ -7,8 +7,9 @@ import 'package:lanis/fork/ui/settings/device_transfer_page.dart';
 
 /// Start der Erstanmeldung. Fork: eine Willkommensseite im Stil der App
 /// (ForkWelcomePage) statt der sechs Einführungsseiten der Vorlage
-/// (Entwurf 18.10.26, abgenommen); intro_screen_page_view_models.dart bleibt
-/// für die Upstream-Herkunft liegen, wird aber nicht mehr gezeigt.
+/// (Entwurf 18.10.26, abgenommen); die Einführungsseiten
+/// (intro_screen_page_view_models.dart) sind seit der Prüfung 27.10.26
+/// gelöscht.
 class WelcomeLoginScreen extends StatelessWidget {
   const WelcomeLoginScreen({super.key});
 

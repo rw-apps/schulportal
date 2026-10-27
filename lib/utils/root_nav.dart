@@ -19,17 +19,6 @@ Future<T?> pushInShell<T extends Object?>(
   return Navigator.of(context).push<T>(route);
 }
 
-/// Pushes an immersive overlay onto the root navigator (covers rail + bar).
-///
-/// Use for file pickers, fullscreen image viewers, and similar content that
-/// is not part of shell navigation.
-Future<T?> pushOverlay<T extends Object?>(
-  BuildContext context,
-  Route<T> route,
-) {
-  return Navigator.of(context, rootNavigator: true).push<T>(route);
-}
-
 /// Shows a modal bottom sheet on the root navigator so it covers home chrome.
 ///
 /// Defaults [useSafeArea] to true so content clears the system gesture/nav bar.

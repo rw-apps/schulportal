@@ -25,7 +25,6 @@ import 'package:lanis/themes.dart';
 import 'package:lanis/utils/glitchtip.dart';
 import 'package:lanis/utils/logger.dart';
 import 'package:lanis/utils/mono_text_viewer.dart';
-import 'package:lanis/utils/phoenix.dart';
 import 'package:lanis/utils/theme_settings.dart';
 import 'package:lanis/view/startup_error_view.dart';
 import 'package:lanis/fork_identity.dart';
@@ -60,11 +59,23 @@ Future<void> _startApp() async {
 
     enableTransparentNavigationBar();
 
+    // Fork: beide Schritte getrennt, Benachrichtigungen zuerst. Ursache
+    // (Prüfung 27.10.26): Warf setupBackgroundService, entfiel
+    // initializeNotifications ganz; zudem zeichnet setupBackgroundService
+    // schon die Sammelmeldung neu (showForkSummary) und braucht das
+    // initialisierte Plugin. Grenze: Fehler werden nur protokolliert, die App
+    // startet trotzdem.
     try {
-      await setupBackgroundService();
       await initializeNotifications();
     } catch (e, stack) {
-      logger.e('Failed to initialize background service and notifications');
+      logger.e('Failed to initialize notifications');
+      logger.e(e, stackTrace: stack);
+      await captureGlitchTipException(e, stackTrace: stack);
+    }
+    try {
+      await setupBackgroundService();
+    } catch (e, stack) {
+      logger.e('Failed to initialize background service');
       logger.e(e, stackTrace: stack);
       await captureGlitchTipException(e, stackTrace: stack);
     }
@@ -92,7 +103,10 @@ void _run(List<Override> overrides) => runApp(
   ProviderScope(
     key: UniqueKey(),
     overrides: overrides,
-    child: Phoenix(child: const App()),
+    // Fork: ohne Phoenix-Hülle (utils/phoenix.dart gelöscht, Prüfung
+    // 27.10.26) – Phoenix.rebirth wurde nie aufgerufen; Neustarts laufen über
+    // den neuen ProviderScope mit UniqueKey (_relaunch).
+    child: const App(),
   ),
 );
 

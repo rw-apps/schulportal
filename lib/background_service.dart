@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/fork/kid_name.dart';
 import 'package:lanis/fork/login_guard.dart';
@@ -14,7 +15,6 @@ import 'package:lanis/fork/notify/notify_window.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:lanis/applets/definitions.dart';
 import 'package:lanis/bridge/lanis_bootstrap.dart';
-import 'package:lanis/bridge/legacy_storage_cleanup.dart';
 import 'package:lanis/l10n/account_type_ui.dart';
 import 'package:lanis/utils/logger.dart';
 import 'package:lanis/utils/privacy_policy.dart';
@@ -56,6 +56,7 @@ Future<void> _runFetchTask(
 }
 
 Future<void> _stopBackgroundFetch() async {
+  _configuredInterval = null;
   try {
     await BackgroundFetch.stop();
   } catch (e, s) {
@@ -63,7 +64,41 @@ Future<void> _stopBackgroundFetch() async {
   }
 }
 
-Future<void> setupBackgroundService() async {
+/// Fork: Abstand (Minuten) der zuletzt in diesem Prozess eingerichteten
+/// Hintergrundabfrage; null = gestoppt oder noch nie eingerichtet.
+int? _configuredInterval;
+Future<void> _setupQueue = Future<void>.value();
+
+/// Fork: Hintergrundabfrage einrichten – mehrfach aufrufbar.
+/// Ursache (Prüfung 27.10.26): Auf Android 13+ zählt eine nie erfragte
+/// Benachrichtigungs-Erlaubnis als `isDenied`; beim ersten Start wurde die
+/// Abfrage daher gestoppt und nach dem späteren Erlauben (NotifyIntroPage,
+/// StartupScreen.requestPermissions, Einstellungen) nie eingerichtet – erst
+/// beim nächsten App-Start. Jetzt rufen diese Stellen und der Hauptschalter
+/// (fork/ui/settings/settings_page.dart) [refreshBackgroundService] auf.
+/// Aufrufe laufen nacheinander ([_setupQueue]); ist die Abfrage mit gleichem
+/// Abstand schon eingerichtet ([_configuredInterval]), entfallen configure
+/// und der Einmal-Lauf nach 10 s – sonst meldete jeder Aufruf alle Konten
+/// erneut an. Grenze: Ein Abstand ist im Fork nicht einstellbar; geändert
+/// wird er nur über die Lanis-Einstellung `notifications-target-interval-…`.
+Future<void> setupBackgroundService() {
+  final run = _setupQueue.then((_) => _setupBackgroundService());
+  _setupQueue = run.catchError((Object _) {});
+  return run;
+}
+
+/// Fork: [setupBackgroundService] für Aufrufer aus der Oberfläche – Fehler
+/// werden protokolliert statt geworfen (ohne Plattform, z. B. in Tests,
+/// wirft schon die Erlaubnis-Abfrage).
+Future<void> refreshBackgroundService() async {
+  try {
+    await setupBackgroundService();
+  } catch (e, s) {
+    backgroundLogger.e(e, stackTrace: s);
+  }
+}
+
+Future<void> _setupBackgroundService() async {
   await BackgroundFetch.registerHeadlessTask(backgroundFetchHeadlessTask);
 
   if ((await Permission.notification.isDenied)) {
@@ -72,7 +107,11 @@ Future<void> setupBackgroundService() async {
     return;
   }
 
-  await removeLegacyV3StorageArtifacts();
+  // Fork: removeLegacyV3StorageArtifacts nur noch einmal je App-Start in
+  // main.dart. Ursache (Prüfung 27.10.26): lief dreimal je Start (main, hier,
+  // im Einmal-Lauf nach 10 s) und las jedes Mal den sicheren Speicher.
+  // Grenze: Headless-Läufe räumen nicht mehr auf; die Reste (v3-Dateien,
+  // `encryption_key`) stören dort nicht und gehen beim nächsten Öffnen.
   final overrides = await bootstrapLanisClient(forApp: false);
   final container = ProviderContainer(overrides: overrides);
   try {
@@ -104,6 +143,8 @@ Future<void> setupBackgroundService() async {
     final shared = container.read(sharedOverAccountSettingsProvider);
     final targetIntervalMinutes =
         shared.getInt('notifications-target-interval-minutes') ?? 60;
+    // Fork: siehe _configuredInterval.
+    if (_configuredInterval == targetIntervalMinutes) return;
     logger.i(
       'Setting up background task with interval of $targetIntervalMinutes minutes',
     );
@@ -132,6 +173,7 @@ Future<void> setupBackgroundService() async {
           stopOnTerminate: false,
         ),
       );
+      _configuredInterval = targetIntervalMinutes; // Fork: siehe oben.
     } catch (e, s) {
       backgroundLogger.e(e, stackTrace: s);
     }
@@ -142,7 +184,10 @@ Future<void> setupBackgroundService() async {
 
 Future<void> initializeNotifications() async {
   try {
-    FlutterLocalNotificationsPlugin().initialize(
+    // Fork: abgewartet – sonst fing der catch asynchrone Fehler nie, und
+    // ein Aufrufer zeigte womöglich vor Ende der Initialisierung eine Meldung
+    // (Prüfung 27.10.26).
+    await FlutterLocalNotificationsPlugin().initialize(
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('@drawable/ic_launcher'),
         iOS: DarwinInitializationSettings(
@@ -164,9 +209,17 @@ Future<void> callbackDispatcher({bool inApp = false}) async {
     WidgetsFlutterBinding.ensureInitialized();
     backgroundLogger.i('Background fetch triggered');
     debugPrint('[Lanis BG] callbackDispatcher started');
+    // Fork: Datumsformate wie main.dart. Ursache (Prüfung 27.10.26): Der
+    // headless Lauf (App geschlossen) startet nicht über main(); ohne
+    // initializeDateFormatting warf DateFormat('E', 'de') in weekDayGer
+    // (applets/substitutions/background.dart) eine LocaleDataException und
+    // die Vertretungsmeldung entfiel. Grenze: lädt alle eingebauten
+    // Sprachen; im Prozess der geöffneten App ist der Aufruf wirkungslos.
+    await initializeDateFormatting();
     await initializeNotifications();
 
-    await removeLegacyV3StorageArtifacts();
+    // Fork: kein removeLegacyV3StorageArtifacts mehr (siehe
+    // setupBackgroundService).
     // Fork: forApp: false – siehe bootstrapLanisClient (Demo-Modus der
     // geöffneten App bleibt unberührt).
     final overrides = await bootstrapLanisClient(forApp: false);
@@ -462,13 +515,3 @@ class BackgroundTaskToolkit {
     return sha256.convert(utf8.encode(input)).toString();
   }
 }
-
-/// Liegt jetzt im Zeitfenster (erlaubter Tag UND Uhrzeit)? Fork: Die Regel
-/// steht in notifyWindowAt (notify_window.dart), die Tag und Uhrzeit für
-/// „Nachrichten auch nachts“ getrennt meldet.
-Future<bool> isTaskWithinConstraints(ProviderContainer container) async =>
-    notifyWindowAt(
-      container.read(sharedOverAccountSettingsProvider),
-      DateTime.now(),
-    ) ==
-    NotifyWindow.open;

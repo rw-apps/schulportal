@@ -45,7 +45,8 @@ void main() {
     parent: parent,
   );
 
-  // Das Zeitfenster prüft background_service.dart (isTaskWithinConstraints);
+  // Das Zeitfenster prüft background_service.dart (notifyWindowAt in
+  // callbackDispatcher);
   // buildNotices selbst sperrt keine Uhrzeit mehr.
   test('keine feste Ruhezeit in buildNotices', () {
     expect(at(DateTime(2026, 10, 19, 21, 30)), isNotEmpty);

@@ -125,6 +125,11 @@ class LoginFormState extends ConsumerState<LoginForm> {
         ),
       ),
     );
+    // Fork: Steht der Ladedialog noch? Ursache (Prüfung 27.10.26): Der
+    // catch unten schloss immer „den Dialog“ – kam der Fehler erst danach
+    // (Rückfrage weiteres Kind, Benachrichtigungs-Seite, Plattform-Abfrage),
+    // schloss er stattdessen die Anmeldeseite. Grenze: nur dieser Ablauf.
+    var dialogOpen = true;
     try {
       final schoolId = int.parse(schoolID);
       final accounts = await ref.read(accountsProvider.future);
@@ -174,6 +179,7 @@ class LoginFormState extends ConsumerState<LoginForm> {
       final cls = ok && firstSetup ? await detectSetupClass(ref) : null;
       if (!mounted) return;
       Navigator.pop(context); // pop dialog
+      dialogOpen = false;
       if (ok) {
         if (!firstSetup) {
           context.go(firstSupportedHomePath(ref));
@@ -221,7 +227,7 @@ class LoginFormState extends ConsumerState<LoginForm> {
     } catch (ex, s) {
       logger.e(ex, stackTrace: s);
       if (!mounted) return;
-      Navigator.pop(context); // pop dialog
+      if (dialogOpen) Navigator.pop(context); // pop dialog
       if (ex is AccountAlreadyExistsException) {
         showDialog(
           context: context,

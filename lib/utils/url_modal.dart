@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lanis/generated/l10n.dart';
+import 'package:lanis/view/moodle_sso.dart' show isHostMatch;
 
 import 'logger.dart';
 import 'safe_launch.dart';
@@ -26,10 +27,20 @@ const trustedDomains = [
   'gesetze-im-internet.de',
 ];
 
+/// Fork: Öffnet sich [uri] ohne Rückfrage? Nur https und nur der Host selbst
+/// oder eine Subdomain eines [trustedDomains]-Eintrags (isHostMatch,
+/// view/moodle_sso.dart). Ursache (Prüfung 27.10.26): vorher
+/// `uri.host.endsWith(domain)` ohne Punktgrenze und ohne Schema – etwa
+/// `evilhessen.de` oder `http://…` öffneten ohne Nachfrage. Grenze: prüft
+/// nur den Host; Weiterleitungen der Zielseite sieht die App nicht.
+bool isTrustedUrl(Uri uri) =>
+    uri.scheme.toLowerCase() == 'https' &&
+    trustedDomains.any((domain) => isHostMatch(uri, domain));
+
 Future<UrlModalResponse> openUrlModal(BuildContext context, Uri uri) async {
   bool? open;
 
-  if (trustedDomains.any((domain) => uri.host.endsWith(domain))) {
+  if (isTrustedUrl(uri)) {
     open = true;
   } else {
     logger.w('Untrusted URL: $uri');

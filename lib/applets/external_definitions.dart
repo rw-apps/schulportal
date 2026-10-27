@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:lanis/applets/definitions.dart';
-import 'package:lanis/generated/l10n.dart';
-import 'package:lanis/utils/deep_link.dart';
 import 'package:lanis/utils/safe_launch.dart';
 import 'package:liblanis/liblanis.dart';
 
 final openLanisDefinition = ExternalDefinition(
   id: 'openLanis',
-  label: (context) => AppLocalizations.of(context).openLanisInBrowser,
   action: (context) {
     if (context == null) return;
     final container = ProviderScope.containerOf(context);
@@ -24,16 +20,5 @@ final openLanisDefinition = ExternalDefinition(
         .catchError((Object error, StackTrace stackTrace) {
           debugPrint('Failed to open Lanis login URL: $error');
         });
-  },
-);
-
-final openMoodleDefinition = ExternalDefinition(
-  id: 'openMoodle',
-  label: (context) => AppLocalizations.of(context).openMoodle,
-  action: (context) {
-    if (context == null) {
-      return;
-    }
-    context.push(SettingsDeepLinks.moodle);
   },
 );

@@ -132,7 +132,8 @@ class AuthController extends Notifier<AuthState> {
       await _authenticate();
       state = const AuthState.authenticated();
     } on WrongCredentialsException catch (e) {
-      // Keep the failed account selected so ResetAccountPage can fix credentials.
+      // Keep the failed account selected so the error sheet can fix credentials
+      // (Fork: changeAccountPassword in startup.dart).
       state = AuthState.error(e);
     } on CredentialsIncompleteException catch (e) {
       state = AuthState.error(e);

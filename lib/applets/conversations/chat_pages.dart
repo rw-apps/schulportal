@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lanis/applets/conversations/view/chat.dart';
 import 'package:lanis/applets/conversations/view/components/statistic_widget.dart';
 import 'package:lanis/applets/conversations/view/shared.dart';
+import 'package:lanis/utils/logger.dart';
 import 'package:lanis/widgets/error_view.dart';
 import 'package:liblanis/liblanis.dart';
 
@@ -14,13 +15,12 @@ import 'package:liblanis/liblanis.dart';
 class ConversationChatPage extends ConsumerWidget {
   final String id;
   final String title;
-  final NewConversationSettings? newSettings;
 
+  // Fork: newSettings entfernt – kein Aufrufer setzte es (chat.dart).
   const ConversationChatPage({
     super.key,
     required this.id,
     required this.title,
-    this.newSettings,
   });
 
   @override
@@ -29,9 +29,15 @@ class ConversationChatPage extends ConsumerWidget {
       key: ValueKey(id),
       id: id,
       title: title,
-      newSettings: newSettings,
+      // Fork: Fehler protokollieren statt unbehandelt (wie chat.dart,
+      // _notifySidebar; Prüfung 27.10.26).
       onSidebarChanged: () {
-        ref.read(conversationsParserProvider).fetchData(forceRefresh: true);
+        ref
+            .read(conversationsParserProvider)
+            .fetchData(forceRefresh: true)
+            .catchError((Object e) {
+              logger.w('Refreshing conversation list failed: $e');
+            });
       },
     );
   }

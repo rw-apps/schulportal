@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:lanis/applets/conversations/view/send.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
 
-typedef SendMessageCallback = Future<void> Function(String message);
+/// Fork: true = gesendet (Editor wird geleert), false = nicht gesendet
+/// (Text bleibt stehen, siehe Senden-Knopf).
+typedef SendMessageCallback = Future<bool> Function(String message);
 typedef EditorSizeChangeCallback = void Function(double height);
 
 class RichChatTextEditor extends StatefulWidget {
@@ -31,6 +34,10 @@ class _RichChatTextEditorState extends State<RichChatTextEditor> {
   final QuillController quillController = QuillController.basic();
   StreamSubscription<DocChange>? _changesSub;
   bool showToolbar = false;
+
+  /// Fork: Senden läuft – Knopf gesperrt, damit derselbe Text nicht zweimal
+  /// geht (der Editor wird erst nach Erfolg geleert).
+  bool _sending = false;
   int editorlineCount = 1;
   final GlobalKey _widgetKey = GlobalKey();
 
@@ -140,11 +147,18 @@ class _RichChatTextEditorState extends State<RichChatTextEditor> {
                             placeholder: widget.tooltip,
                             customStyles: DefaultStyles(
                               placeHolder: DefaultTextBlockStyle(
+                                // Fork: onSurfaceVariant statt onSurface mit
+                                // Alpha 80 (≈31 %). Ursache (Prüfung
+                                // 27.10.26): Der Platzhalter lag auf
+                                // surfaceContainerHigh deutlich unter 4,5:1.
+                                // Grenze: Material-3-Paare sind für
+                                // Text-Kontrast ausgelegt, nicht nachgemessen
+                                // für jede dynamische Farbe.
                                 TextStyle(
                                   fontSize: 18,
                                   color: Theme.of(
                                     context,
-                                  ).colorScheme.onSurface.withAlpha(80),
+                                  ).colorScheme.onSurfaceVariant,
                                 ),
                                 HorizontalSpacing.zero,
                                 VerticalSpacing(0, 0),
@@ -185,17 +199,33 @@ class _RichChatTextEditorState extends State<RichChatTextEditor> {
                   borderRadius: BorderRadius.circular((kToolbarHeight / 1.5)),
                   child: IconButton(
                     iconSize: kToolbarHeight / 1.5,
-                    onPressed: () async {
-                      final String text =
-                          FullScreenConversationsMessageInput.parseText(
-                            quillController.document.toDelta(),
-                          );
-                      if (text.isEmpty) return;
+                    // Fork: erst nach Erfolg leeren. Ursache (Prüfung
+                    // 27.10.26): Der Editor wurde vor dem Senden geleert –
+                    // scheiterte replyToConversation (chat.dart, sendMessage),
+                    // war der Text verloren; nur Leerzeichen gingen als leere
+                    // Antwort raus. Grenze: Was während des Sendens getippt
+                    // wird, leert der Erfolg mit.
+                    tooltip: context.t.send,
+                    onPressed: _sending
+                        ? null
+                        : () async {
+                            final String text =
+                                ConversationMessageText.parseText(
+                                  quillController.document.toDelta(),
+                                );
+                            if (ConversationMessageText.isBlank(text)) return;
 
-                      quillController.clear();
-                      await widget.sendMessage(text);
-                      widget.scrollToBottom();
-                    },
+                            setState(() => _sending = true);
+                            final bool sent;
+                            try {
+                              sent = await widget.sendMessage(text);
+                            } finally {
+                              if (mounted) setState(() => _sending = false);
+                            }
+                            if (!mounted) return;
+                            if (sent) quillController.clear();
+                            widget.scrollToBottom();
+                          },
                     icon: Icon(Icons.send),
                     color: quillController.document.isEmpty()
                         ? Theme.of(context).colorScheme.onTertiary.withAlpha(80)

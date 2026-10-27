@@ -1,5 +1,4 @@
 import 'package:lanis/features/auth/auth_controller.dart';
-import 'package:lanis/utils/deep_link.dart';
 
 /// Pure auth/privacy redirect used by [goRouterProvider].
 ///
@@ -7,14 +6,16 @@ import 'package:lanis/utils/deep_link.dart';
 ///
 /// The blocking privacy-policy update screen is only for installs that already
 /// have an account. First-time users accept the policy on the login form.
+///
+/// Fork (Prüfung 27.10.26): Parameter isShellPath, shellSupported und
+/// deepLinkErrorPath entfernt – router.dart übergab sie immer als
+/// Konstanten (false/true/null), und die Route `/deep-link-error` gab es
+/// nicht; die Zweige waren unerreichbar.
 String? resolveAuthRedirect({
   required AuthPhase phase,
   required String loc,
   required bool privacyAccepted,
   required bool hasAccounts,
-  required bool isShellPath,
-  required bool shellSupported,
-  required String? deepLinkErrorPath,
   required String Function() homePath,
 }) {
   final loggingIn = loc == '/welcome' || loc == '/login';
@@ -49,15 +50,16 @@ String? resolveAuthRedirect({
       return onStartup ? null : '/startup';
     case AuthPhase.authenticated:
       if (onPrivacyPolicy) {
-        return homePath();
+        // Fork: ohne Zustimmung auf der Seite bleiben. Ursache (Prüfung
+        // 27.10.26): Angemeldet, mit Konten und neuer, noch nicht
+        // angenommener Datenschutzerklärung schickte dieser Zweig nach
+        // homePath, die Prüfung oben von dort zurück – eine Endlosschleife
+        // im Router. Grenze: Mit Zustimmung geht es wie bisher nach Hause.
+        return privacyAccepted ? homePath() : null;
       }
       if (loggingIn && loc == '/login') return null;
       if (loc == '/welcome' || onStartup) {
         return homePath();
-      }
-      if (deepLinkErrorPath != null) return deepLinkErrorPath;
-      if (isShellPath && !shellSupported) {
-        return SettingsDeepLinks.deepLinkError;
       }
       return null;
   }

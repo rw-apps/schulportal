@@ -8,10 +8,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:riverpod/misc.dart' show Override;
 
 import '../core/native_adapter_instance.dart';
+import '../fork/db_wal.dart';
 import '../fork/error_log.dart';
 import '../fork/parent_support.dart';
 import '../utils/glitchtip.dart';
-import 'database_storage_migration.dart';
 import 'flutter_secret_store.dart';
 import 'package:lanis/fork_identity.dart';
 
@@ -32,15 +32,21 @@ Future<List<Override>> bootstrapLanisClient({
   bool forApp = true,
 }) async {
   final previous = forApp ? null : LanisClient.config;
-  final cacheDir = await getApplicationCacheDirectory();
   final persistentDir = await getApplicationSupportDirectory();
   final tempDir = await getTemporaryDirectory();
   final packageInfo = await PackageInfo.fromPlatform();
   final store = secretStore ?? FlutterSecretStore();
-  final databasePath = await migrateLanisDatabaseFromCache(
-    cacheDirectory: cacheDir,
-    persistentDirectory: persistentDir,
-  );
+  // Fork: ohne migrateLanisDatabaseFromCache (database_storage_migration.dart
+  // gelöscht). Ursache (Prüfung 27.10.26): Die Lanis-Migration (4de76d9a,
+  // 25.08.26) holte lanis.db aus dem Cache-Ordner alter Lanis-Versionen. Der
+  // Fork hat seit seinem ersten Stand (71259413, 14.10.26) die eigene
+  // applicationId io.github.rwapps.sph – und damit eigene, leere Ordner –
+  // und lag da schon auf dem Speicherort im Support-Ordner; keine Version
+  // des Forks schrieb lanis.db in den Cache. Grenze: gilt für Fork-Builds;
+  // ein Upstream-Build mit alter ID bräuchte die Migration wieder.
+  final databasePath = p.join(persistentDir.path, 'lanis.db');
+  // Fork: WAL-Modus, bevor liblanis die Datei öffnet (fork/db_wal.dart).
+  enableWalJournal(databasePath);
 
   // Fork: lokales Fehlerprotokoll ohne Inhalte (fork/error_log.dart) und
   // Bereinigung des Dateispeichers (ersetzt den Knopf „Zwischenspeicher
@@ -68,7 +74,7 @@ Future<List<Override>> bootstrapLanisClient({
     },
   );
   // Fork: Eltern-Freischaltungen (fork/parent_support.dart).
-  final all = [...overrides, ...forkProviderOverrides()];
+  final all = [...overrides, ...forkProviderOverrides(keepAlive: forApp)];
   if (forApp) {
     bootstrapOverrides = all;
   } else if (previous != null) {

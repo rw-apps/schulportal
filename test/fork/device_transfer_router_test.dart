@@ -207,9 +207,6 @@ GoRouter _router(ProviderContainer c) {
         c.read(sharedOverAccountSettingsProvider),
       ),
       hasAccounts: c.read(accountsProvider).asData?.value.isNotEmpty ?? false,
-      isShellPath: false,
-      shellSupported: true,
-      deepLinkErrorPath: null,
       homePath: () => '/home',
     ),
     routes: [

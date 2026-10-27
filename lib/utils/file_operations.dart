@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lanis/generated/l10n.dart';
 import 'package:lanis/utils/safe_launch.dart';
-import 'package:liblanis/liblanis.dart' show storageManagerProvider;
+import 'package:liblanis/liblanis.dart'
+    show StorageManager, storageManagerProvider;
 import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
@@ -23,7 +24,65 @@ Future<String> _downloadRemote(
     context,
   ).read(storageManagerProvider);
   if (storage == null) return '';
-  return storage.downloadFile(url, filename);
+  return downloadRevalidated(storage, url, filename);
+}
+
+/// Wie lange eine gespeicherte Datei ohne neuen Abruf geöffnet wird.
+const cachedFileMaxAge = Duration(hours: 1);
+
+/// StorageManager.downloadFile, aber eine gespeicherte Kopie älter als
+/// [maxAge] wird neu geladen.
+///
+/// Ursache (Prüfung 27.10.26, liblanis storage/storage_manager.dart:107–109):
+/// Die Bibliothek liefert eine einmal geladene Datei für immer aus dem
+/// Speicher (Schlüssel: Adresse + Name). Ersetzt eine Lehrkraft die Datei
+/// unter derselben Adresse und demselben Namen, sah man weiter die alte –
+/// bis zur Bereinigung nach 30 Tagen (pruneOldFiles, lanis_bootstrap.dart).
+/// Jetzt: Ist die Kopie älter als [maxAge], wird sie beiseitegelegt und neu
+/// geladen; scheitert das (offline, Sitzung weg), kommt die alte Kopie
+/// zurück und wird geöffnet.
+///
+/// Grenze: Innerhalb von [maxAge] nach dem letzten Laden bleibt es bei der
+/// gespeicherten Kopie. Das Portal nennt kein Änderungsdatum je Datei, das
+/// sich vergleichen ließe.
+Future<String> downloadRevalidated(
+  StorageManager storage,
+  String url,
+  String filename, {
+  Duration maxAge = cachedFileMaxAge,
+  DateTime? now,
+}) async {
+  final File cached;
+  try {
+    cached = File(storage.resolvePath(url, filename));
+  } catch (_) {
+    return storage.downloadFile(url, filename);
+  }
+  if (!cached.existsSync() ||
+      (now ?? DateTime.now()).difference(cached.lastModifiedSync()) <= maxAge) {
+    return storage.downloadFile(url, filename);
+  }
+  final aside = File('${cached.path}.old');
+  try {
+    if (aside.existsSync()) aside.deleteSync();
+    cached.renameSync(aside.path);
+  } catch (_) {
+    return storage.downloadFile(url, filename);
+  }
+  try {
+    final path = await storage.downloadFile(url, filename);
+    try {
+      aside.deleteSync();
+    } catch (_) {}
+    return path;
+  } catch (_) {
+    try {
+      if (cached.existsSync()) cached.deleteSync();
+      aside.renameSync(cached.path);
+      return cached.path;
+    } catch (_) {}
+    rethrow;
+  }
 }
 
 class DownloadableFile {

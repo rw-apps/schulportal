@@ -1,22 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:liblanis/liblanis.dart';
-import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
-import 'package:lanis/generated/l10n.dart';
 
-class FullScreenConversationsMessageInput extends StatefulWidget {
-  final ChatCreationData? creationData;
-  final String? title;
-  const FullScreenConversationsMessageInput({
-    super.key,
-    this.creationData,
-    this.title,
-  });
-
-  @override
-  State<FullScreenConversationsMessageInput> createState() =>
-      _FullScreenConversationsMessageInputState();
-
+/// Fork: Von der Vorlage bleibt nur die Umwandlung des Editorinhalts in den
+/// Lanis-Nachrichtentext. Ursache (Prüfung 27.10.26): Die Vollbild-Eingabe
+/// (Widget und State) öffnete keine Seite mehr – der einzige Aufrufer war
+/// parseText aus rich_chat_text_editor.dart.
+abstract final class ConversationMessageText {
   static String parseText(Delta delta) {
     String text = "";
 
@@ -84,110 +72,10 @@ class FullScreenConversationsMessageInput extends StatefulWidget {
 
     return text.substring(0, text.length - 1);
   }
-}
 
-class _FullScreenConversationsMessageInputState
-    extends State<FullScreenConversationsMessageInput> {
-  final QuillController _controller = QuillController.basic();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.creationData?.subject ?? widget.title!),
-        actions: [
-          IconButton(
-            onPressed: () {
-              _controller.clear();
-            },
-            icon: const Icon(Icons.delete_forever),
-          ),
-          IconButton(
-            onPressed: () {
-              final String text = FullScreenConversationsMessageInput.parseText(
-                _controller.document.toDelta(),
-              );
-
-              if (text.isEmpty) return;
-
-              Navigator.pop(context, text);
-            },
-            icon: const Icon(Icons.send),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: QuillEditor.basic(
-                controller: _controller,
-                config: QuillEditorConfig(
-                  placeholder: AppLocalizations.of(
-                    context,
-                  ).sendMessagePlaceholder,
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                ),
-              ),
-            ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainer,
-              ),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Wrap(
-                  children: [
-                    QuillToolbarHistoryButton(
-                      isUndo: true,
-                      controller: _controller,
-                    ),
-                    QuillToolbarHistoryButton(
-                      isUndo: false,
-                      controller: _controller,
-                    ),
-                    QuillToolbarClearFormatButton(controller: _controller),
-                    QuillToolbarToggleStyleButton(
-                      options: const QuillToolbarToggleStyleButtonOptions(),
-                      controller: _controller,
-                      attribute: Attribute.bold,
-                    ),
-                    QuillToolbarToggleStyleButton(
-                      options: const QuillToolbarToggleStyleButtonOptions(),
-                      controller: _controller,
-                      attribute: Attribute.italic,
-                    ),
-                    QuillToolbarToggleStyleButton(
-                      controller: _controller,
-                      attribute: Attribute.underline,
-                    ),
-                    QuillToolbarToggleStyleButton(
-                      controller: _controller,
-                      attribute: Attribute.strikeThrough,
-                    ),
-                    QuillToolbarToggleStyleButton(
-                      controller: _controller,
-                      attribute: Attribute.inlineCode,
-                    ),
-                    QuillToolbarToggleStyleButton(
-                      controller: _controller,
-                      attribute: Attribute.ul,
-                    ),
-                    QuillToolbarToggleStyleButton(
-                      controller: _controller,
-                      attribute: Attribute.superscript,
-                    ),
-                    QuillToolbarToggleStyleButton(
-                      controller: _controller,
-                      attribute: Attribute.subscript,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  /// Fork: nur Leerzeichen/Zeilenumbrüche – nicht senden. Ursache (Prüfung
+  /// 27.10.26): Der Senden-Knopf prüfte nur `text.isEmpty`, eine Nachricht
+  /// aus Leerzeilen ging als leere Antwort an alle Empfänger. Grenze:
+  /// fett gesetzte Leerzeichen („**  **“) gelten als Inhalt.
+  static bool isBlank(String text) => text.trim().isEmpty;
 }

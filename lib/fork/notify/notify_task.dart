@@ -47,7 +47,7 @@ const sentNoticesSetting = 'fork-notify/sent';
 /// (gleiche Zuordnung wie „Heute“, applySubstitutions), als Zeilen der
 /// Sammelmeldung für heute und den nächsten Schultag (summary.dart), dazu
 /// große Termine am Vorabend (buildNotices); Zeitfenster aus den
-/// Einstellungen (isTaskWithinConstraints, background_service.dart).
+/// Einstellungen (notifyWindowAt in callbackDispatcher, background_service.dart).
 ///
 /// Grenze: Ohne Stundenplan im Portal (z. B. Lehrkräfte) läuft die
 /// bisherige Lanis-Aufgabe weiter. Android lässt die App nur etwa alle 15

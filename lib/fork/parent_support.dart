@@ -4,6 +4,8 @@ import 'package:riverpod/misc.dart' show Override;
 
 import 'absence/absence_parser.dart';
 import 'lessons_parent.dart';
+import 'session_guard.dart';
+import 'substitutions_fix.dart';
 import 'timetable_fix.dart';
 
 /// Module, die der Fork über liblanis hinaus für weitere Kontoarten freigibt.
@@ -44,9 +46,26 @@ bool forkSupportsApplet(
 /// durch dieselbe Logik mit [forkSupportsApplet]. Die Abhängigkeiten
 /// (sessionFeatureEpoch, session, aktives Konto) bleiben identisch, damit
 /// Aktualisierung nach Anmeldung/Kontowechsel unverändert funktioniert.
-List<Override> forkProviderOverrides() => [
+///
+/// [keepAlive]: eigene Sitzungs-Erhaltung (session_guard.dart); aus im
+/// Hintergrundlauf (bootstrapLanisClient, forApp: false).
+List<Override> forkProviderOverrides({bool keepAlive = true}) => [
+  // Zeitlimits + eigene Sitzungs-Erhaltung (fork/session_guard.dart).
+  sessionProvider.overrideWith(() => ForkSession(keepAlive: keepAlive)),
+  // Seite ohne Plan = Fehler, kein leerer Plan (fork/substitutions_fix.dart).
+  // Filter wie in liblanis applet_providers.dart:53 laden.
+  substitutionsParserProvider.overrideWith((ref) {
+    final ctx = ref.watch(appletContextProvider);
+    final parser = ForkSubstitutionsParser(
+      ctx,
+      isConnected: () => ref.read(connectionCheckerProvider).connected,
+    );
+    parser.loadFilterFromStorage();
+    ref.onDispose(parser.dispose);
+    return parser;
+  }),
   // Eltern-Übersicht für meinunterricht.php (fork/lessons_parent.dart);
-  // Schüler laufen unverändert durch LessonsStudentParser.getHome.
+  // Schüler zeilenweise fehlertolerant (fork/lessons_student.dart).
   lessonsStudentParserProvider.overrideWith((ref) {
     final ctx = ref.watch(appletContextProvider);
     final parser = LessonsParentAwareParser(

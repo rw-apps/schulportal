@@ -21,30 +21,20 @@ import '../../../utils/logger.dart';
 import '../../../widgets/error_view.dart';
 import 'shared.dart';
 
+// Fork: fromEntry, hidden und newSettings (Neue-Unterhaltung-Weg) entfernt.
+// Ursache (Prüfung 27.10.26): Einziger Aufrufer ist ConversationChatPage
+// (chat_pages.dart) mit id und title; newSettings wurde nirgends gesetzt.
 class ConversationsChat extends ConsumerStatefulWidget {
   final String id;
   final String title;
-  final NewConversationSettings? newSettings;
-  final bool hidden;
   final VoidCallback? onSidebarChanged;
 
   const ConversationsChat({
     super.key,
     required this.title,
     required this.id,
-    this.newSettings,
     this.onSidebarChanged,
-    this.hidden = false,
   });
-
-  ConversationsChat.fromEntry(
-    OverviewEntry entry, {
-    super.key,
-    this.onSidebarChanged,
-  }) : id = entry.id,
-       title = entry.title,
-       newSettings = null,
-       hidden = entry.hidden;
 
   @override
   ConsumerState<ConversationsChat> createState() => _ConversationsChatState();
@@ -52,19 +42,31 @@ class ConversationsChat extends ConsumerStatefulWidget {
 
 class _ConversationsChatState extends ConsumerState<ConversationsChat>
     with SingleTickerProviderStateMixin {
-  late Future<void> _conversationFuture = initConversation();
+  late Future<void> _conversationFuture = _loadConversation();
   Timer? _refreshTimer;
   int _lastRefresh = 0;
-  final List<String> _messagesSendInThisSession = [];
 
-  final TextEditingController messageField = TextEditingController();
+  /// Fork: IDs aller angezeigten Nachrichten (Vorlage: nur die in dieser
+  /// Sitzung gesendeten). Ursache (Prüfung 27.10.26): Kam ein Abgleich
+  /// während des Sendens zurück, war die eigene ID noch nicht bekannt – die
+  /// Nachricht stand doppelt da (lokal + vom Server). Grenze: Nachrichten
+  /// ohne ID (leer) werden nicht entdoppelt.
+  final Set<String> _renderedMessageIds = {};
+
+  /// Fork: erste Ladung gelungen – erst dann läuft der 20-s-Abgleich.
+  bool _loaded = false;
+
+  /// Fork: ein Abgleich läuft (Zeitgeber oder Ziehen) – kein zweiter.
+  bool _refreshInFlight = false;
+
+  late final AppLifecycleListener _lifecycle;
+
   final ScrollController scrollController = ScrollController();
 
   final ValueNotifier<bool> isSendVisible = ValueNotifier<bool>(false);
   final ValueNotifier<bool> isScrollToBottomVisible = ValueNotifier<bool>(
     false,
   );
-  final TextEditingController textEditingController = TextEditingController();
 
   final IndicatorController refreshIndicatorController = IndicatorController();
 
@@ -75,15 +77,22 @@ class _ConversationsChatState extends ConsumerState<ConversationsChat>
 
   double richTextEditorSize = 74.0;
 
-  late bool hidden;
   bool refreshing = false;
 
   final List<dynamic> chat = [];
 
+  /// Fork: Abgleich alle 20 s nur nach erfolgreicher erster Ladung und nur
+  /// im Vordergrund. Ursache (Prüfung 27.10.26): Der Zeitgeber startete in
+  /// initState vor der ersten Ladung (dauerte sie über 20 s, las
+  /// refreshConversation das noch nicht gesetzte `late settings` →
+  /// LateInitializationError, still geschluckt), lief hinter der
+  /// Fehlerseite und im Hintergrund weiter und
+  /// stapelte Abrufe, wenn einer länger als 20 s brauchte. Grenze: Zurück im
+  /// Vordergrund kommt der erste Abgleich erst nach 20 s.
   void initRefreshTimer() {
     _refreshTimer?.cancel();
     _refreshTimer = Timer.periodic(const Duration(seconds: 20), (_) async {
-      if (!mounted) return;
+      if (!mounted || _refreshInFlight) return;
       setState(() {
         refreshing = true;
       });
@@ -95,23 +104,55 @@ class _ConversationsChatState extends ConsumerState<ConversationsChat>
     });
   }
 
+  void _stopRefreshTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
+
+  void _onLifecycleChange(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (_loaded && _refreshTimer == null) initRefreshTimer();
+    } else {
+      _stopRefreshTimer();
+    }
+  }
+
+  /// Fork: erste Ladung (und „Erneut versuchen“); startet danach den
+  /// Abgleich (initRefreshTimer).
+  Future<void> _loadConversation() async {
+    _stopRefreshTimer();
+    _loaded = false;
+    await initConversation();
+    if (!mounted) return;
+    _loaded = true;
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (lifecycle == null || lifecycle == AppLifecycleState.resumed) {
+      initRefreshTimer();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     scrollController.addListener(toggleScrollToBottomFab);
-    hidden = widget.hidden;
-
-    initRefreshTimer();
+    _lifecycle = AppLifecycleListener(onStateChange: _onLifecycleChange);
   }
 
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _lifecycle.dispose();
     scrollController.dispose();
+    // Fork: Ursache (Prüfung 27.10.26): Benachrichtiger und Controller
+    // wurden nie freigegeben (Speicher bleibt bis zum Prozessende).
+    isSendVisible.dispose();
+    isScrollToBottomVisible.dispose();
+    refreshIndicatorController.dispose();
     super.dispose();
   }
 
   void toggleScrollToBottomFab() {
+    if (!scrollController.hasClients) return;
     final currentScrollPosition = scrollController.position.pixels;
     isScrollToBottomVisible.value = currentScrollPosition > 100;
   }
@@ -121,49 +162,65 @@ class _ConversationsChatState extends ConsumerState<ConversationsChat>
       widget.onSidebarChanged!();
       return;
     }
+    // Fork: Fehler protokollieren statt unbehandelt. Ursache (Prüfung
+    // 27.10.26): unawaited ohne catchError – warf fetchData (z. B. nach
+    // dispose des Parsers „Cannot add event after closing“), landete das
+    // als unbehandelter Fehler in der Zone. Grenze: Anmeldefehler meldet
+    // liblanis 0.1.4 (AppletParser.fetchData) selbst als Fehlerzustand im
+    // Datenstrom; hier geht nichts verloren.
     unawaited(
-      ref.read(conversationsParserProvider).fetchData(forceRefresh: true),
+      ref
+          .read(conversationsParserProvider)
+          .fetchData(forceRefresh: true)
+          .catchError((Object e) {
+            logger.w('Refreshing conversation list failed: $e');
+          }),
     );
   }
 
   Future<void> refreshConversation({bool scrollToEnd = true}) async {
-    if (widget.newSettings == null) {
-      try {
-        final result = await ref
-            .read(conversationsParserProvider)
-            .refreshConversation(widget.id, _lastRefresh);
+    // Fork: ein Abgleich zur Zeit (Zeitgeber + Ziehen), erst nach der ersten
+    // Ladung (settings ist sonst nicht gesetzt).
+    if (!_loaded || _refreshInFlight) return;
+    _refreshInFlight = true;
+    try {
+      final result = await ref
+          .read(conversationsParserProvider)
+          .refreshConversation(widget.id, _lastRefresh);
 
-        if (!mounted) return;
+      if (!mounted) return;
 
-        _lastRefresh = result.lastRefresh;
-        for (final UnparsedMessage message in result.messages) {
-          if (_messagesSendInThisSession.contains(message.id)) {
-            continue;
-          }
-          setState(() {
-            _renderSingleMessage(message);
-          });
+      _lastRefresh = result.lastRefresh;
+      for (final UnparsedMessage message in result.messages) {
+        // Fork: entdoppeln über alle angezeigten IDs (_renderedMessageIds).
+        if (_renderedMessageIds.contains(message.id)) {
+          continue;
         }
-        if (result.messages.isNotEmpty) {
-          _notifySidebar();
-        }
-
-        // Update send button visibility
-        if (settings.own) {
-          isSendVisible.value = true;
-        } else {
-          isSendVisible.value = !settings.noReply;
-        }
-
-        // Scroll to bottom after refresh
-        if (scrollToEnd) scrollToBottom();
-      } on NoConnectionException {
-        showNoInternetDialog();
-      } catch (e) {
-        logger.w(
-          "Error while refreshing conversation. This can happen, when the user tuns off their phone or suspends the app.",
-        );
+        setState(() {
+          _renderSingleMessage(message);
+        });
       }
+      if (result.messages.isNotEmpty) {
+        _notifySidebar();
+      }
+
+      // Update send button visibility
+      if (settings.own) {
+        isSendVisible.value = true;
+      } else {
+        isSendVisible.value = !settings.noReply;
+      }
+
+      // Scroll to bottom after refresh
+      if (scrollToEnd) scrollToBottom();
+    } on NoConnectionException {
+      if (mounted) showNoInternetDialog();
+    } catch (e) {
+      logger.w(
+        "Error while refreshing conversation. This can happen, when the user tuns off their phone or suspends the app.",
+      );
+    } finally {
+      _refreshInFlight = false;
     }
   }
 
@@ -177,24 +234,6 @@ class _ConversationsChatState extends ConsumerState<ConversationsChat>
         );
       }
     });
-  }
-
-  void showErrorDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        icon: const Icon(Icons.error),
-        title: Text(AppLocalizations.of(context).errorOccurred),
-        actions: [
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text(AppLocalizations.of(context).back),
-          ),
-        ],
-      ),
-    );
   }
 
   void showNoInternetDialog() {
@@ -222,11 +261,13 @@ class _ConversationsChatState extends ConsumerState<ConversationsChat>
     }
   }
 
-  Future<void> sendMessage(String text) async {
+  /// Fork: true = gesendet; false lässt den Text im Editor stehen
+  /// (rich_chat_text_editor.dart).
+  Future<bool> sendMessage(String text) async {
     // Fork: in der Demo nichts senden (fork/demo/demo_entry.dart).
-    if (blockedInDemo(context)) return;
+    if (blockedInDemo(context)) return false;
     MessageState state = MessageState.first;
-    if (chat.last is Message) {
+    if (chat.isNotEmpty && chat.last is Message) {
       DateTime date = chat.last.date;
       if (date.isToday) {
         state = MessageState.series;
@@ -243,8 +284,10 @@ class _ConversationsChatState extends ConsumerState<ConversationsChat>
     );
 
     setState(() {
-      DateTime lastMessageDate = chat.last.date;
-      if (lastMessageDate.isToday) {
+      // Fork: DateHeader und Message tragen beide `date`; leere Liste →
+      // Kopfzeile.
+      final DateTime? lastMessageDate = chat.isEmpty ? null : chat.last.date;
+      if (lastMessageDate != null && lastMessageDate.isToday) {
         chat.add(textMessage);
       } else {
         chat.addAll([DateHeader(date: DateTime.now()), textMessage]);
@@ -257,32 +300,50 @@ class _ConversationsChatState extends ConsumerState<ConversationsChat>
           .read(conversationsParserProvider)
           .replyToConversation(
             settings.id,
-            "all",
+            settings.replyTo,
             settings.groupChat ? "ja" : "nein",
             settings.onlyPrivateAnswers ? "ja" : "nein",
             text,
           );
     } catch (_) {
       _notifySidebar();
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() {
-        chat.last.status = MessageStatus.error;
+        textMessage.status = MessageStatus.error;
       });
-      showSnackbar(context, AppLocalizations.of(context).errorSendingMessage);
-      return;
+      showSnackbar(
+        context,
+        AppLocalizations.of(context).errorSendingMessage,
+        seconds: 4,
+      );
+      return false;
     }
 
     _notifySidebar();
-    if (!mounted) return;
+    if (!mounted) return result.success;
+    // Fork: Status an der gesendeten Nachricht (textMessage) statt an
+    // chat.last. Ursache (Prüfung 27.10.26): Brachte ein Abgleich während des
+    // Sendens neue Nachrichten, bekam die fremde letzte Nachricht den Status
+    // (oder es krachte, wenn chat.last eine DateHeader-Kopfzeile war).
+    // Fehler-Hinweis 4 s statt 1 s (Vorgabe showSnackbar) – in 1 s nicht
+    // lesbar. Grenze: Kam die eigene Nachricht schon per Abgleich, wird die
+    // lokale Kopie entfernt (die Server-Fassung bleibt).
     setState(() {
       if (result.success) {
-        _messagesSendInThisSession.add(result.messageId);
-        chat.last.status = MessageStatus.sent;
+        if (!_renderedMessageIds.add(result.messageId)) {
+          chat.remove(textMessage);
+        }
+        textMessage.status = MessageStatus.sent;
       } else {
-        chat.last.status = MessageStatus.error;
-        showSnackbar(context, AppLocalizations.of(context).errorSendingMessage);
+        textMessage.status = MessageStatus.error;
+        showSnackbar(
+          context,
+          AppLocalizations.of(context).errorSendingMessage,
+          seconds: 4,
+        );
       }
     });
+    return result.success;
   }
 
   Message addMessage(UnparsedMessage message, MessageState position) {
@@ -302,6 +363,7 @@ class _ConversationsChatState extends ConsumerState<ConversationsChat>
   List<String> authors = [];
 
   void _renderSingleMessage(UnparsedMessage message) {
+    _renderedMessageIds.add(message.id);
     final DateTime messageDate = parseConversationDate(message.date);
     final String messageAuthor = message.author;
     MessageState position = MessageState.first;
@@ -335,6 +397,9 @@ class _ConversationsChatState extends ConsumerState<ConversationsChat>
   void renderMessages(Conversation unparsedMessages) {
     chat.clear(); // Clear existing messages for refresh capability
     authors.clear(); // Clear existing authors
+    _renderedMessageIds
+      ..clear()
+      ..add(unparsedMessages.parent.id);
 
     // Process parent message
     final DateTime parentDate = parseConversationDate(
@@ -361,40 +426,30 @@ class _ConversationsChatState extends ConsumerState<ConversationsChat>
   }
 
   Future<void> initConversation() async {
-    if (widget.newSettings == null) {
-      Conversation result = await ref
-          .read(conversationsParserProvider)
-          .getSingleConversation(widget.id);
-      _lastRefresh = result.msgLastRefresh;
-      logger.d("last refresh: $_lastRefresh");
+    Conversation result = await ref
+        .read(conversationsParserProvider)
+        .getSingleConversation(widget.id);
+    _lastRefresh = result.msgLastRefresh;
+    logger.d("last refresh: $_lastRefresh");
 
-      settings = ConversationSettings(
-        id: widget.id,
-        groupChat: result.groupChat,
-        onlyPrivateAnswers: result.onlyPrivateAnswers,
-        noReply: result.noReply,
-        author: result.parent.author,
-        own: result.parent.own,
-      );
+    settings = ConversationSettings(
+      id: widget.id,
+      groupChat: result.groupChat,
+      onlyPrivateAnswers: result.onlyPrivateAnswers,
+      noReply: result.noReply,
+      author: result.parent.author,
+      own: result.parent.own,
+      sender: result.sender,
+    );
 
-      statistics = ParticipationStatistics(
-        countParents: result.countParents,
-        countStudents: result.countStudents,
-        countTeachers: result.countTeachers,
-        knownParticipants: result.knownParticipants,
-      );
+    statistics = ParticipationStatistics(
+      countParents: result.countParents,
+      countStudents: result.countStudents,
+      countTeachers: result.countTeachers,
+      knownParticipants: result.knownParticipants,
+    );
 
-      renderMessages(result);
-    } else {
-      settings = widget.newSettings!.settings;
-
-      statistics = null;
-
-      chat.addAll([
-        DateHeader(date: widget.newSettings!.firstMessage.date),
-        widget.newSettings!.firstMessage,
-      ]);
-    }
+    renderMessages(result);
 
     if (settings.own) {
       isSendVisible.value = true;
@@ -443,7 +498,7 @@ class _ConversationsChatState extends ConsumerState<ConversationsChat>
                   showAppBar: true,
                   retry: () {
                     setState(() {
-                      _conversationFuture = initConversation();
+                      _conversationFuture = _loadConversation();
                     });
                   },
                 );

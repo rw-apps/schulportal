@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,14 +7,15 @@ import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
-import 'package:webview_flutter/webview_flutter.dart' show WebViewCookieManager;
 
+import 'package:lanis/background_service.dart' show refreshBackgroundService;
 import 'package:lanis/features/auth/auth_controller.dart';
 import 'package:lanis/fork_identity.dart';
 import 'package:lanis/fork/start.dart' show firstSupportedHomePath;
 import 'package:lanis/utils/safe_launch.dart';
 import 'package:lanis/utils/theme_settings.dart';
 
+import '../../account_removal.dart';
 import '../../calendar_subscribe.dart';
 import '../../class_choice.dart';
 import '../../kid_colors.dart';
@@ -132,27 +133,9 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
     final router = GoRouter.of(context);
     // Fork (Sicherheitsprüfung 17.10.26): Auf geteilten Familiengeräten
     // sollen nach dem Abmelden keine Dateien und keine Moodle-Anmeldung
-    // dieses Kontos zurückbleiben. Grenze: Die WebView-Cookies gelten für
-    // alle Konten – andere Konten melden sich in Moodle neu an. Der
-    // Dateicache gehört zum Konto (Container des Kindes, family.dart).
-    Directory? cache;
-    try {
-      final c = m.container;
-      cache =
-          (c == null
-                  ? ref.read(storageManagerProvider)
-                  : c.read(storageManagerProvider))
-              ?.getDocumentCacheDirectory();
-    } catch (_) {}
-    await ref
-        .read(authControllerProvider.notifier)
-        .removeAccountAndContinue(account.localId);
-    try {
-      if (cache != null && cache.existsSync()) {
-        cache.deleteSync(recursive: true);
-      }
-      await WebViewCookieManager().clearCookies();
-    } catch (_) {}
+    // dieses Kontos zurückbleiben. Seit der Prüfung 27.10.26 ein Weg für
+    // alle Stellen (removeAccountFromDevice, fork/account_removal.dart).
+    await removeAccountFromDevice(ref, account.localId);
     if (!mounted) return;
     final phase = ref.read(authControllerProvider).phase;
     router.go(
@@ -176,6 +159,8 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
     final s = await Permission.notification.request();
     if (s.isPermanentlyDenied) await openAppSettings();
     final now = await Permission.notification.status;
+    // Fork: siehe setupBackgroundService (Prüfung 27.10.26).
+    if (now.isGranted) unawaited(refreshBackgroundService());
     if (mounted) setState(() => _permission = now);
   }
 
@@ -614,14 +599,19 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
               detail: summary,
               value: on,
               onChanged: granted && accounts.isNotEmpty
-                  ? (v) => setState(() {
-                      for (final a in accounts) {
-                        TypedSettings.account(
-                          db,
-                          a.$1,
-                        ).setBool(notifyAllowKey, v);
-                      }
-                    })
+                  ? (v) {
+                      setState(() {
+                        for (final a in accounts) {
+                          TypedSettings.account(
+                            db,
+                            a.$1,
+                          ).setBool(notifyAllowKey, v);
+                        }
+                      });
+                      // Fork: Abfrage stoppen bzw. wieder einrichten
+                      // (setupBackgroundService, Prüfung 27.10.26).
+                      unawaited(refreshBackgroundService());
+                    }
                   : null,
             ),
             SettingsRow(

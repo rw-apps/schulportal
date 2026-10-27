@@ -29,7 +29,7 @@ class Notice {
 // Ruhezeit: keine eigene feste Regel mehr. Ursache (Prüfbefund 17.10.26):
 // Die feste 21–6-Uhr-Sperre überstimmte das Zeitfenster aus den
 // Einstellungen (Benachrichtigungen → Zeitfenster, Standard 6–21 Uhr), das
-// background_service.dart (isTaskWithinConstraints) schon vor jeder Aufgabe
+// background_service.dart (notifyWindowAt in callbackDispatcher) schon vor jeder Aufgabe
 // prüft – ein Ende 22 Uhr blieb wirkungslos.
 
 /// Ab 19 Uhr kommt die Sammelmeldung für den nächsten Schultag.
