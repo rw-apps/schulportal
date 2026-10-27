@@ -1700,5 +1700,6 @@
   "mealRemindTitle": "Essens-Erinnerung",
   "mealRemindText": "Hinweis auf Heute und Benachrichtigung, wenn für einen Tag noch nichts bestellt ist und die Frist bald abläuft.",
   "mealRemindAll": "Erinnern, wenn nichts bestellt ist",
-  "summaryMealOpen": "Essen noch nicht bestellt"
+  "summaryMealOpen": "Essen noch nicht bestellt",
+  "mealFetchDetails": "Details zum Abruf"
 }

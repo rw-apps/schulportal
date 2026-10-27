@@ -5,11 +5,12 @@ import 'package:liblanis/liblanis.dart' show sharedOverAccountSettingsProvider;
 import '../../mensa.dart' show isoWeek, mensaUrlForWeek;
 import '../../mensa_store.dart';
 import '../today/today_page.dart' show schoolWeek;
+import '../kit.dart';
 import 'meal_fetcher.dart';
 
 /// Liest auf Heute die Essenswochen der Kinder nach (laufende und nächste
 /// Woche), wenn der gespeicherte Stand älter als [mealRefreshEvery] ist –
-/// je Kind nacheinander, unsichtbar (MealFetcher).
+/// je Kind nacheinander, unsichtbar hinter der Seite (MealFetcher).
 ///
 /// Ursache (Wunsch 26.10.26): Die Karte soll das bestellte Essen nennen und
 /// warnen, wenn für morgen nichts bestellt ist, ohne dass man vorher
@@ -70,40 +71,40 @@ class _MealRefreshState extends ConsumerState<MealRefresh> {
     }
   }
 
+  /// Abruf in voller Größe HINTER der Seite (hiddenWebView,
+  /// meal_fetcher.dart); die Seite liegt deckend darüber.
   @override
   Widget build(BuildContext context) {
     final c = _current;
+    final k = Kit.of(context);
     return Stack(
       children: [
-        widget.child,
         if (c != null)
-          Positioned(
-            left: 0,
-            top: 0,
-            child: IgnorePointer(
-              child: Opacity(
-                opacity: 0,
-                child: MealFetcher(
-                  key: ValueKey(c.owner),
-                  url: mensaUrlForWeek(
-                    mealBaseUrl(c.url, _cache.of(c.owner)),
-                    isoWeek(schoolWeek(widget.now).first),
-                  ),
-                  owner: c.owner,
-                  want: schoolWeek(widget.now).first,
-                  onWeek: (w) => _cache.put(c.owner, [w]),
-                  onUnreadable: () => _cache.markUnreadable(c.owner),
-                  onDone: () {
-                    if (!mounted) return;
-                    setState(() => _current = null);
-                    WidgetsBinding.instance.addPostFrameCallback(
-                      (_) => _pick(),
-                    );
-                  },
-                ),
+          Positioned.fill(
+            child: MealFetcher(
+              key: ValueKey(c.owner),
+              url: mensaUrlForWeek(
+                mealBaseUrl(c.url, _cache.of(c.owner)),
+                isoWeek(schoolWeek(widget.now).first),
               ),
+              owner: c.owner,
+              want: schoolWeek(widget.now).first,
+              onWeek: (w) => _cache.put(c.owner, [w]),
+              onUnreadable: () => _cache.markUnreadable(c.owner),
+              onDone: () {
+                if (!mounted) return;
+                setState(() => _current = null);
+                WidgetsBinding.instance.addPostFrameCallback((_) => _pick());
+              },
             ),
           ),
+        // Schlüssel: Die Seite behält ihren Zustand, wenn der Abruf
+        // davor hinzukommt oder wegfällt.
+        ColoredBox(
+          key: const ValueKey('page'),
+          color: k.p.bg,
+          child: widget.child,
+        ),
       ],
     );
   }

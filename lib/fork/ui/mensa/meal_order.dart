@@ -9,7 +9,7 @@ import '../../mensa.dart' show mensaAllows;
 import '../../mensa_login.dart';
 import '../../mensa_week.dart';
 import '../today/today_page.dart' show dayDiff;
-import 'meal_fetcher.dart' show pageHtml;
+import 'meal_fetcher.dart' show hiddenWebView, pageHtml;
 
 /// ok = die neu gelesene Seite zeigt den gewünschten Stand; notDone = vor
 /// dem Klick abgebrochen, nichts geändert; unclear = geklickt, aber die
@@ -125,7 +125,14 @@ class _MealOrderRunnerState extends State<MealOrderRunner> {
             _loading = false;
             switch (_phase) {
               case _Phase.load:
-                _finish(const MealOrderResult(MealOrderOutcome.notDone));
+                // Nur ohne Verbindung; abgebrochenes Laden (Weiterleitung
+                // der Seite) führt über Seitenende bzw. timeout weiter.
+                if (e.errorType
+                    case WebResourceErrorType.hostLookup ||
+                        WebResourceErrorType.connect ||
+                        WebResourceErrorType.timeout) {
+                  _finish(const MealOrderResult(MealOrderOutcome.notDone));
+                }
               case _Phase.verify:
                 // Kurzer Netzfehler beim Prüfen: einmal neu laden.
                 if (_verifyErrors++ == 0) {
@@ -343,7 +350,9 @@ class _MealOrderRunnerState extends State<MealOrderRunner> {
     super.dispose();
   }
 
+  /// Volle Größe hinter einer deckenden Fläche (hiddenWebView,
+  /// MealFetcher: 1 × 1 arbeitete auf dem Pixel nicht).
   @override
   Widget build(BuildContext context) =>
-      SizedBox(width: 1, height: 1, child: WebViewWidget(controller: _c));
+      hiddenWebView(WebViewWidget(controller: _c));
 }

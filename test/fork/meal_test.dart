@@ -7,6 +7,7 @@ import 'package:lanis/fork/meal_order_js.dart';
 import 'package:lanis/fork/mensa.dart';
 import 'package:lanis/fork/mensa_store.dart';
 import 'package:lanis/fork/mensa_week.dart';
+import 'package:lanis/fork/ui/mensa/meal_fetcher.dart' show MealTrace;
 import 'package:lanis/fork/ui/mensa/meal_week_page.dart';
 import 'package:lanis/fork/ui/today/kid_hints.dart';
 import 'package:lanis/fork/ui/today/live_today_page.dart' show mealUnorderedDay;
@@ -351,5 +352,13 @@ void main() {
     expect(cancelled, 1);
     await t.tap(find.text('Bestellen'));
     expect(chosen, 'Gemüsesuppe');
+  });
+
+  test('Abrufverlauf nennt nur Host und Pfad, keine Abfrage', () {
+    expect(
+      MealTrace.path('https://essen.beispiel.example/kunden/2026/44/?t=geheim'),
+      'essen.beispiel.example/kunden/2026/44/',
+    );
+    expect(MealTrace.path(null), '');
   });
 }

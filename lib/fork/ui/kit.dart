@@ -547,6 +547,14 @@ class Kit {
   TextStyle get body => _s(15, FontWeight.w500, p.ink);
   TextStyle get meta => _s(13, FontWeight.w500, p.muted);
 
+  /// Technischer Verlauf zur Fehlersuche (z. B. MealTrace): klein,
+  /// gleichbreit, damit Zeitspalten untereinander stehen.
+  TextStyle get trace => _s(
+    11,
+    FontWeight.w500,
+    p.muted,
+  ).copyWith(fontFamily: 'monospace', height: 1.35);
+
   List<BoxShadow> get cardShadow => [
     BoxShadow(
       color: p.shadow.withValues(alpha: 0.3),

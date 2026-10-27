@@ -652,5 +652,6 @@
   "mealRemindTitle": "Yemek hatırlatıcısı",
   "mealRemindText": "Bir gün için henüz sipariş yoksa ve süre dolmak üzereyse Bugün'de not ve bildirim.",
   "mealRemindAll": "Sipariş yoksa hatırlat",
-  "summaryMealOpen": "yemek henüz sipariş edilmedi"
+  "summaryMealOpen": "yemek henüz sipariş edilmedi",
+  "mealFetchDetails": "Okuma ayrıntıları"
 }

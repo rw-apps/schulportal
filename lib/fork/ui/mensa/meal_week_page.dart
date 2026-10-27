@@ -191,22 +191,17 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
     );
   }
 
-  void _unreadable() {
-    _cache.markUnreadable(widget.owner);
-    if (!mounted || _weeks.isNotEmpty) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => MensaPage(
-          url: widget.url,
-          open: _base == widget.url
-              ? null
-              : mensaWeekUrl(_base, DateTime.now()),
-          owner: widget.owner,
-          childName: widget.childName,
-        ),
-      ),
-    );
-  }
+  /// Seite nicht lesbar: merken; ohne gespeicherte Wochen bleibt der
+  /// Hinweis mit „Bestellen oder ändern“ und „Details“ stehen.
+  ///
+  /// Bis 9419 ersetzte sich die Ansicht dann gleich durch MensaPage. Grenze
+  /// der Änderung (27.10.26): Für einen unbekannten Caterer ist das ein
+  /// Tipp mehr – ab dem zweiten Öffnen geht Heute wegen
+  /// MealEntry.unreadable ohnehin direkt zur Seite. Dafür bleibt der Verlauf
+  /// des Abrufs (MealTrace) sichtbar, um Fehler auf dem Gerät zu finden.
+  void _unreadable() => _cache.markUnreadable(widget.owner);
+
+  bool _details = false;
 
   @override
   Widget build(BuildContext context) {
@@ -247,73 +242,24 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
                   child: LinearProgressIndicator(minHeight: Sz.progress),
                 ),
         ),
+        // Abruf und Bestellung arbeiten in eingebetteten Ansichten in
+        // voller Größe HINTER der Seite (hiddenWebView, meal_fetcher.dart);
+        // die deckende Fläche darüber verbirgt sie.
         body: Stack(
           children: [
-            ValueListenableBuilder(
-              valueListenable: _cache.notifier,
-              builder: (context, _, _) {
-                final w = _week;
-                if (w != null) {
-                  return MealWeekView(
-                    week: w,
-                    now: _now,
-                    colorIndex: widget.colorIndex,
-                    onPrev: w.prev == null || _job != null
-                        ? null
-                        : () => _go(w, -1),
-                    onNext: w.next == null || _job != null
-                        ? null
-                        : () => _go(w, 1),
-                    onOrder: () => _order(w),
-                    // Während eines Vorgangs keine weiteren Knöpfe.
-                    onOrderOption: _job != null || fetch != null
-                        ? null
-                        : (d, o) => _change(w, d, o),
-                    onCancel: _job != null || fetch != null
-                        ? null
-                        : (d) => _change(w, d, null),
-                  );
-                }
-                return ListView(
-                  padding: const EdgeInsets.all(Sp.page),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(Sp.xl),
-                      child: Text(
-                        fetch == null ? t.mealLoadFailed : t.mealLoading,
-                        style: k.meta,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    if (fetch == null)
-                      FilledButton.icon(
-                        onPressed: () => _order(null),
-                        icon: const Icon(Icons.open_in_new),
-                        label: Text(t.mealChange),
-                      ),
-                  ],
-                );
-              },
-            ),
             if (_job case final j?)
-              Positioned(
-                left: 0,
-                top: 0,
-                child: IgnorePointer(
-                  child: MealOrderRunner(
-                    key: ValueKey('job$_jobRound'),
-                    url: j.url,
-                    owner: widget.owner,
-                    day: j.day.day,
-                    option: j.option,
-                    onResult: _onResultFor(_jobRound),
-                  ),
+              Positioned.fill(
+                child: MealOrderRunner(
+                  key: ValueKey('job$_jobRound'),
+                  url: j.url,
+                  owner: widget.owner,
+                  day: j.day.day,
+                  option: j.option,
+                  onResult: _onResultFor(_jobRound),
                 ),
               ),
             if (fetch != null)
-              Positioned(
-                left: 0,
-                top: 0,
+              Positioned.fill(
                 child: MealFetcher(
                   key: ValueKey('$_round:$fetch'),
                   url: fetch,
@@ -327,6 +273,72 @@ class _MealWeekPageState extends ConsumerState<MealWeekPage> {
                   },
                 ),
               ),
+            Positioned.fill(
+              key: const ValueKey('page'),
+              child: ColoredBox(
+                color: k.p.bg,
+                child: ValueListenableBuilder(
+                  valueListenable: _cache.notifier,
+                  builder: (context, _, _) {
+                    final w = _week;
+                    if (w != null) {
+                      return MealWeekView(
+                        week: w,
+                        now: _now,
+                        colorIndex: widget.colorIndex,
+                        onPrev: w.prev == null || _job != null
+                            ? null
+                            : () => _go(w, -1),
+                        onNext: w.next == null || _job != null
+                            ? null
+                            : () => _go(w, 1),
+                        onOrder: () => _order(w),
+                        // Während eines Vorgangs keine weiteren Knöpfe.
+                        onOrderOption: _job != null || fetch != null
+                            ? null
+                            : (d, o) => _change(w, d, o),
+                        onCancel: _job != null || fetch != null
+                            ? null
+                            : (d) => _change(w, d, null),
+                      );
+                    }
+                    return ListView(
+                      padding: const EdgeInsets.all(Sp.page),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(Sp.xl),
+                          child: Text(
+                            fetch == null ? t.mealLoadFailed : t.mealLoading,
+                            style: k.meta,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        if (fetch == null)
+                          FilledButton.icon(
+                            onPressed: () => _order(null),
+                            icon: const Icon(Icons.open_in_new),
+                            label: Text(t.mealChange),
+                          ),
+                        if (fetch == null &&
+                            MealTrace.of(widget.owner).isNotEmpty) ...[
+                          const SizedBox(height: Sp.m),
+                          TextButton(
+                            onPressed: () =>
+                                setState(() => _details = !_details),
+                            child: Text(t.mealFetchDetails),
+                          ),
+                          if (_details)
+                            SelectableText(
+                              MealTrace.of(widget.owner).join('\n'),
+                              style: k.trace,
+                            ),
+                        ],
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
           ],
         ),
       ),
