@@ -101,6 +101,10 @@ class DemoPortal implements HttpClientAdapter {
         return _json(appsJson(user));
       case '/benutzerverwaltung.php' when q['a'] == 'userData':
         return _html(userDataPage(user));
+      case '/abwesenheitsmeldung.php' when o.method == 'POST':
+        return _text(absenceCheckJson);
+      case '/abwesenheitsmeldung.php':
+        return _html(absencePage(user, _clock));
       case '/stundenplan.php':
         return _html(timetablePage(user.pupils.first, _clock));
       case '/vertretungsplan.php' when o.method == 'POST':

@@ -9,9 +9,11 @@ import 'package:lanis/bridge/lanis_bootstrap.dart' show bootstrapOverrides;
 import 'package:lanis/utils/privacy_policy.dart';
 
 import '../error_log.dart';
+import '../homework_ledger.dart';
 import '../mensa_store.dart';
 import '../ui/live/live_data.dart' show mensaUrlSetting;
 import 'demo_meals.dart';
+import 'demo_pages.dart' show DemoClock;
 import '../parent_support.dart';
 import 'demo_portal.dart';
 import 'demo_school.dart';
@@ -67,13 +69,15 @@ Future<List<Override>> bootstrapDemoClient(
 
   final db = LanisDatabase.open(path: path, secretStore: store);
   try {
-    await prepareDemoDatabase(db, choice);
+    await prepareDemoDatabase(db, choice, now: (now ?? DateTime.now)());
   } finally {
     db.dispose();
   }
 
   demoActive = true;
-  MealCache.instance.demo = (_) => demoMealEntry(DateTime.now());
+  // Dieselbe Uhr wie DemoPortal (Demo-Prüfung 27.10.26: vorher
+  // DateTime.now, mit Test-Uhr liefen Essen und Portal auseinander).
+  MealCache.instance.demo = (_) => demoMealEntry((now ?? DateTime.now)());
   ErrorLog.instance.muted = true;
   final overrides = LanisClient.configure(
     databasePath: path,
@@ -90,7 +94,12 @@ Future<List<Override>> bootstrapDemoClient(
 
 /// Konten anlegen und den Datenschutzhinweis als gelesen markieren (die
 /// Demo sendet nichts).
-Future<void> prepareDemoDatabase(LanisDatabase db, DemoChoice choice) async {
+Future<void> prepareDemoDatabase(
+  LanisDatabase db,
+  DemoChoice choice, {
+  DateTime? now,
+}) async {
+  final at = now ?? DateTime.now();
   final shared = TypedSettings.shared(db);
   acceptPrivacyPolicy(shared);
   for (final u in demoUsersFor(choice)) {
@@ -109,7 +118,33 @@ Future<void> prepareDemoDatabase(LanisDatabase db, DemoChoice choice) async {
       db,
       id,
     ).setString('fork/$mensaUrlSetting', demoMensaUrl);
+    if (u == demoStudent) {
+      TypedSettings.account(
+        db,
+        id,
+      ).setString(homeworkLedgerSetting, demoHomeworkLedger(at).encode());
+    }
   }
+}
+
+/// Eine alte, nie abgehakte Aufgabe im Protokoll, damit das Archiv in der
+/// Demo „Nicht abgehakt“ zeigt (homeworkExpiry: vier Wochen nach dem
+/// Öffnen). Ursache (Demo-Prüfung 27.10.26): Das Protokoll war bei jedem
+/// Start leer und alle Aufgaben höchstens zwei Wochen alt – der Abschnitt
+/// erschien nie.
+HomeworkLedger demoHomeworkLedger(DateTime now) {
+  final given = DemoClock(now).pastSchoolDay(30);
+  final course = demoCourseId(demoLena, 'G');
+  return HomeworkLedger.empty.put(
+    HomeworkItem(
+      course: course,
+      entry: '${course}0',
+      subject: 'Geschichte',
+      text: 'Steckbrief einer Burg anlegen',
+      given: given,
+    ).record(now: DateTime(given.year, given.month, given.day, 16)),
+    DateTime(given.year, given.month, given.day, 16),
+  );
 }
 
 /// Demo verlassen: Merker zurück, Protokoll wieder an.

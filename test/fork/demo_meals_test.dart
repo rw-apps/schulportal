@@ -7,7 +7,7 @@ import 'package:lanis/fork/ui/today/live_today_page.dart' show mealUnorderedDay;
 
 /// Demo-Caterer (demo_meals.dart): zeigt jede Essens-Funktion.
 void main() {
-  test('Dienstag 10:00: heute bestellt, morgen offen, ein Tag zu', () {
+  test('Dienstag 10:00: heute bestellt, morgen offen, übermorgen zu', () {
     final now = DateTime(2026, 10, 27, 10);
     final e = demoMealEntry(now);
     expect(e.weeks.length, 2);
@@ -16,18 +16,17 @@ void main() {
     expect(today.canCancel, isFalse, reason: 'nach 08:30');
     expect(e.dayOf(DateTime(2026, 10, 28))!.state, MealState.open);
     expect(e.dayOf(DateTime(2026, 10, 28))!.options.first.orderable, isTrue);
-    expect(e.dayOf(DateTime(2026, 10, 29))!.canCancel, isTrue);
-    expect(
-      e.weeks.first.days.where((d) => d.state == MealState.closed),
-      isEmpty,
-      reason: 'Mittwoch ist morgen und damit offen',
-    );
+    expect(e.dayOf(DateTime(2026, 10, 30))!.canCancel, isTrue);
+    // Übernächster Schultag geschlossen – wie „Kein Mittagessen in der
+    // Mensa“ im Demo-Kalender (schoolDay(2)).
+    expect(e.dayOf(DateTime(2026, 10, 29))!.state, MealState.closed);
     expect(mealUnorderedDay(e, now), DateTime(2026, 10, 28));
     expect(lowMealBalance(e), '12,50');
     expect(normalizeMensaUrl(demoMensaUrl), demoMensaUrl);
   });
 
   test('Montag früh: Mittwoch geschlossen, heute noch abbestellbar', () {
+    // Montag nach der Zeitumstellung (25.10.): Tage bleiben Mitternacht.
     final e = demoMealEntry(DateTime(2026, 10, 26, 7));
     expect(e.dayOf(DateTime(2026, 10, 26))!.canCancel, isTrue);
     expect(e.dayOf(DateTime(2026, 10, 28))!.state, MealState.closed);
@@ -41,5 +40,11 @@ void main() {
     expect(c.notifier.value, isEmpty);
     c.demo = null;
     expect(c.of('egal'), isNull);
+  });
+
+  test('Samstag vor der Zeitumstellung: Dienstag offen, Mittwoch zu', () {
+    final e = demoMealEntry(DateTime(2026, 10, 24, 12));
+    expect(e.dayOf(DateTime(2026, 10, 27))!.state, MealState.open);
+    expect(e.dayOf(DateTime(2026, 10, 28))!.state, MealState.closed);
   });
 }

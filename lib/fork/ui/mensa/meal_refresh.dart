@@ -58,7 +58,10 @@ class _MealRefreshState extends ConsumerState<MealRefresh> {
   }
 
   void _pick() {
-    if (!mounted || _current != null) return;
+    // Demo: feste Wochen (demo_meals.dart), nichts zu lesen – sonst lud eine
+    // eingebettete Ansicht die erfundene Caterer-Adresse (Demo-Prüfung
+    // 27.10.26, Bildschirmtest der Demo).
+    if (!mounted || _current != null || _cache.demo != null) return;
     for (final t in widget.targets) {
       if (_tried.contains(t.owner)) continue;
       final e = _cache.of(t.owner);

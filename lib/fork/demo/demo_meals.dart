@@ -14,7 +14,8 @@ import 'demo_pages.dart' show DemoClock;
 /// - vergangene Tage bestellt, heute bestellt (abbestellbar bis 08:30),
 /// - nächster Schultag offen mit zwei Gerichten → Hinweis „Kein Essen
 ///   bestellt“ auf Heute,
-/// - ein Tag „Mensa geschlossen“, die übrigen bestellt,
+/// - übernächster Schultag „Mensa geschlossen“ (wie im Kalender), die
+///   übrigen bestellt,
 /// - Guthaben 12,50 € → Hinweis „bitte Geld überweisen“.
 /// Grenze: Bestellen, Abbestellen und die Seite des Caterers sind in der
 /// Demo gesperrt (blockedInDemo).
@@ -44,13 +45,17 @@ MealWeek _week(DateTime monday, DateTime now, int offset) {
   final clock = DemoClock(now);
   final today = clock.today;
   final tomorrow = clock.schoolDay(1);
+  // Derselbe Tag wie „Kein Mittagessen in der Mensa“ im Demo-Kalender
+  // (demo_pages.dart, schoolDay(2)); vorher fest der Mittwoch, und Kalender
+  // und Essen widersprachen sich (Demo-Prüfung 27.10.26).
+  final closed = clock.schoolDay(2);
   final days = <MealDay>[];
   for (var i = 0; i < 5; i++) {
     final d = DateTime(monday.year, monday.month, monday.day + i);
     final (line, name) = _dishes[(i + offset) % _dishes.length];
     final dish = MealOption(line: line, name: name, price: '3,50 €');
     final isToday = d == today;
-    if (d == tomorrow || (offset > 0 && i >= 2)) {
+    if (d != closed && (d == tomorrow || (offset > 0 && i >= 2))) {
       days.add(
         MealDay(
           day: d,
@@ -71,7 +76,7 @@ MealWeek _week(DateTime monday, DateTime now, int offset) {
           ],
         ),
       );
-    } else if (i == 2 && !isToday && offset == 0) {
+    } else if (d == closed) {
       days.add(
         MealDay(day: d, state: MealState.closed, note: 'Mensa geschlossen'),
       );

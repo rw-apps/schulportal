@@ -20,21 +20,27 @@ class DemoClock {
   /// Montag der Woche, die die App zeigt: am Wochenende die nächste.
   DateTime get monday {
     final t = today;
-    final d = t.weekday >= DateTime.saturday
-        ? t.add(Duration(days: 8 - t.weekday))
-        : t.subtract(Duration(days: t.weekday - 1));
-    return d;
+    return t.weekday >= DateTime.saturday
+        ? _plus(t, 8 - t.weekday)
+        : _plus(t, 1 - t.weekday);
   }
+
+  /// Kalendertage statt Duration: Über die Zeitumstellung hinweg ergab
+  /// `add(Duration(days: 1))` 23:00 bzw. 01:00 statt Mitternacht, und
+  /// Vergleiche wie `d == today` (demo_meals.dart) schlugen fehl (Prüfung
+  /// 27.10.26, Woche der Umstellung am 25.10.).
+  static DateTime _plus(DateTime d, int days) =>
+      DateTime(d.year, d.month, d.day + days);
 
   /// Schultag [n] ab heute (0 = heute bzw. nächster Schultag).
   DateTime schoolDay(int n) {
     var d = today;
     while (d.weekday >= DateTime.saturday) {
-      d = d.add(const Duration(days: 1));
+      d = _plus(d, 1);
     }
     var left = n;
     while (left > 0) {
-      d = d.add(const Duration(days: 1));
+      d = _plus(d, 1);
       if (d.weekday < DateTime.saturday) left--;
     }
     return d;
@@ -45,7 +51,7 @@ class DemoClock {
     var d = today;
     var left = n;
     while (left > 0) {
-      d = d.subtract(const Duration(days: 1));
+      d = _plus(d, -1);
       if (d.weekday < DateTime.saturday) left--;
     }
     return d;
@@ -114,9 +120,64 @@ String appsJson(DemoUser u) {
       e('Nachrichten', 'nachrichten.php'),
       e('Stundenplan', 'stundenplan.php'),
       e('Vertretungsplan', 'vertretungsplan.php'),
+      // Krankmeldung gibt es nur im Elternkonto (forkAbsenceApplet).
+      if (u.role == DemoRole.parent)
+        e('Abwesenheitsmeldung', 'abwesenheitsmeldung.php'),
     ],
   });
 }
+
+/// abwesenheitsmeldung.php – Formular wie parseAbsenceForm es liest
+/// (Aufbau nach dem Export von Schule A, absence_form.dart): Kinder,
+/// Art, Von/Bis mit Datepicker-Grenzen, Blöcke, Hinweise.
+///
+/// Ursache (Demo-Prüfung 27.10.26): Ohne das Modul fehlte „Krank melden“
+/// in der Demo ganz, und Heute zeigte nie alle vier Knöpfe. Grenze: Die
+/// Prüfung (`check=1`) antwortet immer „zulässig“ ([absenceCheckJson]);
+/// Absenden gibt es in der App ohnehin nicht (AbsenceDraft).
+String absencePage(DemoUser u, DemoClock c) {
+  final from = c.schoolDay(0);
+  final last = c.schoolDay(10);
+  final pupils = [
+    for (final (i, p) in u.pupils.indexed)
+      '<button type="button" class="btn pupil-select-btn" '
+          'data-pupil-id="${p.id}" data-pupil-name="${p.first} ${p.last}" '
+          'data-preselected="${i == 0}">${p.first} ${p.last}</button>',
+  ].join();
+  const blocks = [
+    ('1', '1. Block (08:00 - 09:30)'),
+    ('2', '2. Block (09:50 - 11:20)'),
+    ('3', '3. Block (11:40 - 13:10)'),
+    ('4', '4. Block (14:00 - 15:30)'),
+  ];
+  String options(String name) =>
+      '<select name="$name">${[for (final (v, l) in blocks) '<option value="$v">$l</option>'].join()}</select>';
+  return _page(
+    'Abwesenheitsmeldung',
+    '<div id="content"><div class="alert alert-info"><ul>'
+        '<li>Meldungen für den aktuellen Tag sind bis 12:00 Uhr möglich.</li>'
+        '<li>Ein Attest geben Sie bitte weiterhin im Sekretariat ab.</li>'
+        '</ul></div>'
+        '<form id="meldungForm">$pupils'
+        '<select name="art"><option value="krank">krank</option>'
+        '<option value="verspätet">verspätet</option></select>'
+        '<input name="von" value="${dmy(from)}">'
+        '<input name="bis" value="${dmy(from)}">'
+        '${options('stundenVon')}${options('stundenBis')}'
+        '<textarea name="kommentar"></textarea>'
+        '<div id="kommentarHinweis">Bitte keine Gesundheitsdaten eingeben.</div>'
+        '</form>'
+        '<table><tbody id="liste"></tbody></table></div>'
+        '<script>\$(".datepickergroupvon").datepicker({startDate: "${dmy(from)}", '
+        'endDate: "${dmy(last)}"});'
+        '\$(".datepickergroupbis").datepicker({startDate: "${dmy(from)}", '
+        'endDate: "${dmy(last)}"});</script>',
+    icon: _icon(u),
+  );
+}
+
+/// Antwort auf die Prüfung einer Meldung (`check=1`, checkAbsence).
+const absenceCheckJson = '{"success":true,"errors":[]}';
 
 // ---- Stundenplan ----------------------------------------------------------
 
@@ -214,6 +275,8 @@ List<DemoChange> demoChanges(DemoPupil p, int day, DemoClock c) {
         substitute: s.teacher == 'SOM' ? 'KRA' : 'SOM',
         note: p == demoJonas ? 'Aufgaben im Buch' : null,
       ),
+      // Auch heute ein Ausfall (Demo-Prüfung 27.10.26: bisher nur morgen).
+      if (lessons.length > 3) DemoChange(lessons.last, 'Entfall'),
     ];
   }
   if (day == 1) {
@@ -358,6 +421,16 @@ String calendarEvents(List<DemoPupil> pupils, DemoClock c) {
         at(c.schoolDay(4), 9, 30),
         category: 2,
       ),
+    // Auch im Kalender (nicht nur in der Kursmappe): Heute zeigt den
+    // Vokabeltest dann sofort als Hinweis, ohne auf den Abgleich der
+    // Kursmappen zu warten (Demo-Prüfung 27.10.26).
+    for (final p in pupils)
+      ev(
+        'Englisch ${p.className} Test',
+        at(c.schoolDay(1), 9, 50),
+        at(c.schoolDay(1), 10, 35),
+        category: 2,
+      ),
   ];
   final f = c.schoolDay(25);
   out.add(
@@ -411,11 +484,22 @@ String _courseHref(DemoPupil p, String subject, {bool parent = false}) =>
     'meinunterricht.php?a=sus_view&amp;id=${demoCourseId(p, subject)}'
     '${parent ? '&amp;p=${p.id}' : ''}';
 
-/// Letzter Termin eines Kurses vor heute.
+/// Letzter Termin eines Kurses vor heute – über alle Stunden des Fachs
+/// in der Woche (bis 9427 nur die erste, dann lag die neueste Mathestunde
+/// manchmal eine Woche zurück).
+///
+/// Physik bewusst älter (mindestens acht Schultage): So zeigt die Demo
+/// immer eine Aufgabe mit „war fällig … · erledigt?“, unabhängig vom
+/// Wochentag (Demo-Prüfung 27.10.26).
 DateTime _lastLesson(DemoPupil p, DemoSlot s, DemoClock c) {
-  for (var n = 1; n < 10; n++) {
+  final days = {
+    for (final o in p.ownPlan)
+      if (o.subject == s.subject) o.day,
+  };
+  final start = s.subject == 'PH' ? 8 : 1;
+  for (var n = start; n < start + 10; n++) {
     final d = c.pastSchoolDay(n);
-    if (d.weekday - 1 == s.day) return d;
+    if (days.contains(d.weekday - 1)) return d;
   }
   return c.pastSchoolDay(5);
 }
@@ -518,8 +602,10 @@ String? coursePage(DemoUser u, String courseId, DemoClock c) {
           '</td><td>$presence</td></tr>';
       final exam = s.subject == 'M'
           ? '<li>${dmy(c.schoolDay(4))} Klassenarbeit, 1. - 2. Std.</li>'
+          // Morgen, damit Heute die Arbeit als Hinweis zeigt (examIsHint gilt
+          // nur heute und am nächsten Schultag; Demo-Prüfung 27.10.26).
           : s.subject == 'E'
-          ? '<li>${dmy(c.schoolDay(7))} Vokabeltest</li>'
+          ? '<li>${dmy(c.schoolDay(1))} Vokabeltest</li>'
           : null;
       final marks = s.subject == 'M' || s.subject == 'D' || s.subject == 'E';
       return _page(
