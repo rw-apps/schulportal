@@ -257,6 +257,7 @@ Map<String, Object?> homeWidgetPayload({
   DateTime? stand,
   int homework = 0,
   UpcomingExam? exam,
+  String? name,
 }) {
   final monday = DateTime(2024, 1, 1); // ein Montag
   final day = DateFormat('ccc', t.localeName);
@@ -265,6 +266,9 @@ Map<String, Object?> homeWidgetPayload({
     'v': 1,
     'account': account,
     'kid': kid,
+    // Vorname im Kopf (Rückmeldung 28.10.26: „Wieso wird das Kind nicht
+    // genannt“) – bei mehreren Kindern sonst nicht zu erkennen.
+    if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
     'generatedAt': now.toIso8601String(),
     if (stand != null) 'stand': stand.toIso8601String(),
     'items': [for (final i in items) i.toJson()],

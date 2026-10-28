@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Startbildschirm-Widget klein 2 × 2 (Entwurf 4, Variante B, Abnahme
      28.10.26): die dringendste Abweichung als Kachel bzw. die ruhige Fläche
-     (untereinander), unten die offenen Aufgaben. Ohne Kopf – dafür ist kein
-     Platz. Kennungen wie widget_medium.xml (SchoolWidget.kt). -->
+     (untereinander), unten die offenen Aufgaben. Statt des Kopfs nur der
+     Vorname. Kennungen wie widget_medium.xml (SchoolWidget.kt). -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/background"
     android:layout_width="match_parent"
@@ -15,10 +15,24 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+        <!-- Vorname des Kindes (Rückmeldung 28.10.26), SchoolWidget.kt. -->
+        <TextView
+            android:id="@+id/head_name"
+            style="@style/WidgetText.Bold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/widget_gap"
+            android:textColor="@color/widget_ink"
+            android:visibility="gone" />
+
+        <!-- Kachel füllt die Höhe (Bildschirmfoto Pixel 28.10.26: sonst
+             leerer Raum unter der Kachel); die Füllfläche unten ist dann
+             aus (SchoolWidget.kt, R.id.fill). -->
         <LinearLayout
             android:id="@+id/tiles"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
             android:orientation="horizontal" />
 
         <LinearLayout
@@ -74,6 +88,7 @@
 
         <!-- Füllt die Höhe (FrameLayout statt View, siehe widget_medium). -->
         <FrameLayout
+            android:id="@+id/fill"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1" />

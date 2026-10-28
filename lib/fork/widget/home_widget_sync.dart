@@ -142,6 +142,7 @@ Map<String, Object?>? livePayloadOf(FamilyMember m, ForkL10n t, DateTime now) {
     stand: s.substitutions.fetchedAt,
     homework: liveOpenHomework(s),
     exam: nextExamWithin(exams, now),
+    name: s.firstName,
   );
 }
 
@@ -215,6 +216,8 @@ Future<void> updateHomeWidgetInBackground({
     stand: now,
   );
   if (old?['homework'] case final String hw) payload['homework'] = hw;
+  // Vorname wie Hausaufgaben aus der vorigen Datei (der Lauf kennt ihn nicht).
+  if (old?['name'] case final String name) payload['name'] = name;
   if (exam is Map) payload['exam'] = exam;
   await writeHomeWidget(payload);
 }

@@ -142,8 +142,16 @@ internal object SchoolWidgetRenderer {
         val items = visibleItems(p, today, now)
 
         if (!small) header(v, p, labels, kid, today)
+        if (small) {
+            // Klein: nur der Vorname über der Kachel (Rückmeldung 28.10.26).
+            val name = p.optString("name")
+            v.setTextViewText(R.id.head_name, name)
+            v.setViewVisibility(R.id.head_name, if (name.isEmpty()) View.GONE else View.VISIBLE)
+        }
 
         val shown = items.take(if (small) 1 else 2)
+        // Klein: Kachel füllt die Höhe, sonst die Füllfläche (widget_small).
+        if (small) v.setViewVisibility(R.id.fill, if (shown.isEmpty()) View.VISIBLE else View.GONE)
         if (shown.isEmpty()) {
             v.setViewVisibility(R.id.tiles, View.GONE)
             v.setViewVisibility(R.id.calm, View.VISIBLE)
@@ -188,7 +196,10 @@ internal object SchoolWidgetRenderer {
         // Datum aus der Datei (Muster der App-Sprache); fehlt der Tag (Datei
         // älter als eine Woche), bleibt nur der Wochentag.
         val day = p.optJSONObject("dates")?.optString(today.toString()).orEmpty()
-        v.setTextViewText(R.id.head_day, day.ifEmpty { labels.weekdays.getOrNull(today.dayOfWeek.value - 1).orEmpty() })
+        val shownDay = day.ifEmpty { labels.weekdays.getOrNull(today.dayOfWeek.value - 1).orEmpty() }
+        // Vorname vor dem Datum (Rückmeldung 28.10.26), fehlt er: nur Datum.
+        val name = p.optString("name")
+        v.setTextViewText(R.id.head_day, if (name.isEmpty()) shownDay else "$name · $shownDay")
         // Stand: Uhrzeit des Abrufs, von einem anderen Tag mit Wochentag – so
         // sieht man, wenn das Widget seit gestern nichts Neues bekommen hat.
         val stand = runCatching { LocalDateTime.parse(p.optString("stand")) }.getOrNull()

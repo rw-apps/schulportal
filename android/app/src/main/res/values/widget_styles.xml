@@ -2,18 +2,21 @@
 <!-- Startbildschirm-Widget: die zwei Schriftstufen des Entwurfs 4 (Abnahme
      28.10.26) – Titel 15 (Kit.tileTitle, Manrope 800) und Zusatz 12
      (Kit.barLabel mit 12, Manrope 600 bzw. 800 für „heute“, „fällt aus“).
-     Grenze: Schriftdateien in res/font wirken erst ab Android 8 (API 26);
-     darunter zeigt das Widget die Systemschrift. -->
+     Systemschrift statt Manrope: Ursache (Bildschirmfoto Pixel 28.10.26):
+     Schriftdateien aus res/font griffen im Widget nicht – der Startbildschirm
+     zeigte normale statt fetter Schrift. Jetzt sans-serif-medium bzw.
+     sans-serif fett; Grenze: Schriftbild weicht leicht von der App ab. -->
 <resources>
     <style name="WidgetText">
         <item name="android:textSize">@dimen/widget_text</item>
-        <item name="android:fontFamily">@font/manrope_semibold</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:includeFontPadding">false</item>
         <item name="android:maxLines">1</item>
         <item name="android:ellipsize">end</item>
     </style>
     <style name="WidgetText.Bold">
-        <item name="android:fontFamily">@font/manrope_extrabold</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">bold</item>
     </style>
     <style name="WidgetTitle" parent="WidgetText.Bold">
         <item name="android:textSize">@dimen/widget_text_title</item>

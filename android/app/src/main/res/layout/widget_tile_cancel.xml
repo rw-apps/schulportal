@@ -55,6 +55,14 @@
         </LinearLayout>
     </LinearLayout>
 
+    <!-- Füllt eine hohe Kachel (klein 2 × 2): Bild oben, Text unten
+         (Bildschirmfoto Pixel 28.10.26). In der mittleren Größe ohne
+         Wirkung, dort ist die Kachel so hoch wie ihr Inhalt. -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
     <TextView
         android:id="@+id/tile_title"
         style="@style/WidgetTitle"

@@ -175,6 +175,19 @@ void main() {
       t: de,
     );
     expect(p['items'], isEmpty);
+    // Ohne Vorname kein Feld; mit Vorname steht er im Kopf (28.10.26).
+    expect(p.containsKey('name'), isFalse);
+    expect(
+      homeWidgetPayload(
+        account: 3,
+        kid: 1,
+        items: const [],
+        now: tuesday,
+        t: de,
+        name: ' Lena ',
+      )['name'],
+      'Lena',
+    );
     final labels = p['labels']! as Map;
     expect(labels['calmTitle'], 'Alles nach Plan');
     expect(labels['calmText'], 'heute und morgen');
