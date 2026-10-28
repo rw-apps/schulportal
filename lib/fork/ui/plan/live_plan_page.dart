@@ -71,6 +71,7 @@ class LiveCalendarPage extends StatelessWidget {
               week: schoolWeek(now),
               t: context.t,
               free: free[i],
+              className: liveClassName(m.snapshot),
             ),
         ];
         final anyEvents = shown.any(
@@ -117,6 +118,7 @@ class LiveCalendarPage extends StatelessWidget {
                 week: w,
                 t: context.t,
                 free: free[i],
+                className: liveClassName(m.snapshot),
               ),
           ],
           freeDays: {for (var i = 0; i < free.length; i++) i: free[i]},

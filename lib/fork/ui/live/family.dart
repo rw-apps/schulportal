@@ -1,3 +1,4 @@
+import 'package:lanis/bridge/login_telemetry.dart';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -295,10 +296,18 @@ class _FamilyScopeState extends ConsumerState<FamilyScope> {
       final before = (await db.getAccount(id))?.lastLogin;
       await c.read(activeAccountProvider.notifier).select(id);
       final account = c.read(activeAccountProvider);
+      // Login-Link einer eben bestandenen Passwort-Prüfung einlösen
+      // (changeAccountPassword → „Erneut versuchen“), statt sich ein zweites
+      // Mal anzumelden. Ursache (Prüfung 27.10.26, Befund 9). Grenze: sonst
+      // (Start, späteres Erneut versuchen) keiner – eigene Anmeldung.
+      final url = takeLoginUrl(id);
       await guardedLogin(
         TypedSettings.account(db, id),
         account?.password ?? '',
-        () => c.read(sessionProvider.notifier).authenticate(),
+        () => authenticateWithLoginTelemetry(
+          c.read(sessionProvider.notifier),
+          withLoginUrl: url,
+        ),
         userInitiated: user,
       );
       // Anmelden setzt last_login; die App startet mit dem Konto mit dem

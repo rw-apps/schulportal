@@ -20,7 +20,7 @@ publish_to: 'none'
 # Upstream-Ständen denselben Code. 9301 = Upstream-Build 93, Fork-Ausgabe 01.
 # Grenze: Die Test-APK vom 14.10.26 (arm64, --split-per-abi) hatte 2093;
 # 9301 > 2093, das Update darüber klappt also.
-version: 4.1.0+9435
+version: 4.1.0+9436
 
 environment:
   sdk: ^3.10.0
@@ -29,7 +29,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  liblanis: 0.1.4
+  # Fork: eingebettete Kopie von liblanis 0.1.4 (pub.dev) mit eigenen
+  # Korrekturen; Herkunft und Änderungen in packages/liblanis/FORK.md.
+  liblanis:
+    path: packages/liblanis
   flutter_riverpod: ^3.0.3
   go_router: ^16.0.0
   dio_cookie_manager: ^3.3.0

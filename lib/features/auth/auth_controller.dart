@@ -52,11 +52,17 @@ class AuthController extends Notifier<AuthState> {
   @visibleForTesting
   static int authenticateCallCount = 0;
 
+  /// Fork: Login-Link, mit dem die letzte Anmeldung lief (null = eigene
+  /// Anmeldung mit Benutzer/Passwort) – siehe [_authenticate].
+  @visibleForTesting
+  static String? lastLoginUrl;
+
   @visibleForTesting
   static void resetDebugAuth() {
     debugAuthenticate = null;
     debugDeauthenticate = null;
     authenticateCallCount = 0;
+    lastLoginUrl = null;
   }
 
   @override
@@ -64,6 +70,16 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> _authenticate() async {
     authenticateCallCount++;
+    final account = ref.read(activeAccountProvider);
+    // Fork: Login-Link einer eben erfolgreichen Passwort-Prüfung desselben
+    // Kontos einlösen statt erneut anzumelden. Ursache (Prüfung 27.10.26,
+    // Befund 9): Neues Konto (view/login/auth.dart) und neues Passwort
+    // (changeAccountPassword) meldeten sich sonst zweimal beim Portal an.
+    // Grenze: nur einmal, nur kurz danach (takeLoginUrl, login_guard.dart);
+    // die Wiederanmeldung des vorigen Kontos in [loginWithAccount] findet
+    // keinen Link und meldet sich wie bisher selbst an.
+    final url = account == null ? null : takeLoginUrl(account.localId);
+    lastLoginUrl = url;
     final override = debugAuthenticate;
     if (override != null) {
       await override(ref);
@@ -71,7 +87,6 @@ class AuthController extends Notifier<AuthState> {
     }
     // Fork: Schutz vor Anmelde-Schleifen, die das Konto im Portal sperren
     // (login_guard.dart).
-    final account = ref.read(activeAccountProvider);
     if (account == null) {
       await authenticateWithLoginTelemetry(ref.read(sessionProvider.notifier));
       return;
@@ -81,7 +96,10 @@ class AuthController extends Notifier<AuthState> {
     await guardedLogin(
       TypedSettings.account(ref.read(lanisDatabaseProvider), account.localId),
       account.password,
-      () => authenticateWithLoginTelemetry(ref.read(sessionProvider.notifier)),
+      () => authenticateWithLoginTelemetry(
+        ref.read(sessionProvider.notifier),
+        withLoginUrl: url,
+      ),
       userInitiated: user,
     );
   }

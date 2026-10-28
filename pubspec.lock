@@ -864,10 +864,9 @@ packages:
   liblanis:
     dependency: "direct main"
     description:
-      name: liblanis
-      sha256: "715e0108dc3d734dbf6eba197708743339a0fbdc1e4eaf533bb5f3117a4866c2"
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/liblanis"
+      relative: true
+    source: path
     version: "0.1.4"
   linkify:
     dependency: "direct main"

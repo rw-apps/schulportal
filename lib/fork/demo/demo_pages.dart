@@ -573,8 +573,9 @@ String lessonsPage(DemoUser u, DemoClock c) {
 
 /// meinunterricht.php?a=sus_view&id=… – Kursmappe mit Historie, Anwesenheit,
 /// Noten und Leistungskontrollen (LessonsStudentParser.getDetailedCourseView).
-/// Grenze: `#marks` und `#klausuren` müssen da sein, sonst bricht der Parser
-/// ab (Cast `as List`, `children[0]`).
+/// `#marks` und `#klausuren` dürfen seit der eingebetteten liblanis
+/// (packages/liblanis/FORK.md, Befund 9) auch fehlen; die Demo zeigt sie
+/// trotzdem, wie das Portal.
 String? coursePage(DemoUser u, String courseId, DemoClock c) {
   for (final p in u.pupils) {
     for (final s in p.courses) {

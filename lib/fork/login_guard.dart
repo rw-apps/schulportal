@@ -121,3 +121,46 @@ Future<void> restoreLastLogin(
     await db.updateLastLogin(id, at: before);
   }
 }
+
+/// Höchstalter eines übergebenen Login-Links ([handOverLoginUrl]).
+const loginUrlHandoffMaxAge = Duration(seconds: 60);
+
+final _loginUrls = <int, ({String url, DateTime at})>{};
+
+/// Login-Link einer eben erfolgreichen Passwort-Prüfung für die gleich
+/// folgende Anmeldung des Kontos [accountId] hinterlegen.
+///
+/// Ursache (Prüfung 27.10.26, Befund 9): Neues Konto (view/login/auth.dart)
+/// und neues Passwort (changeAccountPassword, fork/ui/login_errors.dart)
+/// prüfen das Passwort mit LanisSession.getLoginURL – das IST die Anmeldung
+/// beim Portal (Benutzer/Passwort an login.schulportal.hessen.de). Die
+/// anschließende Anmeldung (Session.authenticate) schickte dieselben Daten
+/// ein zweites Mal: zwei Anmeldungen je Konto, der Link der ersten blieb
+/// ungenutzt. Jetzt löst Session.authenticate(withLoginUrl:) diesen Link
+/// ein – wie liblanis' eigener Weg (EasyAccounts.validateCredentials →
+/// EasyLanisClient.login(loginUrl:)). Eingelöst wird er in
+/// AuthController._authenticate (aktives Konto) und FamilyScope._start
+/// (weiteres Konto).
+///
+/// Grenze: nur einmal und nur [loginUrlHandoffMaxAge] lang; danach (oder
+/// wenn ein anderes Konto angemeldet wird) meldet sich die App wie bisher
+/// selbst an. Wie lange das Portal den Link annimmt, ist nicht belegt – in
+/// beiden Abläufen liegen nur Sekunden dazwischen. Leere Links (getLoginURL
+/// ohne Weiterleitung) werden nicht hinterlegt.
+void handOverLoginUrl(int accountId, String url, {DateTime? now}) {
+  if (url.isEmpty) return;
+  _loginUrls[accountId] = (url: url, at: now ?? DateTime.now());
+}
+
+/// Hinterlegten Login-Link des Kontos holen und verbrauchen; null = keiner
+/// (oder zu alt).
+String? takeLoginUrl(int accountId, {DateTime? now}) {
+  final h = _loginUrls.remove(accountId);
+  if (h == null) return null;
+  final age = (now ?? DateTime.now()).difference(h.at);
+  if (age.isNegative || age > loginUrlHandoffMaxAge) return null;
+  return h.url;
+}
+
+/// Nur für Tests: alle hinterlegten Links vergessen.
+void clearLoginUrlHandoffs() => _loginUrls.clear();

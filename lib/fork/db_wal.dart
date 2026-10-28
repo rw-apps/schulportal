@@ -15,9 +15,11 @@ import 'package:sqlite3/sqlite3.dart';
 /// während einer schreibt.
 ///
 /// Grenze: Der Modus wird in der Datei gespeichert und gilt damit auch für
-/// die Verbindungen von liblanis – busy_timeout dagegen gilt je Verbindung
-/// und lässt sich von außen nicht setzen; zwei GLEICHZEITIGE Schreiber
-/// können weiter kollidieren (selten: kurze Einzel-Schreibvorgänge). Die
+/// die Verbindungen von liblanis – eine Wartezeit auf Sperren dagegen gilt
+/// je Verbindung und lässt sich von außen nicht setzen; seit der
+/// eingebetteten liblanis (packages/liblanis/FORK.md, Befund 12) wartet
+/// jede liblanis-Verbindung selbst bis zu 5 s, zwei GLEICHZEITIGE Schreiber
+/// kollidieren erst danach. Die
 /// Zusatzdateien `-wal`/`-shm` liegen neben lanis.db; keine Funktion der
 /// App kopiert die Datenbankdatei einzeln (geprüft 27.10.26: Übertragung
 /// aufs neue Gerät nur Einstellungen, settings_transfer.dart). Backups sind

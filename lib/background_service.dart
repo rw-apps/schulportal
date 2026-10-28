@@ -165,14 +165,28 @@ Future<void> _setupBackgroundService() async {
         _onBackgroundFetchTimeout,
       );
 
-      await BackgroundFetch.scheduleTask(
-        TaskConfig(
-          taskId: _oneShotTaskId,
-          delay: 10000,
-          enableHeadless: true,
-          stopOnTerminate: false,
-        ),
-      );
+      // Fork: Einmal-Lauf nach 10 s nur, wenn der letzte vollständige Lauf
+      // fehlt oder einen Abstand zurückliegt (startRunDue, notify_keys.dart).
+      // Ursache (Prüfung 27.10.26, Befund 9): Er kam nach JEDEM App-Start
+      // und meldete alle Konten ein zweites Mal an. Grenze: Zeitfenster und
+      // Nachtregel prüft weiter der Lauf selbst (callbackDispatcher); die
+      // regelmäßige Abfrage richtet configure oben unverändert ein.
+      if (startRunDue(
+        lastFullRun(shared),
+        DateTime.now(),
+        Duration(minutes: targetIntervalMinutes),
+      )) {
+        await BackgroundFetch.scheduleTask(
+          TaskConfig(
+            taskId: _oneShotTaskId,
+            delay: 10000,
+            enableHeadless: true,
+            stopOnTerminate: false,
+          ),
+        );
+      } else {
+        logger.i('Skipping start-up fetch: last full run is recent');
+      }
       _configuredInterval = targetIntervalMinutes; // Fork: siehe oben.
     } catch (e, s) {
       backgroundLogger.e(e, stackTrace: s);
@@ -380,6 +394,16 @@ Future<void> callbackDispatcher({bool inApp = false}) async {
           }
           c.dispose();
         }
+      }
+
+      // Fork: Ende eines vollständigen Laufs im Zeitfenster merken – der
+      // Einmal-Lauf nach dem App-Start entfällt dann (startRunDue,
+      // Prüfung 27.10.26, Befund 9). Grenze: Nachts (nur Nachrichten) nicht,
+      // sonst fehlte morgens der Vertretungsplan bis zum nächsten Takt;
+      // gescheiterte Anmeldungen einzelner Konten zählen mit – der Lauf hat
+      // sie versucht, der nächste Takt versucht es wieder.
+      if (inWindow) {
+        noteFullRun(sharedPolicy, DateTime.now());
       }
 
       // Fork: Sammel-Benachrichtigung aus allen Konten (summary.dart).

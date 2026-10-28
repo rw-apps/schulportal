@@ -97,6 +97,12 @@ String technicalLine(Object e, {int max = 160}) {
 /// während einer Sperre des Portals, die verlängerte sie nur
 /// (login_guard.dart). Grenze: Ein falsch getipptes neues Passwort zählt
 /// beim Portal als Fehlversuch; die Meldung sagt das.
+///
+/// Der Login-Link der Prüfung wird für die Anmeldung danach hinterlegt
+/// (handOverLoginUrl): „Erneut versuchen“ der Aufrufer (startup.dart →
+/// AuthController.retry, login_failure_card.dart → FamilyScope._start)
+/// meldet sich damit nicht ein zweites Mal an. Ursache (Prüfung 27.10.26,
+/// Befund 9). Grenze: nur innerhalb von [loginUrlHandoffMaxAge].
 Future<bool> changeAccountPassword(
   BuildContext context,
   WidgetRef ref,
@@ -164,8 +170,12 @@ Future<bool> changeAccountPassword(
   );
   controller.dispose();
   if (pw == null || pw.isEmpty) return false;
+  final String url;
   try {
-    await LanisSession.getLoginURL(account.copyWith(password: pw), config);
+    url = await LanisSession.getLoginURL(
+      account.copyWith(password: pw),
+      config,
+    );
   } catch (e) {
     noteLoginResult(settings, pw, e);
     messenger?.showSnackBar(SnackBar(content: Text(loginErrorText(t, e).text)));
@@ -173,6 +183,7 @@ Future<bool> changeAccountPassword(
   }
   await ref.read(accountsProvider.notifier).updatePassword(accountId, pw);
   noteLoginResult(settings, pw, null);
+  handOverLoginUrl(accountId, url);
   return true;
 }
 

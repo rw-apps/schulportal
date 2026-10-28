@@ -7,6 +7,7 @@ import 'package:lanis/generated/l10n.dart';
 import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:lanis/fork/onboarding/onboarding_kit.dart';
 import 'package:lanis/fork/class_choice.dart' show storeClass;
+import 'package:lanis/fork/login_guard.dart' show handOverLoginUrl;
 import 'package:lanis/fork/onboarding/onboarding_pages.dart';
 import 'package:lanis/fork/onboarding/setup_class.dart';
 import 'package:lanis/fork/ui/settings/class_sheet.dart';
@@ -152,7 +153,16 @@ class LoginFormState extends ConsumerState<LoginForm> {
       setGlitchTipEnabled(shared, errorReportingAgree);
 
       final config = ref.read(lanisConfigProvider);
-      await LanisSession.getLoginURL(
+      // Fork: Die Prüfung bleibt VOR dem Anlegen – ein falsches Passwort
+      // ändert so weder die Datenbank noch die Sitzung eines schon
+      // angemeldeten Kontos (loginWithAccount meldet es beim Wechsel ab und
+      // nach einem Fehlschlag neu an). Ihr Login-Link wird aber für die
+      // Anmeldung gleich danach übergeben (handOverLoginUrl, login_guard.dart).
+      // Ursache (Prüfung 27.10.26, Befund 9): Bisher folgte eine zweite,
+      // volle Anmeldung mit denselben Daten. Grenze: Die Meldungen bei
+      // falschem Passwort, Sperre, Störung oder fehlender Verbindung kommen
+      // weiter aus dieser Prüfung – unverändert.
+      final loginUrl = await LanisSession.getLoginURL(
         ClearTextAccount(
           localId: -1,
           schoolID: schoolId,
@@ -171,6 +181,7 @@ class LoginFormState extends ConsumerState<LoginForm> {
             password: password,
             schoolName: selectedSchoolName,
           );
+      handOverLoginUrl(newID, loginUrl);
       final ok = await ref
           .read(authControllerProvider.notifier)
           .loginWithAccount(newID, removeAccountOnFailure: true);
