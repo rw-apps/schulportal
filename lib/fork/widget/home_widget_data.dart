@@ -231,7 +231,7 @@ List<WidgetItem> widgetItems({
         title: c.subject,
         what: what,
         word: word,
-        slot: c.slot.trim(),
+        slot: widgetSlotShort(c.slot),
         end: end == null || end.isEmpty ? null : end,
       ),
     );
@@ -500,4 +500,16 @@ List<int> widgetAccounts(List<int> ordered, Set<int>? selection) {
       if (selection.contains(a)) a,
   ];
   return shown.isEmpty ? ordered : shown;
+}
+
+/// Stunde ohne Zusatz („1.–2. Std.“ → „1.–2.“, „3. Block“ → „3.“).
+/// Ursache (Bildschirmfoto Pixel 28.10.26): „morgen 1.–2. S…“ wurde in der
+/// Kachel abgeschnitten; der Entwurf zeigt nur die Zahlen. Grenze: Ohne
+/// Zahl am Anfang bleibt die Beschriftung wie im Plan.
+String widgetSlotShort(String slot) {
+  final t = slot.trim();
+  final m = RegExp(r'^\d+\.?(\s*[–-]\s*\d+\.?)?').firstMatch(t);
+  if (m == null) return t;
+  final n = m.group(0)!.replaceAll(RegExp(r'\s+'), '');
+  return n.endsWith('.') ? n : '$n.';
 }

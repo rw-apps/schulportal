@@ -408,4 +408,12 @@ void main() {
     final noStand = lena();
     expect(newerWidgetKid(noStand, old), same(noStand));
   });
+
+  test('Stunde ohne Zusatz (Pixel 28.10.26)', () {
+    expect(widgetSlotShort('1.–2. Std.'), '1.–2.');
+    expect(widgetSlotShort('3. Block'), '3.');
+    expect(widgetSlotShort('5 - 6'), '5-6.');
+    expect(widgetSlotShort('3.'), '3.');
+    expect(widgetSlotShort('Mittag'), 'Mittag');
+  });
 }

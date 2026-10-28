@@ -311,6 +311,27 @@ object WidgetModel {
     }
 
     /**
+     * Klein mit zwei Kindern: eine Kachel je Kind, der Vorname als erste
+     * Zeile („Lena“ / „Französisch“ / „fällt aus morgen“). Ursache
+     * (Bildschirmfoto Pixel 28.10.26): Name als eigene Zeile plus
+     * dreizeilige Kachel passte zweimal nicht hinein; die kompakten Zellen
+     * ließen dann die halbe Fläche leer und nannten weder Fach noch Tag.
+     * Grenze: Lange Fachnamen werden gekürzt („Naturwissensc…“).
+     */
+    fun namedTileFor(kid: Kid, l: Labels, today: LocalDate, now: LocalTime): Tile {
+        val d = visible(kid, today, now).firstOrNull()
+        if (d != null) {
+            return Tile(d.kind, kid.name, d.title, "${d.word} ${l.dayShort(d.date, today)}".trim())
+        }
+        val q = quietTile(kid, l, today)
+        return if (q.kind == TileKind.STALE) {
+            Tile(TileKind.STALE, kid.name, q.l1, q.l2)
+        } else {
+            Tile(TileKind.CALM, kid.name, l.calmShort, listOf(q.l2, q.l3).filter { it.isNotEmpty() }.joinToString(" "))
+        }
+    }
+
+    /**
      * Kompakte Zelle ab drei Kindern: nächste Abweichung, sonst „nach Plan“.
      * [detailed] (mittel): „Name · Fach“ / „fällt aus morgen“; sonst (klein)
      * nur Name / Art. Die Art steht IMMER als Wort (Rückmeldung 28.10.26).

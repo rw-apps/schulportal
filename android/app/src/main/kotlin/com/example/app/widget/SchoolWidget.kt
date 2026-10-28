@@ -141,7 +141,14 @@ internal object SchoolWidgetRenderer {
                 }
             }
             Tier.TWO -> {
-                if (size == WidgetSize.SMALL && !WidgetModel.twoKidsFit(avail, nameH, tileH, GAP)) {
+                if (size == WidgetSize.SMALL && (avail == null || 2 * tileH + GAP_SMALL <= avail)) {
+                    // Klein: je Kind eine Kachel mit dem Vornamen als erster
+                    // Zeile (WidgetModel.namedTileFor, Pixel 28.10.26).
+                    p.kids.forEachIndexed { i, kid ->
+                        if (i > 0) v.addView(R.id.body, gap(ctx, R.layout.widget_vgap_small))
+                        v.addView(R.id.body, row(ctx, kid, listOf(WidgetModel.namedTileFor(kid, l, today, now))))
+                    }
+                } else if (size == WidgetSize.SMALL && !WidgetModel.twoKidsFit(avail, nameH, tileH, GAP)) {
                     // Zu niedrig für zwei Namen und zwei dreizeilige Kacheln:
                     // die kompakten Zellen wie ab drei Kindern (WidgetModel.twoKidsFit).
                     many(ctx, v, p, size, today, now, avail, line, tileH, headH)
