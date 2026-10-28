@@ -259,10 +259,16 @@ void main() {
       expect(i.canSubmit(now), isTrue);
     });
 
-    test('vor dem Start und nach der Frist kein Abgeben', () {
+    // Prüfung 28.10.26: Die Uhr des Geräts sperrt nicht mehr – nur das
+    // Formular des Portals (open) und die Einmal-Regel (done).
+    test('Abgeben hängt am Formular, nicht an der Geräte-Uhr', () {
       final i = UploadInfo(dates: dates, open: true);
-      expect(i.canSubmit(DateTime(2026, 10, 25)), isFalse);
-      expect(i.canSubmit(DateTime(2026, 10, 30, 18)), isFalse);
+      expect(i.canSubmit(DateTime(2026, 10, 25)), isTrue);
+      expect(i.canSubmit(DateTime(2026, 10, 30, 18)), isTrue);
+      expect(
+        UploadInfo(dates: dates).canSubmit(DateTime(2026, 10, 25)),
+        isFalse,
+      );
     });
 
     test('fromPortal: fehlende Felder → strenge Ersatzwerte', () {

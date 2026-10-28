@@ -294,6 +294,7 @@ KidPlan planWithSubstitutions({
   required ForkL10n t,
   Map<DateTime, String> free = const {},
   String className = '',
+  bool? mixed,
 }) {
   final unmatched = <(DateTime, Substitution)>[];
   final freeIdx = [
@@ -319,13 +320,10 @@ KidPlan planWithSubstitutions({
   // 28.10.26): Ein Elternkonto mit einem Kind bekommt nur dessen Klasse
   // („Vertretungsplan für 06 XY“), dort brächte der Filter nichts – nur
   // das Risiko, bei falsch erkannter Klasse echte Ausfälle zu verlieren.
-  final mixed =
-      className.isNotEmpty &&
-      {
-            for (final d in days)
-              for (final s in d.substitutions) ?_classKey(s.klasse),
-          }.length >
-          1;
+  // [mixed] von außen: applySubstitutions ruft je Tag auf und bestimmt den
+  // Plan-weiten Wert vorher (Prüfung 28.10.26: je Tag gerechnet galt ein
+  // Tag mit nur der fremden Klasse als „nicht gemischt“).
+  final isMixed = mixed ?? mixedClassPlan(days, className);
   for (final i in freeIdx) {
     for (final c in out[i]) {
       c.clear();
@@ -341,7 +339,7 @@ KidPlan planWithSubstitutions({
     for (final s in d.substitutions) {
       // Zeilen anderer Klassen (Spalte „Klasse“) gehören nicht zum Kind
       // (substitutionForClass, Ursache dort) – nur bei gemischtem Plan.
-      if (mixed && !substitutionForClass(s.klasse, className)) continue;
+      if (isMixed && !substitutionForClass(s.klasse, className)) continue;
       final hours = hoursOf(s.stunde);
       final codes = {
         for (final c in [_plain(s.fach), _plain(s.fach_alt)])
@@ -522,6 +520,7 @@ KidPlan planWithSubstitutions({
     changes.add((c.day, order, c));
   }
 
+  final mixed = mixedClassPlan(days, className);
   for (final d in days) {
     final date = DateTime(d.dateTime.year, d.dateTime.month, d.dateTime.day);
     final wd = date.weekday - 1;
@@ -536,6 +535,7 @@ KidPlan planWithSubstitutions({
       week: week,
       t: t,
       className: className,
+      mixed: mixed,
     );
     for (final b in dayBlocks(o.plan, wd, choice)) {
       final changed = switch (b.content) {
@@ -905,6 +905,18 @@ String? mealHintFor(
 /// eigene Klasse oder eine Angabe ohne Jahrgang (Q1, E-Phase, Kurs-Namen)
 /// behalten die Zeile, lieber ein Hinweis zu viel als ein verpasster
 /// Ausfall. Mehrere Klassen („07B, 07C“, „7a/7b“) gelten, wenn eine passt.
+/// Enthält der Plan Zeilen mehrerer Klassen? Nur dann filtert
+/// [substitutionForClass]. Ursache (Export 28.10.26): Ein Elternkonto mit
+/// einem Kind bekommt nur dessen Klasse – dort brächte der Filter nichts,
+/// nur das Risiko, bei falsch erkannter Klasse echte Ausfälle zu verlieren.
+bool mixedClassPlan(List<SubstitutionDay> days, String className) =>
+    className.isNotEmpty &&
+    {
+          for (final d in days)
+            for (final s in d.substitutions) ?_classKey(s.klasse),
+        }.length >
+        1;
+
 /// Vergleichsform der Spalte „Klasse“: ohne Klammerzusatz, Leerzeichen,
 /// führende Null, klein; null = leer.
 String? _classKey(String? klasse) {
@@ -934,6 +946,11 @@ bool substitutionForClass(String? klasse, String className) {
     final l = m[2]!.toLowerCase();
     if (letters == null || l.isEmpty) return true;
     if (letters.startsWith(l) || l.startsWith(letters)) return true;
+    // Zusammengelegte Klassen („6ab“, „6abc“): ein einzelner eigener
+    // Buchstabe darin genügt (Prüfung 28.10.26).
+    if (letters.length == 1 && l.length <= 4 && l.contains(letters)) {
+      return true;
+    }
   }
   return false;
 }

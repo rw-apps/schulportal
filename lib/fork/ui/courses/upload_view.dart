@@ -96,8 +96,16 @@ class UploadInfo {
       !now.isBefore(dates.automaticDeletion!);
 
   /// Hinzufügen und Abgeben möglich (Fuß mit „Abgeben“ sichtbar).
-  bool canSubmit(DateTime now) =>
-      open && !done && !isBeforeStart(now) && !isPastDeadline(now);
+  ///
+  /// Nur das Formular des Portals ([open]) und die Einmal-Regel ([done])
+  /// entscheiden, nicht die Uhr des Geräts. Ursache (Prüfung 28.10.26):
+  /// Start und Frist werden als Ortszeit des Geräts gelesen; geht die Uhr
+  /// vor oder steht das Gerät in einer anderen Zeitzone, sperrte die App,
+  /// obwohl das Portal noch annahm – und eine während des Öffnens
+  /// abgelaufene Frist ließ den Knopf stehen, „Abgeben“ tat dann still
+  /// nichts. Grenze: [now] dient nur der Anzeige (Kopfkarte, Hinweis);
+  /// eine zu späte Abgabe lehnt der Server ab, die Meldung kommt von dort.
+  bool canSubmit(DateTime now) => open && !done;
 }
 
 /// Eine gewählte, noch nicht abgegebene Datei.
@@ -525,7 +533,10 @@ class _Hero extends StatelessWidget {
       };
     }
 
-    final String? pill = done
+    // Abgegeben (auch bei „beliebig oft“ nach der Frist): nicht „Frist
+    // vorbei“ (Prüfung 28.10.26).
+    final String? pill =
+        done || (info.ownFiles.isNotEmpty && info.isPastDeadline(now))
         ? t.uploadDoneChip
         : info.isBeforeStart(now)
         ? waiting(start!, left: false)

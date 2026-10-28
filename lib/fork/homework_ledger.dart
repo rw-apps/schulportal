@@ -210,7 +210,11 @@ homeworkLists(
     if (e == null || h == null) continue;
     final key = homeworkKey(l.courseID, e.entryID);
     seen.add(key);
-    final r = ledger[key];
+    // Abgehakter Platzhalter („-“), aus dem die Lehrkraft später eine echte
+    // Aufgabe gemacht hat: der alte Haken gilt nicht (Prüfung 28.10.26) –
+    // sonst stünde die neue Aufgabe sofort unter „Erledigt“.
+    final kept = ledger[key];
+    final r = kept != null && Homework.isPlaceholder(kept.text) ? null : kept;
     final item = HomeworkItem(
       course: l.courseID,
       entry: e.entryID,

@@ -215,7 +215,10 @@ class Cryptor {
       final encodedContent = match.group(1) ?? '';
       try {
         final decryptedContent = decryptString(encodedContent);
-        decrypted++;
+        // Fork: nur echte Klartexte zählen (Prüfung 28.10.26) – ein leerer
+        // oder ungesalzener Tag (null) belegt keinen richtigen Schlüssel;
+        // sonst blieb bei falschem Schlüssel die Neuanmeldung aus.
+        if (decryptedContent != null) decrypted++;
         return decryptedContent ?? '';
       } catch (e, stack) {
         firstError ??= e;

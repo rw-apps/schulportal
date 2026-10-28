@@ -1068,6 +1068,20 @@ void main() {
       expect(substitutionForClass('6 KA', '06 XY'), isFalse);
       expect(substitutionForClass('07B, 07C', '07A'), isFalse);
     });
+    test('zusammengelegte Klassen', () {
+      expect(substitutionForClass('6ab', '06B'), isTrue);
+      expect(substitutionForClass('6abc', '06C'), isTrue);
+      expect(substitutionForClass('6ab', '06C'), isFalse);
+    });
+    test('gemischt gilt für den ganzen Plan, nicht je Tag', () {
+      final days = [
+        _day('19.10.2026', [_sub('19.10.2026', '1', klasse: '6 XY')]),
+        _day('20.10.2026', [_sub('20.10.2026', '1', klasse: '8 B')]),
+      ];
+      expect(mixedClassPlan(days, '06 XY'), isTrue);
+      expect(mixedClassPlan(days.take(1).toList(), '06 XY'), isFalse);
+      expect(mixedClassPlan(days, ''), isFalse);
+    });
     test('unklar bleibt', () {
       expect(substitutionForClass(null, '06 XY'), isTrue);
       expect(substitutionForClass('', '06 XY'), isTrue);

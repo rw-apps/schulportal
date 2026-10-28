@@ -458,7 +458,18 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
             onAdd: () => _add(info),
             onRemovePicked: _remove,
             onSubmit: () => _submit(data, info),
-            onDeleteOwn: (f) => _delete(data, f),
+            // Fork: Löschen nur mit Formular-Kennungen. Ursache (Prüfung
+            // 28.10.26): Nach der einzigen Abgabe oder nach der Frist fehlt
+            // das Formular (course_id … null); deleteUploadedFile warf dann
+            // einen Typfehler, der unbehandelt blieb – nur „Versuche zu
+            // löschen …“ erschien. Grenze: Ohne Formular kein Löschen in der
+            // App; das Portal erlaubt es dann ohnehin nicht.
+            onDeleteOwn:
+                data["course_id"] != null &&
+                    data["entry_id"] != null &&
+                    data["upload_id"] != null
+                ? (f) => _delete(data, f)
+                : null,
             onLongPressOwn: (f) => showFileModal(context, _downloadable(f)),
             onOpenOwn: (f) {
               logger.d(f);

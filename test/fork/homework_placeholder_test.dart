@@ -30,6 +30,7 @@ void main() {
       'keine Fehler im Heft lassen',
       'Vokabeln lernen',
       'AB Teil C',
+      '📖',
     ]) {
       expect(Homework.isPlaceholder(h), isFalse, reason: h);
     }

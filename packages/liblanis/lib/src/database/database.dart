@@ -17,7 +17,10 @@ class LanisDatabase {
   LanisDatabase._(this._db, {this.secretStore, required this.isInMemory});
 
   /// Fork: Wartezeit auf gesperrte Datei in Millisekunden (Befund 12).
-  static const int busyTimeoutMs = 5000;
+  // Fork: 2 s statt 5 s (Prüfung 28.10.26): Das Warten blockiert den
+  // aufrufenden Isolate – in der App den UI-Isolate; ab etwa 5 s meldet
+  // Android „App reagiert nicht“.
+  static const int busyTimeoutMs = 2000;
 
   /// Fork: bis zu [busyTimeoutMs] auf eine Sperre warten statt sofort
   /// „database is locked“.

@@ -113,7 +113,11 @@ class Homework {
   static bool isPlaceholder(String text) {
     final t = text.trim().toLowerCase();
     if (t.isEmpty) return false;
-    if (!RegExp(r'[\p{L}\p{N}]', unicode: true).hasMatch(t)) return true;
+    // Symbole/Emoji (\p{So}, z. B. „📖“) zählen als Inhalt (Prüfung
+    // 28.10.26) – nur Striche, Punkte, Schrägstriche u. Ä. sind Platzhalter.
+    if (!RegExp(r'[\p{L}\p{N}\p{So}]', unicode: true).hasMatch(t)) {
+      return true;
+    }
     return RegExp(
       r'^(keine?|nichts|entf(ä|ae)llt)(\s+(ha|hausaufgaben?))?\s*[.!]*$',
     ).hasMatch(t);
