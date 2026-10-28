@@ -714,6 +714,7 @@ NavBadges navBadgesOf(LiveSnapshot? s, ForkL10n t) {
       days: s.substitutions.content?.days ?? const [],
       now: now,
       t: t,
+      className: liveClassName(s),
     );
     // Wie Heute: heute nur Ausfälle von Stunden, die noch kommen oder
     // laufen (Karte des Kindes, lessonDone), morgen alle (Kasten „Morgen“).

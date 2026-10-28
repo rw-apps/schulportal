@@ -15,7 +15,12 @@ import 'error_log.dart';
 /// bleiben dabei richtig zugeordnet (dieselbe Rechnung wie für Folgezeilen).
 /// Grenze: Eine leere 0. Zeile (Schule B, „0. Stunde“ ohne Einträge) bleibt
 /// unverändert übersprungen.
-TimeTable parseTimetableKeepingFirstRow(Document document) {
+///
+/// [accountType]: nur für die Diagnose (Kontoart im Fehlerprotokoll).
+TimeTable parseTimetableKeepingFirstRow(
+  Document document, {
+  AccountType? accountType,
+}) {
   var inserted = 0;
   for (final id in const ['all', 'own']) {
     final tbody = document.querySelector('#$id tbody');
@@ -44,6 +49,18 @@ TimeTable parseTimetableKeepingFirstRow(Document document) {
       'vonbis': document.querySelectorAll('.VonBis').length,
       'inserted': inserted,
       ...emptyTimetablePageKind(document),
+      // Kontoart (0 unbekannt, 1 Schüler, 2 Eltern, 3 Lehrkraft) und
+      // Hinweiskästen der Seite. Ursache (Fehlerbericht 28.10.26, 9435:
+      // „… login=0 wartung=0 text=5“): Eine kurze Seite ohne Plantabelle
+      // und ohne Anmeldeformular – unklar blieb, bei welchem Konto und ob
+      // das Portal einen Hinweis zeigte („kein Stundenplan hinterlegt“).
+      'acct': switch (accountType) {
+        AccountType.student => 1,
+        AccountType.parent => 2,
+        AccountType.teacher => 3,
+        _ => 0,
+      },
+      'alert': document.querySelectorAll('.alert').length,
     });
   }
   return tt;
@@ -70,7 +87,10 @@ class ForkTimetableParser extends TimetableStudentParser {
   /// nicht freigegeben) bleibt ein leerer Plan – das kann echt sein.
   @override
   TimeTable parseDocument(Document document) {
-    final tt = parseTimetableKeepingFirstRow(document);
+    final tt = parseTimetableKeepingFirstRow(
+      document,
+      accountType: ctx.session.accountTypeOrNull,
+    );
     if (document.querySelector('#all') == null &&
         document.querySelector('#own') == null) {
       throw UnknownException('stundenplan.php: keine Plantabelle');

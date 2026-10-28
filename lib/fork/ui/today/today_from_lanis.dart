@@ -255,7 +255,15 @@ KidPlan planWithSubstitutions({
   required List<DateTime> week,
   required ForkL10n t,
   Map<DateTime, String> free = const {},
-}) => _overlay(plan: plan, days: days, week: week, t: t, free: free).plan;
+  String className = '',
+}) => _overlay(
+  plan: plan,
+  days: days,
+  week: week,
+  t: t,
+  free: free,
+  className: className,
+).plan;
 
 /// [planWithSubstitutions] samt den Zeilen, die keine Stunde des Plans
 /// trafen (für [applySubstitutions]).
@@ -285,6 +293,7 @@ KidPlan planWithSubstitutions({
   required List<DateTime> week,
   required ForkL10n t,
   Map<DateTime, String> free = const {},
+  String className = '',
 }) {
   final unmatched = <(DateTime, Substitution)>[];
   final freeIdx = [
@@ -306,6 +315,17 @@ KidPlan planWithSubstitutions({
         for (final o in c.options) o.short.toUpperCase(): o.subject,
   };
   var changed = false;
+  // Nur ein Plan mit mehreren Klassen wird gefiltert. Ursache (Export
+  // 28.10.26): Ein Elternkonto mit einem Kind bekommt nur dessen Klasse
+  // („Vertretungsplan für 06 XY“), dort brächte der Filter nichts – nur
+  // das Risiko, bei falsch erkannter Klasse echte Ausfälle zu verlieren.
+  final mixed =
+      className.isNotEmpty &&
+      {
+            for (final d in days)
+              for (final s in d.substitutions) ?_classKey(s.klasse),
+          }.length >
+          1;
   for (final i in freeIdx) {
     for (final c in out[i]) {
       c.clear();
@@ -319,6 +339,9 @@ KidPlan planWithSubstitutions({
     );
     if (wd < 0 || wd >= out.length || freeIdx.contains(wd)) continue;
     for (final s in d.substitutions) {
+      // Zeilen anderer Klassen (Spalte „Klasse“) gehören nicht zum Kind
+      // (substitutionForClass, Ursache dort) – nur bei gemischtem Plan.
+      if (mixed && !substitutionForClass(s.klasse, className)) continue;
       final hours = hoursOf(s.stunde);
       final codes = {
         for (final c in [_plain(s.fach), _plain(s.fach_alt)])
@@ -476,6 +499,7 @@ KidPlan planWithSubstitutions({
   required ForkL10n t,
   String Function(String code)? subjectName,
   Map<DateTime, String> free = const {},
+  String className = '',
 }) {
   final todayWd = now.weekday - 1;
   final todayDate = DateTime(now.year, now.month, now.day);
@@ -505,7 +529,13 @@ KidPlan planWithSubstitutions({
       for (var i = 0; i < 5; i++)
         DateTime(date.year, date.month, date.day - wd + i),
     ];
-    final o = _overlay(plan: plan, days: [d], week: week, t: t);
+    final o = _overlay(
+      plan: plan,
+      days: [d],
+      week: week,
+      t: t,
+      className: className,
+    );
     for (final b in dayBlocks(o.plan, wd, choice)) {
       final changed = switch (b.content) {
         ResolvedLesson(:final lesson) => [lesson],
@@ -607,6 +637,7 @@ ChildToday childTodayFromLanis({
     t: t,
     subjectName: subjectName,
     free: free,
+    className: className,
   );
   final freeLabel = free[DateTime(now.year, now.month, now.day)];
   return ChildToday(
@@ -853,6 +884,55 @@ String? mealHintFor(
   if (notes.isEmpty) return null;
   final text = notes.join(' · ');
   return afternoon ? t.mealTomorrow(text) : t.mealToday(text);
+}
+
+/// Gehört eine Vertretungszeile mit der Spalte „Klasse“ [klasse] zur
+/// Klasse [className] („06 XY“, „09C“)?
+///
+/// Ursache (Prüfung 27.10.26, bestätigt am Export eines Elternkontos vom
+/// 28.10.26): Die Spalte wurde nirgends ausgewertet. Bei einem Elternkonto
+/// mit zwei Kindern an einer Schule oder einem Plan mit mehreren Klassen
+/// erschien „08B, 1., M, Entfall“ beim Kind aus der 6. Das Portal schreibt
+/// die Klasse anders als die Benutzerdaten: „6 XY (W)“ zu „06 XY“ –
+/// verglichen werden daher Jahrgang (ohne führende Null) und
+/// Buchstaben-Anfang (Kürzel „ah“ ↔ „Ahorn“ wie in [forClass]), Zusätze in
+/// Klammern zählen nicht.
+///
+/// Grenze: Nur sicher fremde Klassen fallen weg – leere Spalte, unbekannte
+/// eigene Klasse oder eine Angabe ohne Jahrgang (Q1, E-Phase, Kurs-Namen)
+/// behalten die Zeile, lieber ein Hinweis zu viel als ein verpasster
+/// Ausfall. Mehrere Klassen („07B, 07C“, „7a/7b“) gelten, wenn eine passt.
+/// Vergleichsform der Spalte „Klasse“: ohne Klammerzusatz, Leerzeichen,
+/// führende Null, klein; null = leer.
+String? _classKey(String? klasse) {
+  final k = (klasse ?? '')
+      .replaceAll(RegExp(r'\([^)]*\)'), '')
+      .replaceAll(RegExp(r'\s+'), '')
+      .replaceFirst(RegExp(r'^0+'), '')
+      .toLowerCase();
+  return k.isEmpty ? null : k;
+}
+
+bool substitutionForClass(String? klasse, String className) {
+  final raw = (klasse ?? '').replaceAll(RegExp(r'\([^)]*\)'), ' ').trim();
+  if (raw.isEmpty) return true;
+  final own = RegExp(
+    r'^\s*0?(\d{1,2})\s*([a-zA-ZäöüÄÖÜß]+)?',
+  ).firstMatch(className);
+  if (own == null) return true;
+  final grade = int.parse(own[1]!);
+  final letters = own[2]?.toLowerCase();
+  final part = RegExp(r'^0?(\d{1,2})\s*([a-zA-ZäöüÄÖÜß]*)$');
+  for (final p in raw.split(RegExp(r'\s*[,;/+&]\s*'))) {
+    final m = part.firstMatch(p.trim());
+    // Ohne Jahrgang (Q1, Kursname): nicht entscheidbar, Zeile bleibt.
+    if (m == null) return true;
+    if (int.parse(m[1]!) != grade) continue;
+    final l = m[2]!.toLowerCase();
+    if (letters == null || l.isEmpty) return true;
+    if (letters.startsWith(l) || l.startsWith(letters)) return true;
+  }
+  return false;
 }
 
 /// Gilt der Termin [title] für die Klasse [className] („09C“, „06 XY“)?

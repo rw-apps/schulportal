@@ -6,6 +6,7 @@ import 'package:liblanis/liblanis.dart';
 
 import 'package:lanis/utils/applet_settings.dart';
 
+import '../../class_choice.dart' show storedClass;
 import '../../l10n/l10n.dart';
 import '../kit.dart';
 import '../live/live_data.dart';
@@ -131,6 +132,9 @@ class _OfflinePageState extends ConsumerState<OfflinePage> {
             days: days,
             week: schoolWeek(now),
             t: t,
+            // Offline nur die eigene Eingabe (class_choice.dart); ohne sie
+            // bleiben alle Zeilen (substitutionForClass).
+            className: storedClass(settings)?.name ?? '',
           ),
         ],
         now: now,
@@ -145,6 +149,7 @@ class _OfflinePageState extends ConsumerState<OfflinePage> {
         now: now,
         school: '',
         t: t,
+        className: storedClass(settings)?.name ?? '',
       );
       body = TodayPage(
         data: FamilyToday(now: now, kids: [kid], week: const []),

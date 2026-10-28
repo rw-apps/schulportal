@@ -231,6 +231,7 @@ Future<void> _run(
       t: t,
       subjectName: (c) => subjectFullName(c, courses),
       free: freeDaysFrom(cal, now, className: className, days: freeDaysAhead),
+      className: className,
     );
     var r = apply(events ?? const []);
     if (r.changes.isNotEmpty && events == null) {

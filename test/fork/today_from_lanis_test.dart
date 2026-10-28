@@ -79,6 +79,7 @@ Substitution _sub(
   String? lehrer,
   String? vertreter,
   String? hinweis,
+  String? klasse,
 }) => Substitution(
   tag: tag,
   tag_en: '',
@@ -91,6 +92,7 @@ Substitution _sub(
   Lehrerkuerzel: lehrer,
   Vertreterkuerzel: vertreter,
   hinweis: hinweis,
+  klasse: klasse,
 );
 
 SubstitutionDay _day(String date, List<Substitution> s) =>
@@ -1048,6 +1050,60 @@ void main() {
       expect(forClass('Ausflug 06 bi und 6 Ahorn', '6 Ahorn'), isTrue);
       expect(forClass('Lernkontrolle 06 ah', '06 AH'), isTrue);
       expect(forClass('Elternabend 6 Birke', '6 Ahorn'), isTrue);
+    });
+  });
+
+  // Spalte „Klasse“ (Prüfung 27.10.26, Schreibweise aus dem Export eines
+  // Elternkontos vom 28.10.26: „6 XY (W)“ zur Klasse „06 XY“).
+  group('substitutionForClass', () {
+    test('eigene Klasse in Portal-Schreibweise', () {
+      expect(substitutionForClass('6 XY (W)', '06 XY'), isTrue);
+      expect(substitutionForClass('06XY', '06 XY'), isTrue);
+      expect(substitutionForClass('07B, 07C', '07C'), isTrue);
+      expect(substitutionForClass('7a/7b', '07B'), isTrue);
+      expect(substitutionForClass('6 ah', '06 Ahorn'), isTrue);
+    });
+    test('fremde Klasse fällt weg', () {
+      expect(substitutionForClass('8 B (W)', '06 XY'), isFalse);
+      expect(substitutionForClass('6 KA', '06 XY'), isFalse);
+      expect(substitutionForClass('07B, 07C', '07A'), isFalse);
+    });
+    test('unklar bleibt', () {
+      expect(substitutionForClass(null, '06 XY'), isTrue);
+      expect(substitutionForClass('', '06 XY'), isTrue);
+      expect(substitutionForClass('8 B', ''), isTrue);
+      expect(substitutionForClass('Q1', '06 XY'), isTrue);
+      expect(substitutionForClass('6', '06 XY'), isTrue);
+    });
+    test('Zeile einer fremden Klasse erscheint nicht im Tag', () {
+      List<ChangeItem> changes(String? klasse, {bool mixed = false}) =>
+          applySubstitutions(
+            t: de,
+            plan: plan,
+            choice: const {'TXT': 'CCC'},
+            now: monday,
+            className: '06 XY',
+            days: [
+              _day('19.10.2026', [
+                _sub(
+                  '19.10.2026',
+                  '2',
+                  art: 'Entfall',
+                  fach: 'TXT',
+                  lehrer: 'CCC',
+                  klasse: klasse,
+                ),
+                if (mixed)
+                  _sub('19.10.2026', '5', art: 'Entfall', klasse: '9 Z'),
+              ]),
+            ],
+          ).changes.where((c) => c.slot != '5.').toList();
+      // Plan nur einer Klasse (Elternkonto mit einem Kind): kein Filter.
+      expect(changes('6 XY (W)'), isNotEmpty);
+      expect(changes('8 B (W)'), isNotEmpty);
+      // Plan mehrerer Klassen: fremde Zeilen fallen weg.
+      expect(changes('6 XY (W)', mixed: true), isNotEmpty);
+      expect(changes('8 B (W)', mixed: true), isEmpty);
     });
   });
 }
