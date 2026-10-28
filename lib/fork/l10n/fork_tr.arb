@@ -695,5 +695,17 @@
   "uploadPublicFiles": "Sınıfın dosyaları",
   "uploadOnlyOneFile": "Bu teslimde yalnızca bir dosyaya izin var.",
   "uploadNoSubmission": "Hiçbir şey teslim edilmedi.",
-  "uploadHeroDate": "d MMMM ccc"
+  "uploadHeroDate": "d MMMM ccc",
+  "widgetToday": "bugün",
+  "widgetTomorrow": "yarın",
+  "widgetSlot": "{slot} ders",
+  "widgetStartLate": "Başlangıç {time}",
+  "widgetEndEarly": "Bitiş {time}",
+  "widgetRoom": "Derslik {room}",
+  "widgetCalmTitle": "Her şey planlandığı gibi",
+  "widgetCalmText": "bugün ve yarın",
+  "widgetDate": "d MMM ccc",
+  "widgetSetting": "Ana ekran widget'ı",
+  "widgetSettingPick": "Widget kimin planını göstersin?",
+  "widgetSettingHowTo": "Eklemek için: ana ekrana uzun basın → Widget'lar → {app}. Yalnızca bugün ve bir sonraki okul günü için iptalleri ve değişiklikleri gösterir."
 }

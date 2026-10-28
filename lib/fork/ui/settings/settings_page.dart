@@ -38,6 +38,9 @@ import 'class_sheet.dart';
 import '../today/today_from_lanis.dart' show shortSchoolName;
 import 'about_page.dart';
 import '../../notify/notify_keys.dart';
+import '../../widget/home_widget_data.dart' show widgetAccountSetting;
+import '../../widget/home_widget_sync.dart'
+    show storedWidgetAccount, widgetMember;
 import 'notify_settings_page.dart';
 import 'settings_widgets.dart';
 import 'device_transfer_page.dart';
@@ -477,6 +480,63 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
     },
   );
 
+  // ---- Startbildschirm-Widget -------------------------------------------------
+
+  /// Kind des Startbildschirm-Widgets wählen (widgetAccountSetting,
+  /// home_widget_sync.dart) – Blatt wie die Sprachwahl, darunter, wie man
+  /// das Widget hinzufügt. Ursache (Abnahme 28.10.26): Bei mehreren Konten
+  /// zeigt das Widget genau ein Kind; ohne Wahl gilt das aktive Konto.
+  /// Grenze: Mit nur einem Konto gibt es nichts zu wählen, das Blatt erklärt
+  /// dann nur das Hinzufügen.
+  Future<void> _pickWidgetKid(
+    TypedSettings shared,
+    List<FamilyMember> kids,
+    FamilyMember? current,
+  ) => showModalBottomSheet<void>(
+    context: context,
+    useRootNavigator: true,
+    showDragHandle: true,
+    backgroundColor: Kit.of(context).p.card,
+    builder: (sheet) {
+      final k = Kit.of(sheet);
+      final t = sheet.t;
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Sp.l, 0, Sp.l, Sp.s),
+              child: Text(
+                kids.length > 1 ? t.widgetSettingPick : t.widgetSetting,
+                style: k.sheetTitle,
+              ),
+            ),
+            if (kids.length > 1)
+              for (final m in kids)
+                SettingsChoiceRow(
+                  label: kidLabel(m.snapshot),
+                  selected: m.accountId == current?.accountId,
+                  onTap: () {
+                    shared.setString(widgetAccountSetting, '${m.accountId}');
+                    // FamilyScope baut neu, HomeWidgetSync schreibt sofort.
+                    settingsRevision.value++;
+                    Navigator.of(sheet).pop();
+                  },
+                ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Sp.l, Sp.s, Sp.l, Sp.l),
+              child: Text(
+                t.widgetSettingHowTo(forkAppName),
+                style: k.planMeta(k.p.muted),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+
   static List<(String, String)> _languages(ForkL10n t) => [
     (languageSystem, t.likePhone),
     ('de', 'Deutsch'),
@@ -550,6 +610,16 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
 
     final langName =
         {for (final (v, l) in _languages(t)) v: l}[language] ?? t.likePhone;
+    // Dieselbe Wahl wie HomeWidgetSync (widgetMember): gewählt, sonst aktiv.
+    final widgetKid = widgetMember(
+      kids,
+      chosen: storedWidgetAccount(shared),
+      active: account?.localId,
+      known: {
+        for (final a in ref.watch(accountsProvider).value ?? const [])
+          a.localId,
+      },
+    );
 
     return SettingsScaffold(
       title: t.settings,
@@ -658,6 +728,13 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
               detail: langName,
               onTap: () => _pickLanguage(language),
             ),
+            if (kids.isNotEmpty)
+              SettingsRow(
+                icon: Icons.widgets_outlined,
+                label: t.widgetSetting,
+                detail: widgetKid == null ? null : kidLabel(widgetKid.snapshot),
+                onTap: () => _pickWidgetKid(shared, kids, widgetKid),
+              ),
             // Profilfoto statt Anfangsbuchstabe (portal_extras.dart); wirkt
             // sofort über settingsRevision (live_data.dart).
             SettingsSwitchRow(

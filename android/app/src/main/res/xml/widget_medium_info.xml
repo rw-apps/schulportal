@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mittleres Widget 4 × 2 (Entwurf 4, Variante A). updatePeriodMillis
+     30 Min. (das Mindestmaß von Android): Neue Daten zeichnet die App bzw.
+     der Hintergrund-Lauf sofort (home_widget_sync.dart); der Takt sorgt nur
+     dafür, dass vergangene Stunden und „heute/morgen“ nach Mitternacht auch
+     ohne neue Daten stimmen (SchoolWidget.kt). Grenze: bis zu 30 Min.
+     Verzug, schläft das Gerät, auch länger. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_medium_description"
+    android:initialLayout="@layout/widget_medium"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="110dp"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen" />

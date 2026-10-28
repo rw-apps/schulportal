@@ -444,6 +444,7 @@ KidPlan planWithSubstitutions({
                       ? t.unclearNoCourse(what())
                       : t.unclearCourse(what(), code))
                 : c.detail,
+            changeRoom: _plain(s.raum),
           );
           changed = true;
         }
@@ -551,6 +552,7 @@ KidPlan planWithSubstitutions({
             subject: l.subject,
             kind: l.change!,
             detail: l.changeDetail,
+            room: l.changeRoom ?? l.room,
           ),
         );
       }
@@ -597,6 +599,7 @@ KidPlan planWithSubstitutions({
                   : (subjectName?.call(code) ?? code)),
           kind: c.kind,
           detail: c.detail,
+          room: _plain(s.raum),
         ),
       );
     }

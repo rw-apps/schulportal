@@ -37,6 +37,34 @@
                  registriert dasselbe Schema (Auswahlabfrage). -->
         </activity>
 
+        <!-- Fork: Startbildschirm-Widgets (Entwurf 4, Abnahme 28.10.26),
+             mittel 4 × 2 und klein 2 × 2; Inhalt aus der App
+             (lib/fork/widget, Paket home_widget), Darstellung in
+             kotlin/com/example/app/widget/SchoolWidget.kt. Nicht exportiert:
+             Aktualisieren schickt nur das System bzw. die App selbst. -->
+        <receiver
+            android:name=".widget.SchoolWidgetMedium"
+            android:exported="false"
+            android:label="@string/widget_medium_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_medium_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.SchoolWidgetSmall"
+            android:exported="false"
+            android:label="@string/widget_small_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_small_info" />
+        </receiver>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

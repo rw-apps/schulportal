@@ -32,6 +32,8 @@ import '../ui/today/kid_hints.dart' show nextSchoolDay;
 import '../ui/today/today_from_lanis.dart' show applySubstitutions;
 import '../ui/today/today_model.dart'
     show ChangeItem, DayLesson, hasTime, minutesOf;
+import '../widget/home_widget_data.dart' show widgetItems;
+import '../widget/home_widget_sync.dart' show updateHomeWidgetInBackground;
 import 'notices.dart';
 import 'notify_keys.dart';
 import 'summary.dart';
@@ -264,6 +266,40 @@ Future<void> _run(
     );
   } catch (e) {
     backgroundLogger.w('Sammelmeldung übersprungen: ${e.runtimeType}');
+  }
+
+  // Startbildschirm-Widget (lib/fork/widget, Abnahme 28.10.26) mit dem eben
+  // geladenen Vertretungsplan – dieselben Eingaben wie die Sammelmeldung,
+  // nur für das Konto des Widgets (updateHomeWidgetInBackground). Eigenes
+  // try: Ein Fehler hier darf weder Meldungen noch die folgenden Abrufe
+  // dieses Kontos verhindern. Grenze: Der Lauf kommt nur bei eingeschalteten
+  // Benachrichtigungen und im Zeitfenster (background_service.dart); sonst
+  // erneuert nur die offene App das Widget.
+  try {
+    await updateHomeWidgetInBackground(
+      shared: container.read(sharedOverAccountSettingsProvider),
+      account: s,
+      accountId: tools.accountId,
+      t: t,
+      items: widgetItems(
+        plan: plan.withTeacherNames(ownNames),
+        choice: effectiveChoice(auto, userChoice),
+        days: subDays,
+        now: now,
+        t: t,
+        subjectName: (c) => subjectFullName(c, courses),
+        free: freeDaysFrom(
+          events ?? const [],
+          now,
+          className: className,
+          days: freeDaysAhead,
+        ),
+        className: className,
+      ),
+      now: now,
+    );
+  } catch (e) {
+    backgroundLogger.w('Widget übersprungen: ${e.runtimeType}');
   }
 
   final sent = [

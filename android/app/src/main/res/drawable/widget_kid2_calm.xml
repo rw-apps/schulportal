@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ruhige Fläche „Alles nach Plan“ in der Farbe von Kind 2 (KidTone.tint). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/widget_kid2_tint" />
+    <corners android:radius="@dimen/widget_tile_radius" />
+</shape>

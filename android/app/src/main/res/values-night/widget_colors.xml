@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Startbildschirm-Widget: Farben aus KitPalette.dark
+     (lib/fork/ui/kit.dart, dunkel, values-night). Nicht von Hand ändern: Quelle ist das
+     Kit; test/fork/widget_colors_test.dart prüft jede Farbe gegen die
+     Palette. Ursache (Abnahme 28.10.26): Das native Widget kann das
+     Kit nicht lesen, soll aber genau wie die App aussehen. -->
+<resources>
+    <color name="widget_card">#FF171B22</color>
+    <color name="widget_ink">#FFF2F4F8</color>
+    <color name="widget_muted">#FF9AA3B2</color>
+    <color name="widget_faint">#FF5F6878</color>
+    <color name="widget_change_bg">#FF2A2208</color>
+    <color name="widget_change_ink">#FFFDE7A8</color>
+    <color name="widget_change_strong">#FFF5C451</color>
+    <color name="widget_cancel_bg">#FF3A1414</color>
+    <color name="widget_cancel_ink">#FFFECACA</color>
+    <color name="widget_cancel_strong">#FFFCA5A5</color>
+    <color name="widget_cancel_dot">#FFF87171</color>
+    <color name="widget_todo_dot">#FF9AA3B2</color>
+    <color name="widget_kid0_accent">#FF6EA2FF</color>
+    <color name="widget_kid0_tint">#FF1A2741</color>
+    <color name="widget_kid0_on_tint">#FFE6EEFE</color>
+    <color name="widget_kid0_label">#FF8AB6FF</color>
+    <color name="widget_kid0_meta">#FFB9CBEA</color>
+    <color name="widget_kid1_accent">#FF2DD4BF</color>
+    <color name="widget_kid1_tint">#FF12302C</color>
+    <color name="widget_kid1_on_tint">#FFDDF3EF</color>
+    <color name="widget_kid1_label">#FF5EEAD4</color>
+    <color name="widget_kid1_meta">#FFA8DCD5</color>
+    <color name="widget_kid2_accent">#FFA78BFA</color>
+    <color name="widget_kid2_tint">#FF2A1F45</color>
+    <color name="widget_kid2_on_tint">#FFEFE7FE</color>
+    <color name="widget_kid2_label">#FFC4B5FD</color>
+    <color name="widget_kid2_meta">#FFCFC3EE</color>
+    <color name="widget_kid3_accent">#FFA3E635</color>
+    <color name="widget_kid3_tint">#FF22301A</color>
+    <color name="widget_kid3_on_tint">#FFECF5D8</color>
+    <color name="widget_kid3_label">#FFBEF264</color>
+    <color name="widget_kid3_meta">#FFCFE3B0</color>
+</resources>

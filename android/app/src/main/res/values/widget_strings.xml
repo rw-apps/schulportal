@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Startbildschirm-Widget: nur die Texte, die Android selbst zeigt, bevor
+     die App Daten geschrieben hat (Widget-Auswahl, leeres Widget). Alle
+     übrigen Texte kommen fertig übersetzt aus der App (ForkL10n,
+     lib/fork/widget/home_widget_data.dart). Englisch als Vorgabe wie
+     fallbackLanguage (lib/fork/l10n/l10n.dart). -->
+<resources>
+    <string name="widget_medium_label">Changes today &amp; tomorrow</string>
+    <string name="widget_small_label">Next change</string>
+    <string name="widget_medium_description">Cancellations, substitutions and room changes for today and the next school day</string>
+    <string name="widget_small_description">The next cancellation or change</string>
+    <string name="widget_no_data">Open the app once to load the plan.</string>
+</resources>

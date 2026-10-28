@@ -79,3 +79,6 @@ lib/fork/l10n/gen/
 
 # Fork: lokale Tests mit echten Portaldaten – nie ins Repository
 test/_local/
+
+# Kotlin-Compiler-Cache (Widget-Bau 28.10.26)
+android/.kotlin/

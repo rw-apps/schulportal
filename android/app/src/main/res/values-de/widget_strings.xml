@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_medium_label">Änderungen heute &amp; morgen</string>
+    <string name="widget_small_label">Nächste Änderung</string>
+    <string name="widget_medium_description">Ausfälle, Vertretungen und Raumwechsel für heute und den nächsten Schultag</string>
+    <string name="widget_small_description">Der nächste Ausfall oder die nächste Änderung</string>
+    <string name="widget_no_data">App einmal öffnen, damit der Plan geladen wird.</string>
+</resources>

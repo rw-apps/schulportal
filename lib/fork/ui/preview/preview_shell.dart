@@ -22,6 +22,7 @@ import '../courses/homework_due.dart' show liveOpenHomework;
 import '../courses/live_courses_page.dart';
 import '../kit.dart';
 import '../live/family.dart';
+import '../../widget/home_widget_sync.dart' show HomeWidgetSync;
 import '../live/live_data.dart';
 import '../messages/live_messages_page.dart';
 import '../messages/messages_page.dart';
@@ -509,7 +510,12 @@ class _PreviewShellState extends State<PreviewShell> {
           child: widget.liveData
               ? _AccountSwitchWatch(
                   onSwitch: _closeSubpages,
-                  child: LiveDataScope(child: FamilyScope(child: scaffold)),
+                  // Startbildschirm-Widget mit dem Stand der App
+                  // (home_widget_sync.dart): unter FamilyScope, damit es
+                  // jedes Konto der Familie erreicht.
+                  child: LiveDataScope(
+                    child: FamilyScope(child: HomeWidgetSync(child: scaffold)),
+                  ),
                 )
               : scaffold,
         ),

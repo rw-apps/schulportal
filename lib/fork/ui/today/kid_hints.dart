@@ -75,6 +75,33 @@ DateTime nextSchoolDay(DateTime now) {
   return d;
 }
 
+/// Folge des Ausfalls von Abschnitt [i] in [lessons] (Tag, zeitlich
+/// sortiert): [start] = Beginn der ersten stattfindenden Stunde, wenn vor
+/// [i] nichts mehr stattfindet („Beginn erst 09:45“); sonst [end] = Ende der
+/// letzten stattfindenden Stunde, wenn nach [i] nichts mehr kommt („Schluss
+/// schon 13:00“).
+///
+/// EINE Regel für die Kinderkarte ([kidHints]) und das
+/// Startbildschirm-Widget (home_widget_data.dart). Ursache (Abnahme
+/// 28.10.26): Das Widget nennt dieselbe Folge („Start erst 09:55“); eine
+/// zweite Rechnung hätte auseinanderlaufen können. Grenze: beides null, wenn
+/// [i] stattfindet, der ganze Tag ausfällt, der Ausfall mitten im Tag liegt
+/// oder die Schule keine Uhrzeiten zeigt (hasTime).
+({String? start, String? end}) cancelEffect(List<DayLesson> lessons, int i) {
+  const none = (start: null, end: null);
+  if (i < 0 || i >= lessons.length || !lessons[i].cancelled) return none;
+  final held = [
+    for (var j = 0; j < lessons.length; j++)
+      if (!lessons[j].cancelled) j,
+  ];
+  if (held.isEmpty) return none;
+  final first = lessons[held.first];
+  final last = lessons[held.last];
+  if (held.first > i && hasTime(first)) return (start: first.start, end: null);
+  if (held.last < i && hasTime(last)) return (start: null, end: last.end);
+  return none;
+}
+
 /// Hinweise in dieser Reihenfolge:
 /// 1. heutige Änderungen an Stunden, die noch kommen oder laufen
 ///    (vorbei = weg); ein Ausfall am Anfang bzw. Ende nennt die Folge
@@ -95,18 +122,11 @@ List<KidHint> kidHints(
   List<WeekItem> exams = const [],
 }) {
   final l = kid.lessons;
-  final held = [
-    for (var i = 0; i < l.length; i++)
-      if (!l[i].cancelled) i,
-  ];
-  String? effect(int i) {
-    if (!l[i].cancelled || held.isEmpty) return null;
-    final first = l[held.first];
-    final last = l[held.last];
-    if (held.first > i && hasTime(first)) return t.hintLaterStart(first.start);
-    if (held.last < i && hasTime(last)) return t.hintEarlyEnd(last.end);
-    return null;
-  }
+  String? effect(int i) => switch (cancelEffect(l, i)) {
+    (start: final s?, end: _) => t.hintLaterStart(s),
+    (start: _, end: final e?) => t.hintEarlyEnd(e),
+    _ => null,
+  };
 
   final out = <KidHint>[];
   final shown = <String>{};

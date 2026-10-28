@@ -1827,5 +1827,52 @@
   "uploadPublicFiles": "Dateien der Lerngruppe",
   "uploadOnlyOneFile": "Bei dieser Abgabe ist nur eine Datei erlaubt.",
   "uploadNoSubmission": "Nichts abgegeben.",
-  "uploadHeroDate": "ccc, d. MMMM"
+  "uploadHeroDate": "ccc, d. MMMM",
+  "widgetToday": "heute",
+  "widgetTomorrow": "morgen",
+  "widgetSlot": "{slot} Std.",
+  "@widgetSlot": {
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      }
+    }
+  },
+  "widgetStartLate": "Start erst {time}",
+  "@widgetStartLate": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "widgetEndEarly": "Schluss {time}",
+  "@widgetEndEarly": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "widgetRoom": "Raum {room}",
+  "@widgetRoom": {
+    "placeholders": {
+      "room": {
+        "type": "String"
+      }
+    }
+  },
+  "widgetCalmTitle": "Alles nach Plan",
+  "widgetCalmText": "heute und morgen",
+  "widgetDate": "ccc, d. MMM",
+  "widgetSetting": "Startbildschirm-Widget",
+  "widgetSettingPick": "Wessen Plan zeigt das Widget?",
+  "widgetSettingHowTo": "Hinzufügen: Startbildschirm lange drücken → Widgets → {app}. Es zeigt nur Ausfälle und Änderungen für heute und den nächsten Schultag.",
+  "@widgetSettingHowTo": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  }
 }

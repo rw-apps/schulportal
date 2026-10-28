@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Startbildschirm-Widget: Maße aus dem Design-Kit (lib/fork/ui/kit.dart,
+     Sp/Sz/Rad), Entwurf 4 (test/_local/widget_v4_mockup_test.dart, Abnahme
+     28.10.26). Ursache: Das native Widget kann das Kit nicht lesen; die
+     Werte stehen deshalb hier EINMAL, die Layouts nehmen nur diese Namen. -->
+<resources>
+    <!-- Rad.card; ab Android 12 der Radius des Systems (values-v31). -->
+    <dimen name="widget_radius">28dp</dimen>
+    <!-- Rad.cell + 2 (Kachel, ruhige Fläche). -->
+    <dimen name="widget_tile_radius">14dp</dimen>
+    <!-- Rad.row (Quadrat des Lagebilds). -->
+    <dimen name="widget_pic_radius">12dp</dimen>
+    <!-- Sp.m + 2 (Innenabstand der Widget-Fläche). -->
+    <dimen name="widget_padding">14dp</dimen>
+    <!-- Sp.s + 2 (Innenabstand der Kachel, Abstand Kopf → Kacheln). -->
+    <dimen name="widget_tile_padding">10dp</dimen>
+    <!-- Sp.s (zwischen zwei Kacheln, Kreis → Datum). -->
+    <dimen name="widget_gap">8dp</dimen>
+    <!-- Sp.xs + 2 (Lagebild → Fach). -->
+    <dimen name="widget_gap_small">6dp</dimen>
+    <!-- Sp.xs (Symbol → Text in der Fußzeile, Lagebild → Wann). -->
+    <dimen name="widget_gap_tiny">4dp</dimen>
+    <!-- Sp.xxs (Sync-Symbol → Uhrzeit). -->
+    <dimen name="widget_gap_hair">2dp</dimen>
+    <!-- Sp.m (zwischen den Angaben der Fußzeile). -->
+    <dimen name="widget_foot_gap">12dp</dimen>
+    <!-- Lagebild 36 dp, Symbol darin Sz.navIcon. -->
+    <dimen name="widget_pic">36dp</dimen>
+    <dimen name="widget_pic_icon">22dp</dimen>
+    <!-- Kreis im Kopf 22 dp, Schulsymbol 0,6 davon. -->
+    <dimen name="widget_dot">22dp</dimen>
+    <dimen name="widget_dot_icon">13dp</dimen>
+    <!-- Sz.iconSmall (Sync) und Sz.iconSmall + 2 (Fußzeile). -->
+    <dimen name="widget_icon_small">14dp</dimen>
+    <dimen name="widget_icon_foot">16dp</dimen>
+    <!-- Nur zwei Schriftgrößen (Rückmeldung 28.10.26): Titel = tileTitle,
+         alles andere 12. In sp, damit die Systemschrift mitwächst. -->
+    <dimen name="widget_text_title">15sp</dimen>
+    <dimen name="widget_text">12sp</dimen>
+</resources>

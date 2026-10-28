@@ -20,7 +20,7 @@ publish_to: 'none'
 # Upstream-Ständen denselben Code. 9301 = Upstream-Build 93, Fork-Ausgabe 01.
 # Grenze: Die Test-APK vom 14.10.26 (arm64, --split-per-abi) hatte 2093;
 # 9301 > 2093, das Update darüber klappt also.
-version: 4.1.0+9436
+version: 4.1.0+9437
 
 environment:
   sdk: ^3.10.0
@@ -79,6 +79,13 @@ dependencies:
   qr_flutter: ^4.1.0
   mobile_scanner: ^7.4.2
   cryptography: ^2.9.0
+  # Fork (lib/fork/widget, Startbildschirm-Widget, Abnahme 28.10.26): Ablage
+  # der Widget-Daten in den SharedPreferences, die das native Widget liest,
+  # samt Aktualisierungsaufruf – auch aus dem Hintergrund-Lauf
+  # (background_fetch), weil Plugins dort registriert sind. Exakt gepinnt,
+  # damit ein Paket-Update die Kotlin-Seite (HomeWidgetPlugin) nicht
+  # unbemerkt ändert.
+  home_widget: 0.9.4
 
 
 

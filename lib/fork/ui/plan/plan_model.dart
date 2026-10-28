@@ -31,6 +31,7 @@ class PlanLesson {
     this.teacher,
     this.change,
     this.changeDetail,
+    this.changeRoom,
   });
 
   /// Ausgeschrieben („Textil“).
@@ -44,6 +45,14 @@ class PlanLesson {
   final String? teacher;
   final ChangeKind? change;
   final String? changeDetail;
+
+  /// Raum laut Vertretungszeile (Spalte „Raum“), auch bei einer Vertretung –
+  /// [room] wechselt nur beim Raumwechsel. Ursache (Startbildschirm-Widget,
+  /// Abnahme 28.10.26): Die Kachel nennt bei einer Vertretung „Raum R117“,
+  /// der Raum stand bisher nur im Text von [changeDetail] („Name, R117“).
+  /// Grenze: Zählt nicht für [sameAs] – eine Doppelstunde bliebe sonst
+  /// geteilt, wenn nur eine Zeile den Raum nennt; null ohne Raum-Spalte.
+  final String? changeRoom;
 
   /// Kennung der Gruppe innerhalb des Fachs.
   String get groupKey => teacher ?? room ?? subject;

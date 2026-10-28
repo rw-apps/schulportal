@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ab Android 12 schneidet der Startbildschirm Widgets mit seinem eigenen
+     Radius zu; dieselbe Rundung für die Fläche, sonst blitzen die Ecken von
+     widget_card (28 dp) hervor oder werden gekappt. -->
+<resources>
+    <dimen name="widget_radius">@android:dimen/system_app_widget_background_radius</dimen>
+</resources>
