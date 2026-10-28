@@ -200,10 +200,18 @@ List<DateTime> mealReminderDays(
 /// gemerkten Wochenseite (…/2026/46/) setzt mensaUrlForWeek die Woche
 /// direkt ein. Grenze: Vor dem ersten erfolgreichen Lesen gilt die
 /// eingetragene Adresse; dann hilft mealNavJs weiter.
+///
+/// Nur Wochenseiten desselben Caterers (Host wie [stored]). Ursache
+/// (Rückmeldung 28.10.26, Tablet): Nach dem Ändern der Adresse auf einen
+/// anderen Caterer öffnete „Essen“ weiter die gemerkte Wochenseite des
+/// alten. Grenze: Wechselt ein Caterer selbst die Domain, gilt bis zum
+/// nächsten Lesen die eingetragene Adresse.
 String mealBaseUrl(String stored, MealEntry? e) {
+  final host = Uri.tryParse(stored.trim())?.host ?? '';
   MealWeek? best;
   for (final w in e?.weeks ?? const <MealWeek>[]) {
     if (w.url == null) continue;
+    if (host.isNotEmpty && Uri.tryParse(w.url!)?.host != host) continue;
     if (best == null || w.start.isAfter(best.start)) best = w;
   }
   return best?.url ?? stored;
@@ -395,6 +403,22 @@ class MealCache {
           ..sort((a, b) => a.start.compareTo(b.start))),
       ),
     );
+  }
+
+  /// Gespeicherte Wochen eines Kindes verwerfen – beim Wechsel des
+  /// Caterers (live_data.setMensaUrl). Ursache (Rückmeldung 28.10.26):
+  /// Speiseplan, Guthaben und Erinnerungen des alten Caterers blieben
+  /// sonst stehen, bis der neue einmal gelesen war.
+  void forget(String owner) {
+    if (demo != null || !notifier.value.containsKey(owner)) return;
+    final next = {...notifier.value}..remove(owner);
+    notifier.value = next;
+    try {
+      _settings?.setString(
+        mealCacheKey,
+        jsonEncode({for (final x in next.entries) x.key: x.value.toJson()}),
+      );
+    } catch (_) {}
   }
 
   /// Seite ließ sich nicht lesen; gespeicherte Wochen bleiben erhalten.

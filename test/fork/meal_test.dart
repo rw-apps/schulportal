@@ -433,4 +433,26 @@ void main() {
     setMensaLastOwner(s, 'essen.example', '1:c');
     expect(mensaLastName(s, 'essen.example'), '');
   });
+
+  // Rückmeldung 28.10.26: Nach dem Wechsel des Caterers öffnete „Essen“
+  // weiter die gemerkte Wochenseite des alten.
+  test('mealBaseUrl nimmt nur Wochenseiten desselben Caterers', () {
+    MealWeek week(String url, int day) => MealWeek(
+      label: 'KW',
+      url: url,
+      days: [
+        MealDay(day: DateTime(2026, 10, day), state: MealState.values.first),
+      ],
+    );
+    final e = MealEntry(
+      at: DateTime(2026, 10, 28),
+      weeks: [week('https://alt.example/plan/2026/44/', 26)],
+    );
+    expect(mealBaseUrl('https://neu.example/', e), 'https://neu.example/');
+    expect(
+      mealBaseUrl('https://alt.example/login', e),
+      'https://alt.example/plan/2026/44/',
+    );
+    expect(mealBaseUrl('https://neu.example/', null), 'https://neu.example/');
+  });
 }

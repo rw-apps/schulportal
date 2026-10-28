@@ -23,6 +23,7 @@ import 'feed_source.dart';
 import 'serial_loader.dart';
 import '../../mensa.dart';
 import '../../mensa_login.dart' show forgetMensaLogin;
+import '../../mensa_store.dart' show MealCache;
 import '../plan/lesson_times.dart';
 import '../plan/plan_from_lanis.dart';
 import '../plan/plan_model.dart';
@@ -778,6 +779,9 @@ class _LiveDataScopeState extends ConsumerState<LiveDataScope>
         if (Uri.tryParse(before ?? '')?.host !=
             Uri.tryParse(next.of(kid) ?? '')?.host) {
           forgetMensaLogin('${account.localId}:$kid');
+          // Auch die gemerkten Wochen samt Wochenseite des alten Caterers
+          // (MealCache.forget, mealBaseUrl – Rückmeldung 28.10.26).
+          MealCache.instance.forget('${account.localId}:$kid');
         }
         setState(() => _mensa = next);
         final s = ref.read(accountSpecificSettingsProvider);
