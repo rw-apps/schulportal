@@ -710,5 +710,7 @@
   "widgetDueFor": "for {day}",
   "widgetExam": "Exam",
   "widgetMeal": "Lunch",
-  "widgetAllKids": "All children"
+  "widgetAllKids": "All children",
+  "widgetCalmAnd": "and {day}",
+  "widgetStaleText": "Open the app"
 }

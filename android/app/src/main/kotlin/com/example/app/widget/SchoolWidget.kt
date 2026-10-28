@@ -117,6 +117,8 @@ internal object SchoolWidgetRenderer {
         val line = 12f * ctx.resources.configuration.fontScale * 1.2f
         val tileH = 3 * line + TILE_PAD
         val headH = line + GAP
+        // Namenszeile (widget_name): eine Zeile und 4 dp Abstand darunter.
+        val nameH = line + 4f
         val tier = WidgetModel.tier(p.kids.size)
         if (size != WidgetSize.SMALL) header(v, p, tier, today)
 
@@ -127,7 +129,7 @@ internal object SchoolWidgetRenderer {
                 if (size == WidgetSize.SMALL) {
                     // Klein: Vorname, darunter die zwei wichtigsten Kacheln.
                     v.addView(R.id.body, nameLine(ctx, kid))
-                    val n = WidgetModel.rowsThatFit(avail?.minus(line + 4f), tileH, GAP_SMALL, 2)
+                    val n = WidgetModel.rowsThatFit(avail?.minus(nameH), tileH, GAP_SMALL, 2)
                     tiles.take(n).forEachIndexed { i, t ->
                         if (i > 0) v.addView(R.id.body, gap(ctx, R.layout.widget_vgap_small))
                         v.addView(R.id.body, row(ctx, kid, listOf(t)))
@@ -139,7 +141,11 @@ internal object SchoolWidgetRenderer {
                 }
             }
             Tier.TWO -> {
-                if (size == WidgetSize.SMALL) {
+                if (size == WidgetSize.SMALL && !WidgetModel.twoKidsFit(avail, nameH, tileH, GAP)) {
+                    // Zu niedrig für zwei Namen und zwei dreizeilige Kacheln:
+                    // die kompakten Zellen wie ab drei Kindern (WidgetModel.twoKidsFit).
+                    many(ctx, v, p, size, today, now, avail, line, tileH, headH)
+                } else if (size == WidgetSize.SMALL) {
                     // Klein: je Kind Vorname und die wichtigste Kachel.
                     p.kids.forEachIndexed { i, kid ->
                         if (i > 0) v.addView(R.id.body, gap(ctx, R.layout.widget_vgap))
@@ -336,6 +342,8 @@ internal object SchoolWidgetRenderer {
         val layout = when (cell.kind) {
             TileKind.CANCEL -> R.layout.widget_cell_cancel
             TileKind.CHANGE, TileKind.ROOM -> R.layout.widget_cell_change
+            // Veraltet: grau wie Arbeit/Aufgaben, nicht in der Kinderfarbe.
+            TileKind.STALE -> R.layout.widget_cell_info
             else -> R.layout.widget_cell_calm
         }
         val v = RemoteViews(ctx.packageName, layout)
@@ -364,6 +372,7 @@ internal object SchoolWidgetRenderer {
         TileKind.HOMEWORK -> R.drawable.ic_widget_checklist
         TileKind.MEAL -> R.drawable.ic_widget_restaurant
         TileKind.CALM -> R.drawable.ic_widget_sun
+        TileKind.STALE -> R.drawable.ic_widget_stale
     }
 
     private fun line(v: RemoteViews, id: Int, text: String) {

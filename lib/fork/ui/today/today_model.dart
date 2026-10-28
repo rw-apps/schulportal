@@ -71,8 +71,9 @@ class ChangeItem {
 
   /// Raum, in dem die Stunde nach der Änderung stattfindet (Vertretungszeile,
   /// sonst Raum laut Plan; PlanLesson.changeRoom). Für das
-  /// Startbildschirm-Widget („Raum R117“, Abnahme 28.10.26). Grenze: null,
-  /// wenn weder Zeile noch Plan einen Raum nennen.
+  /// Startbildschirm-Widget – genutzt nur beim Raumwechsel („Raum R310“,
+  /// widgetItems; bei einer Vertretung zeigt Entwurf 5 nur „Vertretung“).
+  /// Grenze: null, wenn weder Zeile noch Plan einen Raum nennen.
   final String? room;
 }
 

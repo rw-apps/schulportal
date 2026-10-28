@@ -22,6 +22,7 @@ class WidgetModelTest {
           "weekdays": ["Mo","Di","Mi","Do","Fr","Sa","So"],
           "weekdaysLong": ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag","Sonntag"],
           "calmTitle": "Nach Plan", "calmText": "und morgen", "calmShort": "nach Plan",
+          "calmAnd": "und %s", "stale": "Stand %s", "staleText": "App öffnen",
           "homeworkOpen": "offen", "dueFor": "für %s", "exam": "Arbeit", "meal": "Essen"}
     """
 
@@ -160,5 +161,81 @@ class WidgetModelTest {
         assertEquals(2, WidgetModel.rowsThatFit(126f, 60f, 6f, 3))
         assertEquals(3, WidgetModel.rowsThatFit(500f, 60f, 6f, 3))
         assertEquals(1, WidgetModel.rowsThatFit(10f, 60f, 6f, 2))
+    }
+
+    private fun kid(stand: String?, extra: String = "") = WidgetModel.parse(
+        v2("""{"account": 5, "name": "Mia", "color": 3, ${if (stand == null) "" else "\"stand\": \"$stand\","} "items": [] $extra}"""),
+    )!!
+
+    @Test
+    fun veralteterStandStattRuhigerKachel() {
+        // Abruf Montag 26.10. deckt Montag und Dienstag; am Mittwoch veraltet.
+        val p = kid("2026-10-26T18:05:00.000")
+        val k = p.kids[0]
+        assertEquals(Tile(TileKind.STALE, "Stand Mo 18:05", "App öffnen", ""), WidgetModel.tilesFor(k, p.labels, today, nine, false)[0])
+        assertEquals(Cell(TileKind.STALE, "Mia", "Stand Mo 18:05"), WidgetModel.cellFor(k, p.labels, today, nine, false))
+        // Abruf Dienstag deckt heute (Mittwoch), aber nicht morgen: ohne „und morgen“.
+        val q = kid("2026-10-27T18:05:00.000")
+        assertEquals(Tile(TileKind.CALM, "Nach Plan", "heute", ""), WidgetModel.tilesFor(q.kids[0], q.labels, today, nine, false)[0])
+        assertEquals(Cell(TileKind.CALM, "Mia", "nach Plan"), WidgetModel.cellFor(q.kids[0], q.labels, today, nine, false))
+        // Abruf heute: ruhig mit „und morgen“; ohne Stand (unbekannt) ebenso.
+        val r = kid("2026-10-28T07:00:00.000")
+        assertEquals(Tile(TileKind.CALM, "Nach Plan", "heute", "und morgen"), WidgetModel.tilesFor(r.kids[0], r.labels, today, nine, false)[0])
+        val u = kid(null)
+        assertEquals(TileKind.CALM, WidgetModel.tilesFor(u.kids[0], u.labels, today, nine, false)[0].kind)
+        // Freitagabend abgerufen: Montag ist noch abgedeckt, Dienstag nicht.
+        val fri = kid("2026-10-30T18:05:00.000")
+        assertEquals(TileKind.CALM, WidgetModel.tilesFor(fri.kids[0], fri.labels, LocalDate.of(2026, 11, 2), nine, false)[0].kind)
+        assertEquals(
+            Tile(TileKind.STALE, "Stand Fr 18:05", "App öffnen", ""),
+            WidgetModel.tilesFor(fri.kids[0], fri.labels, LocalDate.of(2026, 11, 3), nine, false)[0],
+        )
+    }
+
+    @Test
+    fun undNaechsterSchultagStattUndMorgen() {
+        val p = kid("2026-10-30T07:00:00.000")
+        val k = p.kids[0]
+        fun third(d: LocalDate) = WidgetModel.tilesFor(k, p.labels, d, nine, false)[0].l3
+        assertEquals("und Montag", third(LocalDate.of(2026, 10, 30)))
+        assertEquals("und Montag", third(LocalDate.of(2026, 10, 31)))
+        assertEquals("und morgen", third(LocalDate.of(2026, 11, 1)))
+        assertEquals(LocalDate.of(2026, 11, 2), WidgetModel.nextSchoolDay(LocalDate.of(2026, 10, 30)))
+        assertEquals(LocalDate.of(2026, 10, 29), WidgetModel.nextSchoolDay(today))
+        // Datei vor 28.10.26 ohne „calmAnd“: „und morgen“ nur, wenn es stimmt.
+        val old = WidgetModel.parse(
+            v2("""{"account": 5, "name": "Mia", "stand": "2026-10-30T07:00:00.000", "items": []}""").replace("\"calmAnd\": \"und %s\",", ""),
+        )!!
+        assertEquals("", WidgetModel.tilesFor(old.kids[0], old.labels, LocalDate.of(2026, 10, 30), nine, false)[0].l3)
+    }
+
+    @Test
+    fun arbeitUndFristNurMitEindeutigemWochentag() {
+        // Mittwoch: Arbeit am Mittwoch in einer Woche hieße „Mittwoch“ wie heute.
+        val p = kid(
+            "2026-10-28T07:00:00.000",
+            """, "exam": {"date": "2026-11-04", "subject": "Bio", "kind": "Test"}, "hwText": "1 Aufgabe", "hwDue": "2026-11-04"""",
+        )
+        val tiles = WidgetModel.tilesFor(p.kids[0], p.labels, today, nine, false)
+        assertEquals(listOf(TileKind.CALM, TileKind.HOMEWORK), tiles.map { it.kind })
+        assertEquals("", tiles[1].l3)
+        assertEquals("", WidgetModel.examLine(p.kids, p.labels, today))
+        // Einen Tag früher (Dienstag, 6 Tage): mit Wochentag.
+        val q = kid(
+            "2026-10-28T07:00:00.000",
+            """, "exam": {"date": "2026-11-03", "subject": "Bio", "kind": "Test"}, "hwText": "1 Aufgabe", "hwDue": "2026-11-03"""",
+        )
+        val t2 = WidgetModel.tilesFor(q.kids[0], q.labels, today, nine, false)
+        assertEquals(Tile(TileKind.EXAM, "Bio", "Test", "Dienstag"), t2[1])
+        assertEquals("für Dienstag", t2[2].l3)
+        assertEquals("Di Mia", WidgetModel.examLine(q.kids, q.labels, today))
+    }
+
+    @Test
+    fun zweiKinderKleinPassenOderKompakt() {
+        // Name 18, Kachel 60, Abstand 8: braucht 2 × 78 + 8 = 164.
+        assertEquals(true, WidgetModel.twoKidsFit(null, 18f, 60f, 8f))
+        assertEquals(true, WidgetModel.twoKidsFit(164f, 18f, 60f, 8f))
+        assertEquals(false, WidgetModel.twoKidsFit(150f, 18f, 60f, 8f))
     }
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
@@ -8,6 +9,10 @@ import 'package:webview_flutter/webview_flutter.dart' show WebViewCookieManager;
 
 import 'package:lanis/background_service.dart' show refreshBackgroundService;
 import 'package:lanis/features/auth/auth_controller.dart';
+import 'package:lanis/fork/l10n/l10n.dart';
+import 'package:lanis/fork/ui/language.dart' show languageProvider;
+import 'package:lanis/fork/widget/home_widget_sync.dart'
+    show removeHomeWidgetKid;
 
 /// Dateicache des Kontos [localId] unter [root] (LanisConfig.
 /// documentCacheDirectory) – derselbe Pfad wie
@@ -42,10 +47,22 @@ Future<void> deleteAccountDocuments(String? root, int localId) async {
 /// sich in Moodle neu an. Danach wird die Hintergrundabfrage neu bewertet
 /// (refreshBackgroundService), damit Meldungen des Kontos verschwinden und
 /// sie stoppt, wenn kein Konto mehr Meldungen will.
+///
+/// Startbildschirm-Widget: Das Kind verschwindet aus der Datei, ohne
+/// übriges Kind wird sie gelöscht (removeHomeWidgetKid,
+/// home_widget_sync.dart). Ursache (Prüfung 28.10.26): Vorher blieb ein
+/// abgemeldetes Kind mit seinem letzten Stand auf dem Startbildschirm.
+/// Grenze: Die übrigen Kinder werden in der Sprache der Einstellung neu
+/// geschrieben (wie der Hintergrund-Lauf, notify_task.dart), nicht in der
+/// des Widget-Baums.
 Future<void> removeAccountFromDevice(WidgetRef ref, int localId) async {
   String? root;
   try {
     root = ref.read(lanisConfigProvider).documentCacheDirectory;
+  } catch (_) {}
+  String? language;
+  try {
+    language = ref.read(languageProvider);
   } catch (_) {}
   await ref
       .read(authControllerProvider.notifier)
@@ -54,5 +71,15 @@ Future<void> removeAccountFromDevice(WidgetRef ref, int localId) async {
   try {
     await WebViewCookieManager().clearCookies();
   } catch (_) {}
+  await removeHomeWidgetKid(
+    localId,
+    t: forkL10nFor(
+      resolveLanguage(
+        language,
+        PlatformDispatcher.instance.locale.languageCode,
+      ),
+    ),
+    now: DateTime.now(),
+  );
   unawaited(refreshBackgroundService());
 }

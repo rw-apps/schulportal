@@ -230,6 +230,9 @@ void main() {
     expect(labels['calmTitle'], 'Nach Plan');
     expect(labels['calmText'], 'und morgen');
     expect(labels['calmShort'], 'nach Plan');
+    expect(labels['calmAnd'], 'und %s');
+    expect(labels['stale'], 'Stand %s');
+    expect(labels['staleText'], 'App öffnen');
     expect(labels['homeworkOpen'], 'offen');
     expect(labels['dueFor'], 'für %s');
     expect(labels['exam'], 'Arbeit');
@@ -350,10 +353,59 @@ void main() {
     expect(widgetAccounts([1, 2], {7}), [1, 2]);
   });
 
-  test('Nächste Arbeit nur innerhalb von 7 Tagen', () {
+  test('Nächste Arbeit nur innerhalb von 7 Tagen (heute bis heute + 6)', () {
     UpcomingExam at(int day) =>
         UpcomingExam(day: DateTime(2026, 11, day), subject: 'Bio', kind: '');
-    expect(nextExamWithin([at(3)], tuesday)?.day.day, 3);
-    expect(nextExamWithin([at(4)], tuesday), isNull);
+    // Dienstag 27.10.: Montag 2.11. ja; Dienstag 3.11. hieße „Dienstag“ wie
+    // heute (Prüfung 28.10.26) – erst am Mittwoch.
+    expect(nextExamWithin([at(2)], tuesday)?.day.day, 2);
+    expect(nextExamWithin([at(3)], tuesday), isNull);
+    expect(nextExamWithin([at(3)], DateTime(2026, 10, 28))?.day.day, 3);
+  });
+
+  test('Abmelden: Kind fällt aus der Datei, ohne Kind wird sie gelöscht', () {
+    final p = homeWidgetPayload(kids: [jonas(), lena()], now: tuesday, t: de);
+    final rest = widgetKidsWithout(p, 1)!;
+    expect(rest.map((k) => k['name']), ['Lena']);
+    // Neu geschrieben stimmt auch die Summe der Fußzeile.
+    expect(
+      homeWidgetPayload(kids: rest, now: tuesday, t: de)['hwTotal'],
+      '3 Aufgaben',
+    );
+    expect(widgetKidsWithout({...p, 'kids': rest}, 2), isEmpty);
+    // Fremdes Konto oder keine Datei: nichts zu tun.
+    expect(widgetKidsWithout(p, 9), isNull);
+    expect(widgetKidsWithout(null, 1), isNull);
+    // Version 1 (ein Kind oben in der Datei): ganz löschen, wenn es dieses ist.
+    expect(widgetKidsWithout({'v': 1, 'account': 3}, 3), isEmpty);
+    expect(widgetKidsWithout({'v': 1, 'account': 3}, 1), isNull);
+  });
+
+  test('Schreiben aus der App: der neuere Vertretungsplan gewinnt', () {
+    final app = jonas();
+    // Hintergrund hat nach dem Laden der App (7:52) um 10:00 abgerufen.
+    final old = mergeWidgetKid(
+      homeWidgetPayload(kids: [app], now: tuesday, t: de),
+      account: 1,
+      items: const [],
+      stand: DateTime(2026, 10, 27, 10, 0),
+      color: 3,
+    )!.single;
+    final kept = newerWidgetKid(app, old)!;
+    expect(kept['stand'], '2026-10-27T10:00:00.000');
+    expect(kept['items'], isEmpty);
+    // Aufgaben, Arbeit, Name und Farbe bleiben aus der App.
+    expect(kept['hw'], 2);
+    expect(kept['exam'], app['exam']);
+    expect(kept['color'], 0);
+    // App neuer (oder gleich alt): der Eintrag der App.
+    final newer = {...app, 'stand': '2026-10-27T11:00:00.000'};
+    expect(newerWidgetKid(newer, old), same(newer));
+    expect(newerWidgetKid(app, app), same(app));
+    // Eine Seite fehlt: die andere; ohne Stand gilt die App.
+    expect(newerWidgetKid(null, old), same(old));
+    expect(newerWidgetKid(app, null), same(app));
+    final noStand = lena();
+    expect(newerWidgetKid(noStand, old), same(noStand));
   });
 }

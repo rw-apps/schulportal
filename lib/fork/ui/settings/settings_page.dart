@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -741,7 +742,12 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
               detail: langName,
               onTap: () => _pickLanguage(language),
             ),
-            if (kids.isNotEmpty)
+            // Nur Android: Das Startbildschirm-Widget gibt es nur dort
+            // (SchoolWidget.kt; writeHomeWidget schreibt sonst nichts).
+            // Ursache (Prüfung 28.10.26): Auf dem iPhone stand die Zeile mit
+            // einer Anleitung, die dort ins Leere führt. Grenze: In Tests auf
+            // dem Rechner (Linux) fehlt die Zeile ebenso.
+            if (kids.isNotEmpty && Platform.isAndroid)
               SettingsRow(
                 icon: Icons.widgets_outlined,
                 label: t.widgetSetting,

@@ -47,11 +47,14 @@ class PlanLesson {
   final String? changeDetail;
 
   /// Raum laut Vertretungszeile (Spalte „Raum“), auch bei einer Vertretung –
-  /// [room] wechselt nur beim Raumwechsel. Ursache (Startbildschirm-Widget,
-  /// Abnahme 28.10.26): Die Kachel nennt bei einer Vertretung „Raum R117“,
-  /// der Raum stand bisher nur im Text von [changeDetail] („Name, R117“).
-  /// Grenze: Zählt nicht für [sameAs] – eine Doppelstunde bliebe sonst
-  /// geteilt, wenn nur eine Zeile den Raum nennt; null ohne Raum-Spalte.
+  /// [room] wechselt nur beim Raumwechsel. Geht als ChangeItem.room
+  /// (today_from_lanis.dart) an das Startbildschirm-Widget; dort nennt ihn
+  /// nur die Kachel eines RAUMWECHSELS („Raum R310“, widgetItems in
+  /// home_widget_data.dart). Ursache der Korrektur (Prüfung 28.10.26): Hier
+  /// stand, die Kachel nenne auch bei einer Vertretung „Raum R117“ – Entwurf
+  /// 5 zeigt dort aber nur „Vertretung“. Grenze: Zählt nicht für [sameAs] –
+  /// eine Doppelstunde bliebe sonst geteilt, wenn nur eine Zeile den Raum
+  /// nennt; null ohne Raum-Spalte.
   final String? changeRoom;
 
   /// Kennung der Gruppe innerhalb des Fachs.

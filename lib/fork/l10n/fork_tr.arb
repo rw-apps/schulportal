@@ -710,5 +710,7 @@
   "widgetDueFor": "{day} için",
   "widgetExam": "Sınav",
   "widgetMeal": "Yemek",
-  "widgetAllKids": "Tüm çocuklar"
+  "widgetAllKids": "Tüm çocuklar",
+  "widgetCalmAnd": "ve {day}",
+  "widgetStaleText": "Uygulamayı aç"
 }

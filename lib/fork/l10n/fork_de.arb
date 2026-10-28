@@ -1863,5 +1863,14 @@
   },
   "widgetExam": "Arbeit",
   "widgetMeal": "Essen",
-  "widgetAllKids": "Alle Kinder"
+  "widgetAllKids": "Alle Kinder",
+  "widgetCalmAnd": "und {day}",
+  "@widgetCalmAnd": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "widgetStaleText": "App öffnen"
 }

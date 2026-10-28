@@ -63,6 +63,40 @@ Future<void> writeHomeWidget(Map<String, Object?> payload) async {
   } catch (_) {}
 }
 
+/// Datei löschen und neu zeichnen lassen – das Widget zeigt dann „keine
+/// Daten“ (SchoolWidget.kt, no_data). Nur auf Android; Fehler wie bei
+/// [writeHomeWidget] geschluckt.
+///
+/// Ursache (Prüfung 28.10.26): Nichts löschte die Datei; nach dem Abmelden
+/// des letzten Kindes blieb sein Stand auf dem Startbildschirm. Setzt auch
+/// die Merker [_lastWritten] und [_lastFresh] zurück, damit derselbe Stand
+/// nach erneuter Anmeldung wieder geschrieben wird.
+Future<void> clearHomeWidget() async {
+  if (!Platform.isAndroid) return;
+  _lastWritten = null;
+  _lastFresh = null;
+  try {
+    await HomeWidget.saveWidgetData<String>(homeWidgetDataKey, null);
+    for (final p in _providers) {
+      await HomeWidget.updateWidget(qualifiedAndroidName: p);
+    }
+  } catch (_) {}
+}
+
+/// Kind [account] vom Widget nehmen (account_removal.dart,
+/// removeAccountFromDevice): übrige Kinder neu schreiben, ohne übriges
+/// Kind die Datei löschen ([widgetKidsWithout]).
+Future<void> removeHomeWidgetKid(
+  int account, {
+  required ForkL10n t,
+  required DateTime now,
+}) async {
+  final kids = widgetKidsWithout(await readHomeWidget(), account);
+  if (kids == null) return;
+  if (kids.isEmpty) return clearHomeWidget();
+  await writeHomeWidget(homeWidgetPayload(kids: kids, now: now, t: t));
+}
+
 /// Zuletzt geschriebene Daten (null ohne Datei oder außerhalb von Android).
 Future<Map<String, Object?>?> readHomeWidget() async {
   if (!Platform.isAndroid) return null;
@@ -176,8 +210,17 @@ Map<String, Object?>? liveKidEntry(FamilyMember m, ForkL10n t, DateTime now) {
 /// Ursache des Wegs überhaupt: Die App lädt Stundenplan und Vertretungsplan
 /// ohnehin; ohne ihn käme neuer Stand nur mit dem Hintergrund-Lauf (15–60
 /// Min., nur bei eingeschalteten Benachrichtigungen). Grenze: Im Demo-Modus
-/// (demo_mode.dart) wird nichts geschrieben – sonst stünden nach der
-/// Vorführung die erfundenen Kinder auf dem Startbildschirm.
+/// (demo_mode.dart) wird nichts geschrieben und nichts gelöscht – sonst
+/// stünden nach der Vorführung die erfundenen Kinder auf dem
+/// Startbildschirm bzw. fehlten die echten.
+///
+/// Keine Konten mehr (geladene Kontenliste leer): Datei löschen
+/// ([clearHomeWidget]). Ursache (Prüfung 28.10.26): Vorher kehrte der Aufbau
+/// bei leerer Familie einfach zurück, das Widget behielt die alten Kinder.
+/// Grenze: Eine leere Familie bei geladenen Konten heißt nur „lädt noch“
+/// (FamilyData.of) und löscht nichts; das Abmelden selbst räumt
+/// removeAccountFromDevice (account_removal.dart) auf, auch wenn diese
+/// Ansicht danach nicht mehr aufgebaut wird.
 class HomeWidgetSync extends ConsumerWidget {
   const HomeWidgetSync({super.key, required this.child});
 
@@ -186,9 +229,14 @@ class HomeWidgetSync extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final members = FamilyData.of(context);
-    if (demoActive || members.isEmpty) return child;
-    final shared = ref.watch(sharedOverAccountSettingsProvider);
+    if (demoActive) return child;
     final accounts = ref.watch(accountsProvider).value;
+    if (accounts != null && accounts.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => clearHomeWidget());
+      return child;
+    }
+    if (members.isEmpty) return child;
+    final shared = ref.watch(sharedOverAccountSettingsProvider);
     final ordered = [
       for (final a in accounts ?? const <AccountSummary>[]) a.localId,
     ]..sort();
@@ -243,6 +291,15 @@ Map<String, Object?>? _cachedEntry(FamilyMember m, ForkL10n t, DateTime now) {
 /// sich nichts geändert hat (FamilyData meldet bei jedem Aufbau).
 String? _lastFresh;
 
+/// Schreibt die Einträge der App ([fresh]) für [ids]; Kinder ohne frischen
+/// Eintrag behalten den der Datei, bei beiden gewinnt der neuere
+/// Vertretungsplan ([newerWidgetKid]).
+///
+/// Grenze (Prüfung 28.10.26): Lesen und Schreiben sind kein gemeinsamer
+/// Schritt. Schreibt der Hintergrund-Lauf (eigenes Isolat,
+/// [updateHomeWidgetInBackground]) genau zwischen beiden, geht sein Stand
+/// verloren – das Fenster sind Millisekunden, der nächste Lauf (15–60 Min.)
+/// oder Aufbau der App holt es nach.
 Future<void> _writeKids(
   List<int> ids,
   Map<int, Map<String, Object?>> fresh,
@@ -256,7 +313,7 @@ Future<void> _writeKids(
     for (final k in widgetKidsOf(await readHomeWidget()))
       if (k['account'] case final int a) a: k,
   };
-  final kids = [for (final id in ids) ?(fresh[id] ?? old[id])];
+  final kids = [for (final id in ids) ?newerWidgetKid(fresh[id], old[id])];
   await writeHomeWidget(homeWidgetPayload(kids: kids, now: now, t: t));
 }
 

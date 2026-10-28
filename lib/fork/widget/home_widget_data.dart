@@ -18,9 +18,9 @@
 /// (WidgetModel.tilesFor). Ursache: Ohne neuen Abruf (nachts kein
 /// Hintergrundlauf, notify_window.dart) bliebe sonst nach Mitternacht
 /// „morgen“ an einem Eintrag von heute stehen. Grenze: Kommt länger keine
-/// neue Datei, zeigt das Widget „Nach Plan“, sobald alle bekannten Einträge
-/// vorbei sind – die Zeile „Stand“ im Kopf nennt dann Wochentag und Uhrzeit
-/// des ältesten Abrufs.
+/// neue Datei, zeigt das Widget nach dem letzten abgedeckten Tag (nächster
+/// Schultag nach `stand`) statt „Nach Plan“ grau „Stand Fr 18:05“
+/// (WidgetModel.quietTile, Prüfung 28.10.26).
 library;
 
 import 'dart:convert';
@@ -62,7 +62,12 @@ const widgetKidsSetting = 'fork-widget/kids';
 const widgetMaxItems = 12;
 
 /// Vorschau für Arbeiten (Abnahme 28.10.26: „nächste Arbeit innerhalb von
-/// 7 Tagen“); Kotlin prüft dieselbe Grenze am Tag der Anzeige (EXAM_DAYS).
+/// 7 Tagen“): heute bis heute + 6; Kotlin prüft dieselbe Grenze am Tag der
+/// Anzeige (WidgetModel.EXAM_DAYS, nameable).
+///
+/// Ursache für „weniger als 7“ (Prüfung 28.10.26): Die Kachel nennt nur den
+/// Wochentag; eine Arbeit genau 7 Tage voraus hieß wie heute („Mittwoch“).
+/// Grenze: Eine Arbeit in genau einer Woche erscheint erst am Tag darauf.
 const widgetExamDays = 7;
 
 /// Art einer Kachel – bestimmt Farbe und Lagebild in Kotlin: [cancel] rot
@@ -235,14 +240,14 @@ List<WidgetItem> widgetItems({
   return out;
 }
 
-/// Erste Arbeit ab heute innerhalb von [widgetExamDays] Tagen; [exams] wie
-/// von upcomingExamsOf (nach Tag sortiert).
+/// Erste Arbeit ab heute, weniger als [widgetExamDays] Tage voraus; [exams]
+/// wie von upcomingExamsOf (nach Tag sortiert).
 UpcomingExam? nextExamWithin(List<UpcomingExam> exams, DateTime now) {
   final today = _day(now);
-  final last = DateTime(now.year, now.month, now.day + widgetExamDays);
+  final end = DateTime(now.year, now.month, now.day + widgetExamDays);
   for (final e in exams) {
     final d = _day(e.day);
-    if (!d.isBefore(today) && !d.isAfter(last)) return e;
+    if (!d.isBefore(today) && d.isBefore(end)) return e;
   }
   return null;
 }
@@ -331,6 +336,56 @@ List<Map<String, Object?>>? mergeWidgetKid(
   ];
 }
 
+/// Datei ohne das Konto [account] (Kind abgemeldet,
+/// account_removal.dart): die übrigen Einträge; leer, wenn keines bleibt
+/// (dann wird die Datei gelöscht); null, wenn das Konto nicht darin steht
+/// (nichts zu tun).
+///
+/// Ursache (Prüfung 28.10.26): Nichts löschte die Datei – ein abgemeldetes
+/// Kind blieb mit seinem letzten Stand auf dem Startbildschirm, beim letzten
+/// Konto sogar das ganze Widget. Version 1 (ein Kind oben in der Datei) wird
+/// ganz gelöscht, wenn es dieses Konto ist. Grenze: Der Hintergrund-Lauf
+/// eines anderen Kontos, der in denselben Millisekunden die alte Datei liest,
+/// kann den Eintrag zurückschreiben; der nächste Aufbau der App
+/// ([widgetAccounts] kennt das Konto nicht mehr) nimmt ihn wieder heraus.
+List<Map<String, Object?>>? widgetKidsWithout(
+  Map<String, Object?>? payload,
+  int account,
+) {
+  if (payload == null) return null;
+  if (payload['v'] != homeWidgetVersion) {
+    return payload['account'] == account ? const [] : null;
+  }
+  final kids = widgetKidsOf(payload);
+  if (!kids.any((k) => k['account'] == account)) return null;
+  return [
+    for (final k in kids)
+      if (k['account'] != account) k,
+  ];
+}
+
+/// Eintrag eines Kindes beim Schreiben aus der App: [app] (eben gerechnet)
+/// gegen [old] (aus der Datei). Gewinnt der neuere Vertretungsplan
+/// (`stand`): Ist der Eintrag der Datei neuer – der Hintergrund-Lauf hat
+/// nach dem letzten Laden der App abgerufen (mergeWidgetKid) –, bleiben
+/// dessen `items` und `stand`; Name, Farbe, Aufgaben, Arbeit und Essen
+/// kommen aus [app] (die kennt der Hintergrund nicht).
+///
+/// Ursache (Prüfung 28.10.26): _writeKids (home_widget_sync.dart) nahm immer
+/// den Eintrag der App; die offene App schrieb so den älteren Plan über
+/// einen neueren aus dem Hintergrund. Grenze: Ohne `stand` (oder nicht
+/// lesbar) gilt [app].
+Map<String, Object?>? newerWidgetKid(
+  Map<String, Object?>? app,
+  Map<String, Object?>? old,
+) {
+  if (app == null || old == null) return app ?? old;
+  final a = DateTime.tryParse('${app['stand'] ?? ''}');
+  final o = DateTime.tryParse('${old['stand'] ?? ''}');
+  if (a == null || o == null || !o.isAfter(a)) return app;
+  return {...app, 'items': old['items'], 'stand': old['stand']};
+}
+
 /// Die ganze Datei für Kotlin (JSON-fähige Map), Version 2.
 ///
 /// [kids]: Einträge ([widgetKidEntry]) in der Reihenfolge der Familie
@@ -384,9 +439,17 @@ Map<String, Object?> homeWidgetPayload({
           long.format(DateTime(monday.year, monday.month, monday.day + i)),
       ],
       // Ruhige Kachel: „Nach Plan / heute / und morgen“, kompakt „nach Plan“.
+      // „calmAnd“: Kotlin setzt den nächsten Schultag ein („und Montag“ am
+      // Freitag, Prüfung 28.10.26); „calmText“ nur für Kotlin-Stände, die
+      // „calmAnd“ nicht kennen – Grenze: dort am Freitag „und morgen“.
       'calmTitle': t.widgetCalmTitle,
       'calmText': t.widgetCalmText,
+      'calmAnd': t.widgetCalmAnd('%s'),
       'calmShort': t.widgetCalmShort,
+      // Veraltet (Plan deckt heute nicht ab, WidgetModel.quietTile):
+      // „Stand %s“ – Kotlin setzt „Fr 18:05“ ein – und „App öffnen“.
+      'stale': t.asOf('%s'),
+      'staleText': t.widgetStaleText,
       'homeworkOpen': t.widgetHomeworkOpen,
       // „für %s“ – Kotlin setzt „morgen“/„Donnerstag“ ein (Wortstellung je
       // Sprache, tr: „%s için“).
