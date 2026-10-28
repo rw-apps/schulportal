@@ -37,8 +37,8 @@
                  registriert dasselbe Schema (Auswahlabfrage). -->
         </activity>
 
-        <!-- Fork: Startbildschirm-Widgets (Entwurf 4, Abnahme 28.10.26),
-             mittel 4 × 2 und klein 2 × 2; Inhalt aus der App
+        <!-- Fork: Startbildschirm-Widgets (Entwurf 5, Abnahme 28.10.26),
+             klein 2 × 2, mittel 4 × 2, groß 4 × 3; Inhalt aus der App
              (lib/fork/widget, Paket home_widget), Darstellung in
              kotlin/com/example/app/widget/SchoolWidget.kt. Nicht exportiert:
              Aktualisieren schickt nur das System bzw. die App selbst. -->
@@ -63,6 +63,17 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_small_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.SchoolWidgetLarge"
+            android:exported="false"
+            android:label="@string/widget_large_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_large_info" />
         </receiver>
 
         <!-- Don't delete the meta-data below.

@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="widget_medium_label">Bugün ve yarın değişiklikler</string>
-    <string name="widget_small_label">Sıradaki değişiklik</string>
-    <string name="widget_medium_description">Bugün ve bir sonraki okul günü için iptaller, vekâletler ve derslik değişiklikleri</string>
-    <string name="widget_small_description">Sıradaki iptal veya değişiklik</string>
+    <string name="widget_small_label">Okul portalı küçük</string>
+    <string name="widget_medium_label">Okul portalı orta</string>
+    <string name="widget_large_label">Okul portalı büyük</string>
+    <string name="widget_small_description">Her çocuk için sıradaki değişiklik</string>
+    <string name="widget_medium_description">Tüm çocuklar için bugün ve bir sonraki okul günü iptaller, vekâletler ve derslik değişiklikleri</string>
+    <string name="widget_large_description">Tüm çocuklar için bugün ve bir sonraki okul günü değişiklikler, sınavlar ve ödevler</string>
     <string name="widget_no_data">Planın yüklenmesi için uygulamayı bir kez açın.</string>
 </resources>

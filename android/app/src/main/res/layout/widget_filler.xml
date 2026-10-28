@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Leere zweite Hälfte einer Reihe mit nur einer Kachel (widget5_e: die
+     Kachel bleibt halb breit). FrameLayout statt View (RemoteViews). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_weight="1" />

@@ -81,10 +81,10 @@ DateTime nextSchoolDay(DateTime now) {
 /// letzten stattfindenden Stunde, wenn nach [i] nichts mehr kommt („Schluss
 /// schon 13:00“).
 ///
-/// EINE Regel für die Kinderkarte ([kidHints]) und das
-/// Startbildschirm-Widget (home_widget_data.dart). Ursache (Abnahme
-/// 28.10.26): Das Widget nennt dieselbe Folge („Start erst 09:55“); eine
-/// zweite Rechnung hätte auseinanderlaufen können. Grenze: beides null, wenn
+/// Als eigene Funktion aus [kidHints] gelöst, solange das
+/// Startbildschirm-Widget (Entwurf 4) dieselbe Folge nannte; seit Entwurf 5
+/// (Abnahme 28.10.26, drei kurze Zeilen je Kachel) nutzt sie nur noch die
+/// Kinderkarte. Grenze: beides null, wenn
 /// [i] stattfindet, der ganze Tag ausfällt, der Ausfall mitten im Tag liegt
 /// oder die Schule keine Uhrzeiten zeigt (hasTime).
 ({String? start, String? end}) cancelEffect(List<DayLesson> lessons, int i) {

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lagebild-Kreis Vertretung/Raumwechsel (change.dot), Entwurf 5. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="@color/widget_change_dot" />
+</shape>

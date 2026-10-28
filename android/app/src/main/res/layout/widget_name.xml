@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Vorname mit Punkt in der Kinderfarbe über den Kacheln (klein, Entwurf 5,
+     _KidName/_KidOne). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/widget_gap_tiny"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <FrameLayout
+        android:id="@+id/name_dot"
+        android:layout_width="@dimen/widget_dot"
+        android:layout_height="@dimen/widget_dot"
+        android:background="@drawable/widget_kid0_dot" />
+
+    <TextView
+        android:id="@+id/name_text"
+        style="@style/WidgetText.Bold"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/widget_gap_small"
+        android:layout_weight="1"
+        android:textColor="@color/widget_ink" />
+</LinearLayout>

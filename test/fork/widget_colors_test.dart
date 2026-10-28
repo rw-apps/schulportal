@@ -15,20 +15,20 @@ Map<String, Color> _expected(KitPalette p) => {
   'widget_ink': p.ink,
   'widget_muted': p.muted,
   'widget_faint': p.faint,
+  // Entwurf 5: graue Kachel, weißes Symbol im Lagebild-Kreis, gelber Kreis.
+  'widget_inset': p.inset,
+  'widget_on_strong': p.onStrong,
   'widget_change_bg': p.change.bg,
   'widget_change_ink': p.change.ink,
-  'widget_change_strong': p.change.strong,
+  'widget_change_dot': p.change.dot,
   'widget_cancel_bg': p.cancel.bg,
   'widget_cancel_ink': p.cancel.ink,
-  'widget_cancel_strong': p.cancel.strong,
   'widget_cancel_dot': p.cancel.dot,
   'widget_todo_dot': p.todo.dot,
   for (final (i, k) in p.kids.indexed) ...{
     'widget_kid${i}_accent': k.accent,
     'widget_kid${i}_tint': k.tint,
     'widget_kid${i}_on_tint': k.onTint,
-    'widget_kid${i}_label': k.label,
-    'widget_kid${i}_meta': k.meta,
   },
 };
 

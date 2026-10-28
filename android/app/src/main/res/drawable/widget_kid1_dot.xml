@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Kreis um das Schulsymbol im Kopf, Kind 1 (KidTone.tint). -->
+<!-- Kreis in der Farbe von Kind 1 (KidTone.accent): Punkt vor dem Namen, Kürzel, Lagebild der ruhigen Kachel. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
-    <solid android:color="@color/widget_kid1_tint" />
+    <solid android:color="@color/widget_kid1_accent" />
 </shape>

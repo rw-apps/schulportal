@@ -1,7 +1,7 @@
 /// Schreibt die Daten des Startbildschirm-Widgets (home_widget_data.dart)
-/// und stößt das Neuzeichnen an – aus der offenen App ([HomeWidgetSync]) und
-/// aus dem Hintergrund-Lauf ([updateHomeWidgetInBackground],
-/// notify_task.dart).
+/// und stößt das Neuzeichnen an – aus der offenen App ([HomeWidgetSync], alle
+/// gezeigten Kinder) und aus dem Hintergrund-Lauf
+/// ([updateHomeWidgetInBackground], nur das eigene Kind, notify_task.dart).
 library;
 
 import 'dart:convert';
@@ -16,7 +16,8 @@ import '../demo/demo_mode.dart' show demoActive;
 import '../exams.dart';
 import '../kid_colors.dart' show storedKidColor;
 import '../l10n/l10n.dart';
-import '../ui/courses/homework_due.dart' show liveOpenHomework;
+import '../mensa_store.dart' show MealCache;
+import '../ui/courses/homework_due.dart' show liveOpenHomeworkItems;
 import '../ui/courses/live_courses_page.dart' show examCalendarOf;
 import '../ui/live/family.dart';
 import '../ui/live/live_data.dart';
@@ -30,8 +31,9 @@ import 'home_widget_data.dart';
 /// (io.github.rwapps.sph, .debug) vom Kotlin-Namensraum (com.example.app)
 /// abweicht – home_widget sucht kurze Namen im App-Paket.
 const _providers = [
-  'com.example.app.widget.SchoolWidgetMedium',
   'com.example.app.widget.SchoolWidgetSmall',
+  'com.example.app.widget.SchoolWidgetMedium',
+  'com.example.app.widget.SchoolWidgetLarge',
 ];
 
 /// Zuletzt geschriebene Daten ohne `generatedAt` – derselbe Stand wird nicht
@@ -41,7 +43,7 @@ const _providers = [
 /// schreibt daher jedes Mal.
 String? _lastWritten;
 
-/// Daten ablegen und beide Widget-Größen neu zeichnen lassen. Nur auf
+/// Daten ablegen und alle Widget-Größen neu zeichnen lassen. Nur auf
 /// Android (sonst kein Widget); Fehler des Plugins (z. B. in Tests ohne
 /// Plattform) werden geschluckt – das Widget ist Beiwerk, kein Grund für
 /// einen Absturz oder einen abgebrochenen Hintergrund-Lauf.
@@ -74,34 +76,29 @@ Future<Map<String, Object?>?> readHomeWidget() async {
   }
 }
 
-/// Gewähltes Konto aus [widgetAccountSetting]; null = nicht gewählt.
-int? storedWidgetAccount(TypedSettings shared) =>
-    int.tryParse(shared.getString(widgetAccountSetting) ?? '');
+/// Gewählte Kinder ([widgetKidsSetting], sonst die alte Einzelwahl
+/// [widgetAccountSetting]); null = alle.
+Set<int>? widgetKidSelection(TypedSettings shared) => widgetKidSelectionFrom(
+  kids: shared.getString(widgetKidsSetting),
+  legacy: shared.getString(widgetAccountSetting),
+);
 
-/// Konto des Widgets unter [members]: das gewählte, sonst das aktive, sonst
-/// das erste. null, wenn das gewählte Konto zwar besteht ([known]), aber
-/// noch nicht geladen ist – dann wird gewartet, statt kurz das Kind eines
-/// anderen Kontos zu zeigen. Ein gelöschtes Konto zählt nicht mehr.
-FamilyMember? widgetMember(
-  List<FamilyMember> members, {
-  required int? chosen,
-  required int? active,
-  required Set<int> known,
-}) {
-  if (members.isEmpty) return null;
-  if (chosen != null && known.contains(chosen)) {
-    return members.where((m) => m.accountId == chosen).firstOrNull;
-  }
-  return members.where((m) => m.accountId == active).firstOrNull ??
-      members.first;
+/// Auswahl speichern; null = alle Kinder (Eintrag gelöscht, damit später
+/// hinzugefügte Kinder von selbst erscheinen). Löscht immer auch die alte
+/// Einzelwahl – sonst käme sie bei „alle“ als Übernahme zurück.
+void storeWidgetKidSelection(TypedSettings shared, Set<int>? selection) {
+  shared.setString(
+    widgetKidsSetting,
+    selection == null ? null : jsonEncode([...selection]..sort()),
+  );
+  shared.setString(widgetAccountSetting, null);
 }
 
-/// Widget-Daten aus dem geladenen Stand eines Kontos; null, solange
+/// Eintrag eines Kindes aus dem geladenen Stand seines Kontos; null, solange
 /// Stundenplan oder Vertretungsplan fehlen. Ursache: Ohne Vertretungsplan
-/// zeigte das Widget „Alles nach Plan“, obwohl nichts bekannt ist – dann
-/// bleibt die vorige Datei stehen (wie die Sammelmeldung,
-/// live_today_page.dart).
-Map<String, Object?>? livePayloadOf(FamilyMember m, ForkL10n t, DateTime now) {
+/// zeigte das Widget „Nach Plan“, obwohl nichts bekannt ist – dann bleibt
+/// der Eintrag der vorigen Datei stehen ([HomeWidgetSync]).
+Map<String, Object?>? liveKidEntry(FamilyMember m, ForkL10n t, DateTime now) {
   final s = m.snapshot;
   if (!s.offers('stundenplan.php') || s.substitutions.content == null) {
     return null;
@@ -133,28 +130,54 @@ Map<String, Object?>? livePayloadOf(FamilyMember m, ForkL10n t, DateTime now) {
     now: now,
     until: DateTime(now.year, now.month, now.day + widgetExamDays),
   );
-  return homeWidgetPayload(
+  final homework = liveOpenHomeworkItems(s);
+  final today = DateTime(now.year, now.month, now.day);
+  // Früheste vermutete Frist ab heute („für morgen“); ohne Stundenplan
+  // keine Frist, dann bleibt die dritte Zeile der Kachel leer.
+  DateTime? due;
+  for (final h in homework) {
+    final d = h.due;
+    if (d == null) continue;
+    final day = DateTime(d.year, d.month, d.day);
+    if (day.isBefore(today)) continue;
+    if (due == null || day.isBefore(due)) due = day;
+  }
+  // Essen: dieselbe Quelle wie die Kinderkarte (live_today_page.dart,
+  // lunch) – nur, was für heute bestellt ist.
+  final meal = s.mensaUrl == null
+      ? null
+      : MealCache.instance.of(s.mensaOwner(s.mensaKid))?.dayOf(now);
+  final name = s.firstName.trim();
+  return widgetKidEntry(
     account: m.accountId,
-    kid: m.colorIndex,
+    name: name.isEmpty ? t.yourChild : name,
+    color: m.colorIndex,
     items: items,
-    now: now,
-    t: t,
     stand: s.substitutions.fetchedAt,
-    homework: liveOpenHomework(s),
+    homework: homework.length,
+    homeworkDue: due,
     exam: nextExamWithin(exams, now),
-    name: s.firstName,
+    meal: meal?.ordered?.name,
+    mealDay: meal?.day,
   );
 }
 
 /// Hält das Widget beim Stand der offenen App: liegt unter FamilyScope
 /// (preview_shell.dart) und schreibt nach jedem Aufbau der Familie die
-/// Daten des gewählten Kindes ([widgetMember]).
+/// Einträge ALLER gezeigten Kinder (Entwurf 5: Vorgabe alle,
+/// [widgetKidSelection]) in Familienreihenfolge (nach Anlage des Kontos,
+/// wie FamilyScope).
 ///
-/// Ursache: Die App lädt Stundenplan und Vertretungsplan ohnehin; ohne
-/// diesen Weg käme neuer Stand nur mit dem Hintergrund-Lauf (15–60 Min.,
-/// nur bei eingeschalteten Benachrichtigungen). Grenze: Im Demo-Modus
-/// (demo_mode.dart) wird nichts geschrieben – sonst stünde nach der
-/// Vorführung das erfundene Kind auf dem Startbildschirm.
+/// Kinder, deren Stand noch lädt, behalten ihren Eintrag aus der vorigen
+/// Datei. Ursache: Sonst wechselte das Widget beim Start kurz die Stufe
+/// (erst ein Kind, dann zwei). Grenze: Ein Kind, das nie geladen war, fehlt,
+/// bis sein Stand da ist.
+///
+/// Ursache des Wegs überhaupt: Die App lädt Stundenplan und Vertretungsplan
+/// ohnehin; ohne ihn käme neuer Stand nur mit dem Hintergrund-Lauf (15–60
+/// Min., nur bei eingeschalteten Benachrichtigungen). Grenze: Im Demo-Modus
+/// (demo_mode.dart) wird nichts geschrieben – sonst stünden nach der
+/// Vorführung die erfundenen Kinder auf dem Startbildschirm.
 class HomeWidgetSync extends ConsumerWidget {
   const HomeWidgetSync({super.key, required this.child});
 
@@ -165,64 +188,100 @@ class HomeWidgetSync extends ConsumerWidget {
     final members = FamilyData.of(context);
     if (demoActive || members.isEmpty) return child;
     final shared = ref.watch(sharedOverAccountSettingsProvider);
-    final active = ref.watch(activeAccountProvider)?.localId;
     final accounts = ref.watch(accountsProvider).value;
-    final m = widgetMember(
-      members,
-      chosen: storedWidgetAccount(shared),
-      active: active,
-      known: {for (final a in accounts ?? const <AccountSummary>[]) a.localId},
+    final ordered = [
+      for (final a in accounts ?? const <AccountSummary>[]) a.localId,
+    ]..sort();
+    final ids = widgetAccounts(
+      ordered.isEmpty ? [for (final m in members) m.accountId] : ordered,
+      widgetKidSelection(shared),
     );
-    if (m == null) return child;
-    final payload = livePayloadOf(m, context.t, DateTime.now());
-    if (payload != null) {
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => writeHomeWidget(payload),
-      );
-    }
-    return child;
+    final t = context.t;
+    // Neu gelesene Essenswochen (MealCache) erneuern das Widget wie Heute.
+    return ValueListenableBuilder(
+      valueListenable: MealCache.instance.notifier,
+      child: child,
+      builder: (context, _, child) {
+        final now = DateTime.now();
+        final fresh = <int, Map<String, Object?>>{
+          for (final m in members)
+            if (ids.contains(m.accountId))
+              m.accountId: ?_cachedEntry(m, t, now),
+        };
+        if (fresh.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _writeKids(ids, fresh, t, now),
+          );
+        }
+        return child!;
+      },
+    );
   }
 }
 
+/// Eintrag je Stand (LiveSnapshot) einmal je Tag, Sprache, Farbe und
+/// Essensstand. Ursache: Seit Entwurf 5 rechnet [HomeWidgetSync] bei jedem
+/// Aufbau der Familie für ALLE Kinder Plan, Vertretungen, Arbeiten und
+/// Aufgaben – ohne Ablage liefe das bei jeder Meldung von FamilyData neu.
+/// Grenze: Ein neuer Stand (neue LiveSnapshot-Instanz) rechnet neu; innerhalb
+/// eines Tages gilt der Eintrag weiter, vergangene Stunden nimmt ohnehin
+/// Kotlin heraus.
+final _entryCache = Expando<(String, Map<String, Object?>?)>();
+
+Map<String, Object?>? _cachedEntry(FamilyMember m, ForkL10n t, DateTime now) {
+  final key =
+      '${isoDate(now)}|${t.localeName}|${m.accountId}|${m.colorIndex}|'
+      '${identityHashCode(MealCache.instance.notifier.value)}';
+  final hit = _entryCache[m.snapshot];
+  if (hit != null && hit.$1 == key) return hit.$2;
+  final e = liveKidEntry(m, t, now);
+  _entryCache[m.snapshot] = (key, e);
+  return e;
+}
+
+/// Zuletzt übergebene Einträge der App – spart das Lesen der Datei, wenn
+/// sich nichts geändert hat (FamilyData meldet bei jedem Aufbau).
+String? _lastFresh;
+
+Future<void> _writeKids(
+  List<int> ids,
+  Map<int, Map<String, Object?>> fresh,
+  ForkL10n t,
+  DateTime now,
+) async {
+  final key = jsonEncode([ids, fresh.map((k, v) => MapEntry('$k', v))]);
+  if (key == _lastFresh) return;
+  _lastFresh = key;
+  final old = {
+    for (final k in widgetKidsOf(await readHomeWidget()))
+      if (k['account'] case final int a) a: k,
+  };
+  final kids = [for (final id in ids) ?(fresh[id] ?? old[id])];
+  await writeHomeWidget(homeWidgetPayload(kids: kids, now: now, t: t));
+}
+
 /// Hintergrund-Lauf (notify_task.dart, je Konto): Widget mit dem eben
-/// geladenen Vertretungsplan erneuern – nur für das Konto des Widgets.
+/// geladenen Vertretungsplan erneuern – nur den Eintrag DIESES Kontos,
+/// die übrigen Kinder bleiben ([mergeWidgetKid]).
 ///
-/// Welches Konto: [widgetAccountSetting], sonst das der vorhandenen Datei
-/// (die App schreibt dort das aktive Konto hinein). Ohne beides – die App
-/// lief seit der Installation des Widgets nie – schreibt der Hintergrund
-/// nichts. Hausaufgaben und Arbeit bleiben aus der vorigen Datei. Ursache:
-/// Der Lauf lädt weder die Liste der erledigten Hausaufgaben noch die
-/// Kursmappen (erst ab 15 Uhr, _courseNews). Grenze: Die Fußzeile ist so
-/// alt wie der letzte App-Start; abgelaufene Arbeiten nimmt Kotlin trotzdem
-/// heraus (Datum).
+/// Ohne Datei der App (Version 2) oder wenn das Konto nicht im Widget steht,
+/// schreibt der Hintergrund nichts. Grenze: Aufgaben, Arbeit und Essen sind
+/// so alt wie der letzte App-Start; abgelaufene Arbeiten und Essen anderer
+/// Tage nimmt Kotlin trotzdem heraus (Datum).
 Future<void> updateHomeWidgetInBackground({
-  required TypedSettings shared,
   required TypedSettings account,
   required int accountId,
   required ForkL10n t,
   required List<WidgetItem> items,
   required DateTime now,
 }) async {
-  final old = await readHomeWidget();
-  final target = storedWidgetAccount(shared) ?? (old?['account'] as int?);
-  if (target == null || target != accountId) return;
-  final exam = old?['exam'];
-  final payload = homeWidgetPayload(
+  final kids = mergeWidgetKid(
+    await readHomeWidget(),
     account: accountId,
-    kid: storedKidColorOrOld(account, old),
     items: items,
-    now: now,
-    t: t,
     stand: now,
+    color: storedKidColor(account),
   );
-  if (old?['homework'] case final String hw) payload['homework'] = hw;
-  // Vorname wie Hausaufgaben aus der vorigen Datei (der Lauf kennt ihn nicht).
-  if (old?['name'] case final String name) payload['name'] = name;
-  if (exam is Map) payload['exam'] = exam;
-  await writeHomeWidget(payload);
+  if (kids == null) return;
+  await writeHomeWidget(homeWidgetPayload(kids: kids, now: now, t: t));
 }
-
-/// Farbplatz des Kindes: gespeichert (kid_colors.dart), sonst aus der
-/// vorigen Datei, sonst 0.
-int storedKidColorOrOld(TypedSettings account, Map<String, Object?>? old) =>
-    storedKidColor(account) ?? (old?['kid'] as int?) ?? 0;

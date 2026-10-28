@@ -1,12 +1,19 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lanis/fork/exams.dart';
 import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:lanis/fork/ui/plan/plan_model.dart';
 import 'package:lanis/fork/widget/home_widget_data.dart';
+import 'package:lanis/fork/widget/home_widget_sync.dart'
+    show storeWidgetKidSelection, widgetKidSelection;
 import 'package:liblanis/liblanis.dart';
 
-/// Startbildschirm-Widget (Entwurf 4, Abnahme 28.10.26): Abbildung von Plan
-/// und Vertretungsplan auf Kacheln. Erfundene Daten, keine echten Namen.
+/// Startbildschirm-Widget (Entwurf 5, Abnahme 28.10.26): Abbildung von Plan
+/// und Vertretungsplan auf Kacheln, Datei mit allen Kindern, Zusammenführen
+/// im Hintergrund, Übernahme der alten Einstellung. Stufen und Reihenfolge
+/// der Kacheln prüft der JVM-Test android/app/src/test/.../WidgetModelTest.kt.
+/// Erfundene Daten (Jonas, Lena), keine echten Namen.
 
 final de = forkL10nFor('de');
 
@@ -126,84 +133,35 @@ void main() {
     ]);
   });
 
-  test('Ausfall am Tagesende: „Schluss“ mit Ende der letzten Stunde', () {
-    final sport = items(days, tuesday).firstWhere((i) => i.title == 'Sport');
+  test('Drei Zeilen: Fach / was / Stunde ohne „Std.“', () {
+    final r = items(days, tuesday);
+    final sport = r.firstWhere((i) => i.title == 'Sport');
     expect(sport.kind, WidgetKind.cancel);
     expect(sport.what, 'fällt aus');
-    expect(sport.slot, '5.–6. Std.');
-    expect(sport.detail, 'Schluss 11:30');
+    expect(sport.word, 'fällt aus');
+    expect(sport.slot, '5.–6.');
     expect(sport.end, '13:20');
-  });
-
-  test('Ausfall am Tagesanfang: „Start erst“ mit Beginn der ersten Stunde', () {
-    final german = items(days, tuesday).firstWhere((i) => i.title == 'Deutsch');
-    expect(german.kind, WidgetKind.cancel);
-    expect(german.slot, '1.–2. Std.');
-    expect(german.detail, 'Start erst 09:55');
-  });
-
-  test('Ausfall mitten im Tag: keine Folge', () {
-    final r = items([
-      _day('27.10.2026', [_sub('3', art: 'Entfall', fach: 'E', lehrer: 'BBB')]),
-    ], tuesday);
-    expect(r.single.kind, WidgetKind.cancel);
-    expect(r.single.detail, isNull);
-  });
-
-  test('Vertretung nennt den Raum der Vertretungszeile', () {
-    final english = items(days, tuesday).first;
+    final english = r.first;
     expect(english.kind, WidgetKind.change);
     expect(english.what, 'Vertretung');
-    expect(english.slot, '3. Std.');
-    expect(english.detail, 'Raum R117');
+    expect(english.slot, '3.');
   });
 
-  test('Raumwechsel: „neu statt alt“', () {
+  test('Raumwechsel: Kachel nennt den Raum, die Zelle das Wort', () {
     final math = items(days, tuesday)[1];
     expect(math.kind, WidgetKind.room);
-    expect(math.what, 'Raumwechsel');
-    expect(math.detail, 'R310 statt R106');
-  });
-
-  test('Nichts geändert: keine Einträge, ruhige Fläche in der Datei', () {
-    expect(items(const [], tuesday), isEmpty);
-    final p = homeWidgetPayload(
-      account: 3,
-      kid: 1,
-      items: const [],
-      now: tuesday,
-      t: de,
-    );
-    expect(p['items'], isEmpty);
-    // Ohne Vorname kein Feld; mit Vorname steht er im Kopf (28.10.26).
-    expect(p.containsKey('name'), isFalse);
-    expect(
-      homeWidgetPayload(
-        account: 3,
-        kid: 1,
-        items: const [],
-        now: tuesday,
-        t: de,
-        name: ' Lena ',
-      )['name'],
-      'Lena',
-    );
-    final labels = p['labels']! as Map;
-    expect(labels['calmTitle'], 'Alles nach Plan');
-    expect(labels['calmText'], 'heute und morgen');
+    expect(math.what, 'Raum R310');
+    expect(math.word, 'Raumwechsel');
+    expect(math.toJson()['word'], 'Raumwechsel');
   });
 
   test('Vergangene Tage: Dart nimmt nur heute und den nächsten Schultag, '
       'Kotlin filtert nach Datum und Ende', () {
-    // Montag liegt vor „heute“ (Dienstag) und fällt schon hier weg.
     final r = items([
       _day('26.10.2026', [_sub('3', art: 'Entfall', fach: 'E', lehrer: 'BBB')]),
       ...days,
     ], tuesday);
     expect(r.any((i) => i.date.day == 26), isFalse);
-    // Jeder Eintrag trägt Datum und Ende – daraus entscheidet
-    // SchoolWidget.kt nach Mitternacht bzw. nach der Stunde selbst
-    // (visibleItems), auch ohne neue Datei.
     final json = r.first.toJson();
     expect(json['date'], '2026-10-27');
     expect(json['end'], '10:40');
@@ -217,31 +175,179 @@ void main() {
     expect(isoDate(r.single.date), '2026-11-02');
   });
 
-  test('Datei: Datum, Wochentage, Aufgaben, Arbeit', () {
-    final p = homeWidgetPayload(
-      account: 3,
-      kid: 1,
-      items: items(days, tuesday),
-      now: tuesday,
-      t: de,
-      stand: DateTime(2026, 10, 27, 7, 52),
-      homework: 2,
-      exam: UpcomingExam(
-        day: DateTime(2026, 10, 29),
-        subject: 'Mathematik',
-        kind: 'Test',
-      ),
-    );
-    expect(p['account'], 3);
-    expect(p['kid'], 1);
+  Map<String, Object?> jonas({List<WidgetItem>? list, int hw = 2}) =>
+      widgetKidEntry(
+        account: 1,
+        name: ' Jonas ',
+        color: 0,
+        items: list ?? items(days, tuesday),
+        stand: DateTime(2026, 10, 27, 7, 52),
+        homework: hw,
+        homeworkDue: DateTime(2026, 10, 28),
+        exam: UpcomingExam(
+          day: DateTime(2026, 10, 29),
+          subject: 'Mathematik',
+          kind: '',
+        ),
+        meal: 'Gnocchi',
+        mealDay: DateTime(2026, 10, 27),
+      );
+  Map<String, Object?> lena() => widgetKidEntry(
+    account: 2,
+    name: 'Lena',
+    color: 1,
+    items: const [],
+    homework: 3,
+  );
+
+  test('Datei Version 2: alle Kinder in Familienreihenfolge, Texte dazu', () {
+    final p = homeWidgetPayload(kids: [jonas(), lena()], now: tuesday, t: de);
+    expect(p['v'], 2);
+    final kids = (p['kids']! as List).cast<Map<String, Object?>>();
+    expect(kids.map((k) => k['name']), ['Jonas', 'Lena']);
+    expect(kids[0]['account'], 1);
+    expect(kids[0]['color'], 0);
+    expect(kids[0]['hw'], 2);
+    expect(kids[0]['hwText'], '2 Aufgaben');
+    expect(kids[0]['hwDue'], '2026-10-28');
+    expect(kids[0]['exam'], {
+      'date': '2026-10-29',
+      'subject': 'Mathematik',
+      'kind': '',
+    });
+    expect(kids[0]['meal'], {'date': '2026-10-27', 'name': 'Gnocchi'});
+    expect(kids[0]['stand'], '2026-10-27T07:52:00.000');
+    expect((kids[0]['items']! as List).length, 4);
+    expect(kids[1].containsKey('stand'), isFalse);
+    // Summe für die Fußzeile ab drei Kindern.
+    expect(p['hwTotal'], '5 Aufgaben');
     expect((p['dates']! as Map)['2026-10-27'], 'Di, 27. Okt.');
     expect((p['dates']! as Map).length, 8);
-    expect(((p['labels']! as Map)['weekdays'] as List).first, 'Mo');
-    expect((p['labels']! as Map)['today'], 'heute');
-    expect(p['homework'], '2 Aufgaben');
-    expect(p['exam'], {'date': '2026-10-29', 'label': 'Test'});
-    expect(p['stand'], '2026-10-27T07:52:00.000');
-    expect((p['items']! as List).length, 4);
+    final labels = p['labels']! as Map;
+    expect((labels['weekdays'] as List).first, 'Mo');
+    expect((labels['weekdaysLong'] as List)[3], 'Donnerstag');
+    expect(labels['today'], 'heute');
+    expect(labels['calmTitle'], 'Nach Plan');
+    expect(labels['calmText'], 'und morgen');
+    expect(labels['calmShort'], 'nach Plan');
+    expect(labels['homeworkOpen'], 'offen');
+    expect(labels['dueFor'], 'für %s');
+    expect(labels['exam'], 'Arbeit');
+    expect(labels['meal'], 'Essen');
+    // Englisch/Türkisch: Platzhalter bleibt für Kotlin erhalten.
+    expect(
+      (homeWidgetPayload(
+            kids: const [],
+            now: tuesday,
+            t: forkL10nFor('tr'),
+          )['labels']!
+          as Map)['dueFor'],
+      '%s için',
+    );
+    // Ohne Aufgaben kein Text, keine Summe.
+    final none = homeWidgetPayload(kids: [jonas(hw: 0)], now: tuesday, t: de);
+    expect((none['kids']! as List).single, isNot(contains('hwText')));
+    expect(none.containsKey('hwTotal'), isFalse);
+    expect(jsonDecode(jsonEncode(p)), p);
+  });
+
+  test('Hintergrund: nur der eigene Eintrag wird ersetzt, Geschwister '
+      'bleiben', () {
+    final old = homeWidgetPayload(kids: [jonas(), lena()], now: tuesday, t: de);
+    final later = DateTime(2026, 10, 27, 10, 0);
+    final merged = mergeWidgetKid(
+      old,
+      account: 1,
+      items: const [],
+      stand: later,
+      color: 3,
+    )!;
+    expect(merged.map((k) => k['name']), ['Jonas', 'Lena']);
+    expect(merged[0]['items'], isEmpty);
+    expect(merged[0]['stand'], later.toIso8601String());
+    expect(merged[0]['color'], 3);
+    // Aufgaben, Arbeit, Essen und Name bleiben aus der vorigen Datei.
+    expect(merged[0]['hw'], 2);
+    expect(merged[0]['exam'], isNotNull);
+    expect(merged[0]['meal'], isNotNull);
+    expect(merged[1], (old['kids']! as List)[1]);
+    // Ohne Farbe bleibt die alte.
+    expect(
+      mergeWidgetKid(
+        old,
+        account: 2,
+        items: const [],
+        stand: later,
+      )![1]['color'],
+      1,
+    );
+    // Neu geschrieben stimmt die Summe wieder.
+    expect(
+      homeWidgetPayload(kids: merged, now: later, t: de)['hwTotal'],
+      '5 Aufgaben',
+    );
+  });
+
+  test('Hintergrund schreibt nichts ohne Datei, bei Version 1 oder fremdem '
+      'Konto', () {
+    final old = homeWidgetPayload(kids: [lena()], now: tuesday, t: de);
+    expect(
+      mergeWidgetKid(null, account: 2, items: const [], stand: tuesday),
+      isNull,
+    );
+    expect(
+      mergeWidgetKid(
+        {'v': 1, 'account': 2, 'items': []},
+        account: 2,
+        items: const [],
+        stand: tuesday,
+      ),
+      isNull,
+    );
+    expect(
+      mergeWidgetKid(old, account: 9, items: const [], stand: tuesday),
+      isNull,
+    );
+  });
+
+  test('Auswahl: Vorgabe alle, neue Liste, alte Einzelwahl verfällt', () {
+    expect(widgetKidSelectionFrom(), isNull);
+    expect(widgetKidSelectionFrom(kids: '[2, 3]'), {2, 3});
+    // Neue Einstellung geht vor der alten.
+    expect(widgetKidSelectionFrom(kids: '[2]', legacy: '3'), {2});
+    // Entwurf 4: die alte Einzelwahl gilt nicht mehr (alle Kinder).
+    expect(widgetKidSelectionFrom(legacy: '3'), isNull);
+    expect(widgetKidSelectionFrom(legacy: 'x'), isNull);
+    // Leer oder kaputt: alle.
+    expect(widgetKidSelectionFrom(kids: '[]', legacy: '3'), isNull);
+    expect(widgetKidSelectionFrom(kids: '{kaputt'), isNull);
+  });
+
+  test('Einstellung: alte Einzelwahl verfällt, neue Wahl löscht sie', () {
+    final store = <String, String>{};
+    final shared = TypedSettings(
+      read: (k) => store[k],
+      write: (k, v) => store[k] = v!,
+      delete: store.remove,
+    );
+    expect(widgetKidSelection(shared), isNull);
+    shared.setString(widgetAccountSetting, '3');
+    expect(widgetKidSelection(shared), isNull);
+    storeWidgetKidSelection(shared, {4, 3});
+    expect(widgetKidSelection(shared), {3, 4});
+    expect(store.containsKey(widgetAccountSetting), isFalse);
+    // „Alle“: beide Einträge weg, die alte Wahl kommt nicht zurück.
+    shared.setString(widgetAccountSetting, '3');
+    storeWidgetKidSelection(shared, null);
+    expect(store, isEmpty);
+    expect(widgetKidSelection(shared), isNull);
+  });
+
+  test('Gezeigte Konten in Familienreihenfolge; gelöschte zählen nicht', () {
+    expect(widgetAccounts([1, 2, 4], null), [1, 2, 4]);
+    expect(widgetAccounts([1, 2, 4], {4, 1}), [1, 4]);
+    // Gewähltes Konto gelöscht: wieder alle statt eines leeren Widgets.
+    expect(widgetAccounts([1, 2], {7}), [1, 2]);
   });
 
   test('Nächste Arbeit nur innerhalb von 7 Tagen', () {
@@ -249,10 +355,5 @@ void main() {
         UpcomingExam(day: DateTime(2026, 11, day), subject: 'Bio', kind: '');
     expect(nextExamWithin([at(3)], tuesday)?.day.day, 3);
     expect(nextExamWithin([at(4)], tuesday), isNull);
-  });
-
-  test('Stunde ohne Zahl bleibt, wie die Schule sie nennt', () {
-    expect(widgetSlotLabel(de, '2. Block'), '2. Block');
-    expect(widgetSlotLabel(de, '4.'), '4. Std.');
   });
 }

@@ -3,11 +3,15 @@
      die App Daten geschrieben hat (Widget-Auswahl, leeres Widget). Alle
      übrigen Texte kommen fertig übersetzt aus der App (ForkL10n,
      lib/fork/widget/home_widget_data.dart). Englisch als Vorgabe wie
-     fallbackLanguage (lib/fork/l10n/l10n.dart). -->
+     fallbackLanguage (lib/fork/l10n/l10n.dart). Namen nach der Größe
+     (Entwurf 5): Der Inhalt hängt von der Zahl der Kinder ab, nicht mehr von
+     der Art der Änderung. -->
 <resources>
-    <string name="widget_medium_label">Changes today &amp; tomorrow</string>
-    <string name="widget_small_label">Next change</string>
-    <string name="widget_medium_description">Cancellations, substitutions and room changes for today and the next school day</string>
-    <string name="widget_small_description">The next cancellation or change</string>
+    <string name="widget_small_label">School portal small</string>
+    <string name="widget_medium_label">School portal medium</string>
+    <string name="widget_large_label">School portal large</string>
+    <string name="widget_small_description">The next change for each child</string>
+    <string name="widget_medium_description">Cancellations, substitutions and room changes for today and the next school day, for all children</string>
+    <string name="widget_large_description">Changes, exams and homework for today and the next school day, for all children</string>
     <string name="widget_no_data">Open the app once to load the plan.</string>
 </resources>

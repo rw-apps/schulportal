@@ -1,40 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Startbildschirm-Widget: Maße aus dem Design-Kit (lib/fork/ui/kit.dart,
-     Sp/Sz/Rad), Entwurf 4 (test/_local/widget_v4_mockup_test.dart, Abnahme
+     Sp/Sz/Rad), Entwurf 5 (test/_local/widget_v5_mockup_test.dart, Abnahme
      28.10.26). Ursache: Das native Widget kann das Kit nicht lesen; die
-     Werte stehen deshalb hier EINMAL, die Layouts nehmen nur diese Namen. -->
+     Werte stehen deshalb hier EINMAL, die Layouts nehmen nur diese Namen.
+     SchoolWidget.kt rechnet beim Einpassen der Reihen mit denselben Zahlen
+     (PAD, GAP, TILE_PAD …) – bei einer Änderung dort mitziehen. -->
 <resources>
     <!-- Rad.card; ab Android 12 der Radius des Systems (values-v31). -->
     <dimen name="widget_radius">28dp</dimen>
-    <!-- Rad.cell + 2 (Kachel, ruhige Fläche). -->
-    <dimen name="widget_tile_radius">14dp</dimen>
-    <!-- Rad.row (Quadrat des Lagebilds). -->
-    <dimen name="widget_pic_radius">12dp</dimen>
+    <!-- Rad.row (Kachel, kompakte Zelle). -->
+    <dimen name="widget_tile_radius">12dp</dimen>
     <!-- Sp.m + 2 (Innenabstand der Widget-Fläche). -->
     <dimen name="widget_padding">14dp</dimen>
-    <!-- Sp.s + 2 (Innenabstand der Kachel, Abstand Kopf → Kacheln). -->
-    <dimen name="widget_tile_padding">10dp</dimen>
-    <!-- Sp.s (zwischen zwei Kacheln, Kreis → Datum). -->
+    <!-- Innenabstand der Kachel: Sp.xs + 2 seitlich, Sp.s oben/unten. -->
+    <dimen name="widget_tile_pad_h">6dp</dimen>
+    <dimen name="widget_tile_pad_v">8dp</dimen>
+    <!-- Sp.xs (oben/unten in der kompakten Zelle). -->
+    <dimen name="widget_cell_pad_v">4dp</dimen>
+    <!-- Sp.s (Kopf → Inhalt, zwischen Kindern, über der Fußzeile). -->
     <dimen name="widget_gap">8dp</dimen>
-    <!-- Sp.xs + 2 (Lagebild → Fach). -->
+    <!-- Sp.xs + 2 (zwischen Kacheln, Lagebild → Text, Punkt → Name). -->
     <dimen name="widget_gap_small">6dp</dimen>
-    <!-- Sp.xs (Symbol → Text in der Fußzeile, Lagebild → Wann). -->
+    <!-- Sp.xs (Symbol → Text, Namensspalte → Kacheln). -->
     <dimen name="widget_gap_tiny">4dp</dimen>
-    <!-- Sp.xxs (Sync-Symbol → Uhrzeit). -->
+    <!-- Sp.xxs (Sync-Symbol → Uhrzeit, Kürzel → Vorname). -->
     <dimen name="widget_gap_hair">2dp</dimen>
     <!-- Sp.m (zwischen den Angaben der Fußzeile). -->
     <dimen name="widget_foot_gap">12dp</dimen>
-    <!-- Lagebild 36 dp, Symbol darin Sz.navIcon. -->
-    <dimen name="widget_pic">36dp</dimen>
-    <dimen name="widget_pic_icon">22dp</dimen>
-    <!-- Kreis im Kopf 22 dp, Schulsymbol 0,6 davon. -->
-    <dimen name="widget_dot">22dp</dimen>
-    <dimen name="widget_dot_icon">13dp</dimen>
+    <!-- Lagebild-Kreis 20 dp, Symbol 0,6 davon (_Dot size: 20). -->
+    <dimen name="widget_circle">20dp</dimen>
+    <dimen name="widget_circle_icon">12dp</dimen>
+    <!-- Kürzel-Kreis 26 dp in einer 44 dp breiten Spalte (_Kid). -->
+    <dimen name="widget_avatar">26dp</dimen>
+    <dimen name="widget_avatar_col">44dp</dimen>
+    <!-- Sz.dot (Punkt vor dem Namen); 7 dp in der kompakten Zelle wie im
+         Entwurf (_Compact). -->
+    <dimen name="widget_dot">8dp</dimen>
+    <dimen name="widget_dot_small">7dp</dimen>
     <!-- Sz.iconSmall (Sync) und Sz.iconSmall + 2 (Fußzeile). -->
     <dimen name="widget_icon_small">14dp</dimen>
     <dimen name="widget_icon_foot">16dp</dimen>
-    <!-- Nur zwei Schriftgrößen (Rückmeldung 28.10.26): Titel = tileTitle,
-         alles andere 12. In sp, damit die Systemschrift mitwächst. -->
-    <dimen name="widget_text_title">15sp</dimen>
+    <!-- Schrift 12 überall (Abnahme 28.10.26), der Vorname unter dem Kürzel
+         10. In sp, damit die Systemschrift mitwächst. -->
     <dimen name="widget_text">12sp</dimen>
+    <dimen name="widget_text_name">10sp</dimen>
 </resources>

@@ -72,9 +72,15 @@ DateTime? Function(String course, DateTime? given)? _buildDue(LiveSnapshot s) {
 
 /// Offene Hausaufgaben für Heute: wie die Liste unter „Unterricht“
 /// (homeworkLists mit Frist), abgelaufene zählen nicht mit.
-int liveOpenHomework(LiveSnapshot s) => homeworkLists(
+int liveOpenHomework(LiveSnapshot s) => liveOpenHomeworkItems(s).length;
+
+/// Die offenen Hausaufgaben selbst (mit vermuteter Frist, [HomeworkItem.due])
+/// – für das Startbildschirm-Widget („2 Aufgaben / offen / für morgen“,
+/// Entwurf 5, home_widget_sync.dart). Dieselbe Rechnung wie
+/// [liveOpenHomework], damit Zahl und Frist nicht auseinanderlaufen.
+List<HomeworkItem> liveOpenHomeworkItems(LiveSnapshot s) => homeworkLists(
   s.lessons.content ?? const <Lesson>[],
   s.homework,
   subjectOf: (l) => l.name,
   dueOf: liveHomeworkDue(s),
-).open.length;
+).open;

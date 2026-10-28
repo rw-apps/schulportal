@@ -1830,30 +1830,6 @@
   "uploadHeroDate": "ccc, d. MMMM",
   "widgetToday": "heute",
   "widgetTomorrow": "morgen",
-  "widgetSlot": "{slot} Std.",
-  "@widgetSlot": {
-    "placeholders": {
-      "slot": {
-        "type": "String"
-      }
-    }
-  },
-  "widgetStartLate": "Start erst {time}",
-  "@widgetStartLate": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "widgetEndEarly": "Schluss {time}",
-  "@widgetEndEarly": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
   "widgetRoom": "Raum {room}",
   "@widgetRoom": {
     "placeholders": {
@@ -1862,17 +1838,30 @@
       }
     }
   },
-  "widgetCalmTitle": "Alles nach Plan",
-  "widgetCalmText": "heute und morgen",
+  "widgetCalmTitle": "Nach Plan",
+  "widgetCalmText": "und morgen",
   "widgetDate": "ccc, d. MMM",
   "widgetSetting": "Startbildschirm-Widget",
-  "widgetSettingPick": "Wessen Plan zeigt das Widget?",
-  "widgetSettingHowTo": "Hinzufügen: Startbildschirm lange drücken → Widgets → {app}. Es zeigt nur Ausfälle und Änderungen für heute und den nächsten Schultag.",
+  "widgetSettingPick": "Welche Kinder zeigt das Widget?",
+  "widgetSettingHowTo": "Hinzufügen: Startbildschirm lange drücken → Widgets → {app}. Es zeigt Ausfälle und Änderungen für heute und den nächsten Schultag, dazu Arbeiten und offene Aufgaben – in drei Größen.",
   "@widgetSettingHowTo": {
     "placeholders": {
       "app": {
         "type": "String"
       }
     }
-  }
+  },
+  "widgetCalmShort": "nach Plan",
+  "widgetHomeworkOpen": "offen",
+  "widgetDueFor": "für {day}",
+  "@widgetDueFor": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "widgetExam": "Arbeit",
+  "widgetMeal": "Essen",
+  "widgetAllKids": "Alle Kinder"
 }

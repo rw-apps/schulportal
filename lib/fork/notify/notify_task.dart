@@ -270,14 +270,14 @@ Future<void> _run(
 
   // Startbildschirm-Widget (lib/fork/widget, Abnahme 28.10.26) mit dem eben
   // geladenen Vertretungsplan – dieselben Eingaben wie die Sammelmeldung,
-  // nur für das Konto des Widgets (updateHomeWidgetInBackground). Eigenes
-  // try: Ein Fehler hier darf weder Meldungen noch die folgenden Abrufe
-  // dieses Kontos verhindern. Grenze: Der Lauf kommt nur bei eingeschalteten
+  // nur der Eintrag dieses Kontos, die Geschwister bleiben (Entwurf 5,
+  // updateHomeWidgetInBackground → mergeWidgetKid). Eigenes try: Ein Fehler
+  // hier darf weder Meldungen noch die folgenden Abrufe dieses Kontos
+  // verhindern. Grenze: Der Lauf kommt nur bei eingeschalteten
   // Benachrichtigungen und im Zeitfenster (background_service.dart); sonst
   // erneuert nur die offene App das Widget.
   try {
     await updateHomeWidgetInBackground(
-      shared: container.read(sharedOverAccountSettingsProvider),
       account: s,
       accountId: tools.accountId,
       t: t,

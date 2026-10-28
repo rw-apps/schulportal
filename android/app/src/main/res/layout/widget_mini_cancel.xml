@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kachel Ausfall, rot (cancel.bg/ink/dot).
+     Kleine Kachel (Entwurf 5, _Mini in test/_local/widget_v5_mockup_test.dart):
+     Lagebild im Kreis, drei Zeilen Fach (fett) / was (fett) / wann. Breite
+     über das Gewicht, Höhe wie die Nachbarkachel der Reihe (match_parent in
+     widget_row). Inhalt setzt SchoolWidget.kt (tile). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tile_bg"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_weight="1"
+    android:background="@drawable/widget_tile_cancel"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/widget_tile_pad_h"
+    android:paddingTop="@dimen/widget_tile_pad_v"
+    android:paddingEnd="@dimen/widget_tile_pad_h"
+    android:paddingBottom="@dimen/widget_tile_pad_v">
+
+    <FrameLayout
+        android:id="@+id/tile_circle"
+        android:layout_width="@dimen/widget_circle"
+        android:layout_height="@dimen/widget_circle"
+        android:background="@drawable/widget_circle_cancel">
+
+        <ImageView
+            android:id="@+id/tile_icon"
+            android:layout_width="@dimen/widget_circle_icon"
+            android:layout_height="@dimen/widget_circle_icon"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_widget_event_busy" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/widget_gap_small"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tile_l1"
+            style="@style/WidgetText.Bold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/widget_cancel_ink" />
+
+        <TextView
+            android:id="@+id/tile_l2"
+            style="@style/WidgetText.Bold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/widget_cancel_ink" />
+
+        <TextView
+            android:id="@+id/tile_l3"
+            style="@style/WidgetText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/widget_cancel_ink" />
+    </LinearLayout>
+</LinearLayout>

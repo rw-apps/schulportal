@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Abstand zwischen zwei Kacheln (Sp.s); als eigene Ansicht, weil eine
-     Kachel nicht weiß, ob sie die erste ist. FrameLayout statt View:
-     RemoteViews lässt nur markierte Klassen zu. -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="@dimen/widget_gap"
-    android:layout_height="match_parent" />

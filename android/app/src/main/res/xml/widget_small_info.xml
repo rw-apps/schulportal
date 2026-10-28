@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Kleines Widget 2 × 2 (Entwurf 4, Variante B); Takt wie
-     widget_medium_info.xml. -->
+<!-- Kleines Widget 2 × 2 (Entwurf 5); Takt wie widget_medium_info.xml. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_small_description"
-    android:initialLayout="@layout/widget_small"
+    android:initialLayout="@layout/widget_root"
     android:minWidth="110dp"
     android:minHeight="110dp"
     android:resizeMode="horizontal|vertical"

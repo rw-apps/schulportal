@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Waagerechter Abstand Sp.xs + 2 (zwischen zwei Kacheln). FrameLayout statt View: RemoteViews lässt nur markierte Klassen zu. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="@dimen/widget_gap_small"
+    android:layout_height="match_parent" />
