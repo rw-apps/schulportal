@@ -224,6 +224,9 @@ homeworkLists(
   }
   for (final r in ledger.byKey.values) {
     if (seen.contains(r.key)) continue;
+    // Gemerkter Platzhalter („-“) von vor dem 28.10.26: keine Aufgabe
+    // (Homework.isPlaceholder).
+    if (Homework.isPlaceholder(r.text)) continue;
     final item = HomeworkItem(
       course: r.course,
       entry: r.entry,

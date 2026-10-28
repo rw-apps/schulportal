@@ -40,3 +40,4 @@ so zeigt `git diff` gegen Commit 2 genau die Änderungen.
 
 Die übrigen Befundnummern der Prüfung (1, 7, 8) waren nicht Teil dieser
 Runde.
+- 28.10.26: `Homework.isPlaceholder` – „-“, „keine HA“ u. Ä. gelten nicht als Hausaufgabe (getHome, getDetailedCourseView).

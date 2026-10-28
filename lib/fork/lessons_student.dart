@@ -71,7 +71,11 @@ import 'error_log.dart';
     }
     final courseUrl = tr.querySelector('td>h3>a')?.attributes['href'];
     Homework? homework;
-    if (tr.querySelector('.homework') != null) {
+    // Platzhalter („-“) ist keine Hausaufgabe (Homework.isPlaceholder).
+    if (tr.querySelector('.homework') != null &&
+        !Homework.isPlaceholder(
+          tr.querySelector('.realHomework')?.text ?? '',
+        )) {
       homework = Homework(
         description: tr.querySelector('.realHomework')?.text.trim() ?? '',
         homeWorkDone: tr.querySelector('.undone') == null,

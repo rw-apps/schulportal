@@ -99,6 +99,25 @@ class Homework {
   bool homeWorkDone;
 
   Homework({required this.description, required this.homeWorkDone});
+
+  /// Fork: Platzhalter statt einer Aufgabe – „-“, „–“, „/“, „.“ oder
+  /// „keine (HA/Hausaufgaben)“, „nichts“. Ursache (Bildschirmfoto
+  /// 28.10.26): Eine Lehrkraft trug „-“ als Hausaufgabe ein; die App zeigte
+  /// eine offene Hausaufgabe „-“, zählte sie mit und bot „Erledigt“ an.
+  /// Jetzt gilt der Eintrag als ohne Hausaufgabe (alle Leser: liblanis
+  /// getHome/getDetailedCourseView, lib/fork/lessons_student.dart,
+  /// lessons_parent.dart, offline_store.dart, homework_ledger.dart).
+  /// Grenze: Ein leerer Text bleibt eine Hausaufgabe („Hausaufgabe
+  /// eingetragen“ – das Portal markiert sie ausdrücklich); Wörter außer den
+  /// genannten gelten immer als Aufgabe.
+  static bool isPlaceholder(String text) {
+    final t = text.trim().toLowerCase();
+    if (t.isEmpty) return false;
+    if (!RegExp(r'[\p{L}\p{N}]', unicode: true).hasMatch(t)) return true;
+    return RegExp(
+      r'^(keine?|nichts|entf(ä|ae)llt)(\s+(ha|hausaufgaben?))?\s*[.!]*$',
+    ).hasMatch(t);
+  }
 }
 
 class LessonUpload {

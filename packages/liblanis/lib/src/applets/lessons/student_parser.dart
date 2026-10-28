@@ -78,7 +78,11 @@ class LessonsStudentParser extends AppletParser<Lessons> {
         int fileCount = schoolClass.getElementsByClassName('file').length;
 
         Homework? homework;
-        if (schoolClass.querySelector('.homework') != null) {
+        // Fork: Platzhalter („-“) ist keine Hausaufgabe (Homework.isPlaceholder).
+        if (schoolClass.querySelector('.homework') != null &&
+            !Homework.isPlaceholder(
+              schoolClass.querySelector('.realHomework')?.text ?? '',
+            )) {
           homework = Homework(
             description: schoolClass
                 .querySelector('.realHomework')!
@@ -321,7 +325,8 @@ class LessonsStudentParser extends AppletParser<Lessons> {
                 .trimRight(),
             files: files,
             uploads: uploads,
-            homework: (homework != null)
+            // Fork: Platzhalter („-“) ist keine Hausaufgabe.
+            homework: (homework != null && !Homework.isPlaceholder(homework))
                 ? Homework(description: homework, homeWorkDone: homeworkDone)
                 : null,
           ),

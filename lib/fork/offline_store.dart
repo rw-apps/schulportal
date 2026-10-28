@@ -141,7 +141,9 @@ Lesson _lessonOf(Map<String, dynamic> j) {
             topicDate: _date(e['date']),
             schoolHours: e['hours'] as String?,
             presence: e['presence'] as String?,
-            homework: h is Map
+            // Gespeicherter Platzhalter („-“) zählt nicht (Homework
+            // .isPlaceholder) – Ablage von vor dem 28.10.26.
+            homework: h is Map && !Homework.isPlaceholder('${h['text'] ?? ''}')
                 ? Homework(
                     description: '${h['text'] ?? ''}',
                     homeWorkDone: h['done'] == true,
