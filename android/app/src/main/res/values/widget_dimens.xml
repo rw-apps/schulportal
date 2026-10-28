@@ -3,8 +3,10 @@
      Sp/Sz/Rad), Entwurf 5 (test/_local/widget_v5_mockup_test.dart, Abnahme
      28.10.26). Ursache: Das native Widget kann das Kit nicht lesen; die
      Werte stehen deshalb hier EINMAL, die Layouts nehmen nur diese Namen.
-     SchoolWidget.kt rechnet beim Einpassen der Reihen mit denselben Zahlen
-     (PAD, GAP, TILE_PAD …) – bei einer Änderung dort mitziehen. -->
+     WidgetModel.kt (WidgetMetrics) rechnet beim Einpassen der Reihen und
+     beim Maßstab für Tablets mit denselben Zahlen (Rand 14, Abstände 8/6/4,
+     Kachel 8, Zelle 4) – bei einer Änderung dort mitziehen. SchoolWidget.kt
+     (Scaler) liest die Werte zum Vergrößern von hier. -->
 <resources>
     <!-- Rad.card; ab Android 12 der Radius des Systems (values-v31). -->
     <dimen name="widget_radius">28dp</dimen>

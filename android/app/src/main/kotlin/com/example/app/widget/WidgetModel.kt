@@ -393,7 +393,7 @@ object WidgetModel {
      * höchstens [cap], mindestens 1. [avail] null = unbekannt → [cap].
      * Ursache: Die Startbildschirme geben 4 × 3 sehr unterschiedlich hoch;
      * statt unten abgeschnittener Kacheln entfällt eine ganze Reihe.
-     * Grenze: Zeilenhöhe ist geschätzt (SchoolWidget.kt, lineDp).
+     * Grenze: Zeilenhöhe ist geschätzt (WidgetMetrics.line).
      */
     fun rowsThatFit(avail: Float?, row: Float, gap: Float, cap: Int): Int {
         if (avail == null || cap <= 1) return cap.coerceAtLeast(1)
@@ -434,4 +434,171 @@ object WidgetModel {
 
     private fun dateTime(s: String?): LocalDateTime? =
         if (s.isNullOrEmpty()) null else runCatching { LocalDateTime.parse(s) }.getOrNull()
+}
+
+/**
+ * Fläche des Widgets in dp (Breite, Höhe); null je Richtung = vom
+ * Startbildschirm nicht gemeldet (OPTION_APPWIDGET_* = 0).
+ */
+data class Area(val width: Float?, val height: Float?)
+
+/**
+ * Maße des Entwurfs 5 beim Maßstab [s] in dp: die Werte aus
+ * res/values/widget_dimens.xml mal [s], die Zeilenhöhe aus 12 sp mal
+ * Systemschrift ([fontScale]) mal 1,2 ohne Schriftpolster
+ * (includeFontPadding=false, widget_styles.xml). SchoolWidget.kt schätzt
+ * damit, wie viele Reihen passen; WidgetScale rechnet mit denselben Werten
+ * den Maßstab aus. Ursache: Schätzung und Zeichnen müssen mit DEMSELBEN
+ * Maßstab wachsen, sonst passen auf dem Tablet zu viele oder zu wenige
+ * Reihen. Grenze: Herstellerschriften können höher sein als 1,2 × Größe;
+ * vor Android 12 wachsen Außenabstände (layout_margin) nicht mit
+ * (SchoolWidget.kt, Scaler) – die Schätzung ist dort etwas zu groß, es
+ * entfällt eher eine Reihe, abgeschnitten wird nichts.
+ */
+class WidgetMetrics(fontScale: Float, val s: Float) {
+    /** widget_padding (14) oben und unten. */
+    val pad = 14f * 2 * s
+
+    /** widget_gap (8): Kopf → Inhalt, zwischen Kindern, über der Fußzeile. */
+    val gap = 8f * s
+
+    /** widget_gap_small (6): zwischen Kachelreihen. */
+    val gapSmall = 6f * s
+
+    val line = WidgetScale.TEXT_SP * fontScale * 1.2f * s
+
+    /** Kachel: drei Zeilen und widget_tile_pad_v (8) oben und unten. */
+    val tileH = 3 * line + 8f * 2 * s
+
+    val headH = line + gap
+
+    /** Namenszeile (widget_name): eine Zeile und widget_gap_tiny (4) darunter. */
+    val nameH = line + 4f * s
+
+    /** Kompakte Zelle: zwei Zeilen und widget_cell_pad_v (4) oben und unten. */
+    val cellH = 2 * line + 4f * 2 * s
+    val footH = line + gap
+
+    /** Höhe von [n] Reihen der Höhe [row] mit Abstand [g]. */
+    fun rows(n: Int, row: Float, g: Float): Float = if (n <= 0) 0f else n * row + (n - 1) * g
+}
+
+/**
+ * Maßstab für große Flächen (Tablet). Ursache (Foto Tablet 28.10.26): Das
+ * Widget mit zwei Kindern nahm zwei Drittel der Breite und die halbe Höhe
+ * eines Tablets quer ein, zeigte aber alles in Telefongröße (Schrift fest
+ * 12 sp, Kreise und Abstände fest in dp, Reihen je Stufe gedeckelt): oben
+ * Kopf und zwei Kind-Zeilen, darunter leer, die Schrift winzig zur Fläche.
+ * Jetzt wachsen Schrift, Innenabstände und (ab Android 12) Kreise, Symbole
+ * und Außenabstände mit [scale]; reicht die Höhe danach noch, kommen Reihen
+ * dazu ([twoKidRows]). Grenze: nur auf Tablets (kürzeste Seite ab
+ * [TABLET_SW] dp) – auf Telefonen bleibt der Maßstab 1, auch wenn man das
+ * Widget dort groß zieht.
+ */
+object WidgetScale {
+    /** Schrift überall (widget_text) und Vorname unter dem Kürzel (widget_text_name), sp. */
+    const val TEXT_SP = 12f
+    const val NAME_SP = 10f
+
+    /** Höchstens doppelt so groß: Darüber wirken die Kacheln plakativ. */
+    const val MAX = 2f
+
+    /**
+     * Kürzeste Bildschirmseite, ab der ein Gerät als Tablet gilt
+     * (smallestScreenWidthDp, wie res/values-sw600dp). Ursache: Telefone
+     * (Pixel 9a: 411 dp) sollen genau wie bisher aussehen – auch ein
+     * großgezogenes Widget dort bleibt bei Maßstab 1. Grenze: Aufgeklappte
+     * Falt-Telefone (ab etwa 600 dp) zählen als Tablet und wachsen mit.
+     */
+    const val TABLET_SW = 600
+
+    /**
+     * Breite, für die der Entwurf gebaut ist: das Widget auf einem Telefon
+     * hochkant (Pixel 9a: vier Zellen etwa 360 dp, zwei etwa 180 dp).
+     * Grenze: Die Zellenzahl kommt vom Anbieter (klein 2, sonst 4), nicht
+     * von der gezogenen Größe – ein schmal gezogenes mittleres Widget
+     * bekommt eher Maßstab 1.
+     */
+    fun referenceWidth(size: WidgetSize): Float = if (size == WidgetSize.SMALL) 180f else 360f
+
+    /**
+     * Fläche nach Lage des Geräts: hochkant minWidth × maxHeight, quer
+     * maxWidth × minHeight (so fasst AppWidgetManager die beiden Lagen
+     * zusammen). 0 = nicht gemeldet → null. Grenze: Es gilt die Lage beim
+     * Zeichnen; dreht man das Gerät danach, bleibt sie bis zum nächsten
+     * Neuzeichnen (auf Tablets ab Android 12 zeichnet SchoolWidget.kt
+     * deshalb je gemeldeter Größe, OPTION_APPWIDGET_SIZES).
+     */
+    fun area(landscape: Boolean, minWidth: Int, maxWidth: Int, minHeight: Int, maxHeight: Int): Area {
+        val w = if (landscape) maxWidth else minWidth
+        val h = if (landscape) minHeight else maxHeight
+        return Area(w.takeIf { it > 0 }?.toFloat(), h.takeIf { it > 0 }?.toFloat())
+    }
+
+    /**
+     * Gesamthöhe (mit Rand) der Stufe beim Maßstab 1 mit den Reihen, die ein
+     * Telefon zeigt: ein Kind klein 2 Kacheln, mittel 2, groß 3 Reihen; zwei
+     * Kinder klein je eine Kachel, mittel je 1, groß je 2 Reihen; ab drei
+     * Kindern bis [WidgetModel.MAX_KIDS] Zellen bzw. Kind-Zeilen. Ursache:
+     * Der Maßstab richtet sich nach der festen Stufe, nicht nach der Zahl der
+     * Kacheln von heute – sonst wechselte die Schriftgröße von Tag zu Tag.
+     * Grenze: Hat ein Kind weniger Kacheln, bleibt unten Platz frei.
+     */
+    fun neededHeight(size: WidgetSize, kids: Int, fontScale: Float): Float {
+        val m = WidgetMetrics(fontScale, 1f)
+        val content = when (WidgetModel.tier(kids)) {
+            Tier.ONE -> when (size) {
+                WidgetSize.SMALL -> m.nameH + m.rows(2, m.tileH, m.gapSmall)
+                WidgetSize.MEDIUM -> m.headH + m.rows(2, m.tileH, m.gapSmall)
+                WidgetSize.LARGE -> m.headH + m.rows(3, m.tileH, m.gapSmall)
+            }
+            Tier.TWO -> when (size) {
+                WidgetSize.SMALL -> m.rows(2, m.tileH, m.gapSmall)
+                WidgetSize.MEDIUM -> m.headH + 2 * m.tileH + m.gap
+                WidgetSize.LARGE -> m.headH + 2 * m.rows(2, m.tileH, m.gapSmall) + m.gap
+            }
+            Tier.MANY -> {
+                val n = minOf(kids, WidgetModel.MAX_KIDS)
+                when (size) {
+                    WidgetSize.SMALL -> m.footH + m.rows(n, m.cellH, m.gapSmall)
+                    WidgetSize.MEDIUM -> m.headH + m.footH + m.rows((n + 1) / 2, m.cellH, m.gapSmall)
+                    WidgetSize.LARGE -> m.headH + m.footH + m.rows(n, m.tileH, m.gap)
+                }
+            }
+        }
+        return content + m.pad
+    }
+
+    /**
+     * Maßstab = min(Breite / [referenceWidth], Höhe / [neededHeight]),
+     * abgerundet auf 0,05, zwischen 1 und [MAX]. Breite UND Höhe begrenzen:
+     * Alles wächst gleichmäßig (Rand, Abstände, Schrift), also passt die
+     * Stufe beim Maßstab s genau dann, wenn s × Bedarf ≤ Höhe. Ursache der
+     * Rundung: Kleine Unterschiede der gemeldeten Größe (Lage, Launcher)
+     * sollen die Schrift nicht in Schritten von 1 % verstellen. Grenze: kein
+     * Tablet ([tablet] false) oder Fläche unbekannt → 1.
+     */
+    fun scale(tablet: Boolean, area: Area?, referenceWidth: Float, neededHeight: Float): Float {
+        if (!tablet) return 1f
+        val w = area?.width ?: return 1f
+        val h = area.height ?: return 1f
+        val raw = minOf(w / referenceWidth, h / neededHeight)
+        return (kotlin.math.floor(raw * 20f) / 20f).coerceIn(1f, MAX)
+    }
+
+    /**
+     * Reihen je Kind bei zwei Kindern (mittel/groß). Telefon wie bisher:
+     * groß bis 2, mittel 1. Tablet: groß bis 3, mittel bis 2 – nur so viele,
+     * wie beim Maßstab von [m] in [avail] dp passen (Kopf, zwei Kinder,
+     * Abstand). Ursache (Foto Tablet 28.10.26): Auch mit größerer Schrift
+     * bliebe unten Fläche frei, während weitere Kacheln (Arbeit, Aufgaben)
+     * fehlen. Grenze: [avail] null (unbekannt) → die Telefonzahl.
+     */
+    fun twoKidRows(size: WidgetSize, tablet: Boolean, avail: Float?, m: WidgetMetrics): Int {
+        val phone = if (size == WidgetSize.LARGE) 2 else 1
+        if (avail == null) return phone
+        var rows = if (!tablet) phone else if (size == WidgetSize.LARGE) 3 else 2
+        while (rows > 1 && m.headH + 2 * m.rows(rows, m.tileH, m.gapSmall) + m.gap > avail) rows--
+        return rows
+    }
 }

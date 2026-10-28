@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Waagerechter Abstand Sp.xs + 2 (zwischen zwei Kacheln). FrameLayout statt View: RemoteViews lässt nur markierte Klassen zu. -->
+<!-- Waagerechter Abstand Sp.xs + 2 (zwischen zwei Kacheln). FrameLayout statt View: RemoteViews lässt nur markierte Klassen zu.
+     Breite als Innenabstand, damit er auf Tablets mitwächst (wie widget_vgap.xml). -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="@dimen/widget_gap_small"
-    android:layout_height="match_parent" />
+    android:id="@+id/gap"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:paddingStart="@dimen/widget_gap_small" />

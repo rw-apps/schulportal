@@ -8,6 +8,7 @@
     android:orientation="horizontal">
 
     <LinearLayout
+        android:id="@+id/kid_col"
         android:layout_width="@dimen/widget_avatar_col"
         android:layout_height="wrap_content"
         android:gravity="center_horizontal"

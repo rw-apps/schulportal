@@ -238,4 +238,87 @@ class WidgetModelTest {
         assertEquals(true, WidgetModel.twoKidsFit(164f, 18f, 60f, 8f))
         assertEquals(false, WidgetModel.twoKidsFit(150f, 18f, 60f, 8f))
     }
+
+    // Maßstab für Tablets (Foto Tablet 28.10.26). Bedarf groß mit zwei
+    // Kindern bei Schrift 1: Kopf 22,4 + 2 × (2 × 59,2 + 6) + 8 + Rand 28
+    // = 307,2 dp; mittel: 22,4 + 59,2 × 2 + 8 + 28 = 176,8 dp.
+
+    @Test
+    fun telefonMasseWieBisher() {
+        val m = WidgetMetrics(1f, 1f)
+        assertEquals(14.4f, m.line, 0.001f)
+        assertEquals(3 * 14.4f + 16f, m.tileH, 0.001f)
+        assertEquals(14.4f + 8f, m.headH, 0.001f)
+        assertEquals(14.4f + 4f, m.nameH, 0.001f)
+        assertEquals(2 * 14.4f + 8f, m.cellH, 0.001f)
+        assertEquals(28f, m.pad, 0.001f)
+        assertEquals(307.2f, WidgetScale.neededHeight(WidgetSize.LARGE, 2, 1f), 0.01f)
+        assertEquals(176.8f, WidgetScale.neededHeight(WidgetSize.MEDIUM, 2, 1f), 0.01f)
+    }
+
+    @Test
+    fun massstabAufTelefonenImmerEins() {
+        val need = WidgetScale.neededHeight(WidgetSize.LARGE, 2, 1f)
+        // Pixel 9a hochkant 4 × 3 und quer; auch groß gezogen bleibt es 1.
+        assertEquals(1f, WidgetScale.scale(false, Area(370f, 430f), 360f, need), 0f)
+        assertEquals(1f, WidgetScale.scale(false, Area(700f, 250f), 360f, need), 0f)
+        assertEquals(1f, WidgetScale.scale(false, Area(1000f, 1000f), 360f, need), 0f)
+        // Tablet, aber Fläche nicht größer als am Telefon: 1, nie kleiner.
+        assertEquals(1f, WidgetScale.scale(true, Area(300f, 200f), 360f, need), 0f)
+        assertEquals(1f, WidgetScale.scale(true, Area(370f, 900f), 360f, need), 0f)
+        // Fläche unbekannt.
+        assertEquals(1f, WidgetScale.scale(true, null, 360f, need), 0f)
+        assertEquals(1f, WidgetScale.scale(true, Area(850f, null), 360f, need), 0f)
+    }
+
+    @Test
+    fun massstabAufTabletsNachBreiteUndHoehe() {
+        val large = WidgetScale.neededHeight(WidgetSize.LARGE, 2, 1f)
+        // Foto: zwei Drittel der Breite, halbe Höhe eines Tablets quer.
+        // Die Höhe begrenzt: 400 / 307,2 = 1,302 → 1,30.
+        assertEquals(1.30f, WidgetScale.scale(true, Area(850f, 400f), 360f, large), 0.001f)
+        // Die Breite begrenzt: 540 / 360 = 1,5.
+        assertEquals(1.5f, WidgetScale.scale(true, Area(540f, 900f), 360f, large), 0.001f)
+        // Höchstens doppelt: mittel 850 × 400 ergäbe 2,26.
+        val medium = WidgetScale.neededHeight(WidgetSize.MEDIUM, 2, 1f)
+        assertEquals(2f, WidgetScale.scale(true, Area(850f, 400f), 360f, medium), 0f)
+        assertEquals(2f, WidgetScale.scale(true, Area(2000f, 2000f), 360f, large), 0f)
+        // Größere Systemschrift braucht mehr Höhe → kleinerer Maßstab.
+        val big = WidgetScale.neededHeight(WidgetSize.LARGE, 2, 1.3f)
+        assertEquals(true, WidgetScale.scale(true, Area(850f, 400f), 360f, big) < 1.30f)
+        // Klein (zwei Zellen breit): Bezug 180 dp.
+        assertEquals(180f, WidgetScale.referenceWidth(WidgetSize.SMALL), 0f)
+        assertEquals(360f, WidgetScale.referenceWidth(WidgetSize.LARGE), 0f)
+    }
+
+    @Test
+    fun flaecheNachLage() {
+        // Hochkant minWidth × maxHeight, quer maxWidth × minHeight.
+        assertEquals(Area(300f, 400f), WidgetScale.area(false, 300, 500, 200, 400))
+        assertEquals(Area(500f, 200f), WidgetScale.area(true, 300, 500, 200, 400))
+        // 0 = nicht gemeldet.
+        assertEquals(Area(null, null), WidgetScale.area(false, 0, 500, 200, 0))
+        assertEquals(Area(500f, null), WidgetScale.area(true, 0, 500, 0, 400))
+    }
+
+    @Test
+    fun zweiKinderMehrReihenNurAufTablets() {
+        val one = WidgetMetrics(1f, 1f)
+        // Telefon: groß 2, mittel 1 – auch mit viel Höhe.
+        assertEquals(2, WidgetScale.twoKidRows(WidgetSize.LARGE, false, 900f, one))
+        assertEquals(1, WidgetScale.twoKidRows(WidgetSize.MEDIUM, false, 900f, one))
+        // Telefon zu niedrig: groß fällt auf 1.
+        assertEquals(1, WidgetScale.twoKidRows(WidgetSize.LARGE, false, 200f, one))
+        // Höhe unbekannt: Telefonzahl, auch auf Tablets.
+        assertEquals(2, WidgetScale.twoKidRows(WidgetSize.LARGE, true, null, one))
+        assertEquals(1, WidgetScale.twoKidRows(WidgetSize.MEDIUM, true, null, one))
+        // Tablet mit Platz: groß 3 (22,4 + 2 × 189,6 + 8 = 409,6), mittel 2.
+        assertEquals(3, WidgetScale.twoKidRows(WidgetSize.LARGE, true, 410f, one))
+        assertEquals(2, WidgetScale.twoKidRows(WidgetSize.LARGE, true, 409f, one))
+        assertEquals(2, WidgetScale.twoKidRows(WidgetSize.MEDIUM, true, 400f, one))
+        // Foto: Maßstab 1,30, Inhalt 400 − 28 × 1,3 = 363,6 dp: zwei Reihen
+        // passen gerade (362,96), drei nicht.
+        val photo = WidgetMetrics(1f, 1.3f)
+        assertEquals(2, WidgetScale.twoKidRows(WidgetSize.LARGE, true, 400f - photo.pad, photo))
+    }
 }

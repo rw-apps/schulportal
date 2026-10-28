@@ -5,8 +5,11 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.util.SizeF
+import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import com.example.app.MainActivity
@@ -23,28 +26,33 @@ import java.time.LocalTime
  * Drei Größen als eigene Anbieter (klein 2 × 2, mittel 4 × 2, groß 4 × 3),
  * je drei Stufen nach Zahl der Kinder (WidgetModel.tier). Ursache: Mit
  * mehreren Kindern war Entwurf 4 „viel Fläche für wenig Information“
- * (Rückmeldung 28.10.26). Grenze: Die Größe kommt vom Anbieter, nicht von
- * der tatsächlichen Fläche; nach dem Verkleinern entfallen nur ganze Reihen
- * (WidgetModel.rowsThatFit), mehr Kacheln als die Stufe vorsieht kommen
- * beim Vergrößern nicht dazu.
+ * (Rückmeldung 28.10.26). Auf Tablets wächst alles mit der tatsächlichen
+ * Fläche (WidgetScale, Foto Tablet 28.10.26). Grenze: Auf Telefonen kommt
+ * die Größe vom Anbieter, nicht von der Fläche; nach dem Verkleinern
+ * entfallen nur ganze Reihen (WidgetModel.rowsThatFit), mehr Kacheln als
+ * die Stufe vorsieht kommen nur auf Tablets dazu (WidgetScale.twoKidRows).
  */
 abstract class SchoolWidgetBase : AppWidgetProvider() {
     protected abstract val size: WidgetSize
 
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         for (id in ids) {
-            manager.updateAppWidget(id, SchoolWidgetRenderer.render(context, size, manager.getAppWidgetOptions(id)))
+            manager.updateAppWidget(id, SchoolWidgetRenderer.build(context, size, manager.getAppWidgetOptions(id)))
         }
     }
 
-    /** Größe geändert: neu zeichnen, damit die Reihen zur Höhe passen. */
+    /**
+     * Größe geändert: neu zeichnen, damit Reihen und (Tablet) Maßstab zur
+     * Fläche passen. Grenze: Das Drehen des Geräts meldet der
+     * Startbildschirm hier nicht – dafür die Größen je Lage in [SchoolWidgetRenderer.build].
+     */
     override fun onAppWidgetOptionsChanged(
         context: Context,
         manager: AppWidgetManager,
         id: Int,
         options: Bundle?,
     ) {
-        manager.updateAppWidget(id, SchoolWidgetRenderer.render(context, size, options))
+        manager.updateAppWidget(id, SchoolWidgetRenderer.build(context, size, options ?: manager.getAppWidgetOptions(id)))
     }
 }
 
@@ -67,6 +75,9 @@ internal object SchoolWidgetRenderer {
     /** Ablage des Pakets home_widget (HomeWidgetPlugin.PREFERENCES). */
     private const val PREFS = "HomeWidgetPreferences"
 
+    /** Höchstzahl der Fassungen je Größe (RemoteViews.MAX_INIT_VIEW_COUNT). */
+    private const val MAX_SIZES = 16
+
     // Kinderfarben (KitPalette.kids, res/values/widget_colors.xml). Als
     // Ressourcen je Kind statt eingefärbt: Formen lösen hell/dunkel dann
     // selbst auf (values-night), auch auf Android vor 12.
@@ -83,14 +94,46 @@ internal object SchoolWidgetRenderer {
         R.color.widget_kid2_on_tint, R.color.widget_kid3_on_tint,
     )
 
-    // Maße für das Einpassen der Reihen (dp), aus res/values/widget_dimens.xml.
-    private const val PAD = 14f * 2
-    private const val GAP = 8f
-    private const val GAP_SMALL = 6f
-    private const val TILE_PAD = 8f * 2
-    private const val CELL_PAD = 4f * 2
+    private fun isTablet(ctx: Context) =
+        ctx.resources.configuration.smallestScreenWidthDp >= WidgetScale.TABLET_SW
 
-    fun render(ctx: Context, size: WidgetSize, options: Bundle?): RemoteViews {
+    /**
+     * Widget für [options] zeichnen. Tablet ab Android 12: eine Fassung je
+     * gemeldeter Größe (OPTION_APPWIDGET_SIZES, meist hochkant und quer);
+     * der Startbildschirm wählt beim Drehen selbst. Ursache (Foto Tablet
+     * 28.10.26): Tablets werden oft gedreht, und mit Maßstab passt eine für
+     * hochkant gerechnete Fassung quer nicht mehr in die Höhe. Sonst (Telefon,
+     * älteres Android, keine Größen gemeldet) EINE Fassung für die Lage beim
+     * Zeichnen (WidgetScale.area). Grenze: Telefone bleiben beim bisherigen
+     * Weg, damit sie genau wie vorher aussehen.
+     */
+    fun build(ctx: Context, size: WidgetSize, options: Bundle?): RemoteViews {
+        if (isTablet(ctx) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            @Suppress("DEPRECATION")
+            val sizes = options?.getParcelableArrayList<SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES)
+                ?.filter { it.width > 0f && it.height > 0f }?.distinct()?.take(MAX_SIZES).orEmpty()
+            if (sizes.isNotEmpty()) {
+                val views = runCatching {
+                    RemoteViews(sizes.associateWith { render(ctx, size, Area(it.width, it.height)) })
+                }.getOrNull()
+                if (views != null) return views
+            }
+        }
+        val landscape = ctx.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val area = options?.let {
+            WidgetScale.area(
+                landscape,
+                it.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0),
+                it.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0),
+                it.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0),
+                it.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0),
+            )
+        }
+        return render(ctx, size, area)
+    }
+
+    /** Eine Fassung für die Fläche [area] (dp; null = nicht gemeldet). */
+    private fun render(ctx: Context, size: WidgetSize, area: Area?): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_root)
         v.setOnClickPendingIntent(android.R.id.background, openApp(ctx))
         v.removeAllViews(R.id.body)
@@ -98,6 +141,20 @@ internal object SchoolWidgetRenderer {
         v.setViewVisibility(R.id.footer, View.GONE)
         val raw = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(WidgetModel.PAYLOAD_KEY, null)
         val p = WidgetModel.parse(raw)
+        // Maßstab (Telefon immer 1) und damit alle Höhen; Zeilenhöhe mit der
+        // Schriftgröße des Systems geschätzt (WidgetMetrics). Ohne Daten wie
+        // mit einem Kind.
+        val tablet = isTablet(ctx)
+        val fontScale = ctx.resources.configuration.fontScale
+        val s = WidgetScale.scale(
+            tablet,
+            area,
+            WidgetScale.referenceWidth(size),
+            WidgetScale.neededHeight(size, p?.kids?.size?.coerceAtLeast(1) ?: 1, fontScale),
+        )
+        val m = WidgetMetrics(fontScale, s)
+        val sc = Scaler(ctx, s)
+        sc.root(v)
         if (p == null || p.kids.isEmpty()) {
             // Noch nie Daten (App seit dem Hinzufügen nicht geöffnet bzw. Demo).
             v.setViewVisibility(R.id.no_data, View.VISIBLE)
@@ -108,17 +165,9 @@ internal object SchoolWidgetRenderer {
         val today = LocalDate.now()
         val now = LocalTime.now()
         val l = p.labels
-        // Höhe hochkant (OPTION_APPWIDGET_MAX_HEIGHT); 0 = vom Startbildschirm
-        // nicht gemeldet, dann gelten nur die Höchstzahlen der Stufe.
-        val avail = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)
-            ?.takeIf { it > 0 }?.toFloat()?.minus(PAD)
-        // Zeilenhöhe 12 sp ohne Schriftpolster, mit der Schriftgröße des
-        // Systems geschätzt. Grenze: Herstellerschriften können höher sein.
-        val line = 12f * ctx.resources.configuration.fontScale * 1.2f
-        val tileH = 3 * line + TILE_PAD
-        val headH = line + GAP
-        // Namenszeile (widget_name): eine Zeile und 4 dp Abstand darunter.
-        val nameH = line + 4f
+        // Höhe des Inhalts; null = vom Startbildschirm nicht gemeldet, dann
+        // gelten nur die Höchstzahlen der Stufe.
+        val avail = area?.height?.minus(m.pad)
         val tier = WidgetModel.tier(p.kids.size)
         if (size != WidgetSize.SMALL) header(v, p, tier, today)
 
@@ -128,55 +177,52 @@ internal object SchoolWidgetRenderer {
                 val tiles = WidgetModel.tilesFor(kid, l, today, now, withMeal = size == WidgetSize.LARGE)
                 if (size == WidgetSize.SMALL) {
                     // Klein: Vorname, darunter die zwei wichtigsten Kacheln.
-                    v.addView(R.id.body, nameLine(ctx, kid))
-                    val n = WidgetModel.rowsThatFit(avail?.minus(nameH), tileH, GAP_SMALL, 2)
+                    v.addView(R.id.body, nameLine(ctx, sc, kid))
+                    val n = WidgetModel.rowsThatFit(avail?.minus(m.nameH), m.tileH, m.gapSmall, 2)
                     tiles.take(n).forEachIndexed { i, t ->
-                        if (i > 0) v.addView(R.id.body, gap(ctx, R.layout.widget_vgap_small))
-                        v.addView(R.id.body, row(ctx, kid, listOf(t)))
+                        if (i > 0) v.addView(R.id.body, gap(ctx, sc, R.layout.widget_vgap_small))
+                        v.addView(R.id.body, row(ctx, sc, kid, listOf(t)))
                     }
                 } else {
                     val cap = if (size == WidgetSize.LARGE) 3 else 2
-                    val rows = WidgetModel.rowsThatFit(avail?.minus(headH), tileH, GAP_SMALL, cap)
-                    grid(ctx, v, R.id.body, kid, tiles.take(rows * 2))
+                    val rows = WidgetModel.rowsThatFit(avail?.minus(m.headH), m.tileH, m.gapSmall, cap)
+                    grid(ctx, sc, v, R.id.body, kid, tiles.take(rows * 2))
                 }
             }
             Tier.TWO -> {
-                if (size == WidgetSize.SMALL && (avail == null || 2 * tileH + GAP_SMALL <= avail)) {
+                if (size == WidgetSize.SMALL && (avail == null || 2 * m.tileH + m.gapSmall <= avail)) {
                     // Klein: je Kind eine Kachel mit dem Vornamen als erster
                     // Zeile (WidgetModel.namedTileFor, Pixel 28.10.26).
                     p.kids.forEachIndexed { i, kid ->
-                        if (i > 0) v.addView(R.id.body, gap(ctx, R.layout.widget_vgap_small))
-                        v.addView(R.id.body, row(ctx, kid, listOf(WidgetModel.namedTileFor(kid, l, today, now))))
+                        if (i > 0) v.addView(R.id.body, gap(ctx, sc, R.layout.widget_vgap_small))
+                        v.addView(R.id.body, row(ctx, sc, kid, listOf(WidgetModel.namedTileFor(kid, l, today, now))))
                     }
-                } else if (size == WidgetSize.SMALL && !WidgetModel.twoKidsFit(avail, nameH, tileH, GAP)) {
+                } else if (size == WidgetSize.SMALL && !WidgetModel.twoKidsFit(avail, m.nameH, m.tileH, m.gap)) {
                     // Zu niedrig für zwei Namen und zwei dreizeilige Kacheln:
                     // die kompakten Zellen wie ab drei Kindern (WidgetModel.twoKidsFit).
-                    many(ctx, v, p, size, today, now, avail, line, tileH, headH)
+                    many(ctx, sc, v, p, size, today, now, avail, m)
                 } else if (size == WidgetSize.SMALL) {
                     // Klein: je Kind Vorname und die wichtigste Kachel.
                     p.kids.forEachIndexed { i, kid ->
-                        if (i > 0) v.addView(R.id.body, gap(ctx, R.layout.widget_vgap))
-                        v.addView(R.id.body, nameLine(ctx, kid))
+                        if (i > 0) v.addView(R.id.body, gap(ctx, sc, R.layout.widget_vgap))
+                        v.addView(R.id.body, nameLine(ctx, sc, kid))
                         WidgetModel.tilesFor(kid, l, today, now, false).firstOrNull()?.let {
-                            v.addView(R.id.body, row(ctx, kid, listOf(it)))
+                            v.addView(R.id.body, row(ctx, sc, kid, listOf(it)))
                         }
                     }
                 } else {
                     // Je Kind eine Zeile: Kürzel und Name links, Kacheln rechts;
-                    // groß bis zwei Reihen, wenn beide Kinder hineinpassen.
-                    val cap = if (size == WidgetSize.LARGE) 2 else 1
-                    var rows = cap
-                    if (avail != null) {
-                        while (rows > 1 && headH + 2 * (rows * tileH + (rows - 1) * GAP_SMALL) + GAP > avail) rows--
-                    }
+                    // groß bis zwei Reihen (Tablet bis drei, mittel bis zwei),
+                    // wenn beide Kinder hineinpassen.
+                    val rows = WidgetScale.twoKidRows(size, tablet, avail, m)
                     p.kids.forEachIndexed { i, kid ->
-                        if (i > 0) v.addView(R.id.body, gap(ctx, R.layout.widget_vgap))
+                        if (i > 0) v.addView(R.id.body, gap(ctx, sc, R.layout.widget_vgap))
                         val tiles = WidgetModel.tilesFor(kid, l, today, now, false)
-                        v.addView(R.id.body, kidRow(ctx, kid, tiles.take(rows * 2)))
+                        v.addView(R.id.body, kidRow(ctx, sc, kid, tiles.take(rows * 2)))
                     }
                 }
             }
-            Tier.MANY -> many(ctx, v, p, size, today, now, avail, line, tileH, headH)
+            Tier.MANY -> many(ctx, sc, v, p, size, today, now, avail, m)
         }
         return v
     }
@@ -184,28 +230,25 @@ internal object SchoolWidgetRenderer {
     /** Ab drei Kindern (widget5_c/d). */
     private fun many(
         ctx: Context,
+        sc: Scaler,
         v: RemoteViews,
         p: Payload,
         size: WidgetSize,
         today: LocalDate,
         now: LocalTime,
         avail: Float?,
-        line: Float,
-        tileH: Float,
-        headH: Float,
+        m: WidgetMetrics,
     ) {
         val l = p.labels
-        val cellH = 2 * line + CELL_PAD
-        val footH = line + GAP
         val shown = when (size) {
             // Klein: je Kind eine kompakte Zeile, nur Name und Art.
             WidgetSize.SMALL -> {
-                val n = WidgetModel.rowsThatFit(avail?.minus(footH), cellH, GAP_SMALL, WidgetModel.MAX_KIDS)
+                val n = WidgetModel.rowsThatFit(avail?.minus(m.footH), m.cellH, m.gapSmall, WidgetModel.MAX_KIDS)
                 val kids = p.kids.take(n)
                 kids.forEachIndexed { i, kid ->
-                    if (i > 0) v.addView(R.id.body, gap(ctx, R.layout.widget_vgap_small))
+                    if (i > 0) v.addView(R.id.body, gap(ctx, sc, R.layout.widget_vgap_small))
                     val r = RemoteViews(ctx.packageName, R.layout.widget_row)
-                    r.addView(R.id.row, cell(ctx, kid, WidgetModel.cellFor(kid, l, today, now, detailed = false)))
+                    r.addView(R.id.row, cell(ctx, sc, kid, WidgetModel.cellFor(kid, l, today, now, detailed = false)))
                     v.addView(R.id.body, r)
                 }
                 kids.size
@@ -213,17 +256,17 @@ internal object SchoolWidgetRenderer {
             // Mittel: zwei kompakte Zellen je Reihe, Fußzeile mit Arbeiten
             // und Aufgaben aller Kinder.
             WidgetSize.MEDIUM -> {
-                val rows = WidgetModel.rowsThatFit(avail?.minus(headH + footH), cellH, GAP_SMALL, WidgetModel.MAX_KIDS / 2)
+                val rows = WidgetModel.rowsThatFit(avail?.minus(m.headH + m.footH), m.cellH, m.gapSmall, WidgetModel.MAX_KIDS / 2)
                 val kids = p.kids.take(rows * 2)
                 kids.chunked(2).forEachIndexed { i, pair ->
-                    if (i > 0) v.addView(R.id.body, gap(ctx, R.layout.widget_vgap_small))
+                    if (i > 0) v.addView(R.id.body, gap(ctx, sc, R.layout.widget_vgap_small))
                     val r = RemoteViews(ctx.packageName, R.layout.widget_row)
                     pair.forEachIndexed { j, kid ->
-                        if (j > 0) r.addView(R.id.row, gap(ctx, R.layout.widget_hgap))
-                        r.addView(R.id.row, cell(ctx, kid, WidgetModel.cellFor(kid, l, today, now, detailed = true)))
+                        if (j > 0) r.addView(R.id.row, gap(ctx, sc, R.layout.widget_hgap))
+                        r.addView(R.id.row, cell(ctx, sc, kid, WidgetModel.cellFor(kid, l, today, now, detailed = true)))
                     }
                     if (pair.size == 1) {
-                        r.addView(R.id.row, gap(ctx, R.layout.widget_hgap))
+                        r.addView(R.id.row, gap(ctx, sc, R.layout.widget_hgap))
                         r.addView(R.id.row, RemoteViews(ctx.packageName, R.layout.widget_filler))
                     }
                     v.addView(R.id.body, r)
@@ -237,11 +280,11 @@ internal object SchoolWidgetRenderer {
             }
             // Groß: wie zwei Kinder, je Kind Kürzel und zwei Kacheln.
             WidgetSize.LARGE -> {
-                val n = WidgetModel.rowsThatFit(avail?.minus(headH + footH), tileH, GAP, WidgetModel.MAX_KIDS)
+                val n = WidgetModel.rowsThatFit(avail?.minus(m.headH + m.footH), m.tileH, m.gap, WidgetModel.MAX_KIDS)
                 val kids = p.kids.take(n)
                 kids.forEachIndexed { i, kid ->
-                    if (i > 0) v.addView(R.id.body, gap(ctx, R.layout.widget_vgap))
-                    v.addView(R.id.body, kidRow(ctx, kid, WidgetModel.tilesFor(kid, l, today, now, false).take(2)))
+                    if (i > 0) v.addView(R.id.body, gap(ctx, sc, R.layout.widget_vgap))
+                    v.addView(R.id.body, kidRow(ctx, sc, kid, WidgetModel.tilesFor(kid, l, today, now, false).take(2)))
                 }
                 v.setViewVisibility(R.id.foot_exam, View.GONE)
                 v.setViewVisibility(R.id.foot_hw, View.GONE)
@@ -275,10 +318,10 @@ internal object SchoolWidgetRenderer {
     }
 
     /** Zwei Kacheln je Reihe in [parent] (ein Kind: ohne Namensspalte). */
-    private fun grid(ctx: Context, v: RemoteViews, parent: Int, kid: Kid, tiles: List<Tile>) {
+    private fun grid(ctx: Context, sc: Scaler, v: RemoteViews, parent: Int, kid: Kid, tiles: List<Tile>) {
         tiles.chunked(2).forEachIndexed { i, pair ->
-            if (i > 0) v.addView(parent, gap(ctx, R.layout.widget_vgap_small))
-            v.addView(parent, row(ctx, kid, pair, pairs = true))
+            if (i > 0) v.addView(parent, gap(ctx, sc, R.layout.widget_vgap_small))
+            v.addView(parent, row(ctx, sc, kid, pair, pairs = true))
         }
     }
 
@@ -286,43 +329,45 @@ internal object SchoolWidgetRenderer {
      * Eine Reihe: eine Kachel über die volle Breite, oder (pairs) zwei
      * gleich breite; eine einzelne zweite Hälfte bleibt leer (widget5_e).
      */
-    private fun row(ctx: Context, kid: Kid, tiles: List<Tile>, pairs: Boolean = false): RemoteViews {
+    private fun row(ctx: Context, sc: Scaler, kid: Kid, tiles: List<Tile>, pairs: Boolean = false): RemoteViews {
         val r = RemoteViews(ctx.packageName, R.layout.widget_row)
         tiles.forEachIndexed { i, t ->
-            if (i > 0) r.addView(R.id.row, gap(ctx, R.layout.widget_hgap))
-            r.addView(R.id.row, tile(ctx, kid, t))
+            if (i > 0) r.addView(R.id.row, gap(ctx, sc, R.layout.widget_hgap))
+            r.addView(R.id.row, tile(ctx, sc, kid, t))
         }
         if (pairs && tiles.size == 1) {
-            r.addView(R.id.row, gap(ctx, R.layout.widget_hgap))
+            r.addView(R.id.row, gap(ctx, sc, R.layout.widget_hgap))
             r.addView(R.id.row, RemoteViews(ctx.packageName, R.layout.widget_filler))
         }
         return r
     }
 
     /** Kind-Zeile (2 Kinder, groß ab 3): Kürzel im Kreis, Vorname, Kacheln. */
-    private fun kidRow(ctx: Context, kid: Kid, tiles: List<Tile>): RemoteViews {
+    private fun kidRow(ctx: Context, sc: Scaler, kid: Kid, tiles: List<Tile>): RemoteViews {
         val k = RemoteViews(ctx.packageName, R.layout.widget_kid)
         k.setInt(R.id.kid_avatar, "setBackgroundResource", dots[color(kid)])
         k.setTextViewText(R.id.kid_initial, initial(kid.name))
         k.setTextViewText(R.id.kid_name, kid.name)
+        sc.kid(k)
         k.removeAllViews(R.id.kid_tiles)
         tiles.chunked(2).forEachIndexed { i, pair ->
-            if (i > 0) k.addView(R.id.kid_tiles, gap(ctx, R.layout.widget_vgap_small))
-            k.addView(R.id.kid_tiles, row(ctx, kid, pair, pairs = true))
+            if (i > 0) k.addView(R.id.kid_tiles, gap(ctx, sc, R.layout.widget_vgap_small))
+            k.addView(R.id.kid_tiles, row(ctx, sc, kid, pair, pairs = true))
         }
         return k
     }
 
     /** Punkt in der Kinderfarbe und Vorname (klein). */
-    private fun nameLine(ctx: Context, kid: Kid): RemoteViews {
+    private fun nameLine(ctx: Context, sc: Scaler, kid: Kid): RemoteViews {
         val n = RemoteViews(ctx.packageName, R.layout.widget_name)
         n.setInt(R.id.name_dot, "setBackgroundResource", dots[color(kid)])
         n.setTextViewText(R.id.name_text, kid.name)
+        sc.name(n)
         return n
     }
 
     /** Kleine Kachel (Entwurf 5, _Mini). */
-    private fun tile(ctx: Context, kid: Kid, t: Tile): RemoteViews {
+    private fun tile(ctx: Context, sc: Scaler, kid: Kid, t: Tile): RemoteViews {
         val c = color(kid)
         val layout = when (t.kind) {
             TileKind.CANCEL -> R.layout.widget_mini_cancel
@@ -340,11 +385,12 @@ internal object SchoolWidgetRenderer {
         line(v, R.id.tile_l1, t.l1)
         line(v, R.id.tile_l2, t.l2)
         line(v, R.id.tile_l3, t.l3)
+        sc.tile(v)
         return v
     }
 
     /** Kompakte Zelle (Entwurf 5, _Compact). */
-    private fun cell(ctx: Context, kid: Kid, cell: Cell): RemoteViews {
+    private fun cell(ctx: Context, sc: Scaler, kid: Kid, cell: Cell): RemoteViews {
         val c = color(kid)
         val layout = when (cell.kind) {
             TileKind.CANCEL -> R.layout.widget_cell_cancel
@@ -364,6 +410,7 @@ internal object SchoolWidgetRenderer {
         }
         v.setTextViewText(R.id.cell_l1, cell.l1)
         v.setTextViewText(R.id.cell_l2, cell.l2)
+        sc.cell(v)
         return v
     }
 
@@ -387,7 +434,16 @@ internal object SchoolWidgetRenderer {
         v.setViewVisibility(id, if (text.isEmpty()) View.GONE else View.VISIBLE)
     }
 
-    private fun gap(ctx: Context, layout: Int) = RemoteViews(ctx.packageName, layout)
+    /** Abstand (widget_vgap, widget_vgap_small, widget_hgap) im Maßstab. */
+    private fun gap(ctx: Context, sc: Scaler, layout: Int): RemoteViews {
+        val g = RemoteViews(ctx.packageName, layout)
+        when (layout) {
+            R.layout.widget_vgap -> sc.gapTop(g, R.dimen.widget_gap)
+            R.layout.widget_vgap_small -> sc.gapTop(g, R.dimen.widget_gap_small)
+            R.layout.widget_hgap -> sc.gapStart(g, R.dimen.widget_gap_small)
+        }
+        return g
+    }
 
     private fun color(kid: Kid) = Math.floorMod(kid.color, dots.size)
 
@@ -425,5 +481,133 @@ internal object SchoolWidgetRenderer {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+    }
+}
+
+/**
+ * Vergrößert die festen Maße der Layouts um den Maßstab [s]
+ * (WidgetScale.scale): Schrift (setTextViewTextSize, sp) und Innenabstände
+ * (setViewPadding) auf jedem Android; Kreise, Symbole, Punkte, die
+ * Namensspalte und Außenabstände (setViewLayoutWidth/Height/Margin) erst ab
+ * Android 12 – diese Aufrufe gibt es davor nicht. Die Grundwerte kommen aus
+ * res/values/widget_dimens.xml, nicht als Zahl von hier.
+ *
+ * Ursache (Foto Tablet 28.10.26): Schrift 12 sp und Maße in dp sind auf
+ * einer Tablet-Fläche winzig. Grenze: Bei [s] = 1 (jedes Telefon) bleibt
+ * jeder Aufruf aus – das Widget ist dort Zeichen für Zeichen das bisherige.
+ * Vor Android 12 bleiben Kreise und Symbole in Telefongröße, und die
+ * Namensspalte (Kürzel, Vorname) wächst gar nicht, weil ihr Kreis und ihre
+ * Breite fest sind; die Kacheln daneben wachsen trotzdem.
+ */
+private class Scaler(ctx: Context, val s: Float) {
+    private val on = s > 1f
+    private val res = ctx.resources
+    private val density = res.displayMetrics.density
+
+    /** Größen und Außenabstände nur ab Android 12 (s. o.). */
+    private val boxes = on && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+
+    private fun dp(id: Int) = res.getDimension(id) / density * s
+
+    private fun px(id: Int) = Math.round(res.getDimension(id) * s)
+
+    private fun text(v: RemoteViews, id: Int, sp: Float = WidgetScale.TEXT_SP) {
+        if (on) v.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_SP, sp * s)
+    }
+
+    private fun pad(v: RemoteViews, id: Int, h: Int, vert: Int) {
+        if (on) v.setViewPadding(id, px(h), px(vert), px(h), px(vert))
+    }
+
+    private fun square(v: RemoteViews, id: Int, dim: Int) {
+        if (boxes && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            v.setViewLayoutWidth(id, dp(dim), TypedValue.COMPLEX_UNIT_DIP)
+            v.setViewLayoutHeight(id, dp(dim), TypedValue.COMPLEX_UNIT_DIP)
+        }
+    }
+
+    private fun margin(v: RemoteViews, id: Int, type: Int, dim: Int) {
+        if (boxes && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            v.setViewLayoutMargin(id, type, dp(dim), TypedValue.COMPLEX_UNIT_DIP)
+        }
+    }
+
+    /** Rand, Kopf und Fußzeile (widget_root). */
+    fun root(v: RemoteViews) {
+        pad(v, android.R.id.background, R.dimen.widget_padding, R.dimen.widget_padding)
+        text(v, R.id.head_day)
+        text(v, R.id.head_stand)
+        text(v, R.id.foot_exam_text)
+        text(v, R.id.foot_hw_text)
+        text(v, R.id.foot_more)
+        text(v, R.id.no_data)
+        if (!boxes) return
+        margin(v, R.id.head, RemoteViews.MARGIN_BOTTOM, R.dimen.widget_gap)
+        square(v, R.id.head_dot, R.dimen.widget_dot)
+        margin(v, R.id.head_dot, RemoteViews.MARGIN_END, R.dimen.widget_gap_small)
+        square(v, R.id.head_sync, R.dimen.widget_icon_small)
+        margin(v, R.id.head_stand, RemoteViews.MARGIN_START, R.dimen.widget_gap_hair)
+        margin(v, R.id.footer, RemoteViews.MARGIN_TOP, R.dimen.widget_gap)
+        margin(v, R.id.foot_exam, RemoteViews.MARGIN_END, R.dimen.widget_foot_gap)
+        square(v, R.id.foot_exam_icon, R.dimen.widget_icon_foot)
+        square(v, R.id.foot_hw_icon, R.dimen.widget_icon_foot)
+        margin(v, R.id.foot_exam_text, RemoteViews.MARGIN_START, R.dimen.widget_gap_tiny)
+        margin(v, R.id.foot_hw_text, RemoteViews.MARGIN_START, R.dimen.widget_gap_tiny)
+    }
+
+    /** Kachel (widget_mini_*). */
+    fun tile(v: RemoteViews) {
+        pad(v, R.id.tile_bg, R.dimen.widget_tile_pad_h, R.dimen.widget_tile_pad_v)
+        text(v, R.id.tile_l1)
+        text(v, R.id.tile_l2)
+        text(v, R.id.tile_l3)
+        square(v, R.id.tile_circle, R.dimen.widget_circle)
+        square(v, R.id.tile_icon, R.dimen.widget_circle_icon)
+        margin(v, R.id.tile_text, RemoteViews.MARGIN_START, R.dimen.widget_gap_small)
+    }
+
+    /** Kompakte Zelle (widget_cell_*). */
+    fun cell(v: RemoteViews) {
+        pad(v, R.id.cell_bg, R.dimen.widget_tile_pad_h, R.dimen.widget_cell_pad_v)
+        text(v, R.id.cell_l1)
+        text(v, R.id.cell_l2)
+        square(v, R.id.cell_circle, R.dimen.widget_circle)
+        square(v, R.id.cell_icon, R.dimen.widget_circle_icon)
+        margin(v, R.id.cell_text, RemoteViews.MARGIN_START, R.dimen.widget_gap_small)
+        square(v, R.id.cell_dot, R.dimen.widget_dot_small)
+        margin(v, R.id.cell_l1, RemoteViews.MARGIN_START, R.dimen.widget_gap_tiny)
+    }
+
+    /**
+     * Kind-Zeile (widget_kid): Namensspalte nur ab Android 12 – Kürzel und
+     * Vorname liegen in Kreis und Spalte fester Breite (s. Klasse).
+     */
+    fun kid(v: RemoteViews) {
+        margin(v, R.id.kid_tiles, RemoteViews.MARGIN_START, R.dimen.widget_gap_tiny)
+        if (!boxes || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        v.setViewLayoutWidth(R.id.kid_col, dp(R.dimen.widget_avatar_col), TypedValue.COMPLEX_UNIT_DIP)
+        v.setViewPadding(R.id.kid_col, 0, px(R.dimen.widget_gap_tiny), 0, 0)
+        square(v, R.id.kid_avatar, R.dimen.widget_avatar)
+        text(v, R.id.kid_initial)
+        text(v, R.id.kid_name, WidgetScale.NAME_SP)
+        margin(v, R.id.kid_name, RemoteViews.MARGIN_TOP, R.dimen.widget_gap_hair)
+    }
+
+    /** Namenszeile (widget_name). */
+    fun name(v: RemoteViews) {
+        text(v, R.id.name_text)
+        square(v, R.id.name_dot, R.dimen.widget_dot)
+        margin(v, R.id.name_text, RemoteViews.MARGIN_START, R.dimen.widget_gap_small)
+        margin(v, R.id.name_row, RemoteViews.MARGIN_BOTTOM, R.dimen.widget_gap_tiny)
+    }
+
+    /** Senkrechter Abstand (Höhe als paddingTop, widget_vgap*.xml). */
+    fun gapTop(v: RemoteViews, dim: Int) {
+        if (on) v.setViewPadding(R.id.gap, 0, px(dim), 0, 0)
+    }
+
+    /** Waagerechter Abstand (Breite als Innenabstand, widget_hgap.xml). */
+    fun gapStart(v: RemoteViews, dim: Int) {
+        if (on) v.setViewPadding(R.id.gap, px(dim), 0, 0, 0)
     }
 }
