@@ -33,6 +33,14 @@
     <dimen name="widget_slot_27">27dp</dimen>
     <dimen name="widget_icon_27">17dp</dimen>
     <dimen name="widget_slot_30">30dp</dimen>
+    <!-- Groß: mittleres Widget mit zwei Kindern (widget_wide_row, Rückmeldung 30.10.26 „Platz noch nicht optimal genutzt“). -->
+    <dimen name="widget_slot_38">38dp</dimen>
+    <dimen name="widget_icon_38">24dp</dimen>
+    <dimen name="widget_slot_34">34dp</dimen>
+    <dimen name="widget_icon_34">21dp</dimen>
+    <dimen name="widget_label_col_big">66dp</dimen>
+    <dimen name="widget_label_col_big_narrow">52dp</dimen>
+    <dimen name="widget_label_h_big">18dp</dimen>
     <dimen name="widget_icon_30">19dp</dimen>
     <dimen name="widget_slot_32">32dp</dimen>
     <dimen name="widget_icon_32">20dp</dimen>
@@ -53,6 +61,8 @@
     <dimen name="widget_busy_14">14dp</dimen>
 
     <!-- Abstände aus dem Nachbau. -->
+    <!-- Höhe der Beschriftung unter Symbolen: fest, damit autoSize greift (10 sp bei Systemschrift 1,3 ≈ 13 dp + Luft). -->
+    <dimen name="widget_label_h">16dp</dimen>
     <dimen name="widget_gap_1">1dp</dimen>
     <dimen name="widget_gap_2">2dp</dimen>
     <dimen name="widget_gap_3">3dp</dimen>
@@ -74,6 +84,9 @@
     <dimen name="widget_text_14">14sp</dimen>
     <dimen name="widget_text_14_5">14.5sp</dimen>
     <dimen name="widget_text_16">16sp</dimen>
+    <dimen name="widget_text_20">20sp</dimen>
+    <dimen name="widget_text_15">15sp</dimen>
+    <dimen name="widget_busy_18">18dp</dimen>
     <!-- Tag-Marke darf auf 8 sp schrumpfen (autoSize, ab Android 8). -->
     <dimen name="widget_text_8">8sp</dimen>
 </resources>

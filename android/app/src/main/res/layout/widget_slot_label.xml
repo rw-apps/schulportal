@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Beschriftetes Symbol 30 dp (_one41: _slot label: true), Spalte 56 breit (drei Symbole). Beschriftung an = ink fett, blass = faint 60 %; autoSize statt FittedBox (ab Android 8, davor gekürzt). -->
+<!-- Beschriftetes Symbol 30 dp (_one41: _slot label: true), Spalte 56 breit (drei Symbole). Beschriftung an = ink fett, blass = faint 60 %; autoSize statt FittedBox (ab Android 8, davor gekürzt); feste Höhe widget_label_h und eine Zeile, sonst schrumpft autoSize nicht – Ursache (Bildschirmfoto Pixel 30.10.26): „Aufgaben“ und „Vertretung“ liefen ineinander. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/slot"
     android:layout_width="@dimen/widget_label_col"
@@ -43,8 +43,11 @@
         android:id="@+id/slot_label_on"
         style="@style/WidgetText.Bold"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="@dimen/widget_label_h"
         android:layout_marginTop="@dimen/widget_gap_3"
+        android:maxLines="1"
+        android:paddingStart="@dimen/widget_gap_1"
+        android:paddingEnd="@dimen/widget_gap_1"
         android:autoSizeMaxTextSize="@dimen/widget_text_10"
         android:autoSizeMinTextSize="@dimen/widget_text_8"
         android:autoSizeTextType="uniform"
@@ -58,8 +61,11 @@
         android:id="@+id/slot_label_off"
         style="@style/WidgetText"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="@dimen/widget_label_h"
         android:layout_marginTop="@dimen/widget_gap_3"
+        android:maxLines="1"
+        android:paddingStart="@dimen/widget_gap_1"
+        android:paddingEnd="@dimen/widget_gap_1"
         android:autoSizeMaxTextSize="@dimen/widget_text_10"
         android:autoSizeMinTextSize="@dimen/widget_text_8"
         android:autoSizeTextType="uniform"

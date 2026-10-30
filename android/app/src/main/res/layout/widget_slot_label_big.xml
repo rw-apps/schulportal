@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Groß für das mittlere Widget mit zwei Kindern (widget_wide_row): Symbol 38 dp, Beschriftung 12 sp (autoSize bis 8 sp). Ursache (Rückmeldung 30.10.26): „Der Platz wird noch nicht optimal genutzt“. Sonst wie widget_slot_label.xml. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/slot"
+    android:layout_width="@dimen/widget_label_col_big"
+    android:layout_height="wrap_content"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:gravity="center_horizontal"
+    android:orientation="vertical">
+
+    <FrameLayout
+        android:layout_width="@dimen/widget_slot_38"
+        android:layout_height="@dimen/widget_slot_38"
+        android:clipChildren="false"
+        android:clipToPadding="false">
+
+        <FrameLayout
+            android:id="@+id/slot_box"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <ImageView
+                android:id="@+id/slot_icon"
+                android:layout_width="@dimen/widget_icon_38"
+                android:layout_height="@dimen/widget_icon_38"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/slot_mark"
+            style="@style/WidgetMark"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/widget_mark"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="@dimen/widget_mark_out"
+            android:layout_marginEnd="@dimen/widget_mark_out"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/slot_label_on"
+        style="@style/WidgetText.Bold"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/widget_label_h_big"
+        android:layout_marginTop="@dimen/widget_gap_3"
+        android:maxLines="1"
+        android:paddingStart="@dimen/widget_gap_1"
+        android:paddingEnd="@dimen/widget_gap_1"
+        android:autoSizeMaxTextSize="@dimen/widget_text_12"
+        android:autoSizeMinTextSize="@dimen/widget_text_8"
+        android:autoSizeTextType="uniform"
+        android:gravity="center"
+        android:importantForAccessibility="no"
+        android:textColor="@color/widget_ink"
+        android:textSize="@dimen/widget_text_12"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/slot_label_off"
+        style="@style/WidgetText"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/widget_label_h_big"
+        android:layout_marginTop="@dimen/widget_gap_3"
+        android:maxLines="1"
+        android:paddingStart="@dimen/widget_gap_1"
+        android:paddingEnd="@dimen/widget_gap_1"
+        android:autoSizeMaxTextSize="@dimen/widget_text_12"
+        android:autoSizeMinTextSize="@dimen/widget_text_8"
+        android:autoSizeTextType="uniform"
+        android:gravity="center"
+        android:importantForAccessibility="no"
+        android:textColor="@color/widget_faint_label"
+        android:textSize="@dimen/widget_text_12" />
+</LinearLayout>

@@ -299,7 +299,8 @@ internal object SchoolWidgetRenderer {
     private fun wideRow(ctx: Context, kv: KidView, l: Labels): RemoteViews {
         val r = RemoteViews(ctx.packageName, R.layout.widget_wide_row)
         head(ctx, r, kv, l, 0)
-        val res = if (kv.slots.size > 3) R.layout.widget_slot_label_narrow else R.layout.widget_slot_label
+        // Größere Fassung (Rückmeldung 30.10.26: Platz besser nutzen).
+        val res = if (kv.slots.size > 3) R.layout.widget_slot_label_big_narrow else R.layout.widget_slot_label_big
         for (s in kv.slots) r.addView(R.id.slots, slot(ctx, res, kv, s))
         return r
     }
@@ -399,7 +400,9 @@ internal object SchoolWidgetRenderer {
             r.setInt(R.id.slot_mark, "setBackgroundResource", markBg(s.signal))
             r.setViewVisibility(R.id.slot_mark, if (mark) View.VISIBLE else View.GONE)
         }
-        if (layout == R.layout.widget_slot_label || layout == R.layout.widget_slot_label_narrow) {
+        if (layout == R.layout.widget_slot_label || layout == R.layout.widget_slot_label_narrow ||
+            layout == R.layout.widget_slot_label_big || layout == R.layout.widget_slot_label_big_narrow
+        ) {
             r.setTextViewText(R.id.slot_label_on, if (s.on) s.label else "")
             r.setTextViewText(R.id.slot_label_off, if (s.on) "" else s.label)
             r.setViewVisibility(R.id.slot_label_on, if (s.on) View.VISIBLE else View.GONE)
