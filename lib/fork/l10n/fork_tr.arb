@@ -716,5 +716,7 @@
   "demoBand": "Demo · gönderim kapalı",
   "demoEndShort": "Bitir",
   "hwTextMore": "devamı",
-  "hwTextLess": "daha az"
+  "hwTextLess": "daha az",
+  "hintUnitLesson": "Ders",
+  "hintUnitBlock": "Blok"
 }

@@ -444,7 +444,15 @@ String calendarEvents(List<DemoPupil> pupils, DemoClock c) {
 /// Erfundene Themen und Hausaufgaben je Fach, je Jahrgang verschieden
 /// (sonst stünden bei zwei Kindern dieselben Aufgaben doppelt).
 const _topics7 = {
-  'D': ('Gedichte der Romantik', 'Gedicht S. 34 auswendig lernen'),
+  // Bewusst lang wie echte Lehrertexte: zeigt die Kürzung mit „mehr“
+  // (Hausaufgabenkarte, Entwurf A 30.10.26).
+  'D': (
+    'Gedichte der Romantik',
+    'Gedicht S. 34 auswendig lernen. Zusätzlich zwei Strophen in eigenen '
+        'Worten zusammenfassen und das Reimschema bestimmen (Hilfe im '
+        'Merkkasten S. 33). Wer am Mittwoch gefehlt hat, holt bitte das '
+        'Arbeitsblatt im Sekretariat ab.',
+  ),
   'M': ('Brüche erweitern und kürzen', 'Buch S. 52 Nr. 3–5'),
   'E': ('Unit 2: At the station', 'Workbook p. 18'),
   'F': ('Leçon 3: En ville', 'Vokabeln Leçon 3'),

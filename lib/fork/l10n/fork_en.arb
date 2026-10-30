@@ -716,5 +716,7 @@
   "demoBand": "Demo · sending locked",
   "demoEndShort": "End",
   "hwTextMore": "more",
-  "hwTextLess": "less"
+  "hwTextLess": "less",
+  "hintUnitLesson": "Period",
+  "hintUnitBlock": "Block"
 }

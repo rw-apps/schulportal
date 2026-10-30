@@ -420,6 +420,7 @@ class KidCard extends StatelessWidget {
               if (i > 0) const SizedBox(height: Sp.s),
               _HintGroup(
                 caption: hintDayCaption(t, g.day, now),
+                block: kid.lessons.any((l) => l.slot.contains('Block')),
                 hints: g.hints,
                 onTap: (h) => tapHint(h, g.day),
               ),
@@ -662,12 +663,24 @@ class _SectionHead extends StatelessWidget {
 /// Signalfläche – bei sieben Hinweisen rutschte der Stundenplan unter den
 /// ersten Bildschirm. Grenze: Die Signalfarbe trägt jetzt nur noch das Feld
 /// um das Symbol und das Art-Wort; die Zeile selbst ist weiß.
+///
+/// Rechts im Kopf „STUNDE“ (bzw. „BLOCK“) über den Marken, sobald eine
+/// Zeile eine Stundennummer trägt; die frühere Anzahl entfällt. Ursache
+/// (Rückmeldung 30.10.26): Eine Marke „3.“ las sich wie eine Note, die
+/// Anzahl „1“ neben „HEUTE“ war unverständlich. Im Kopf statt in jeder
+/// Marke („3. Std.“), damit die Marken schmal bleiben und lange Fächer
+/// nicht umbrechen. Grenze: Marken mit Uhrzeit (Arbeit „09:50“) erklären
+/// sich selbst; ohne Stundennummer bleibt der Kopf rechts leer.
 class _HintGroup extends StatelessWidget {
   const _HintGroup({
     required this.caption,
     required this.hints,
     required this.onTap,
+    this.block = false,
   });
+
+  /// Schule zählt in Blöcken (Stundenplan „3. Block“).
+  final bool block;
 
   final String caption;
   final List<KidHint> hints;
@@ -676,6 +689,11 @@ class _HintGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
+    final t = context.t;
+    final numbered = hints.any((h) => RegExp(r'^\d+\.').hasMatch(h.slot ?? ''));
+    final right = numbered
+        ? upperFor(t, block ? t.hintUnitBlock : t.hintUnitLesson)
+        : null;
     return Container(
       padding: const EdgeInsets.all(Sp.s),
       decoration: BoxDecoration(
@@ -697,8 +715,10 @@ class _HintGroup extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: Sp.s),
-                Text('${hints.length}', style: k.dateCaps),
+                if (right != null) ...[
+                  const SizedBox(width: Sp.s),
+                  Text(right, style: k.dateCaps),
+                ],
               ],
             ),
           ),

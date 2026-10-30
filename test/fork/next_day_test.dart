@@ -150,8 +150,11 @@ void main() {
     expect(find.text('DIENSTAG, 27. OKT.'), findsOneWidget);
     expect(_hint('Mathematik  Klassenarbeit'), findsOneWidget);
     expect(_hint('Deutsch  Vertretung'), findsOneWidget);
-    // Marke: nur die Stunde als Zahl.
+    // Marke: nur die Stunde als Zahl, „STUNDE“ im Kopf statt der Anzahl
+    // (Rückmeldung 30.10.26: „3.“ las sich wie eine Note).
     expect(find.text('1.–2.'), findsOneWidget);
+    expect(find.text('STUNDE'), findsOneWidget);
+    expect(find.text('2'), findsNothing);
     await t.tap(find.text('Ganzer Tag'));
     expect(opened, [tue]);
     // Antippen einer Zeile öffnet ihren Tag wie „Ganzer Tag“.

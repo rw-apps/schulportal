@@ -1869,5 +1869,7 @@
   "demoBand": "Demo · Senden gesperrt",
   "demoEndShort": "Beenden",
   "hwTextMore": "mehr",
-  "hwTextLess": "weniger"
+  "hwTextLess": "weniger",
+  "hintUnitLesson": "Stunde",
+  "hintUnitBlock": "Block"
 }
