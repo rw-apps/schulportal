@@ -24,6 +24,7 @@ import '../courses/live_courses_page.dart';
 import '../kit.dart';
 import '../live/family.dart';
 import '../../widget/home_widget_sync.dart' show HomeWidgetSync;
+import '../../widget/widget_launch.dart';
 import '../live/live_data.dart';
 import '../messages/live_messages_page.dart';
 import '../messages/messages_page.dart';
@@ -129,6 +130,35 @@ class _PreviewShellState extends State<PreviewShell> {
     gradesRequest.value = true;
     _navKeys[ShellTab.courses]!.currentState?.popUntil((r) => r.isFirst);
     _select(ShellTab.courses);
+  }
+
+  /// Tipp im Startbildschirm-Widget (widget_launch.dart, Entwurf 10): das
+  /// Kind ist schon gewählt, hier nur Reiter bzw. Seite. Essen ohne
+  /// eingetragene Mensa führt nach Heute (dort steht, wie man sie einträgt).
+  void _onWidgetTarget(BuildContext context, WidgetLaunch l) {
+    switch (l.target) {
+      case WidgetTarget.today:
+        _navKeys[ShellTab.today]!.currentState?.popUntil((r) => r.isFirst);
+        _select(ShellTab.today);
+      case WidgetTarget.exams:
+        _openExams();
+      case WidgetTarget.homework:
+        _navKeys[ShellTab.courses]!.currentState?.popUntil((r) => r.isFirst);
+        _select(ShellTab.courses);
+      case WidgetTarget.meal:
+        final members = FamilyData.of(context);
+        final m = members.where((x) => x.accountId == l.account).firstOrNull;
+        final s = m?.snapshot;
+        _select(ShellTab.today);
+        if (m == null || s == null || s.mensaUrl == null) return;
+        openMensa(
+          context,
+          s,
+          s.mensaKid,
+          name: members.length > 1 ? s.firstName : null,
+          colorIndex: m.colorIndex,
+        );
+    }
   }
 
   void _openEvents() {
@@ -523,7 +553,14 @@ class _PreviewShellState extends State<PreviewShell> {
                   // (home_widget_sync.dart): unter FamilyScope, damit es
                   // jedes Konto der Familie erreicht.
                   child: LiveDataScope(
-                    child: FamilyScope(child: HomeWidgetSync(child: scaffold)),
+                    child: FamilyScope(
+                      child: HomeWidgetSync(
+                        child: WidgetLaunchHandler(
+                          onTarget: _onWidgetTarget,
+                          child: scaffold,
+                        ),
+                      ),
+                    ),
                   ),
                 )
               : scaffold,

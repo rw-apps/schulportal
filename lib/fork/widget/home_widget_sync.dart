@@ -16,12 +16,12 @@ import '../demo/demo_mode.dart' show demoActive;
 import '../exams.dart';
 import '../kid_colors.dart' show storedKidColor;
 import '../l10n/l10n.dart';
-import '../mensa_store.dart' show MealCache;
+import '../mensa_store.dart'
+    show MealCache, lowMealBalance, mealReminderDays, mealRemindDays;
 import '../ui/courses/homework_due.dart' show liveOpenHomeworkItems;
 import '../ui/courses/live_courses_page.dart' show examCalendarOf;
 import '../ui/live/family.dart';
 import '../ui/live/live_data.dart';
-import '../ui/plan/plan_from_lanis.dart' show subjectFullName;
 import '../ui/plan/plan_model.dart';
 import '../ui/today/today_from_lanis.dart' show freeDaysAhead, freeDaysFrom;
 import 'home_widget_data.dart';
@@ -31,6 +31,7 @@ import 'home_widget_data.dart';
 /// (io.github.rwapps.sph, .debug) vom Kotlin-Namensraum (com.example.app)
 /// abweicht – home_widget sucht kurze Namen im App-Paket.
 const _providers = [
+  'com.example.app.widget.SchoolWidgetStrip',
   'com.example.app.widget.SchoolWidgetSmall',
   'com.example.app.widget.SchoolWidgetMedium',
   'com.example.app.widget.SchoolWidgetLarge',
@@ -132,7 +133,12 @@ void storeWidgetKidSelection(TypedSettings shared, Set<int>? selection) {
 /// Stundenplan oder Vertretungsplan fehlen. Ursache: Ohne Vertretungsplan
 /// zeigte das Widget „Nach Plan“, obwohl nichts bekannt ist – dann bleibt
 /// der Eintrag der vorigen Datei stehen ([HomeWidgetSync]).
-Map<String, Object?>? liveKidEntry(FamilyMember m, ForkL10n t, DateTime now) {
+Map<String, Object?>? liveKidEntry(
+  FamilyMember m,
+  ForkL10n t,
+  DateTime now, {
+  bool shown = true,
+}) {
   final s = m.snapshot;
   if (!s.offers('stundenplan.php') || s.substitutions.content == null) {
     return null;
@@ -145,14 +151,12 @@ Map<String, Object?>? liveKidEntry(FamilyMember m, ForkL10n t, DateTime now) {
   if (live == null) return null;
   final className = liveClassName(s);
   final events = s.calendar.content ?? const <CalendarEvent>[];
-  final courses = s.courseNames;
-  final items = widgetItems(
+  final days = widgetDays(
     plan: live.plan,
     choice: effectiveChoice(live.auto, s.userChoice),
     days: s.substitutionDaysFromToday(now),
     now: now,
     t: t,
-    subjectName: (c) => subjectFullName(c, courses),
     free: s.offers('kalender.php')
         ? freeDaysFrom(events, now, className: className, days: freeDaysAhead)
         : const {},
@@ -164,35 +168,31 @@ Map<String, Object?>? liveKidEntry(FamilyMember m, ForkL10n t, DateTime now) {
     now: now,
     until: DateTime(now.year, now.month, now.day + widgetExamDays),
   );
-  final homework = liveOpenHomeworkItems(s);
-  final today = DateTime(now.year, now.month, now.day);
-  // Früheste vermutete Frist ab heute („für morgen“); ohne Stundenplan
-  // keine Frist, dann bleibt die dritte Zeile der Kachel leer.
-  DateTime? due;
-  for (final h in homework) {
-    final d = h.due;
-    if (d == null) continue;
-    final day = DateTime(d.year, d.month, d.day);
-    if (day.isBefore(today)) continue;
-    if (due == null || day.isBefore(due)) due = day;
-  }
-  // Essen: dieselbe Quelle wie die Kinderkarte (live_today_page.dart,
-  // lunch) – nur, was für heute bestellt ist.
-  final meal = s.mensaUrl == null
+  // Essen: dieselbe Quelle und Erinnerungstage wie die Kinderkarte
+  // (live_today_page.dart, mealUnordered/lowBalance).
+  final meals = s.mensaUrl == null
       ? null
-      : MealCache.instance.of(s.mensaOwner(s.mensaKid))?.dayOf(now);
+      : MealCache.instance.of(s.mensaOwner(s.mensaKid));
   final name = s.firstName.trim();
   return widgetKidEntry(
     account: m.accountId,
     name: name.isEmpty ? t.yourChild : name,
     color: m.colorIndex,
-    items: items,
+    days: days,
     stand: s.substitutions.fetchedAt,
-    homework: homework.length,
-    homeworkDue: due,
-    exam: nextExamWithin(exams, now),
-    meal: meal?.ordered?.name,
-    mealDay: meal?.day,
+    own: s.session.accountTypeOrNull == AccountType.student,
+    shown: shown,
+    homeworkDue: [for (final h in liveOpenHomeworkItems(s)) ?h.due],
+    exams: [for (final e in exams) e.day],
+    mealOpen: mealReminderDays(
+      meals,
+      now,
+      weekdays: mealRemindDays(
+        MealCache.instance.settings,
+        s.mensaOwner(s.mensaKid),
+      ),
+    ),
+    lowBalance: lowMealBalance(meals) != null,
   );
 }
 
@@ -251,14 +251,19 @@ class HomeWidgetSync extends ConsumerWidget {
       child: child,
       builder: (context, _, child) {
         final now = DateTime.now();
+        // Alle Kinder in die Datei, `shown` = Vorgabe der App. Ursache
+        // (Vorschlag 7, 30.10.26): Jedes Widget kann eigene Kinder zeigen
+        // (Auswahl je Widget in Kotlin) – dafür müssen alle darin stehen.
+        final all = ordered.isEmpty
+            ? [for (final m in members) m.accountId]
+            : ordered;
         final fresh = <int, Map<String, Object?>>{
           for (final m in members)
-            if (ids.contains(m.accountId))
-              m.accountId: ?_cachedEntry(m, t, now),
+            m.accountId: ?_cachedEntry(m, t, now, ids.contains(m.accountId)),
         };
         if (fresh.isNotEmpty) {
           WidgetsBinding.instance.addPostFrameCallback(
-            (_) => _writeKids(ids, fresh, t, now),
+            (_) => _writeKids(all, fresh, t, now),
           );
         }
         return child!;
@@ -276,13 +281,18 @@ class HomeWidgetSync extends ConsumerWidget {
 /// Kotlin heraus.
 final _entryCache = Expando<(String, Map<String, Object?>?)>();
 
-Map<String, Object?>? _cachedEntry(FamilyMember m, ForkL10n t, DateTime now) {
+Map<String, Object?>? _cachedEntry(
+  FamilyMember m,
+  ForkL10n t,
+  DateTime now,
+  bool shown,
+) {
   final key =
       '${isoDate(now)}|${t.localeName}|${m.accountId}|${m.colorIndex}|'
-      '${identityHashCode(MealCache.instance.notifier.value)}';
+      '$shown|${identityHashCode(MealCache.instance.notifier.value)}';
   final hit = _entryCache[m.snapshot];
   if (hit != null && hit.$1 == key) return hit.$2;
-  final e = liveKidEntry(m, t, now);
+  final e = liveKidEntry(m, t, now, shown: shown);
   _entryCache[m.snapshot] = (key, e);
   return e;
 }
@@ -321,21 +331,20 @@ Future<void> _writeKids(
 /// geladenen Vertretungsplan erneuern – nur den Eintrag DIESES Kontos,
 /// die übrigen Kinder bleiben ([mergeWidgetKid]).
 ///
-/// Ohne Datei der App (Version 2) oder wenn das Konto nicht im Widget steht,
-/// schreibt der Hintergrund nichts. Grenze: Aufgaben, Arbeit und Essen sind
-/// so alt wie der letzte App-Start; abgelaufene Arbeiten und Essen anderer
-/// Tage nimmt Kotlin trotzdem heraus (Datum).
+/// Ohne Datei der App (Version 3) oder wenn das Konto nicht im Widget steht,
+/// schreibt der Hintergrund nichts. Grenze: Aufgaben, Arbeiten und Essen
+/// sind so alt wie der letzte App-Start; Kotlin wertet sie nach Datum aus.
 Future<void> updateHomeWidgetInBackground({
   required TypedSettings account,
   required int accountId,
   required ForkL10n t,
-  required List<WidgetItem> items,
+  required List<Map<String, Object?>> days,
   required DateTime now,
 }) async {
   final kids = mergeWidgetKid(
     await readHomeWidget(),
     account: accountId,
-    items: items,
+    days: days,
     stand: now,
     color: storedKidColor(account),
   );
