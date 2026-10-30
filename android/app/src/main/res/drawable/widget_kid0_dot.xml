@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Kreis in der Farbe von Kind 0 (KidTone.accent): Punkt vor dem Namen, Kürzel, Lagebild der ruhigen Kachel. -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
-    <solid android:color="@color/widget_kid0_accent" />
-</shape>

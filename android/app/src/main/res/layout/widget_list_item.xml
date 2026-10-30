@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Zeile der Liste (_oneList, Variante A, drei Symbole): Symbolfeld 26 dp ohne Marke, 8 dp, Text („3 Aufgaben“) – an ink fett, blass faint 60 %. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/slot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingBottom="@dimen/widget_gap_5">
+
+    <FrameLayout
+        android:id="@+id/slot_box"
+        android:layout_width="@dimen/widget_slot_26"
+        android:layout_height="@dimen/widget_slot_26">
+
+        <ImageView
+            android:id="@+id/slot_icon"
+            android:layout_width="@dimen/widget_icon_26"
+            android:layout_height="@dimen/widget_icon_26"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/item_on"
+        style="@style/WidgetText.Bold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/widget_gap_8"
+        android:importantForAccessibility="no"
+        android:textColor="@color/widget_ink"
+        android:textSize="@dimen/widget_text_12_5"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/item_off"
+        style="@style/WidgetText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/widget_gap_8"
+        android:importantForAccessibility="no"
+        android:textColor="@color/widget_faint_label"
+        android:textSize="@dimen/widget_text_12_5" />
+</LinearLayout>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Essen, trifft nicht zu (faint 45 %), Entwurf 10.
+     Glyphe Icons.restaurant aus MaterialIcons-Regular.otf (Google, Apache-2.0),
+     erzeugt von gen_widget_res10.py. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="@color/widget_faint_off" android:pathData="M11.02 9H9V2.02H6.98V9H5.02V2.02H3V9C3 11.11 4.64 12.84 6.75 12.98V21.98H9.23V12.98C11.34 12.84 12.98 11.11 12.98 9V2.02H11.02V9ZM15.98 6V14.02H18.52V21.98H21V2.02C18.23 2.02 15.98 4.22 15.98 6Z" />
+</vector>

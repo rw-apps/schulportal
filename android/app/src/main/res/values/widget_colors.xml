@@ -1,33 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Startbildschirm-Widget: Farben aus KitPalette.light
-     (lib/fork/ui/kit.dart, hell). Nicht von Hand ändern: Quelle ist das
-     Kit; test/fork/widget_colors_test.dart prüft jede Farbe gegen die
-     Palette. Ursache (Abnahme 28.10.26): Das native Widget kann das
-     Kit nicht lesen, soll aber genau wie die App aussehen. -->
+<!-- Startbildschirm-Widget (Entwurf 10, Abnahme 30.10.26): Farben aus
+     KitPalette.light (lib/fork/ui/kit.dart, hell). Nicht von Hand ändern:
+     Quelle ist das Kit (Erzeuger gen_widget_res10.py, Deckkraft gerundet wie
+     Color.toARGB32); test/fork/widget_colors_test.dart prüft jede Farbe gegen
+     die Palette. Ursache: Das native Widget kann das Kit nicht lesen, soll
+     aber genau wie der Nachbau (test/_local/widget_v9_mockup_test.dart) aussehen. -->
 <resources>
+    <!-- KitPalette.card -->
     <color name="widget_card">#FFFFFFFF</color>
+    <!-- ink: Name-Text, Aufgaben-Symbol, Beschriftung an -->
     <color name="widget_ink">#FF101828</color>
+    <!-- muted: Zeitraum ungeändert, Tag-Marke -->
     <color name="widget_muted">#FF5B6474</color>
+    <!-- faint -->
     <color name="widget_faint">#FF98A2B3</color>
-    <color name="widget_change_bg">#FFFEF0C7</color>
+    <!-- faint 45 %: blasses Symbol (_slot) -->
+    <color name="widget_faint_off">#7398A2B3</color>
+    <!-- faint 60 %: blasse Beschriftung (_slot label, _oneList) -->
+    <color name="widget_faint_label">#9998A2B3</color>
+    <!-- inset: Feld Aufgaben -->
     <color name="widget_inset">#FFF2F4F7</color>
-    <color name="widget_on_strong">#FFFFFFFF</color>
-    <color name="widget_change_dot">#FFF5B000</color>
-    <color name="widget_change_ink">#FF7A2E0E</color>
-    <color name="widget_cancel_bg">#FFFEE4E2</color>
-    <color name="widget_cancel_ink">#FF912018</color>
-    <color name="widget_cancel_dot">#FFD92D20</color>
-    <color name="widget_todo_dot">#FF667085</color>
-    <color name="widget_kid0_accent">#FF2563EB</color>
-    <color name="widget_kid0_tint">#FFE6EEFE</color>
-    <color name="widget_kid0_on_tint">#FF0B1F4D</color>
-    <color name="widget_kid1_accent">#FF0F8A7E</color>
-    <color name="widget_kid1_tint">#FFDDF3EF</color>
-    <color name="widget_kid1_on_tint">#FF08332E</color>
-    <color name="widget_kid2_accent">#FF7C3AED</color>
-    <color name="widget_kid2_tint">#FFEFE7FE</color>
-    <color name="widget_kid2_on_tint">#FF2E1065</color>
-    <color name="widget_kid3_accent">#FF4D7C0F</color>
-    <color name="widget_kid3_tint">#FFE9F5D6</color>
-    <color name="widget_kid3_on_tint">#FF1F3305</color>
+    <!-- line: Linie zwischen zwei Kindern (_small2) -->
+    <color name="widget_line">#FFEAECF0</color>
+    <!-- onNavSelected: Arbeit (Symbol, Marke) -->
+    <color name="widget_on_nav_selected">#FF1D4ED8</color>
+    <!-- onNavSelected 22 %: Feld Arbeit -->
+    <color name="widget_exam_bg">#381D4ED8</color>
+    <!-- change.bg: Feld Essen/Vertretung/Raum -->
+    <color name="widget_change_bg">#FFFEF0C7</color>
+    <!-- change.strong: Symbol und Marke Essen/Vertretung/Raum -->
+    <color name="widget_change_strong">#FF93370D</color>
+    <!-- cancel.strong: Ausfall, geänderter Zeitraum -->
+    <color name="widget_cancel_strong">#FF912018</color>
+    <!-- KidTone.label Kind 0: Vorname -->
+    <color name="widget_kid0_label">#FF1D4ED8</color>
+    <!-- KidTone.label Kind 1: Vorname -->
+    <color name="widget_kid1_label">#FF0B6B61</color>
+    <!-- KidTone.label Kind 2: Vorname -->
+    <color name="widget_kid2_label">#FF6D28D9</color>
+    <!-- KidTone.label Kind 3: Vorname -->
+    <color name="widget_kid3_label">#FF3F6212</color>
 </resources>

@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Kachel Ausfall (SignalTone cancel.bg, Rad.row), Entwurf 5. -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="@color/widget_cancel_bg" />
-    <corners android:radius="@dimen/widget_tile_radius" />
-</shape>

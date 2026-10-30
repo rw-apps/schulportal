@@ -40,6 +40,7 @@ import '../today/today_from_lanis.dart' show shortSchoolName;
 import 'about_page.dart';
 import '../../notify/notify_keys.dart';
 import '../../widget/home_widget_data.dart' show widgetAccounts;
+import '../../widget/widget_legend.dart';
 import '../../widget/home_widget_sync.dart'
     show storeWidgetKidSelection, widgetKidSelection;
 import 'notify_settings_page.dart';
@@ -498,6 +499,8 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
     useRootNavigator: true,
     showDragHandle: true,
     backgroundColor: Kit.of(context).p.card,
+    // Die Legende macht das Blatt lang: scrollbar statt abgeschnitten.
+    isScrollControlled: true,
     builder: (sheet) => StatefulBuilder(
       builder: (sheet, setSheet) {
         final k = Kit.of(sheet);
@@ -505,45 +508,48 @@ class _ForkSettingsPageState extends ConsumerState<ForkSettingsPage> {
         final ids = [for (final m in kids) m.accountId];
         final shown = widgetAccounts(ids, widgetKidSelection(shared)).toSet();
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(Sp.l, 0, Sp.l, Sp.s),
-                child: Text(
-                  kids.length > 1 ? t.widgetSettingPick : t.widgetSetting,
-                  style: k.sheetTitle,
-                ),
-              ),
-              if (kids.length > 1)
-                for (final m in kids)
-                  SettingsChoiceRow(
-                    label: kidLabel(m.snapshot),
-                    selected: shown.contains(m.accountId),
-                    onTap: () {
-                      final next = {...shown};
-                      if (!next.remove(m.accountId)) next.add(m.accountId);
-                      if (next.isEmpty) return;
-                      // Alle gewählt = Vorgabe (null): Später hinzugefügte
-                      // Kinder erscheinen dann von selbst.
-                      storeWidgetKidSelection(
-                        shared,
-                        next.length == ids.length ? null : next,
-                      );
-                      // FamilyScope baut neu, HomeWidgetSync schreibt sofort.
-                      settingsRevision.value++;
-                      setSheet(() {});
-                    },
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(Sp.l, 0, Sp.l, Sp.s),
+                  child: Text(
+                    kids.length > 1 ? t.widgetSettingPick : t.widgetSetting,
+                    style: k.sheetTitle,
                   ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(Sp.l, Sp.s, Sp.l, Sp.l),
-                child: Text(
-                  t.widgetSettingHowTo(forkAppName),
-                  style: k.planMeta(k.p.muted),
                 ),
-              ),
-            ],
+                if (kids.length > 1)
+                  for (final m in kids)
+                    SettingsChoiceRow(
+                      label: kidLabel(m.snapshot),
+                      selected: shown.contains(m.accountId),
+                      onTap: () {
+                        final next = {...shown};
+                        if (!next.remove(m.accountId)) next.add(m.accountId);
+                        if (next.isEmpty) return;
+                        // Alle gewählt = Vorgabe (null): Später hinzugefügte
+                        // Kinder erscheinen dann von selbst.
+                        storeWidgetKidSelection(
+                          shared,
+                          next.length == ids.length ? null : next,
+                        );
+                        // FamilyScope baut neu, HomeWidgetSync schreibt sofort.
+                        settingsRevision.value++;
+                        setSheet(() {});
+                      },
+                    ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(Sp.l, Sp.s, Sp.l, Sp.s),
+                  child: Text(
+                    t.widgetSettingHowTo(forkAppName),
+                    style: k.planMeta(k.p.muted),
+                  ),
+                ),
+                const WidgetLegend(),
+              ],
+            ),
           ),
         );
       },

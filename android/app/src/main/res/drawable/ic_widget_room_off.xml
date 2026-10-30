@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Raumwechsel, trifft nicht zu (faint 45 %), Entwurf 10.
+     Glyphe Icons.directions_walk aus MaterialIcons-Regular.otf (Google, Apache-2.0),
+     erzeugt von gen_widget_res10.py. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="@color/widget_faint_off" android:pathData="M13.5 5.48C14.58 5.48 15.52 4.59 15.52 3.52C15.52 2.39 14.58 1.5 13.5 1.5C12.42 1.5 11.48 2.39 11.48 3.52C11.48 4.59 12.42 5.48 13.5 5.48ZM9.8 8.91 6.98 23.02H9.09L10.92 15L12.98 17.02V23.02H15V15.52L12.89 13.5L13.5 10.5C14.81 12 16.78 12.98 18.98 12.98V11.02C17.11 11.02 15.52 9.98 14.72 8.58L13.69 6.98C13.31 6.42 12.7 6 12 6C11.72 6 11.48 6.09 11.2 6.09L6 8.3V12.98H8.02V9.61L9.8 8.91Z" />
+</vector>

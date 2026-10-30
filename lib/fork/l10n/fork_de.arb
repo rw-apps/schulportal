@@ -1834,7 +1834,7 @@
   "widgetDate": "ccc, d. MMM",
   "widgetSetting": "Startbildschirm-Widget",
   "widgetSettingPick": "Welche Kinder zeigt das Widget?",
-  "widgetSettingHowTo": "Hinzufügen: Startbildschirm lange drücken → Widgets → {app}. Es zeigt Ausfälle und Änderungen für heute und den nächsten Schultag, dazu Arbeiten und offene Aufgaben – in drei Größen.",
+  "widgetSettingHowTo": "Hinzufügen: Startbildschirm lange drücken → Widgets → {app}. Es zeigt je Kind, wann Unterricht ist, und ob eine Arbeit, Hausaufgaben oder Essen anstehen – als Leiste (4 × 1) oder in drei weiteren Größen.",
   "@widgetSettingHowTo": {
     "placeholders": {
       "app": {
@@ -1879,5 +1879,84 @@
         "type": "String"
       }
     }
-  }
+  },
+  "widgetFrom": "ab {x}",
+  "@widgetFrom": {
+    "placeholders": {
+      "x": {
+        "type": "String"
+      }
+    }
+  },
+  "widgetUntil": "bis {x}",
+  "@widgetUntil": {
+    "placeholders": {
+      "x": {
+        "type": "String"
+      }
+    }
+  },
+  "widgetSlotLabel": "{slot} Std.",
+  "@widgetSlotLabel": {
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      }
+    }
+  },
+  "widgetOff": "frei",
+  "widgetHomework": "Aufgaben",
+  "widgetMealOrder": "Essen bestellen",
+  "widgetBalance": "Guthaben aufladen",
+  "widgetSubAt": "Vertretung {slot}",
+  "@widgetSubAt": {
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      }
+    }
+  },
+  "widgetRoomShort": "Raum",
+  "widgetRoomAt": "Raum {slot}",
+  "@widgetRoomAt": {
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      }
+    }
+  },
+  "widgetMoreCalm": "+{n} nach Plan",
+  "@widgetMoreCalm": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "widgetCdCancel": "Ausfall",
+  "widgetCdHomework": "Hausaufgaben",
+  "widgetConfigTitle": "Kinder im Widget",
+  "widgetConfigOk": "Fertig",
+  "widgetConfigEmpty": "Erst die App öffnen und anmelden.",
+  "widgetFreeUntil": "{label} bis {date}",
+  "@widgetFreeUntil": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "widgetFreeDate": "EEE d.M.",
+  "widgetLegendTitle": "Symbole im Widget",
+  "widgetLegendTime": "Zeit des Tages – rot mit Symbol, wenn Stunden am Anfang oder Ende ausfallen; dahinter Ausfälle mitten am Tag.",
+  "widgetLegendExam": "Arbeit am gezeigten Tag",
+  "widgetLegendHomework": "Hausaufgaben, die bis dahin fällig sind (Zahl)",
+  "widgetLegendMeal": "Essen bestellen oder Guthaben aufladen (!)",
+  "widgetLegendSub": "Vertretung (nur Schülerkonto)",
+  "widgetLegendRoom": "Raumwechsel (nur Schülerkonto)",
+  "widgetLegendTap": "Antippen öffnet die passende Seite: Name → Heute, Arbeit → Arbeiten & Noten, Aufgaben → Unterricht, Essen → Bestellung.",
+  "widgetLegendPerWidget": "Welche Kinder ein Widget zeigt, lässt sich beim Aufstellen und später über „Widget einrichten“ (lange drücken) je Widget wählen."
 }

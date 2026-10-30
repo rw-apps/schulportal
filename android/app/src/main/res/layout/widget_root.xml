@@ -1,153 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Startbildschirm-Widget, alle drei Größen (Entwurf 5, Abnahme 28.10.26,
-     test/_local/widget_v5_mockup_test.dart): Kopf (ein Kind: Punkt und
-     Vorname; Datum; Stand), Inhalt (body: Reihen, Kind-Zeilen oder kompakte
-     Zellen, gefüllt von SchoolWidget.kt), unten die Fußzeile ab drei Kindern
-     (Arbeiten, Aufgaben, „+N“). Kennung der Wurzel @android:id/background:
-     Ab Android 12 schneidet der Startbildschirm daran die Ecken zu. -->
+<!-- Startbildschirm-Widget, Entwurf 10 (Abnahme 30.10.26), Wurzel für alle
+     Anordnungen: body (waagerecht; SchoolWidget.kt hängt Tag-Marke und
+     Kind-Zeilen bzw. die Spalte der kleinen Anordnungen an), corner_day (Tag
+     klein rechts oben, nur _small2) und no_data (keine Datei oder Version ≠ 3).
+     Kennung @android:id/background: Ab Android 12 schneidet der
+     Startbildschirm daran die Ecken zu. clipChildren/clipToPadding aus:
+     Ursache: Die Marke am Symbol ragt 5 dp über ihr Feld hinaus (_slot,
+     Positioned -5) und die gedrehte Tag-Marke über ihre Spalte
+     (widget_tag.xml); beides läge sonst abgeschnitten. Grenze: Über den Rand
+     der Karte hinaus zeichnet der Startbildschirm trotzdem nicht. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_card"
-    android:padding="@dimen/widget_padding">
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:padding="@dimen/widget_pad_wide">
 
     <LinearLayout
+        android:id="@+id/body"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:orientation="horizontal" />
 
-        <LinearLayout
-            android:id="@+id/head"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/widget_gap"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:visibility="gone">
+    <TextView
+        android:id="@+id/corner_day"
+        style="@style/WidgetText.Bold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:textColor="@color/widget_muted"
+        android:textSize="@dimen/widget_text_11"
+        android:visibility="gone" />
 
-            <FrameLayout
-                android:id="@+id/head_dot"
-                android:layout_width="@dimen/widget_dot"
-                android:layout_height="@dimen/widget_dot"
-                android:layout_marginEnd="@dimen/widget_gap_small"
-                android:background="@drawable/widget_kid0_dot"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/head_day"
-                style="@style/WidgetText.Bold"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textColor="@color/widget_ink" />
-
-            <ImageView
-                android:id="@+id/head_sync"
-                android:layout_width="@dimen/widget_icon_small"
-                android:layout_height="@dimen/widget_icon_small"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_widget_sync" />
-
-            <TextView
-                android:id="@+id/head_stand"
-                style="@style/WidgetText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/widget_gap_hair"
-                android:textColor="@color/widget_faint" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/body"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
-
-        <TextView
-            android:id="@+id/no_data"
-            style="@style/WidgetText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:maxLines="4"
-            android:text="@string/widget_no_data"
-            android:textColor="@color/widget_muted"
-            android:visibility="gone" />
-
-        <!-- Füllt die Höhe, damit die Fußzeile unten steht. FrameLayout statt
-             View: RemoteViews lässt nur markierte Klassen zu. -->
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-
-        <LinearLayout
-            android:id="@+id/footer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/widget_gap"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:id="@+id/foot_exam"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="@dimen/widget_foot_gap"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <ImageView
-                    android:id="@+id/foot_exam_icon"
-                    android:layout_width="@dimen/widget_icon_foot"
-                    android:layout_height="@dimen/widget_icon_foot"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_widget_foot_exam" />
-
-                <TextView
-                    android:id="@+id/foot_exam_text"
-                    style="@style/WidgetText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/widget_gap_tiny"
-                    android:textColor="@color/widget_ink" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/foot_hw"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <ImageView
-                    android:id="@+id/foot_hw_icon"
-                    android:layout_width="@dimen/widget_icon_foot"
-                    android:layout_height="@dimen/widget_icon_foot"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_widget_foot_homework" />
-
-                <TextView
-                    android:id="@+id/foot_hw_text"
-                    style="@style/WidgetText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/widget_gap_tiny"
-                    android:textColor="@color/widget_ink" />
-            </LinearLayout>
-
-            <FrameLayout
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-
-            <TextView
-                android:id="@+id/foot_more"
-                style="@style/WidgetText.Bold"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/widget_muted" />
-        </LinearLayout>
-    </LinearLayout>
+    <TextView
+        android:id="@+id/no_data"
+        style="@style/WidgetText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:maxLines="4"
+        android:text="@string/widget_no_data"
+        android:textColor="@color/widget_muted"
+        android:visibility="gone" />
 </FrameLayout>

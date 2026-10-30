@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Symbolfeld 27 dp (_slot size: 27, _strip10/_four42, je 8 dp davor): Feld in der Signalfarbe, wenn es zutrifft, sonst durchsichtig mit blassem Symbol; Marke oben rechts ragt 5 dp hinaus (clipChildren aus). Gefüllt von SchoolWidget.kt (slot()). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/slot"
+    android:layout_width="@dimen/widget_slot_27"
+    android:layout_height="@dimen/widget_slot_27"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:layout_marginStart="@dimen/widget_gap_8">
+
+    <FrameLayout
+        android:id="@+id/slot_box"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <ImageView
+            android:id="@+id/slot_icon"
+            android:layout_width="@dimen/widget_icon_27"
+            android:layout_height="@dimen/widget_icon_27"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/slot_mark"
+        style="@style/WidgetMark"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/widget_mark"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="@dimen/widget_mark_out"
+        android:layout_marginEnd="@dimen/widget_mark_out"
+        android:visibility="gone" />
+</FrameLayout>

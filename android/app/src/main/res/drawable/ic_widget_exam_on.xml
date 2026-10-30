@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Arbeit, trifft zu (on_nav_selected), Entwurf 10.
+     Glyphe Icons.edit_note aus MaterialIcons-Regular.otf (Google, Apache-2.0),
+     erzeugt von gen_widget_res10.py. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="@color/widget_on_nav_selected" android:pathData="M3 9.98H14.02V12H3V9.98ZM3 8.02H14.02V6H3V8.02ZM3 15.98H9.98V14.02H3V15.98ZM18 12.89 18.7 12.14C19.12 11.77 19.73 11.77 20.11 12.14L20.86 12.89C21.23 13.27 21.23 13.88 20.86 14.3L20.11 15L18 12.89ZM17.3 13.59 12 18.89V21H14.11L19.41 15.7L17.3 13.59Z" />
+</vector>

@@ -1,19 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Mittleres Widget 4 × 2 (Entwurf 5, Abnahme 28.10.26). updatePeriodMillis
-     30 Min. (das Mindestmaß von Android): Neue Daten zeichnet die App bzw.
-     der Hintergrund-Lauf sofort (home_widget_sync.dart); der Takt sorgt nur
-     dafür, dass vergangene Stunden und „heute/morgen“ nach Mitternacht auch
-     ohne neue Daten stimmen (WidgetModel.kt). Grenze: bis zu 30 Min.
-     Verzug, schläft das Gerät, auch länger. -->
+<!-- Mittleres Widget 4 × 2 (Entwurf 10, Abnahme 30.10.26): Kinder
+     untereinander (_four42), ein Kind breit mit Beschriftung (_one41).
+     updatePeriodMillis 30 Min. (das Mindestmaß von Android) als Netz;
+     genauer weckt SchoolWidget.kt selbst (scheduleWakeup: Ende des
+     Unterrichts, 17 Uhr, Mitternacht). Neue Daten zeichnet die App sofort
+     (home_widget_sync.dart). Grenze: Der Wecker ist ungenau und weckt das
+     Gerät nicht. Einstellung „Kinder im Widget“ (WidgetConfigActivity):
+     beim Hinzufügen ab Android 12 freiwillig (configuration_optional),
+     später über „Widget einstellen“ (reconfigurable); vor Android 12 öffnet
+     sie beim Hinzufügen immer. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="com.example.app.widget.WidgetConfigActivity"
     android:description="@string/widget_medium_description"
     android:initialLayout="@layout/widget_root"
     android:minWidth="250dp"
     android:minHeight="110dp"
     android:minResizeWidth="180dp"
-    android:minResizeHeight="110dp"
+    android:minResizeHeight="40dp"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="4"
     android:targetCellHeight="2"
     android:updatePeriodMillis="1800000"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable|configuration_optional" />

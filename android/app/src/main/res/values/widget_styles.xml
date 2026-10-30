@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Startbildschirm-Widget: Schriftstufen des Entwurfs 5 (Abnahme 28.10.26)
-     – 12 überall (Kit.barLabel mit 12), fett für Fach und Art, 10 fett für
-     den Vornamen unter dem Kürzel. Systemschrift statt Manrope: Ursache
+<!-- Startbildschirm-Widget, Entwurf 10 (Abnahme 30.10.26): Schriftstufen des
+     Nachbaus (test/_local/widget_v9_mockup_test.dart). w600 → sans-serif-medium,
+     w700/w800 → sans-serif fett. Systemschrift statt Manrope: Ursache
      (Bildschirmfoto Pixel 28.10.26): Schriftdateien aus res/font griffen im
-     Widget nicht – der Startbildschirm zeigte normale statt fetter Schrift.
-     Jetzt sans-serif-medium bzw. sans-serif fett; Grenze: Schriftbild weicht
-     leicht von der App ab. -->
+     Widget nicht. Grenze: Schriftbild weicht leicht von der App ab; w700 und
+     w800 sind beide „fett“. -->
 <resources>
     <style name="WidgetText">
-        <item name="android:textSize">@dimen/widget_text</item>
+        <item name="android:textSize">@dimen/widget_text_12</item>
         <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:includeFontPadding">false</item>
         <item name="android:maxLines">1</item>
@@ -18,7 +17,20 @@
         <item name="android:fontFamily">sans-serif</item>
         <item name="android:textStyle">bold</item>
     </style>
-    <style name="WidgetName" parent="WidgetText.Bold">
-        <item name="android:textSize">@dimen/widget_text_name</item>
+    <!-- Marke am Symbol (_slot: 10, w800, Farbe card auf der Symbolfarbe). -->
+    <style name="WidgetMark" parent="WidgetText.Bold">
+        <item name="android:textSize">@dimen/widget_text_10</item>
+        <item name="android:textColor">@color/widget_card</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minWidth">@dimen/widget_mark</item>
+        <item name="android:paddingStart">@dimen/widget_mark_pad</item>
+        <item name="android:paddingEnd">@dimen/widget_mark_pad</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
+    <!-- Auswahl „Kinder im Widget“ (WidgetConfigActivity): schlichter Dialog
+         des Systems, dunkel über values-night/widget_styles.xml. -->
+    <style name="WidgetConfigTheme" parent="@android:style/Theme.DeviceDefault.Light.Dialog">
+        <item name="android:windowNoTitle">true</item>
     </style>
 </resources>

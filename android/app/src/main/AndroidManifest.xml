@@ -26,6 +26,20 @@
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme"
             />
+            <!-- Fork: Flutter-Deep-Links aus (Widget-Entwurf 10, 30.10.26).
+                 Ursache: Die Klick-Ziele des Widgets kommen als Intent-Daten
+                 (schulportal-widget://open?…, SchoolWidget.kt launch()).
+                 FlutterActivityAndFragmentDelegate.maybeGetInitialRouteFromIntent
+                 nimmt bei eingeschalteten Deep-Links (Vorgabe true,
+                 FlutterActivityLaunchConfigs.deepLinkEnabled) JEDE Intent-Uri
+                 als Startroute bzw. pushRouteInformation (onNewIntent) – der
+                 Router (routerConfig, lib/main.dart) bekäme die Widget-Uri als
+                 Pfad. Die Uri liest allein home_widget
+                 (initiallyLaunchedFromHomeWidget / widgetClicked). Grenze:
+                 Echte Deep-Links müssten diesen Schalter wieder einschalten. -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -37,11 +51,23 @@
                  registriert dasselbe Schema (Auswahlabfrage). -->
         </activity>
 
-        <!-- Fork: Startbildschirm-Widgets (Entwurf 5, Abnahme 28.10.26),
-             klein 2 × 2, mittel 4 × 2, groß 4 × 3; Inhalt aus der App
-             (lib/fork/widget, Paket home_widget), Darstellung in
-             kotlin/com/example/app/widget/SchoolWidget.kt. Nicht exportiert:
-             Aktualisieren schickt nur das System bzw. die App selbst. -->
+        <!-- Fork: Startbildschirm-Widgets (Entwurf 10, Abnahme 30.10.26),
+             Leiste 4 × 1, klein 2 × 2, mittel 4 × 2, groß 4 × 3; Inhalt aus der
+             App (lib/fork/widget, Paket home_widget, Datei Version 3),
+             Darstellung in kotlin/com/example/app/widget/SchoolWidget.kt.
+             Nicht exportiert: Aktualisieren schicken nur das System, der
+             eigene Wecker (SchoolWidgetRenderer.scheduleWakeup) und die App. -->
+        <receiver
+            android:name=".widget.SchoolWidgetStrip"
+            android:exported="false"
+            android:label="@string/widget_strip_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_strip_info" />
+        </receiver>
         <receiver
             android:name=".widget.SchoolWidgetMedium"
             android:exported="false"
@@ -75,6 +101,23 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_large_info" />
         </receiver>
+
+        <!-- Fork: „Kinder im Widget“ je Widget (Entwurf 10, Vertrag Punkt 7).
+             Exportiert, weil der Startbildschirm sie startet (APPWIDGET_CONFIGURE);
+             sie schreibt nur die Auswahl dieses Widgets. Eigene Aufgabe ohne
+             Eintrag in „Zuletzt verwendet“: Ursache: Sonst läge sie in der
+             Aufgabe der App, und ein späterer Widget-Klick (singleTop,
+             MainActivity) fände sie oben statt der App. -->
+        <activity
+            android:name=".widget.WidgetConfigActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:taskAffinity=""
+            android:theme="@style/WidgetConfigTheme">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
 
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

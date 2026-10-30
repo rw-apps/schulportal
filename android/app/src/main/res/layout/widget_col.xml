@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Senkrechte Spalte mit Gewicht 1 im body (Kind-Zeilen, Raster, _small2). Abstände „spaceEvenly“ des Nachbaus über widget_vspace.xml. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/col"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_weight="1"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:orientation="vertical" />

@@ -1,49 +1,79 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Startbildschirm-Widget: Maße aus dem Design-Kit (lib/fork/ui/kit.dart,
-     Sp/Sz/Rad), Entwurf 5 (test/_local/widget_v5_mockup_test.dart, Abnahme
-     28.10.26). Ursache: Das native Widget kann das Kit nicht lesen; die
+<!-- Startbildschirm-Widget, Entwurf 10 (Abnahme 30.10.26): Maße aus dem
+     Flutter-Nachbau test/_local/widget_v9_mockup_test.dart (_strip10, _one41,
+     _small2, _oneList, _four42, _four22) und dem Design-Kit (lib/fork/ui/kit.dart,
+     Rad). Ursache: Das native Widget kann weder Kit noch Nachbau lesen; die
      Werte stehen deshalb hier EINMAL, die Layouts nehmen nur diese Namen.
-     WidgetModel.kt (WidgetMetrics) rechnet beim Einpassen der Reihen und
-     beim Maßstab für Tablets mit denselben Zahlen (Rand 14, Abstände 8/6/4,
-     Kachel 8, Zelle 4) – bei einer Änderung dort mitziehen. SchoolWidget.kt
-     (Scaler) liest die Werte zum Vergrößern von hier. -->
+     Grenze: Feste Größen ohne Mitwachsen auf Tablets (Entwurf 5 hatte einen
+     Maßstab; Entwurf 10 wählt stattdessen die Anordnung nach der Fläche,
+     WidgetModel.mode). -->
 <resources>
     <!-- Rad.card; ab Android 12 der Radius des Systems (values-v31). -->
     <dimen name="widget_radius">28dp</dimen>
-    <!-- Rad.row (Kachel, kompakte Zelle). -->
-    <dimen name="widget_tile_radius">12dp</dimen>
-    <!-- Sp.m + 2 (Innenabstand der Widget-Fläche). -->
-    <dimen name="widget_padding">14dp</dimen>
-    <!-- Innenabstand der Kachel: Sp.xs + 2 seitlich, Sp.s oben/unten. -->
-    <dimen name="widget_tile_pad_h">6dp</dimen>
-    <dimen name="widget_tile_pad_v">8dp</dimen>
-    <!-- Sp.xs (oben/unten in der kompakten Zelle). -->
-    <dimen name="widget_cell_pad_v">4dp</dimen>
-    <!-- Sp.s (Kopf → Inhalt, zwischen Kindern, über der Fußzeile). -->
-    <dimen name="widget_gap">8dp</dimen>
-    <!-- Sp.xs + 2 (zwischen Kacheln, Lagebild → Text, Punkt → Name). -->
-    <dimen name="widget_gap_small">6dp</dimen>
-    <!-- Sp.xs (Symbol → Text, Namensspalte → Kacheln). -->
-    <dimen name="widget_gap_tiny">4dp</dimen>
-    <!-- Sp.xxs (Sync-Symbol → Uhrzeit, Kürzel → Vorname). -->
-    <dimen name="widget_gap_hair">2dp</dimen>
-    <!-- Sp.m (zwischen den Angaben der Fußzeile). -->
-    <dimen name="widget_foot_gap">12dp</dimen>
-    <!-- Lagebild-Kreis 20 dp, Symbol 0,6 davon (_Dot size: 20). -->
-    <dimen name="widget_circle">20dp</dimen>
-    <dimen name="widget_circle_icon">12dp</dimen>
-    <!-- Kürzel-Kreis 26 dp in einer 44 dp breiten Spalte (_Kid). -->
-    <dimen name="widget_avatar">26dp</dimen>
-    <dimen name="widget_avatar_col">44dp</dimen>
-    <!-- Sz.dot (Punkt vor dem Namen); 7 dp in der kompakten Zelle wie im
-         Entwurf (_Compact). -->
-    <dimen name="widget_dot">8dp</dimen>
-    <dimen name="widget_dot_small">7dp</dimen>
-    <!-- Sz.iconSmall (Sync) und Sz.iconSmall + 2 (Fußzeile). -->
-    <dimen name="widget_icon_small">14dp</dimen>
-    <dimen name="widget_icon_foot">16dp</dimen>
-    <!-- Schrift 12 überall (Abnahme 28.10.26), der Vorname unter dem Kürzel
-         10. In sp, damit die Systemschrift mitwächst. -->
-    <dimen name="widget_text">12sp</dimen>
-    <dimen name="widget_text_name">10sp</dimen>
+    <!-- Rand: pad 10 (_strip10/_one41/_four42), 12 (_small2/_oneList), 11 (_four22).
+         SchoolWidget.kt setzt ihn je Anordnung (setViewPadding). -->
+    <dimen name="widget_pad_wide">10dp</dimen>
+    <dimen name="widget_pad_small">12dp</dimen>
+    <dimen name="widget_pad_grid">11dp</dimen>
+
+    <!-- Feld um ein Symbol: Rad.badge + 2; Marke 16 hoch, Radius 8, 5 dp über
+         den Rand hinaus (_slot: Positioned right/top -5). -->
+    <dimen name="widget_slot_radius">11dp</dimen>
+    <dimen name="widget_mark">16dp</dimen>
+    <dimen name="widget_mark_radius">8dp</dimen>
+    <dimen name="widget_mark_out">-5dp</dimen>
+    <dimen name="widget_mark_pad">4dp</dimen>
+    <!-- Symbolgrößen je Anordnung, Symbol im Feld = 0,62 × Feld (_slot). -->
+    <dimen name="widget_slot_20">20dp</dimen>
+    <dimen name="widget_icon_20">12dp</dimen>
+    <dimen name="widget_slot_21">21dp</dimen>
+    <dimen name="widget_icon_21">13dp</dimen>
+    <dimen name="widget_slot_26">26dp</dimen>
+    <dimen name="widget_icon_26">16dp</dimen>
+    <dimen name="widget_slot_27">27dp</dimen>
+    <dimen name="widget_icon_27">17dp</dimen>
+    <dimen name="widget_slot_30">30dp</dimen>
+    <dimen name="widget_icon_30">19dp</dimen>
+    <dimen name="widget_slot_32">32dp</dimen>
+    <dimen name="widget_icon_32">20dp</dimen>
+    <!-- Spalte je beschriftetem Symbol (_one41): 56, ab vier Symbolen 48. -->
+    <dimen name="widget_label_col">56dp</dimen>
+    <dimen name="widget_label_col_narrow">48dp</dimen>
+
+    <!-- Namensspalte der Kind-Zeile (_strip10/_four42: SizedBox width 58). -->
+    <dimen name="widget_name_col">58dp</dimen>
+    <!-- Tag-Marke senkrecht: Spalte so breit wie eine Zeile 11 sp, Länge
+         reicht für „DONNERSTAG“ (RotatedBox, s. widget_tag.xml). -->
+    <dimen name="widget_tag_col">14dp</dimen>
+    <dimen name="widget_tag_len">80dp</dimen>
+    <!-- Ausfall-Symbol am Zeitraum: Schrift + 4 (_when). -->
+    <dimen name="widget_busy_16">16dp</dimen>
+    <dimen name="widget_busy_15">15dp</dimen>
+    <dimen name="widget_busy_17">17dp</dimen>
+    <dimen name="widget_busy_14">14dp</dimen>
+
+    <!-- Abstände aus dem Nachbau. -->
+    <dimen name="widget_gap_1">1dp</dimen>
+    <dimen name="widget_gap_2">2dp</dimen>
+    <dimen name="widget_gap_3">3dp</dimen>
+    <dimen name="widget_gap_4">4dp</dimen>
+    <dimen name="widget_gap_5">5dp</dimen>
+    <dimen name="widget_gap_6">6dp</dimen>
+    <dimen name="widget_gap_7">7dp</dimen>
+    <dimen name="widget_gap_8">8dp</dimen>
+    <dimen name="widget_line">1dp</dimen>
+
+    <!-- Schriftgrößen des Nachbaus, in sp (Systemschrift wächst mit). -->
+    <dimen name="widget_text_10">10sp</dimen>
+    <dimen name="widget_text_10_5">10.5sp</dimen>
+    <dimen name="widget_text_11">11sp</dimen>
+    <dimen name="widget_text_11_5">11.5sp</dimen>
+    <dimen name="widget_text_12">12sp</dimen>
+    <dimen name="widget_text_12_5">12.5sp</dimen>
+    <dimen name="widget_text_13">13sp</dimen>
+    <dimen name="widget_text_14">14sp</dimen>
+    <dimen name="widget_text_14_5">14.5sp</dimen>
+    <dimen name="widget_text_16">16sp</dimen>
+    <!-- Tag-Marke darf auf 8 sp schrumpfen (autoSize, ab Android 8). -->
+    <dimen name="widget_text_8">8sp</dimen>
 </resources>

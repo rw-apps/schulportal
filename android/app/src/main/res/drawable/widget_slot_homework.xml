@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Feld um das Symbol Aufgaben, an (inset, Rad.badge + 2), Entwurf 10. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/widget_inset" />
+    <corners android:radius="@dimen/widget_slot_radius" />
+</shape>

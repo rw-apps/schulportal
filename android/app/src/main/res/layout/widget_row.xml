@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Eine Reihe Kacheln bzw. Zellen nebeneinander (Gewicht je Kachel, Abstand
-     widget_hgap). Auch eine einzelne Kachel steht in einer Reihe: Ihre Breite
-     ist 0dp mit Gewicht, in einer senkrechten Liste wäre sie unsichtbar. -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/row"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="horizontal" />

@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Senkrechter Abstand Sp.xs + 2 (zwischen Kachelreihen). FrameLayout statt View: RemoteViews lässt nur markierte Klassen zu.
-     Höhe als Innenabstand, damit er auf Tablets mitwächst (wie widget_vgap.xml). -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/gap"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:paddingTop="@dimen/widget_gap_small" />

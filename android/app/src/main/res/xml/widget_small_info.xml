@@ -1,12 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Kleines Widget 2 × 2 (Entwurf 5); Takt wie widget_medium_info.xml. -->
+<!-- Kleines Widget 2 × 2 (Entwurf 10, Abnahme 30.10.26): ein Kind als Liste
+     (_oneList, Variante A), zwei Kinder übereinander (_small2), ab drei ein
+     Raster 2 × 2 (_four22). Takt, Wecker und Einstellung wie
+     widget_medium_info.xml. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="com.example.app.widget.WidgetConfigActivity"
     android:description="@string/widget_small_description"
     android:initialLayout="@layout/widget_root"
     android:minWidth="110dp"
     android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="40dp"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="2"
     android:targetCellHeight="2"
     android:updatePeriodMillis="1800000"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable|configuration_optional" />

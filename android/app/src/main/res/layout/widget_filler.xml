@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Leere zweite Hälfte einer Reihe mit nur einer Kachel (widget5_e: die
-     Kachel bleibt halb breit). FrameLayout statt View (RemoteViews). -->
+<!-- Waagerechter Füller mit Gewicht 1 (Row spaceBetween in _small2). -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="0dp"
-    android:layout_height="match_parent"
+    android:layout_height="1dp"
     android:layout_weight="1" />

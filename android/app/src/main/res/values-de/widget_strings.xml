@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="widget_strip_label">Schulportal Leiste</string>
     <string name="widget_small_label">Schulportal klein</string>
     <string name="widget_medium_label">Schulportal mittel</string>
     <string name="widget_large_label">Schulportal groß</string>
-    <string name="widget_small_description">Die nächste Änderung je Kind</string>
-    <string name="widget_medium_description">Ausfälle, Vertretungen und Raumwechsel für heute und den nächsten Schultag, für alle Kinder</string>
-    <string name="widget_large_description">Änderungen, Arbeiten und Aufgaben für heute und den nächsten Schultag, für alle Kinder</string>
+    <string name="widget_strip_description">Unterrichtszeit und Fälliges je Kind in einer Leiste</string>
+    <string name="widget_small_description">Unterrichtszeit, Arbeiten, Aufgaben und Essen je Kind</string>
+    <string name="widget_medium_description">Unterrichtszeit, Arbeiten, Aufgaben und Essen für bis zu vier Kinder</string>
+    <string name="widget_large_description">Unterrichtszeit, Arbeiten, Aufgaben und Essen für bis zu vier Kinder, mit mehr Platz</string>
     <string name="widget_no_data">App einmal öffnen, damit der Plan geladen wird.</string>
 </resources>

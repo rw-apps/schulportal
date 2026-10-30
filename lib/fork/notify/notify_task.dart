@@ -32,7 +32,7 @@ import '../ui/today/kid_hints.dart' show nextSchoolDay;
 import '../ui/today/today_from_lanis.dart' show applySubstitutions;
 import '../ui/today/today_model.dart'
     show ChangeItem, DayLesson, hasTime, minutesOf;
-import '../widget/home_widget_data.dart' show widgetItems;
+import '../widget/home_widget_data.dart' show widgetDays;
 import '../widget/home_widget_sync.dart' show updateHomeWidgetInBackground;
 import 'notices.dart';
 import 'notify_keys.dart';
@@ -281,13 +281,12 @@ Future<void> _run(
       account: s,
       accountId: tools.accountId,
       t: t,
-      items: widgetItems(
+      days: widgetDays(
         plan: plan.withTeacherNames(ownNames),
         choice: effectiveChoice(auto, userChoice),
         days: subDays,
         now: now,
         t: t,
-        subjectName: (c) => subjectFullName(c, courses),
         free: freeDaysFrom(
           events ?? const [],
           now,

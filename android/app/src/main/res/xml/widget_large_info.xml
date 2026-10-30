@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Großes Widget 4 × 3 (neu in Entwurf 5, Abnahme 28.10.26): ein Kind bis
-     sechs Kacheln, zwei Kinder bis vier je Kind, ab drei Kindern je Kind zwei
-     (höchstens vier Kinder, sonst „+N“). Takt wie widget_medium_info.xml. -->
+<!-- Großes Widget 4 × 3 (Entwurf 10, Abnahme 30.10.26): zeichnet wie mittel
+     (Vertrag Punkt 10), die Zeilen verteilen sich über die Höhe. Takt,
+     Wecker und Einstellung wie widget_medium_info.xml. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="com.example.app.widget.WidgetConfigActivity"
     android:description="@string/widget_large_description"
     android:initialLayout="@layout/widget_root"
     android:minWidth="250dp"
     android:minHeight="180dp"
     android:minResizeWidth="180dp"
-    android:minResizeHeight="110dp"
+    android:minResizeHeight="40dp"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="4"
     android:targetCellHeight="3"
     android:updatePeriodMillis="1800000"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable|configuration_optional" />

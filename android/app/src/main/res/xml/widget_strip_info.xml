@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Leiste 4 × 1 (neu in Entwurf 10, Abnahme 30.10.26): je Kind eine Zeile
+     [Name | Zeitraum | Symbole], Tag-Marke senkrecht links (_strip10, _one41).
+     Die Anordnung folgt der Fläche (WidgetModel.mode: Höhe < 100 dp →
+     Leiste), nicht der Klasse; zieht man die Leiste höher, zeichnet sie wie
+     mittel. Takt, Wecker und Einstellung wie widget_medium_info.xml. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="com.example.app.widget.WidgetConfigActivity"
+    android:description="@string/widget_strip_description"
+    android:initialLayout="@layout/widget_root"
+    android:minWidth="250dp"
+    android:minHeight="40dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="40dp"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="4"
+    android:targetCellHeight="1"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable|configuration_optional" />

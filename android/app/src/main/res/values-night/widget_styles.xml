@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Auswahl „Kinder im Widget“ im Dunkelmodus (Gegenstück zu
+     values/widget_styles.xml, WidgetConfigTheme). Ursache: Theme.DeviceDefault
+     .DayNight gibt es erst ab Android 10, minSdk ist 24. -->
+<resources>
+    <style name="WidgetConfigTheme" parent="@android:style/Theme.DeviceDefault.Dialog">
+        <item name="android:windowNoTitle">true</item>
+    </style>
+</resources>

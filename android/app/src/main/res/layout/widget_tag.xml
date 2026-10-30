@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tag-Marke senkrecht links (_strip10/_one41/_four42: RotatedBox
+     quarterTurns 3, liest von unten nach oben). RemoteViews kennen kein
+     RotatedBox; android:rotation dreht nur das Bild, nicht den Platzbedarf.
+     Deshalb: Spalte so breit wie eine Zeile (widget_tag_col), darin ein
+     Textfeld mit fester Länge (widget_tag_len), mittig und um -90° gedreht –
+     es ragt ungedreht seitlich über die Spalte hinaus, gedreht liegt es genau
+     in ihr. Grenze: Die Länge ist fest (80 dp); längere Wochentage
+     verkleinert autoSize ab Android 8 bis 8 sp, davor werden sie gekürzt.
+     In der Leiste (Inhalt ~72 dp hoch) ragt die volle Länge 4 dp in den
+     Rand der Karte (clipChildren aus, widget_root.xml). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="@dimen/widget_tag_col"
+    android:layout_height="match_parent"
+    android:layout_marginEnd="@dimen/widget_gap_8"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+
+    <TextView
+        android:id="@+id/tag_text"
+        style="@style/WidgetText.Bold"
+        android:layout_width="@dimen/widget_tag_len"
+        android:layout_height="@dimen/widget_tag_col"
+        android:layout_gravity="center"
+        android:autoSizeMaxTextSize="@dimen/widget_text_11"
+        android:autoSizeMinTextSize="@dimen/widget_text_8"
+        android:autoSizeTextType="uniform"
+        android:gravity="center"
+        android:rotation="-90"
+        android:textColor="@color/widget_muted"
+        android:textSize="@dimen/widget_text_11" />
+</FrameLayout>
