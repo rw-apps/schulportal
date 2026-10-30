@@ -90,6 +90,7 @@
     <dimen name="widget_text_14_5">14.5sp</dimen>
     <dimen name="widget_text_16">16sp</dimen>
     <dimen name="widget_text_20">20sp</dimen>
+    <dimen name="widget_text_18">18sp</dimen>
     <dimen name="widget_text_15">15sp</dimen>
     <dimen name="widget_busy_18">18dp</dimen>
     <!-- Tag-Marke darf auf 8 sp schrumpfen (autoSize, ab Android 8). -->

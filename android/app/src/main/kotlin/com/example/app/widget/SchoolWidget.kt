@@ -197,9 +197,12 @@ internal object SchoolWidgetRenderer {
             Layout.ROWS -> if (mode == Mode.MEDIUM && plan.rows.size <= 2 && !plan.moreCalm && plan.more == 0) {
                 v.addView(R.id.body, tagView(ctx, tag))
                 val col = RemoteViews(ctx.packageName, R.layout.widget_col)
+                // Ein Kind mit fünf Symbolen (Schülerkonto): beide Zeilen
+                // etwas kleiner, sonst werden Name und Uhrzeit gekürzt.
+                val crowded = plan.rows.any { it.slots.size > 3 }
                 plan.rows.forEachIndexed { i, kv ->
                     if (i > 0) col.addView(R.id.col, RemoteViews(ctx.packageName, R.layout.widget_line))
-                    col.addView(R.id.col, wideRow(ctx, kv, l))
+                    col.addView(R.id.col, wideRow(ctx, kv, l, crowded))
                 }
                 v.addView(R.id.body, col)
             } else {
@@ -317,11 +320,16 @@ internal object SchoolWidgetRenderer {
     }
 
     /** Hohe Kind-Zeile im mittleren Widget mit zwei Kindern (widget_wide_row). */
-    private fun wideRow(ctx: Context, kv: KidView, l: Labels): RemoteViews {
-        val r = RemoteViews(ctx.packageName, R.layout.widget_wide_row)
+    private fun wideRow(ctx: Context, kv: KidView, l: Labels, crowded: Boolean): RemoteViews {
+        val r = RemoteViews(ctx.packageName, if (crowded) R.layout.widget_wide_row_compact else R.layout.widget_wide_row)
         head(ctx, r, kv, l, 0)
-        // Größere Fassung (Rückmeldung 30.10.26: Platz besser nutzen).
-        val res = if (kv.slots.size > 3) R.layout.widget_slot_label_big_narrow else R.layout.widget_slot_label_big
+        // Größere Fassung (Rückmeldung 30.10.26: Platz besser nutzen); bei
+        // fünf Symbolen die schmalen (48 dp), damit Name und Uhrzeit passen.
+        val res = when {
+            kv.slots.size > 3 -> R.layout.widget_slot_label_narrow
+            crowded -> R.layout.widget_slot_label
+            else -> R.layout.widget_slot_label_big
+        }
         for (s in kv.slots) r.addView(R.id.slots, slot(ctx, res, kv, s))
         return r
     }
