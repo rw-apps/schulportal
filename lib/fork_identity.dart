@@ -37,4 +37,14 @@ const upstreamRepoUrl = 'https://github.com/lanis-mobile/lanis';
 /// andere App mit eigener Versionszählung; unter fremdem Namen aufzutreten
 /// würde Fehler im Portal-Log dem Original zuschreiben.
 String forkUserAgent(String version, String buildNumber) =>
-    'Schulportal-rw/v$version+$buildNumber (fork of $upstreamName)';
+    'Schulportal-rw/v${appVersionLabel(version, buildNumber)} '
+    '(fork of $upstreamName)';
+
+/// „4.1.0+9452“ aus PackageInfo. Ursache: Seit 30.10.26 trägt der
+/// Versionsname den Build schon (android/app/build.gradle, versionName);
+/// angehängt wird die Build-Nummer nur noch bei älteren Builds oder auf
+/// Plattformen ohne diesen Namen (iOS) – sonst stünde „4.1.0+9452+11452“
+/// da. Grenze: buildNumber ist auf Android der versionCode mit
+/// ABI-Aufschlag (11452), nicht die Release-Nummer.
+String appVersionLabel(String version, String buildNumber) =>
+    version.contains('+') ? version : '$version+$buildNumber';

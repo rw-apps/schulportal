@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:liblanis/liblanis.dart';
+import 'package:lanis/fork_identity.dart' show appVersionLabel;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:lanis/generated/l10n.dart';
@@ -132,7 +133,7 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
             builder: (context, snapshot) {
               if (!snapshot.hasData) return const SizedBox.shrink();
               return Text(
-                'v${snapshot.data!.version}+${snapshot.data!.buildNumber}',
+                'v${appVersionLabel(snapshot.data!.version, snapshot.data!.buildNumber)}',
                 style: Theme.of(context).textTheme.bodySmall,
               );
             },

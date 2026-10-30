@@ -61,7 +61,9 @@ class _AboutSettingsPageState extends State<AboutSettingsPage> {
     PackageInfo.fromPlatform()
         .then((i) {
           if (mounted) {
-            setState(() => _version = '${i.version}+${i.buildNumber}');
+            setState(
+              () => _version = appVersionLabel(i.version, i.buildNumber),
+            );
           }
         })
         .catchError((Object _) {});

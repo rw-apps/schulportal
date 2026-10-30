@@ -52,7 +52,7 @@ Future<List<Override>> bootstrapLanisClient({
   // Bereinigung des Dateispeichers (ersetzt den Knopf „Zwischenspeicher
   // leeren“, Entscheidung 17.10.26).
   ErrorLog.instance
-    ..version = '${packageInfo.version}+${packageInfo.buildNumber}'
+    ..version = appVersionLabel(packageInfo.version, packageInfo.buildNumber)
     ..attach(File(p.join(persistentDir.path, 'fork_errors.json')));
   final documents = p.join(tempDir.path, 'lanis_documents');
   unawaited(Future(() => pruneOldFiles(Directory(documents))));

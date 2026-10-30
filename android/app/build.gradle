@@ -57,7 +57,12 @@ android {
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
+        // Versionsname je Build eindeutig („4.1.0+9452“, wie der Release-Tag
+        // ohne „v“). Ursache (Rückmeldung 30.10.26): Alle Builds hießen
+        // „4.1.0“; Obtainium mit Versionserkennung hielt 11443 für die
+        // neueste Version und bot kein Update an. Grenze: versionCode bleibt
+        // pubspec-Build + ABI-Aufschlag (arm64 + 2000) des Flutter-Plugins.
+        versionName "${flutterVersionName}+${flutterVersionCode}"
         multiDexEnabled true
     }
 
