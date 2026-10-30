@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
 
+import '../../demo/demo_mode.dart' show demoActive;
 import '../../error_log.dart';
 import '../../l10n/l10n.dart';
 import '../../report_relay.dart';
@@ -22,7 +23,12 @@ String reportOs() {
 /// mit eingerichtetem Dienst, noch nicht entschieden und erst, wenn es
 /// etwas zu melden gibt. Ursache (Entwurf 26.10.26): Eine Frage ohne
 /// Anlass wirkt wie Werbung; mit einem erkannten Fehler ist sie verständlich.
+///
+/// Nicht in der Demo. Ursache (Bildschirmfoto 30.10.26): Die Frage
+/// erschien in der Schüler-Demo, weil das Fehlerprotokoll der echten App
+/// Einträge hatte – in einer erfundenen Schule wirkt sie fehl am Platz.
 bool autoReportPromptDue(TypedSettings settings, {ErrorLog? log}) =>
+    !demoActive &&
     relayConfigured &&
     settings.getBool(autoReportKey) == null &&
     (log ?? ErrorLog.instance).records.isNotEmpty;

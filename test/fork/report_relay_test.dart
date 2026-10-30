@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:lanis/fork/anon/anon_export.dart';
+import 'package:lanis/fork/demo/demo_mode.dart' show demoActive;
 import 'package:lanis/fork/error_log.dart';
 import 'package:lanis/fork/l10n/l10n.dart';
 import 'package:lanis/fork/report_relay.dart';
@@ -86,6 +87,11 @@ void main() {
     expect(autoReportPromptDue(s), isFalse, reason: 'noch kein Fehler');
     ErrorLog.instance.record('x', UnknownException('x'), StackTrace.empty);
     expect(autoReportPromptDue(s), relayConfigured);
+    // Nie in der Demo (Bildschirmfoto 30.10.26).
+    demoActive = true;
+    addTearDown(() => demoActive = false);
+    expect(autoReportPromptDue(s), isFalse, reason: 'Demo');
+    demoActive = false;
     s.setBool(autoReportKey, false);
     expect(autoReportPromptDue(s), isFalse, reason: 'entschieden');
   });
