@@ -185,7 +185,21 @@ internal object SchoolWidgetRenderer {
                 v.addView(R.id.body, tagView(ctx, tag))
                 v.addView(R.id.body, oneWide(ctx, plan.rows[0], l))
             }
-            Layout.ROWS -> {
+            // Mittel (4 × 2) mit zwei Kindern: je Kind eine hohe Zeile wie
+            // beim einzelnen Kind (Name groß, Symbole mit Beschriftung), Linie
+            // dazwischen. Ursache (Bildschirmfoto Pixel 30.10.26: „nutzt den
+            // Platz nicht gut“): Die schmalen Zeilen der Leiste ließen im
+            // 4 × 2 die Hälfte leer. Grenze: ab drei Kindern weiter die
+            // schmalen Zeilen (_four42), sonst reicht die Höhe nicht.
+            Layout.ROWS -> if (mode == Mode.MEDIUM && plan.rows.size <= 2 && !plan.moreCalm && plan.more == 0) {
+                v.addView(R.id.body, tagView(ctx, tag))
+                val col = RemoteViews(ctx.packageName, R.layout.widget_col)
+                plan.rows.forEachIndexed { i, kv ->
+                    if (i > 0) col.addView(R.id.col, RemoteViews(ctx.packageName, R.layout.widget_line))
+                    col.addView(R.id.col, wideRow(ctx, kv, l))
+                }
+                v.addView(R.id.body, col)
+            } else {
                 v.addView(R.id.body, tagView(ctx, tag))
                 val col = RemoteViews(ctx.packageName, R.layout.widget_col)
                 col.addView(R.id.col, space(ctx))
@@ -275,6 +289,15 @@ internal object SchoolWidgetRenderer {
     /** Ein Kind breit (_one41): Symbole mit Beschriftung, ab vier Symbolen schmaler. */
     private fun oneWide(ctx: Context, kv: KidView, l: Labels): RemoteViews {
         val r = RemoteViews(ctx.packageName, R.layout.widget_one)
+        head(ctx, r, kv, l, 0)
+        val res = if (kv.slots.size > 3) R.layout.widget_slot_label_narrow else R.layout.widget_slot_label
+        for (s in kv.slots) r.addView(R.id.slots, slot(ctx, res, kv, s))
+        return r
+    }
+
+    /** Hohe Kind-Zeile im mittleren Widget mit zwei Kindern (widget_wide_row). */
+    private fun wideRow(ctx: Context, kv: KidView, l: Labels): RemoteViews {
+        val r = RemoteViews(ctx.packageName, R.layout.widget_wide_row)
         head(ctx, r, kv, l, 0)
         val res = if (kv.slots.size > 3) R.layout.widget_slot_label_narrow else R.layout.widget_slot_label
         for (s in kv.slots) r.addView(R.id.slots, slot(ctx, res, kv, s))
