@@ -94,6 +94,7 @@ class TodayPage extends StatelessWidget {
     this.onOpenCalendar,
     this.onOpenDay,
     this.onOrderMeal,
+    this.onEnterTimes,
     this.onRefresh,
     this.notices = const [],
     this.title,
@@ -120,6 +121,9 @@ class TodayPage extends StatelessWidget {
   /// den nächsten Schultag, den die Karte gerade zeigt.
   final void Function(ChildToday child, DateTime day)? onOpenDay;
   final void Function(ChildToday child)? onOrderMeal;
+
+  /// Wie [KidCard.onEnterTimes].
+  final void Function(ChildToday child)? onEnterTimes;
 
   /// Ziehen zum Aktualisieren; null = ohne (Beispieldaten).
   final Future<void> Function()? onRefresh;
@@ -169,6 +173,7 @@ class TodayPage extends StatelessWidget {
           nextDay: i < data.next.length ? data.next[i] : null,
           nextDate: data.nextDate,
           exams: examsFor(data.week, i, data.kids.length),
+          onEnterTimes: onEnterTimes,
         ),
     ];
     final kids = <Widget>[
@@ -298,6 +303,7 @@ class KidCard extends StatelessWidget {
     this.nextDay,
     this.nextDate,
     this.exams = const [],
+    this.onEnterTimes,
   });
 
   /// Arbeiten dieses Kindes (FamilyToday.week); heute und am nächsten
@@ -324,6 +330,11 @@ class KidCard extends StatelessWidget {
   /// Tag eines Kindes im Kalender öffnen: heute bzw. – nach Schulschluss –
   /// den nächsten Schultag, den die Karte gerade zeigt.
   final void Function(ChildToday child, DateTime day)? onOpenDay;
+
+  /// „Stundenzeiten eintragen ›“ unter dem Plan, wenn die Schule keine
+  /// Uhrzeiten zeigt (Abnahme 30.10.26). Ursache: Der Dialog lag nur im
+  /// Kalender; ohne Zeiten weiß die Karte nicht, wann Schluss ist.
+  final void Function(ChildToday child)? onEnterTimes;
 
   @override
   Widget build(BuildContext context) {
@@ -494,7 +505,11 @@ class KidCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _NowPanel(kid: planKid, status: planStatus),
+                    _NowPanel(
+                      kid: planKid,
+                      status: planStatus,
+                      nextDay: showNext,
+                    ),
                     // Ohne stattfindende Stunde (alle fallen aus, schulfrei)
                     // keine Leiste: Sie hätte nur rote bzw. keine Abschnitte.
                     if (planKid.lessons.any((x) => !x.cancelled)) ...[
@@ -506,6 +521,30 @@ class KidCard extends StatelessWidget {
               ),
             ),
           ),
+          if (onEnterTimes != null &&
+              planKid.lessons.isNotEmpty &&
+              !planKid.lessons.every(hasTime)) ...[
+            const SizedBox(height: Sp.s),
+            InkWell(
+              onTap: () => onEnterTimes!(kid),
+              borderRadius: BorderRadius.circular(Rad.bar),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: Sp.xs),
+                child: Row(
+                  children: [
+                    Icon(Icons.schedule, size: Sz.icon, color: k.p.muted),
+                    const SizedBox(width: Sp.s),
+                    Expanded(child: Text(t.enterLessonTimes, style: k.link)),
+                    Icon(
+                      Icons.chevron_right,
+                      size: Sz.icon,
+                      color: k.link.color,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           if (planKid.lunch case final dish?) ...[
             const SizedBox(height: Sp.s),
             InkWell(
@@ -634,6 +673,9 @@ class _NextDayHead extends StatelessWidget {
               child: Text(
                 done == null
                     ? (freeLabel ?? t.noLessons)
+                    // Ohne Uhrzeiten (untimedOverHour) kein „seit …“.
+                    : done.isEmpty
+                    ? t.schoolOverTitle
                     : t.schoolOverSince(done),
                 style: k.meta,
               ),
@@ -890,10 +932,18 @@ class _HintLine extends StatelessWidget {
 /// (bricht nur um, wenn es nicht passt). Schlicht ohne eigene Fläche; der
 /// Rahmen um den Stundenplan (KidCard) grenzt ab.
 class _NowPanel extends StatelessWidget {
-  const _NowPanel({required this.kid, required this.status});
+  const _NowPanel({
+    required this.kid,
+    required this.status,
+    this.nextDay = false,
+  });
 
   final ChildToday kid;
   final DayStatus status;
+
+  /// Zeigt den nächsten Schultag (_NextDayHead darüber): ohne Uhrzeiten
+  /// „Erste Stunde · 1.–2.“ statt „Heute · ab 1.–2.“ (Entwurf 30.10.26).
+  final bool nextDay;
 
   @override
   Widget build(BuildContext context) {
@@ -945,7 +995,10 @@ class _NowPanel extends StatelessWidget {
         meta = kid.freeLabel;
       case DayPhase.untimed:
         final x = l[status.next!];
-        label = upperFor(t, t.todayFromSlot(x.slot));
+        label = upperFor(
+          t,
+          nextDay ? t.firstFromSlot(x.slot) : t.todayFromSlot(x.slot),
+        );
         title = x.subject;
         meta = details(x);
     }

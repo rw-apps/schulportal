@@ -1871,5 +1871,13 @@
   "hwTextMore": "mehr",
   "hwTextLess": "weniger",
   "hintUnitLesson": "Stunde",
-  "hintUnitBlock": "Block"
+  "hintUnitBlock": "Block",
+  "firstFromSlot": "Erste Stunde · {slot}",
+  "@firstFromSlot": {
+    "placeholders": {
+      "slot": {
+        "type": "String"
+      }
+    }
+  }
 }

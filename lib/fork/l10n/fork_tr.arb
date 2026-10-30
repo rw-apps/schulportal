@@ -718,5 +718,6 @@
   "hwTextMore": "devamı",
   "hwTextLess": "daha az",
   "hintUnitLesson": "Ders",
-  "hintUnitBlock": "Blok"
+  "hintUnitBlock": "Blok",
+  "firstFromSlot": "İlk ders · {slot}"
 }

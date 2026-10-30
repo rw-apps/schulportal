@@ -12,6 +12,7 @@ import '../live/family.dart';
 import '../live/live_data.dart';
 import '../live/stale_notice.dart';
 import '../plan/plan_from_lanis.dart' show subjectFullName;
+import '../plan/lesson_times_dialog.dart' show askLessonTimes;
 import '../plan/plan_model.dart';
 import 'today_from_lanis.dart';
 import 'today_model.dart';
@@ -379,6 +380,15 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
                   );
                 }
               : null,
+          // Wie im Kalender (live_plan_page, onEditTimes); die Karte baut
+          // danach mit den Zeiten neu (livePlanOf, lessonTimes).
+          onEnterTimes: (c) async {
+            final s = memberOf(c).snapshot;
+            final save = s.setLessonTimes;
+            if (save == null) return;
+            final r = await askLessonTimes(context, s.lessonTimes, count: 10);
+            if (r != null) save(r.times);
+          },
           onOpenCalendar: widget.onOpenCalendar,
           onOpenHomework: widget.onOpenHomework == null
               ? null

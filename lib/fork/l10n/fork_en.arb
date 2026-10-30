@@ -718,5 +718,6 @@
   "hwTextMore": "more",
   "hwTextLess": "less",
   "hintUnitLesson": "Period",
-  "hintUnitBlock": "Block"
+  "hintUnitBlock": "Block",
+  "firstFromSlot": "First lesson · {slot}"
 }

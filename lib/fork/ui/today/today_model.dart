@@ -248,6 +248,9 @@ Hm minutesOf(String hm) {
   return h == null || m == null ? const Hm(-1) : Hm(h * 60 + m);
 }
 
+/// Stunde, ab der ein Tag ohne Uhrzeiten als vorbei gilt ([dayStatus]).
+const untimedOverHour = 17;
+
 /// Hat die Stunde eine Uhrzeit?
 bool hasTime(DayLesson l) => l.start.isNotEmpty && l.end.isNotEmpty;
 
@@ -262,6 +265,16 @@ DayStatus dayStatus(List<DayLesson> lessons, DateTime now) {
   ];
   if (held.isEmpty) return const DayStatus(phase: DayPhase.noLessons);
   if (!lessons.every(hasTime)) {
+    // Ohne Uhrzeiten gilt der Tag ab [untimedOverHour] als vorbei.
+    // Ursache (Bildschirmfoto Tablet 30.10.26): Schulen ohne Zeiten im
+    // Stundenplan (KidPlan.timed) blieben bis Mitternacht bei „ab 1.–2.
+    // Stunde“, die Karte sprang nie auf den nächsten Schultag. Grenze:
+    // geschätzt – Unterricht nach 17 Uhr (Wunsch 30.10.26: erst dann
+    // umstellen) gilt dann schon als vorbei; genau wird es mit
+    // eingetragenen Stundenzeiten.
+    if (now.hour >= untimedOverHour) {
+      return const DayStatus(phase: DayPhase.over);
+    }
     return DayStatus(phase: DayPhase.untimed, next: held.first);
   }
   final t = _nowMin(now);
