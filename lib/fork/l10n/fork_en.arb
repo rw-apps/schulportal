@@ -634,7 +634,6 @@
   "hwDueOn": "due {day}",
   "hwDueToday": "due today",
   "hwDueTomorrow": "due tomorrow",
-  "hwOverdue": "was due {day} · done?",
   "hwNotTickedTitle": "Not ticked off",
   "hwDoneTitle": "Done",
   "hwWasDue": "was due {day}",
@@ -715,5 +714,7 @@
   "hintsDayCaption": "EEEE, MMM d",
   "hintMealUnordered": "not ordered",
   "demoBand": "Demo · sending locked",
-  "demoEndShort": "End"
+  "demoEndShort": "End",
+  "hwTextMore": "more",
+  "hwTextLess": "less"
 }

@@ -634,7 +634,6 @@
   "hwDueOn": "son gün {day}",
   "hwDueToday": "son gün bugün",
   "hwDueTomorrow": "son gün yarın",
-  "hwOverdue": "son gün {day} idi · yapıldı mı?",
   "hwNotTickedTitle": "İşaretlenmedi",
   "hwDoneTitle": "Tamamlandı",
   "hwWasDue": "son gün {day} idi",
@@ -715,5 +714,7 @@
   "hintsDayCaption": "d MMM EEEE",
   "hintMealUnordered": "sipariş edilmedi",
   "demoBand": "Demo · gönderim kapalı",
-  "demoEndShort": "Bitir"
+  "demoEndShort": "Bitir",
+  "hwTextMore": "devamı",
+  "hwTextLess": "daha az"
 }

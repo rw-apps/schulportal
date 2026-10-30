@@ -108,4 +108,53 @@ void main() {
     await t.tap(find.text('Alle 12 erledigten anzeigen'));
     expect(all, 1);
   });
+
+  // Entwurf A (30.10.26): langer Lehrertext gekürzt mit „mehr“, Frist im
+  // Kopf, „aufgegeben“ im Fuß.
+  testWidgets('langer Text: drei Zeilen, „mehr“ klappt auf', (t) async {
+    final long = HomeworkItem(
+      course: 'd',
+      entry: '1',
+      subject: 'Deutsch',
+      text: List.filled(12, 'Begründe deine Meinung mit Belegen.').join(' '),
+      given: DateTime(2026, 10, 28),
+      due: DateTime(2026, 10, 21),
+    );
+    await t.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: ForkL10n.localizationsDelegates,
+        supportedLocales: ForkL10n.supportedLocales,
+        locale: const Locale('de'),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: HomeworkSection(
+              now: DateTime(2026, 10, 29),
+              open: [
+                HwEntry(item: long, onDone: () {}, onReopen: () {}),
+                HwEntry(
+                  item: hw('2', 'Buch S. 42'),
+                  onDone: () {},
+                  onReopen: () {},
+                ),
+              ],
+              done: const [],
+              emptyText: 'leer',
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(t.takeException(), isNull);
+    expect(find.text('Deutsch'), findsOneWidget);
+    expect(find.text('war fällig Mi 21.10.'), findsOneWidget);
+    expect(find.text('aufgegeben Mi 28.10.'), findsOneWidget);
+    // Nur die lange Karte bekommt „mehr“.
+    expect(find.text('mehr'), findsOneWidget);
+    Text body() => t.widget<Text>(find.text(long.text));
+    expect(body().maxLines, 3);
+    await t.tap(find.text('mehr'));
+    await t.pump();
+    expect(body().maxLines, isNull);
+    expect(find.text('weniger'), findsOneWidget);
+  });
 }

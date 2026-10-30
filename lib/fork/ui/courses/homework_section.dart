@@ -272,9 +272,19 @@ class _HomeworkSectionState extends State<HomeworkSection> {
   }
 }
 
-/// Offene Hausaufgabe: Kreis hakt ab ([ticked] = Haken gefüllt, Text
-/// gestrichen); [flash] lässt die Karte nach dem Zurückholen aufleuchten.
-class _OpenCard extends StatelessWidget {
+/// Offene Hausaufgabe (Entwurf A, abgenommen 30.10.26): weiße Karte wie
+/// die Fächer darunter; Kopf Fach · Kind | Frist, Lehrertext normal gesetzt
+/// und höchstens [_lines] Zeilen („mehr“ klappt auf), Fuß „aufgegeben …“ |
+/// „Erledigt“. [ticked] = Knopf gefüllt, Text gestrichen; [flash] lässt die
+/// Karte nach dem Zurückholen aufleuchten.
+///
+/// Ursache (Rückmeldung 30.10.26 mit Bild aus „Alle“): Der Text stand
+/// vollständig und fett in einer schmalen Spalte neben dem Knopf – ein
+/// längerer Lehrertext ergab zehn Zeilen je Karte; das Fach stand klein
+/// darunter. Dazu war die Karte grau (KitPalette.todo) statt weiß wie in
+/// den anderen Reitern. Grenze: Der volle Text steht auch auf der Fachseite
+/// (Antippen der Karte), „mehr“ ist nur die Abkürzung dorthin.
+class _OpenCard extends StatefulWidget {
   const _OpenCard({
     required this.entry,
     required this.ticked,
@@ -294,72 +304,148 @@ class _OpenCard extends StatelessWidget {
   final int? flash;
 
   @override
+  State<_OpenCard> createState() => _OpenCardState();
+}
+
+/// Zeilen des Lehrertexts, bevor „mehr“ erscheint. Ursache für 3: Die
+/// meisten Einträge (Seite, Nummer, kurzer Auftrag) passen ganz hinein;
+/// gekürzt werden nur die Absätze.
+const _lines = 3;
+
+class _OpenCardState extends State<_OpenCard> {
+  bool _more = false;
+
+  @override
   Widget build(BuildContext context) {
     final k = Kit.of(context);
     final t = context.t;
-    // Dezent grau (KitPalette.todo), nicht Gelb wie eine Vertretung.
-    final tone = k.p.todo;
+    final entry = widget.entry;
     final item = entry.item;
     final text = item.text.isEmpty ? t.homeworkEntered : item.text;
-    final meta = item.given == null
-        ? item.subject
-        : t.givenOn(item.subject, formatDate(t, t.dateShort, item.given!));
-    final strike = ticked
-        ? const TextStyle(decoration: TextDecoration.lineThrough)
-        : null;
+    final style = k.body.merge(
+      widget.ticked
+          ? const TextStyle(decoration: TextDecoration.lineThrough)
+          : null,
+    );
+    final scaler = MediaQuery.textScalerOf(context);
     final card = Material(
-      color: tone.bg,
+      color: k.p.card,
       borderRadius: BorderRadius.circular(Rad.signal),
       child: InkWell(
         borderRadius: BorderRadius.circular(Rad.signal),
         onTap: entry.onOpen,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(Sp.l, Sp.m, Sp.m, Sp.m),
-          // Knopf nur neben dem Aufgabentext; Fach und Kind darunter in
-          // voller Breite. Ursache (Bild 20.10.26): Neben dem Knopf brach
-          // die Fachzeile um („aufgegeben Di / 20.10.“) – unruhig.
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+          child: LayoutBuilder(
+            builder: (c, box) {
+              // Nur wenn der Text die Zeilen wirklich überschreitet, steht
+              // „mehr“ da (gemessen, nicht nach Zeichenzahl: Schriftgröße
+              // und Breite schwanken je Gerät).
+              final long = (TextPainter(
+                text: TextSpan(text: text, style: style),
+                maxLines: _lines,
+                textScaler: scaler,
+                textDirection: Directionality.of(c),
+              )..layout(maxWidth: box.maxWidth)).didExceedMaxLines;
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(text, style: k.boxStrong(tone).merge(strike)),
+                  Row(
+                    children: [
+                      // Fach und Kind nehmen den Rest neben der Frist; erst
+                      // wenn der fehlt, wird das Fach gekürzt (nicht die
+                      // Frist). Ein Spacer daneben teilte den Platz 1:1 und
+                      // kürzte „Mathematik“ schon ohne Not (Bild 30.10.26).
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                item.subject,
+                                style: k.tileTitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (entry.kid != null) ...[
+                              const SizedBox(width: Sp.s),
+                              KidLine(kid: entry.kid!),
+                            ],
+                          ],
+                        ),
+                      ),
+                      if (item.due case final due?) ...[
+                        const SizedBox(width: Sp.s),
+                        _DueLine(due: due, now: widget.now ?? DateTime.now()),
+                      ],
+                    ],
                   ),
-                  if (onTick != null) ...[
-                    const SizedBox(width: Sp.s),
-                    _CardAction(
-                      icon: Icons.check,
-                      label: t.homeworkDoneButton,
-                      color: tone.ink,
-                      fill: tone.bg,
-                      active: ticked,
-                      onPressed: ticked ? null : onTick,
+                  const SizedBox(height: Sp.xs),
+                  Text(
+                    text,
+                    style: style,
+                    maxLines: _more ? null : _lines,
+                    overflow: _more ? null : TextOverflow.ellipsis,
+                  ),
+                  if (item.given != null || long || widget.onTick != null) ...[
+                    const SizedBox(height: Sp.s),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              if (item.given != null)
+                                Flexible(
+                                  child: Text(
+                                    t.givenDate(
+                                      formatDate(t, t.dateShort, item.given!),
+                                    ),
+                                    style: k.meta,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              if (long)
+                                TextButton(
+                                  onPressed: () =>
+                                      setState(() => _more = !_more),
+                                  style: TextButton.styleFrom(
+                                    minimumSize: const Size(0, Sz.buttonTiny),
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: Sp.s,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    _more ? t.hwTextLess : t.hwTextMore,
+                                    style: k.link,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        if (widget.onTick != null)
+                          _CardAction(
+                            icon: Icons.check,
+                            label: t.homeworkDoneButton,
+                            color: k.p.ink,
+                            side: k.p.faint,
+                            fill: k.p.card,
+                            active: widget.ticked,
+                            onPressed: widget.ticked ? null : widget.onTick,
+                          ),
+                      ],
                     ),
                   ],
                 ],
-              ),
-              // Kind in der Fachzeile wie bei den erledigten (eine Zeile
-              // weniger in „Alle“).
-              Wrap(
-                spacing: Sp.s,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(meta, style: k.planMeta(tone.ink)),
-                  if (entry.kid != null) KidLine(kid: entry.kid!),
-                ],
-              ),
-              if (entry.item.due case final due?) ...[
-                const SizedBox(height: Sp.xs),
-                _DueLine(due: due, now: now ?? DateTime.now()),
-              ],
-            ],
+              );
+            },
           ),
         ),
       ),
     );
-    final f = flash;
+    final f = widget.flash;
     if (f == null) return card;
     return TweenAnimationBuilder<double>(
       key: ValueKey('flash-$f'),
@@ -483,7 +569,12 @@ class _CardAction extends StatelessWidget {
     required this.onPressed,
     this.tooltip,
     this.outlined = true,
+    this.side,
   });
+
+  /// Rahmenfarbe; Standard [color]. Auf weißer Karte leiser (KitPalette
+  /// .faint), damit vier Knöpfe untereinander nicht unruhig wirken.
+  final Color? side;
 
   final IconData icon;
   final String label;
@@ -517,7 +608,9 @@ class _CardAction extends StatelessWidget {
         minimumSize: const Size(0, Sz.buttonTiny),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         padding: const EdgeInsets.symmetric(horizontal: Sp.s),
-        side: outlined ? BorderSide(color: color, width: 1.5) : BorderSide.none,
+        side: outlined
+            ? BorderSide(color: active ? color : side ?? color, width: 1.5)
+            : BorderSide.none,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(Rad.pill),
         ),
@@ -582,11 +675,12 @@ class _DoneToggle extends StatelessWidget {
   }
 }
 
-/// Frist unter einer offenen Hausaufgabe (Entwurf 27.10.26): „fällig
-/// Mi 28.10.“ (Nebenschrift), „fällig heute“/„fällig morgen“ (kräftig),
-/// nach dem Tag gelb „war fällig Mi 22.10. · erledigt?“. Gelb wie andere
-/// Hinweise, die etwas zu tun verlangen; das Fragezeichen, weil die Frist
-/// nur vermutet ist (HomeworkItem.due) – die App hakt nichts selbst ab.
+/// Frist rechts im Kopf einer offenen Hausaufgabe (Entwurf 27.10.26, Ort
+/// seit 30.10.26): „fällig Mi 28.10.“ (Nebenschrift), „fällig heute“/
+/// „fällig morgen“ (kräftig), nach dem Tag gelb „war fällig Mi 22.10.“
+/// (ohne „· erledigt?“: im Kopf zu lang, der Knopf darunter fragt es).
+/// Gelb wie andere Hinweise, die etwas zu tun verlangen. Grenze: Die Frist
+/// ist nur vermutet (HomeworkItem.due) – die App hakt nichts selbst ab.
 class _DueLine extends StatelessWidget {
   const _DueLine({required this.due, required this.now});
 
@@ -609,7 +703,7 @@ class _DueLine extends StatelessWidget {
           borderRadius: BorderRadius.circular(Rad.pill),
         ),
         child: Text(
-          t.hwOverdue(day),
+          t.hwWasDue(day),
           style: k.tileCaption.copyWith(color: tone.ink),
         ),
       );

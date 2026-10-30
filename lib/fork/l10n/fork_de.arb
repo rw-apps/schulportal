@@ -1654,14 +1654,6 @@
   },
   "hwDueToday": "fällig heute",
   "hwDueTomorrow": "fällig morgen",
-  "hwOverdue": "war fällig {day} · erledigt?",
-  "@hwOverdue": {
-    "placeholders": {
-      "day": {
-        "type": "String"
-      }
-    }
-  },
   "hwNotTickedTitle": "Nicht abgehakt",
   "hwDoneTitle": "Erledigt",
   "hwWasDue": "war fällig {day}",
@@ -1875,5 +1867,7 @@
   "hintsDayCaption": "EEEE, d. MMM",
   "hintMealUnordered": "nicht bestellt",
   "demoBand": "Demo · Senden gesperrt",
-  "demoEndShort": "Beenden"
+  "demoEndShort": "Beenden",
+  "hwTextMore": "mehr",
+  "hwTextLess": "weniger"
 }
