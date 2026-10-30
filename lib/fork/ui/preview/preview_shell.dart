@@ -16,6 +16,7 @@ import '../../l10n/l10n.dart';
 import '../../report_relay.dart';
 import '../today/auto_report_prompt.dart' show reportOs;
 import '../../school_links.dart';
+import '../courses/grades_request.dart';
 import '../courses/course_detail_page.dart';
 import '../courses/courses_page.dart';
 import '../courses/homework_due.dart' show liveOpenHomework;
@@ -121,6 +122,13 @@ class _PreviewShellState extends State<PreviewShell> {
     _calendarView.value = PlanView.day;
     _navKeys[ShellTab.calendar]!.currentState?.popUntil((r) => r.isFirst);
     _select(ShellTab.calendar);
+  }
+
+  /// „Unterricht · Arbeiten & Noten“ (grades_request.dart).
+  void _openExams() {
+    gradesRequest.value = true;
+    _navKeys[ShellTab.courses]!.currentState?.popUntil((r) => r.isFirst);
+    _select(ShellTab.courses);
   }
 
   void _openEvents() {
@@ -376,6 +384,7 @@ class _PreviewShellState extends State<PreviewShell> {
     onOpenCalendar: _openEvents,
     onOpenDay: _openDay,
     onOpenHomework: () => _select(ShellTab.courses),
+    onOpenExams: _openExams,
     onOpenMessages: () => _select(ShellTab.messages),
   );
 

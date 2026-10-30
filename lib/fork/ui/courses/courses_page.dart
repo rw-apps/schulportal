@@ -9,6 +9,7 @@ import '../segments.dart';
 import 'courses_model.dart';
 import 'exam_card.dart';
 import 'homework_section.dart';
+import 'grades_request.dart';
 import 'grades_view.dart';
 
 export 'exam_card.dart' show AllExam, ExamCard, KidLine, KidTag;
@@ -115,6 +116,27 @@ class _CoursesPageState extends State<CoursesPage> {
           as bool? ??
       false;
   final _gradesKey = GlobalKey<GradesViewState>();
+
+  @override
+  void initState() {
+    super.initState();
+    gradesRequest.addListener(_takeRequest);
+    // Auftrag von Heute schon vor dem Aufbau gesetzt (Reiter neu).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _takeRequest());
+  }
+
+  @override
+  void dispose() {
+    gradesRequest.removeListener(_takeRequest);
+    super.dispose();
+  }
+
+  /// „Arbeiten & Noten“ auf Wunsch von Heute (grades_request.dart).
+  void _takeRequest() {
+    if (!mounted || !gradesRequest.value || widget.grades == null) return;
+    gradesRequest.value = false;
+    _mode(true);
+  }
 
   void _mode(bool grades) {
     if (grades == _grades) return;

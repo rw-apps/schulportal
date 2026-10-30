@@ -83,6 +83,7 @@ class TodayPage extends StatelessWidget {
     required this.data,
     this.onReportAbsence,
     this.onOpenHomework,
+    this.onOpenExams,
     this.onOpenMessages,
     this.onOpenCalendar,
     this.onOpenDay,
@@ -101,6 +102,9 @@ class TodayPage extends StatelessWidget {
   final FamilyToday data;
   final void Function(ChildToday child)? onReportAbsence;
   final void Function(ChildToday child)? onOpenHomework;
+
+  /// „Arbeiten & Noten“ des Kindes (Arbeits-Hinweis, Rückmeldung 30.10.26).
+  final void Function(ChildToday child)? onOpenExams;
   final void Function(ChildToday child)? onOpenMessages;
   final VoidCallback? onOpenCalendar;
 
@@ -152,6 +156,7 @@ class TodayPage extends StatelessWidget {
           now: data.now,
           onReportAbsence: onReportAbsence,
           onOpenHomework: onOpenHomework,
+          onOpenExams: onOpenExams,
           onOpenMessages: onOpenMessages,
           onOrderMeal: onOrderMeal,
           onOpenDay: onOpenDay,
@@ -249,6 +254,7 @@ class KidCard extends StatelessWidget {
     required this.now,
     this.onReportAbsence,
     this.onOpenHomework,
+    this.onOpenExams,
     this.onOpenMessages,
     this.onOrderMeal,
     this.onOpenDay,
@@ -272,6 +278,9 @@ class KidCard extends StatelessWidget {
   final DateTime? nextDate;
   final void Function(ChildToday child)? onReportAbsence;
   final void Function(ChildToday child)? onOpenHomework;
+
+  /// „Arbeiten & Noten“ des Kindes (Arbeits-Hinweis, Rückmeldung 30.10.26).
+  final void Function(ChildToday child)? onOpenExams;
   final void Function(ChildToday child)? onOpenMessages;
   final void Function(ChildToday child)? onOrderMeal;
 
@@ -320,8 +329,12 @@ class KidCard extends StatelessWidget {
     // Antippen einer Zeile: der Tag im Kalender (wie „Ganzer Tag“), dort
     // stehen Lehrkraft und Zeiten, die die Zeile weglässt; Guthaben und
     // „nicht bestellt“ öffnen die Essensbestellung.
+    // Arbeit: „Arbeiten & Noten“ des Kindes statt des Tages (Rückmeldung
+    // 30.10.26); ohne diesen Weg wie bisher der Tag.
     VoidCallback? tapHint(KidHint h, DateTime day) => h.toMeal
         ? (onOrderMeal == null ? null : () => onOrderMeal!(kid))
+        : h.kind == HintKind.exam && onOpenExams != null
+        ? () => onOpenExams!(kid)
         : (onOpenDay == null ? null : () => onOpenDay!(kid, day));
 
     return Container(
@@ -788,7 +801,9 @@ class _HintLine extends StatelessWidget {
                         TextSpan(text: h.what, style: k.hintKind(tone)),
                     ],
                   ),
-                  maxLines: 1,
+                  // Zwei Zeilen statt „Naturwissenschaften Lernkon…“
+                  // (Bildschirmfoto 30.10.26); die Art muss lesbar bleiben.
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),

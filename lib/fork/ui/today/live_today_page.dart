@@ -89,6 +89,7 @@ class LiveTodayPage extends StatefulWidget {
     super.key,
     this.onOpenCalendar,
     this.onOpenHomework,
+    this.onOpenExams,
     this.onOpenMessages,
     this.onOpenDay,
     this.onlyAccount,
@@ -105,6 +106,9 @@ class LiveTodayPage extends StatefulWidget {
   final ValueChanged<DateTime>? onOpenDay;
   final VoidCallback? onOpenCalendar;
   final VoidCallback? onOpenHomework;
+
+  /// „Unterricht · Arbeiten & Noten“ (Arbeits-Hinweis, 30.10.26).
+  final VoidCallback? onOpenExams;
   final VoidCallback? onOpenMessages;
 
   @override
@@ -381,6 +385,12 @@ class _LiveTodayPageState extends State<LiveTodayPage> {
               : (c) {
                   select(c);
                   widget.onOpenHomework!();
+                },
+          onOpenExams: widget.onOpenExams == null
+              ? null
+              : (c) {
+                  select(c);
+                  widget.onOpenExams!();
                 },
           onOpenMessages: widget.onOpenMessages == null
               ? null

@@ -107,15 +107,22 @@ void main() {
     });
   });
 
-  Widget app(FamilyToday data, {void Function(DateTime)? opened}) =>
-      MaterialApp(
-        localizationsDelegates: ForkL10n.localizationsDelegates,
-        supportedLocales: ForkL10n.supportedLocales,
-        locale: const Locale('de'),
-        home: Scaffold(
-          body: TodayPage(data: data, onOpenDay: (_, day) => opened?.call(day)),
-        ),
-      );
+  Widget app(
+    FamilyToday data, {
+    void Function(DateTime)? opened,
+    VoidCallback? exams,
+  }) => MaterialApp(
+    localizationsDelegates: ForkL10n.localizationsDelegates,
+    supportedLocales: ForkL10n.supportedLocales,
+    locale: const Locale('de'),
+    home: Scaffold(
+      body: TodayPage(
+        data: data,
+        onOpenDay: (_, day) => opened?.call(day),
+        onOpenExams: exams == null ? null : (_) => exams(),
+      ),
+    ),
+  );
 
   testWidgets('nach Schulschluss: Heute vorbei, darunter Morgen', (t) async {
     final opened = <DateTime>[];
@@ -150,6 +157,23 @@ void main() {
     // Antippen einer Zeile öffnet ihren Tag wie „Ganzer Tag“.
     await t.tap(_hint('Deutsch  Vertretung'));
     expect(opened, [tue, tue]);
+  });
+
+  // Rückmeldung 30.10.26: Arbeits-Hinweis führt zu „Arbeiten & Noten“.
+  testWidgets('Arbeit antippen öffnet Arbeiten & Noten', (t) async {
+    final opened = <DateTime>[];
+    var exams = 0;
+    await t.pumpWidget(
+      app(
+        family(DateTime(2026, 10, 26, 17)),
+        opened: opened.add,
+        exams: () => exams++,
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.tap(_hint('Mathematik  Klassenarbeit'));
+    expect(exams, 1);
+    expect(opened, isEmpty);
   });
 
   testWidgets('während des Unterrichts: unverändert heute', (t) async {
