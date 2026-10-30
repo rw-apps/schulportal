@@ -106,13 +106,31 @@ class ForkTimetableParser extends TimetableStudentParser {
 /// „EmptyTimetable(all=0 own=0 rows=1 …)“ 2× um 06:35): Die Zählwerte
 /// zeigten nur, DASS keine Plantabelle kam, nicht WAS stattdessen – ob
 /// Sitzungsende, Wartung oder Fehlerseite, ließ sich nicht unterscheiden.
-/// Grenze: keine Inhalte, nur diese drei Werte; eine Fehlerseite ohne
-/// Passwortfeld und ohne „Wartung“ bleibt nur an der Länge erkennbar.
+/// Grenze: keine Inhalte, nur Kennzahlen; eine Fehlerseite ohne diese
+/// Merkmale bleibt nur an der Länge erkennbar.
+///
+/// `anmeld` = Text nennt Anmeldung/Sitzung („abgemeldet“, „Sitzung“,
+/// „Login“); `weiter` = Seite leitet selbst weiter (meta refresh oder
+/// Skript mit `location`). Ursache (Fehlerbericht 30.10.26, 9445:
+/// „… login=0 wartung=0 text=5 acct=1 alert=0 · 1×“): Schülerkonto, kurze
+/// Seite ohne Passwortfeld – und nur EIN Eintrag, d. h. der zweite Versuch
+/// nach Neuanmeldung (AppletParser.fetchData, secondTry) fand den Plan.
+/// Das spricht für eine abgelaufene Sitzung, deren Seite nur auf die
+/// Anmeldung weiterleitet; die beiden Merkmale sollen das bestätigen.
 Map<String, int> emptyTimetablePageKind(Document document) {
   final text = (document.body?.text ?? '').replaceAll(RegExp(r'\s+'), ' ');
+  final lower = text.toLowerCase();
+  final scripts = document.querySelectorAll('script').map((e) => e.text);
   return {
     'login': document.querySelector('input[type=password]') == null ? 0 : 1,
-    'wartung': text.toLowerCase().contains('wartung') ? 1 : 0,
+    'wartung': lower.contains('wartung') ? 1 : 0,
     'text': (text.trim().length / 100).ceil().clamp(0, 99),
+    'anmeld': RegExp(r'anmeld|abgemeld|sitzung|login').hasMatch(lower) ? 1 : 0,
+    'weiter':
+        document.querySelector('meta[http-equiv=refresh]') != null ||
+            document.querySelector('meta[http-equiv=Refresh]') != null ||
+            scripts.any((s) => s.contains('location'))
+        ? 1
+        : 0,
   };
 }

@@ -100,7 +100,13 @@ void main() {
     final login = emptyTimetablePageKind(
       parse('<html><body><form><input type="password"></form></body></html>'),
     );
-    expect(login, {'login': 1, 'wartung': 0, 'text': 0});
+    expect(login, {
+      'login': 1,
+      'wartung': 0,
+      'text': 0,
+      'anmeld': 0,
+      'weiter': 0,
+    });
     final down = emptyTimetablePageKind(
       parse(
         '<html><body><p>Das Schulportal ist wegen Wartung nicht '
@@ -110,5 +116,16 @@ void main() {
     expect(down['wartung'], 1);
     expect(down['login'], 0);
     expect(down['text'], 1);
+    // Fehlerbericht 30.10.26: Sitzungsende mit Weiterleitung.
+    final gone = emptyTimetablePageKind(
+      parse(
+        '<html><head><script>window.location="index.php"</script></head>'
+        '<body><p>Sie wurden abgemeldet.</p></body></html>',
+      ),
+    );
+    expect(gone['anmeld'], 1);
+    expect(gone['weiter'], 1);
+    expect(down['anmeld'], 0);
+    expect(down['weiter'], 0);
   });
 }
