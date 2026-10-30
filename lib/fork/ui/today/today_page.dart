@@ -76,7 +76,13 @@ List<DateTime> schoolWeek(DateTime now) {
 /// Kopf in einer Zeile (Datum, Stand) statt Datum plus Begrüßung; Karten je
 /// Kind mit Hinweisen für heute und den nächsten Schultag (KidCard, seit
 /// 21.10.26 statt eines eigenen Kastens für morgen); „Demnächst“ als Liste.
-/// Ab [Sz.wideLayout] Breite (Tablet) Kinder links, Termine rechts.
+/// Tablet (Entwurf A, abgenommen 30.10.26): ab [Sz.wideLayout] Breite
+/// stehen ab zwei Kindern je zwei Karten nebeneinander, „Demnächst“
+/// darunter in voller Breite; ab [Sz.wideLandscape] (quer) rechts daneben,
+/// bei zwei Kindern also drei Spalten. Ein Kind: Karte links, Termine
+/// rechts. Ursache (Bildschirmfoto Tablet 30.10.26): Kinder untereinander in
+/// einer schmalen Spalte – das zweite Kind war abgeschnitten, „Demnächst“
+/// brach Titel mitten im Wort um und ließ darunter viel Fläche frei.
 class TodayPage extends StatelessWidget {
   const TodayPage({
     super.key,
@@ -148,9 +154,9 @@ class TodayPage extends StatelessWidget {
       ],
     );
 
-    final kids = <Widget>[
-      for (final (i, kid) in data.kids.indexed) ...[
-        if (i > 0) const SizedBox(height: Sp.m),
+    final width = MediaQuery.sizeOf(context).width;
+    final cards = <Widget>[
+      for (final (i, kid) in data.kids.indexed)
         KidCard(
           kid: kid,
           now: data.now,
@@ -164,8 +170,35 @@ class TodayPage extends StatelessWidget {
           nextDate: data.nextDate,
           exams: examsFor(data.week, i, data.kids.length),
         ),
+    ];
+    final kids = <Widget>[
+      for (final (i, c) in cards.indexed) ...[
+        if (i > 0) const SizedBox(height: Sp.m),
+        c,
       ],
     ];
+    // Je zwei Karten nebeneinander (Tablet, ab zwei Kindern); eine dritte
+    // steht links in der nächsten Reihe. Oben bündig statt gleich hoch:
+    // IntrinsicHeight verträgt die LayoutBuilder in den Karten nicht.
+    final pairs = <Widget>[
+      for (var i = 0; i < cards.length; i += 2) ...[
+        if (i > 0) const SizedBox(height: Sp.l),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: cards[i]),
+            const SizedBox(width: Sp.l),
+            Expanded(
+              child: i + 1 < cards.length
+                  ? cards[i + 1]
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      ],
+    ];
+    final paired = wide && cards.length > 1;
+    final side = !paired || width >= Sz.wideLandscape;
     final upcoming =
         upcomingWithoutHints(data.week, data.now, data.kids.length).isEmpty
         ? null
@@ -197,22 +230,26 @@ class TodayPage extends StatelessWidget {
             child: Text(t.demoNote, style: k.meta, textAlign: TextAlign.center),
           ),
         const SizedBox(height: Sp.s),
-        if (wide)
+        if (wide && side)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                flex: 11,
+                // Zwei Kinder nebeneinander + Termine: drei gleiche Spalten.
+                flex: paired ? 20 : 11,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: kids,
+                  children: paired ? pairs : kids,
                 ),
               ),
               const SizedBox(width: Sp.l),
               Expanded(flex: 10, child: upcoming ?? const SizedBox.shrink()),
             ],
           )
-        else ...[
+        else if (wide) ...[
+          ...pairs,
+          if (upcoming != null) ...[const SizedBox(height: Sp.l), upcoming],
+        ] else ...[
           ...kids,
           if (upcoming != null) ...[const SizedBox(height: Sp.l), upcoming],
         ],

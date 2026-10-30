@@ -81,8 +81,17 @@ abstract final class Sz {
   /// Punkt mit Anfangsbuchstabe im Kopf der Kinderkarte (kompakt, 18.10.26).
   static const double avatarSmall = 32;
 
-  /// Ab dieser Breite zweispaltig (Tablet): Kinder links, Termine rechts.
+  /// Ab dieser Breite Tablet-Aufbau auf Heute: ein Kind links, Termine
+  /// rechts; ab zwei Kindern je zwei nebeneinander (TodayPage).
   static const double wideLayout = 700;
+
+  /// Ab dieser Breite (Tablet quer) stehen die Termine auch bei mehreren
+  /// Kindern rechts daneben statt darunter – bei zwei Kindern drei Spalten.
+  static const double wideLandscape = 1100;
+
+  /// Höchstbreite der unteren Leiste (Tablet): mittig statt über die ganze
+  /// Breite, fünf Ziele à ~110 dp wie auf dem Telefon.
+  static const double navMaxWidth = 560;
   static const double dot = 8;
   static const double dotSmall = 6;
 

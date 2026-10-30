@@ -132,8 +132,9 @@ void main() {
     await t.tap(find.text('Ganzer Tag').first);
     await t.tap(_hint('Deutsch  Vertretung'));
     expect(opened, ['Lena', 'Lena', 'Lena']);
-    // Tablet: Termine neben den Kindern, ohne Scrollen sichtbar.
-    t.view.physicalSize = const Size(1600, 2560);
+    // Tablet quer: Termine neben den Kindern, ohne Scrollen sichtbar
+    // (hoch: Kinder nebeneinander, Termine darunter – today_tablet_test).
+    t.view.physicalSize = const Size(2560, 1600);
     t.view.devicePixelRatio = 2.0;
     await t.pumpWidget(page());
     await t.pumpAndSettle();

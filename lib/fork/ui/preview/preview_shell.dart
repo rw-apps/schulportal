@@ -560,31 +560,40 @@ class FloatingNavBar extends StatelessWidget {
           Sz.navMargin,
           Sz.navBottom + inset,
         ),
-        child: Container(
-          height: Sz.navHeight,
-          padding: const EdgeInsets.symmetric(horizontal: Sp.s),
-          decoration: BoxDecoration(
-            color: k.p.navBg,
-            borderRadius: BorderRadius.circular(Rad.nav),
-            boxShadow: k.navShadow,
-          ),
-          // Jedes Ziel bekommt ein Fünftel der Breite. Ursache: Mit freier
-          // Breite lief die Leiste bei großer Systemschrift um bis zu 220 px
-          // über („Nachrichten“, Test today_page_test, Schrift ×1,3).
-          child: Row(
-            children: [
-              for (final (i, d) in items.indexed)
-                Expanded(
-                  child: _NavItem(
-                    icon: i == selected ? d.iconSelected : d.icon,
-                    label: d.label,
-                    selected: i == selected,
-                    count: d.count,
-                    alert: d.alert,
-                    onTap: () => onSelect(i),
-                  ),
-                ),
-            ],
+        // Tablet: mittig und höchstens Sz.navMaxWidth breit. Ursache
+        // (Bildschirmfoto Tablet 30.10.26): Über die ganze Breite lagen die
+        // fünf Ziele weit auseinander.
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: Sz.navMaxWidth),
+            child: Container(
+              height: Sz.navHeight,
+              padding: const EdgeInsets.symmetric(horizontal: Sp.s),
+              decoration: BoxDecoration(
+                color: k.p.navBg,
+                borderRadius: BorderRadius.circular(Rad.nav),
+                boxShadow: k.navShadow,
+              ),
+              // Jedes Ziel bekommt ein Fünftel der Breite. Ursache: Mit freier
+              // Breite lief die Leiste bei großer Systemschrift um bis zu 220 px
+              // über („Nachrichten“, Test today_page_test, Schrift ×1,3).
+              child: Row(
+                children: [
+                  for (final (i, d) in items.indexed)
+                    Expanded(
+                      child: _NavItem(
+                        icon: i == selected ? d.iconSelected : d.icon,
+                        label: d.label,
+                        selected: i == selected,
+                        count: d.count,
+                        alert: d.alert,
+                        onTap: () => onSelect(i),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
