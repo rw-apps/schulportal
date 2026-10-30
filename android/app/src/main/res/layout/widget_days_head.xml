@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kopfzeile des großen Widgets (4 × 4, Wunsch 30.10.26): links App-Symbol
+     und „Schulportal“, rechts Tag (heute/Wochentag) und Stand des
+     Vertretungsplans; darunter feine Linie (widget_line im Aufbau). Ursache:
+     Oben war Platz frei; der Stand zeigt zugleich, wie aktuell die Daten sind. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/widget_gap_6"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <ImageView
+        android:layout_width="@dimen/widget_logo"
+        android:layout_height="@dimen/widget_logo"
+        android:layout_marginEnd="@dimen/widget_gap_6"
+        android:importantForAccessibility="no"
+        android:src="@mipmap/ic_launcher" />
+
+    <TextView
+        style="@style/WidgetText.Bold"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:maxLines="1"
+        android:text="@string/widget_app_name"
+        android:textColor="@color/widget_ink"
+        android:textSize="@dimen/widget_text_13" />
+
+    <TextView
+        android:id="@+id/head_day"
+        style="@style/WidgetText.Bold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:maxLines="1"
+        android:textColor="@color/widget_ink"
+        android:textSize="@dimen/widget_text_11" />
+
+    <TextView
+        android:id="@+id/head_stand"
+        style="@style/WidgetText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:maxLines="1"
+        android:textColor="@color/widget_muted"
+        android:textSize="@dimen/widget_text_11" />
+</LinearLayout>

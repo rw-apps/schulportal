@@ -185,7 +185,7 @@ internal object SchoolWidgetRenderer {
 
         when (layout) {
             Layout.ONE_WIDE -> {
-                v.addView(R.id.body, tagView(ctx, tag))
+                v.addView(R.id.body, tagView(ctx, tag, mode))
                 v.addView(R.id.body, oneWide(ctx, plan.rows[0], l))
             }
             // Mittel (4 × 2) mit zwei Kindern: je Kind eine hohe Zeile wie
@@ -195,7 +195,7 @@ internal object SchoolWidgetRenderer {
             // 4 × 2 die Hälfte leer. Grenze: ab drei Kindern weiter die
             // schmalen Zeilen (_four42), sonst reicht die Höhe nicht.
             Layout.ROWS -> if (mode == Mode.MEDIUM && plan.rows.size <= 2 && !plan.moreCalm && plan.more == 0) {
-                v.addView(R.id.body, tagView(ctx, tag))
+                v.addView(R.id.body, tagView(ctx, tag, mode))
                 val col = RemoteViews(ctx.packageName, R.layout.widget_col)
                 // Ein Kind mit fünf Symbolen (Schülerkonto): beide Zeilen
                 // etwas kleiner, sonst werden Name und Uhrzeit gekürzt.
@@ -206,7 +206,7 @@ internal object SchoolWidgetRenderer {
                 }
                 v.addView(R.id.body, col)
             } else {
-                v.addView(R.id.body, tagView(ctx, tag))
+                v.addView(R.id.body, tagView(ctx, tag, mode))
                 val col = RemoteViews(ctx.packageName, R.layout.widget_col)
                 col.addView(R.id.col, space(ctx))
                 plan.rows.forEachIndexed { i, kv ->
@@ -222,12 +222,14 @@ internal object SchoolWidgetRenderer {
                 }
                 v.addView(R.id.body, col)
             }
-            // Groß (4 × 4, Abnahme 30.10.26): je Kind Name/Zeitraum und drei
-            // umrandete Tage mit allen vier Zeichen. Ohne Tag-Marke – die
-            // Tage tragen ihr Kürzel selbst. Bis zwei Kinder größer.
+            // Groß (4 × 4, Abnahme 30.10.26): Kopfzeile (Symbol, Name der
+            // App, Tag, Stand), je Kind Name/Zeitraum und drei umrandete Tage
+            // mit allen vier Zeichen. Bis zwei Kinder größer.
             Layout.DAYS -> {
                 val big = plan.rows.size <= 2
                 val col = RemoteViews(ctx.packageName, R.layout.widget_col)
+                col.addView(R.id.col, daysHead(ctx, tag, plan.rows, l, now))
+                col.addView(R.id.col, RemoteViews(ctx.packageName, R.layout.widget_line))
                 plan.rows.forEachIndexed { i, kv ->
                     if (i > 0) col.addView(R.id.col, RemoteViews(ctx.packageName, R.layout.widget_line))
                     val tail = if (i == plan.rows.lastIndex && !plan.moreCalm) plan.more else 0
@@ -296,8 +298,25 @@ internal object SchoolWidgetRenderer {
 
     private fun space(ctx: Context) = RemoteViews(ctx.packageName, R.layout.widget_vspace)
 
-    private fun tagView(ctx: Context, tag: String): RemoteViews =
-        RemoteViews(ctx.packageName, R.layout.widget_tag).apply { setTextViewText(R.id.tag_text, tag) }
+    /**
+     * Tag-Marke links; im mittleren Widget mit kleinem App-Symbol darüber
+     * (widget_tag_logo, Wunsch 30.10.26). Leiste ohne Symbol (kein Platz).
+     */
+    private fun tagView(ctx: Context, tag: String, mode: Mode): RemoteViews =
+        RemoteViews(ctx.packageName, if (mode == Mode.STRIP) R.layout.widget_tag else R.layout.widget_tag_logo)
+            .apply { setTextViewText(R.id.tag_text, tag) }
+
+    /** Kopfzeile 4 × 4: Symbol, „Schulportal“, Tag und ältester Stand der gezeigten Kinder. */
+    private fun daysHead(ctx: Context, tag: String, rows: List<KidView>, l: Labels, now: LocalDateTime): RemoteViews {
+        val r = RemoteViews(ctx.packageName, R.layout.widget_days_head)
+        r.setTextViewText(R.id.head_day, tag)
+        val stand = rows.mapNotNull { it.kid.stand }.minOrNull()
+        r.setTextViewText(
+            R.id.head_stand,
+            stand?.let { "  ·  " + l.one(l.stale, WidgetModel.standText(it, l, now.toLocalDate())) }.orEmpty(),
+        )
+        return r
+    }
 
     private fun moreLine(ctx: Context, l: Labels, n: Int): RemoteViews =
         RemoteViews(ctx.packageName, R.layout.widget_more).apply { setTextViewText(R.id.more_line, l.num(l.more, n)) }

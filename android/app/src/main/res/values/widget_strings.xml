@@ -15,4 +15,6 @@
     <string name="widget_medium_description">School hours, exams, homework and lunch for up to four children</string>
     <string name="widget_large_description">School hours, exams, homework and lunch for up to four children, with more room</string>
     <string name="widget_no_data">Open the app once to load the plan.</string>
+    <!-- Kopfzeile im großen Widget (4 × 4, Wunsch 30.10.26); Name der App, in allen Sprachen gleich. -->
+    <string name="widget_app_name" translatable="false">Schulportal</string>
 </resources>

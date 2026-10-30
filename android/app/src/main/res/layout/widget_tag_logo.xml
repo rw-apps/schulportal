@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tag-Marke senkrecht links wie widget_tag.xml, darüber klein das
+     App-Symbol (nur mittleres Widget 4 × 2, Wunsch 30.10.26: „hübsches Symbol
+     oder Schulportal in die Widgets“). Spalte so breit wie das Symbol; die
+     gedrehte Marke liegt mittig im Rest. Grenze: Leiste und 2 × 2 ohne
+     Symbol – dort ist kein Platz. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="@dimen/widget_logo"
+    android:layout_height="match_parent"
+    android:layout_marginEnd="@dimen/widget_gap_8"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:orientation="vertical">
+
+    <ImageView
+        android:layout_width="@dimen/widget_logo"
+        android:layout_height="@dimen/widget_logo"
+        android:importantForAccessibility="no"
+        android:src="@mipmap/ic_launcher" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipChildren="false"
+        android:clipToPadding="false">
+
+        <TextView
+            android:id="@+id/tag_text"
+            style="@style/WidgetText.Bold"
+            android:layout_width="@dimen/widget_tag_len"
+            android:layout_height="@dimen/widget_tag_col"
+            android:layout_gravity="center"
+            android:autoSizeMaxTextSize="@dimen/widget_text_11"
+            android:autoSizeMinTextSize="@dimen/widget_text_8"
+            android:autoSizeTextType="uniform"
+            android:gravity="center"
+            android:rotation="-90"
+            android:textColor="@color/widget_muted"
+            android:textSize="@dimen/widget_text_11" />
+    </FrameLayout>
+</LinearLayout>

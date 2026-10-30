@@ -59,6 +59,8 @@
          reicht für „DONNERSTAG“ (RotatedBox, s. widget_tag.xml). -->
     <dimen name="widget_tag_col">14dp</dimen>
     <dimen name="widget_tag_len">80dp</dimen>
+    <!-- App-Symbol im Widget (4 × 4 Kopfzeile, 4 × 2 über der Tag-Marke). -->
+    <dimen name="widget_logo">18dp</dimen>
     <!-- Ausfall-Symbol am Zeitraum: Schrift + 4 (_when). -->
     <dimen name="widget_busy_16">16dp</dimen>
     <dimen name="widget_busy_15">15dp</dimen>
