@@ -33,14 +33,32 @@ enum class Target(val key: String) {
 }
 
 /** Anordnung nach tatsächlicher Fläche ([WidgetModel.mode]). */
-enum class Mode { STRIP, MEDIUM, SMALL }
+enum class Mode { STRIP, MEDIUM, SMALL, LARGE }
 
 /**
  * Aufbau nach Anordnung und Zahl der Kinder ([WidgetModel.layout]):
  * ONE_WIDE = _one41, ROWS = _strip10/_four42, ONE_LIST = _oneList (Variante A),
  * TWO_SMALL = _small2, GRID = _four22 (test/_local/widget_v9_mockup_test.dart).
  */
-enum class Layout { ONE_WIDE, ROWS, ONE_LIST, TWO_SMALL, GRID }
+enum class Layout { ONE_WIDE, ROWS, ONE_LIST, TWO_SMALL, GRID, DAYS }
+
+/**
+ * Ein Tag der Vorschau im großen Widget (4 × 4, Abnahme 30.10.26): immer
+ * alle vier Zeichen an fester Stelle – Ausfall, Arbeit, Aufgaben (Zahl),
+ * Essen. [free] = Ferientext statt Zeichen; [first] = gezeigter Tag
+ * (hinterlegt). [bang] = Guthaben knapp (Marke „!“ am Essen, nur erster Tag).
+ */
+data class DayCell(
+    val date: LocalDate,
+    val label: String,
+    val first: Boolean,
+    val free: String?,
+    val cancel: Boolean,
+    val exam: Boolean,
+    val hw: Int,
+    val meal: Boolean,
+    val bang: Boolean,
+)
 
 /** Stunde mit Ende (Ausfall mitten am Tag, Vertretung, Raum). [end] null = Schule ohne Uhrzeiten. */
 class Lesson(val slot: String, val end: LocalTime?, val room: String = "")
@@ -198,8 +216,20 @@ object WidgetModel {
     const val STRIP_MAX_H = 100f
     const val SMALL_MAX_W = 250f
 
+    /**
+     * Ab dieser Höhe (dp, bei Breite ≥ [SMALL_MAX_W]) groß mit Tagesvorschau
+     * (4 × 4, Abnahme 30.10.26). Ursache: Das große Widget zeigte dieselben
+     * Zeilen wie 4 × 2 und ließ die Hälfte leer. Grenze: 4 × 3 liegt je nach
+     * Startbildschirm knapp darunter oder darüber.
+     */
+    const val LARGE_MIN_H = 260f
+
+    /** Tage der Vorschau: der gezeigte und die zwei folgenden Einträge der Datei. */
+    const val PREVIEW_DAYS = 3
+
     /** Höchstzahl der Kinder je Anordnung; mehr → [plan]. */
     fun capacity(layout: Layout): Int = when (layout) {
+        Layout.DAYS -> 4
         Layout.ROWS -> 4
         Layout.GRID -> 4
         Layout.TWO_SMALL -> 2
@@ -467,6 +497,47 @@ object WidgetModel {
         return SlotState(s, false, "", name, name, "", target)
     }
 
+    // ---- Tagesvorschau (4 × 4) ---------------------------------------------------
+
+    /** Weicht der Tag vom Plan ab (Beginn/Ende verschoben, Ausfall mitten, alles frei)? */
+    fun cancelled(d: Day): Boolean = d.allOff || d.mid.isNotEmpty() ||
+        (if (d.timed) (d.planStart != null && d.start != d.planStart) || (d.planEnd != null && d.end != d.planEnd)
+        else (d.planStartSlot.isNotEmpty() && d.startSlot != d.planStartSlot) ||
+            (d.planEndSlot.isNotEmpty() && d.endSlot != d.planEndSlot))
+
+    /**
+     * Drei Tage ab dem gezeigten ([shownDay]): je Tag die vier Zeichen
+     * (Abnahme 30.10.26). Aufgaben: am ersten Tag wie die Symbolreihe (fällig
+     * heute bis dahin, [homeworkCount]), an den folgenden die an genau diesem
+     * Tag fälligen. Freie Tage (Ferien) mit Text. Leer, wenn veraltet.
+     * Grenze: Ein Ausfall am ersten Tag, dessen Stunde heute schon vorbei
+     * ist, bleibt rot – die Zeile darüber nennt den aktuellen Stand.
+     */
+    fun daysFor(kid: Kid, now: LocalDateTime, l: Labels): List<DayCell> {
+        val today = now.toLocalDate()
+        val first = shownDay(kid, now) ?: return emptyList()
+        if (isStale(kid, first, now)) return emptyList()
+        val after = kid.days.filter { it.date.isAfter(first.date) }.take(PREVIEW_DAYS - 1)
+        return (listOf(first) + after).mapIndexed { i, d ->
+            val label = l.weekdays.getOrNull(d.date.dayOfWeek.value - 1).orEmpty()
+            if (d.free != null) {
+                DayCell(d.date, label, i == 0, l.off, false, false, 0, false, false)
+            } else {
+                DayCell(
+                    date = d.date,
+                    label = label,
+                    first = i == 0,
+                    free = null,
+                    cancel = cancelled(d),
+                    exam = d.date in kid.exams,
+                    hw = if (i == 0) homeworkCount(kid, today, d.date) else kid.hwDue.count { it == d.date },
+                    meal = d.date in kid.mealOpen || (i == 0 && kid.lowBalance),
+                    bang = i == 0 && kid.lowBalance,
+                )
+            }
+        }
+    }
+
     // ---- Zusammensetzen ----------------------------------------------------------
 
     /** Alles für ein Kind zum Zeitpunkt [now] (Punkte 1–3, 6). */
@@ -513,11 +584,13 @@ object WidgetModel {
     fun mode(width: Float?, height: Float?, fallback: Mode): Mode = when {
         height != null && height < STRIP_MAX_H -> Mode.STRIP
         width != null && width < SMALL_MAX_W -> Mode.SMALL
+        width != null && height != null && height >= LARGE_MIN_H -> Mode.LARGE
         width != null && height != null -> Mode.MEDIUM
         else -> fallback
     }
 
     fun layout(mode: Mode, kids: Int): Layout = when (mode) {
+        Mode.LARGE -> Layout.DAYS
         Mode.STRIP, Mode.MEDIUM -> if (kids <= 1) Layout.ONE_WIDE else Layout.ROWS
         Mode.SMALL -> when {
             kids <= 1 -> Layout.ONE_LIST

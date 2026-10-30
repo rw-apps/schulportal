@@ -26,6 +26,8 @@ Map<String, Color> _expected(KitPalette p) => {
   'widget_change_bg': p.change.bg,
   'widget_change_strong': p.change.strong,
   'widget_cancel_strong': p.cancel.strong,
+  // Tagesvorschau 4 × 4: Feld Ausfall.
+  'widget_cancel_bg': p.cancel.bg,
   for (final (i, k) in p.kids.indexed) 'widget_kid${i}_label': k.label,
 };
 

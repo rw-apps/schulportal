@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ein Kind in der Tagesvorschau 4 × 4: Name und Zeitraum (dieselben
+     Kennungen wie widget_one, head() in SchoolWidget.kt), darunter drei Tage
+     (widget_day_cell_big). Gewicht 1: alle Kinder teilen sich die Höhe. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:gravity="center_vertical"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/name"
+        style="@style/WidgetText.Bold"
+        android:layout_marginEnd="@dimen/widget_gap_8"
+        android:maxLines="1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/widget_ink"
+        android:textSize="@dimen/widget_text_20" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/busy"
+            android:layout_width="@dimen/widget_busy_16"
+            android:layout_height="@dimen/widget_busy_16"
+            android:layout_marginEnd="@dimen/widget_gap_3"
+            android:src="@drawable/ic_widget_busy"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/time"
+            style="@style/WidgetText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/widget_muted"
+            android:textSize="@dimen/widget_text_15" />
+
+        <TextView
+            android:id="@+id/time_red"
+            style="@style/WidgetText.Bold"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/widget_cancel_strong"
+            android:textSize="@dimen/widget_text_15"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/mid_busy"
+            android:layout_width="@dimen/widget_busy_16"
+            android:layout_height="@dimen/widget_busy_16"
+            android:layout_marginStart="@dimen/widget_gap_6"
+            android:layout_marginEnd="@dimen/widget_gap_2"
+            android:src="@drawable/ic_widget_busy"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/mid"
+            style="@style/WidgetText.Bold"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:importantForAccessibility="no"
+            android:textColor="@color/widget_cancel_strong"
+            android:textSize="@dimen/widget_text_15"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/more"
+            style="@style/WidgetText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/widget_gap_6"
+            android:textColor="@color/widget_muted"
+            android:textSize="@dimen/widget_text_15"
+            android:visibility="gone" />
+    </LinearLayout>
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:id="@+id/days"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/widget_gap_8"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:orientation="horizontal" />
+</LinearLayout>

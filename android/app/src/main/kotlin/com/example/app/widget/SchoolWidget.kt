@@ -90,9 +90,12 @@ class SchoolWidgetMedium : SchoolWidgetBase() {
     override val alarmCode = 4103
 }
 
-/** Groß 4 × 3: zeichnet wie mittel (Vertrag Punkt 10), nur mit mehr Luft zwischen den Zeilen. */
+/**
+ * Groß 4 × 3 / 4 × 4: ab [WidgetModel.LARGE_MIN_H] Höhe mit Tagesvorschau
+ * (Abnahme 30.10.26); meldet der Startbildschirm keine Größe, ebenso.
+ */
 class SchoolWidgetLarge : SchoolWidgetBase() {
-    override val fallback = Mode.MEDIUM
+    override val fallback = Mode.LARGE
     override val alarmCode = 4104
 }
 
@@ -173,7 +176,7 @@ internal object SchoolWidgetRenderer {
         val plan = WidgetModel.plan(views, cap)
         val tag = WidgetModel.dayTag(plan.rows, now.toLocalDate(), l)
         val padRes = when (layout) {
-            Layout.ONE_WIDE, Layout.ROWS -> R.dimen.widget_pad_wide
+            Layout.ONE_WIDE, Layout.ROWS, Layout.DAYS -> R.dimen.widget_pad_wide
             Layout.GRID -> R.dimen.widget_pad_grid
             else -> R.dimen.widget_pad_small
         }
@@ -213,6 +216,24 @@ internal object SchoolWidgetRenderer {
                     row.addView(R.id.more_row, moreLine(ctx, l, plan.more))
                     col.addView(R.id.col, row)
                     col.addView(R.id.col, space(ctx))
+                }
+                v.addView(R.id.body, col)
+            }
+            // Groß (4 × 4, Abnahme 30.10.26): je Kind Name/Zeitraum und drei
+            // umrandete Tage mit allen vier Zeichen. Ohne Tag-Marke – die
+            // Tage tragen ihr Kürzel selbst. Bis zwei Kinder größer.
+            Layout.DAYS -> {
+                val big = plan.rows.size <= 2
+                val col = RemoteViews(ctx.packageName, R.layout.widget_col)
+                plan.rows.forEachIndexed { i, kv ->
+                    if (i > 0) col.addView(R.id.col, RemoteViews(ctx.packageName, R.layout.widget_line))
+                    val tail = if (i == plan.rows.lastIndex && !plan.moreCalm) plan.more else 0
+                    col.addView(R.id.col, daysBlock(ctx, kv, l, now, big, tail))
+                }
+                if (plan.moreCalm) {
+                    val row = RemoteViews(ctx.packageName, R.layout.widget_more_row)
+                    row.addView(R.id.more_row, moreLine(ctx, l, plan.more))
+                    col.addView(R.id.col, row)
                 }
                 v.addView(R.id.body, col)
             }
@@ -302,6 +323,53 @@ internal object SchoolWidgetRenderer {
         // Größere Fassung (Rückmeldung 30.10.26: Platz besser nutzen).
         val res = if (kv.slots.size > 3) R.layout.widget_slot_label_big_narrow else R.layout.widget_slot_label_big
         for (s in kv.slots) r.addView(R.id.slots, slot(ctx, res, kv, s))
+        return r
+    }
+
+    /** Ein Kind der Tagesvorschau (4 × 4): Kopf wie überall, darunter drei Tage. */
+    private fun daysBlock(ctx: Context, kv: KidView, l: Labels, now: LocalDateTime, big: Boolean, tail: Int): RemoteViews {
+        val r = RemoteViews(ctx.packageName, if (big) R.layout.widget_days_kid_big else R.layout.widget_days_kid)
+        head(ctx, r, kv, l, tail)
+        for (c in WidgetModel.daysFor(kv.kid, now, l)) r.addView(R.id.days, dayCell(ctx, kv, c, l, big))
+        return r
+    }
+
+    /**
+     * Ein Tag: Kürzel, vier Zeichen an fester Stelle (an = Feld + Farbe,
+     * aus = blass), Rahmen; Antippen öffnet Heute des Kindes. Vorlesetext
+     * nennt nur, was zutrifft („Mo: Ausfall, Arbeit, Hausaufgaben 2“).
+     */
+    private fun dayCell(ctx: Context, kv: KidView, c: DayCell, l: Labels, big: Boolean): RemoteViews {
+        val r = RemoteViews(ctx.packageName, if (big) R.layout.widget_day_cell_big else R.layout.widget_day_cell)
+        r.setTextViewText(R.id.day_label, c.label)
+        textColor(ctx, r, R.id.day_label, if (c.first) R.color.widget_ink else R.color.widget_muted)
+        r.setInt(R.id.day, "setBackgroundResource", if (c.first) R.drawable.widget_day_first else R.drawable.widget_day)
+        r.setOnClickPendingIntent(R.id.day, launch(ctx, kv.kid.account, Target.TODAY))
+        if (c.free != null) {
+            r.setTextViewText(R.id.day_free, c.free)
+            r.setViewVisibility(R.id.day_free, View.VISIBLE)
+            r.setViewVisibility(R.id.day_slots, View.GONE)
+            r.setContentDescription(R.id.day, "${c.label}: ${c.free}")
+            return r
+        }
+        fun mark(on: Boolean, box: Int, img: Int, onIcon: Int, offIcon: Int, bg: Int) {
+            r.setImageViewResource(img, if (on) onIcon else offIcon)
+            r.setInt(box, "setBackgroundResource", if (on) bg else 0)
+        }
+        mark(c.cancel, R.id.d_cancel_box, R.id.d_cancel, R.drawable.ic_widget_busy, R.drawable.ic_widget_busy_off, R.drawable.widget_slot_cancel)
+        mark(c.exam, R.id.d_exam_box, R.id.d_exam, R.drawable.ic_widget_exam_on, R.drawable.ic_widget_exam_off, R.drawable.widget_slot_exam)
+        mark(c.hw > 0, R.id.d_hw_box, R.id.d_hw, R.drawable.ic_widget_homework_on, R.drawable.ic_widget_homework_off, R.drawable.widget_slot_homework)
+        mark(c.meal, R.id.d_meal_box, R.id.d_meal, R.drawable.ic_widget_meal_on, R.drawable.ic_widget_meal_off, R.drawable.widget_slot_change)
+        r.setTextViewText(R.id.d_hw_mark, if (c.hw > 0) c.hw.toString() else "")
+        r.setInt(R.id.d_hw_mark, "setBackgroundResource", R.drawable.widget_mark_homework)
+        r.setViewVisibility(R.id.d_hw_mark, if (c.hw > 0) View.VISIBLE else View.GONE)
+        val cd = listOfNotNull(
+            l.cdCancel.takeIf { c.cancel },
+            l.cdExam.takeIf { c.exam },
+            "${l.cdHomework} ${c.hw}".takeIf { c.hw > 0 },
+            l.cdMeal.takeIf { c.meal },
+        )
+        r.setContentDescription(R.id.day, if (cd.isEmpty()) c.label else "${c.label}: ${cd.joinToString(", ")}")
         return r
     }
 

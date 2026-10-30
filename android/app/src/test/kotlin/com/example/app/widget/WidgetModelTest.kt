@@ -282,6 +282,9 @@ class WidgetModelTest {
         assertEquals(Mode.STRIP, WidgetModel.mode(392f, 92f, Mode.MEDIUM))
         assertEquals(Mode.STRIP, WidgetModel.mode(200f, 80f, Mode.SMALL))
         assertEquals(Mode.MEDIUM, WidgetModel.mode(392f, 200f, Mode.STRIP))
+        // 4 × 4 (Abnahme 30.10.26): ab 260 dp Höhe Tagesvorschau.
+        assertEquals(Mode.LARGE, WidgetModel.mode(392f, 392f, Mode.MEDIUM))
+        assertEquals(Layout.DAYS, WidgetModel.layout(Mode.LARGE, 4))
         assertEquals(Mode.MEDIUM, WidgetModel.mode(250f, 100f, Mode.SMALL))
         assertEquals(Mode.SMALL, WidgetModel.mode(184f, 204f, Mode.MEDIUM))
         assertEquals(Mode.SMALL, WidgetModel.mode(249f, 300f, Mode.MEDIUM))
@@ -418,5 +421,47 @@ class WidgetModelTest {
     fun klickZiele() {
         assertEquals("schulportal-widget://open?account=12&target=homework", WidgetModel.uri(12, Target.HOMEWORK))
         assertEquals("schulportal-widget://open?target=today", WidgetModel.uri(null, Target.TODAY))
+    }
+
+    // ---- Tagesvorschau 4 × 4 (Abnahme 30.10.26) ------------------------------------
+
+    @Test
+    fun vorschauDreiTageMitAllenZeichen() {
+        val wed = mon.plusDays(2)
+        val (k, l) = one(
+            kid(
+                1, "Jonas",
+                listOf(
+                    day(mon, start = "09:50"),
+                    day(tue, mid = """{"slot": "4.", "end": "11:30"}"""),
+                    free(wed, "Herbstferien bis Mi 4.11."),
+                    day(mon.plusDays(3)),
+                ).joinToString(","),
+                hwDue = "\"$mon\", \"$tue\", \"$tue\", \"${mon.minusDays(3)}\"",
+                exams = "\"$tue\"",
+                mealOpen = "\"$mon\"",
+                lowBalance = true,
+            ),
+        )
+        val c = WidgetModel.daysFor(k, at(7), l)
+        assertEquals(listOf("Mo", "Di", "Mi"), c.map { it.label })
+        // Montag: Beginn verschoben → Ausfall; Aufgaben heute bis Montag (die
+        // überfällige vom Freitag zählt nicht); Essen + knappes Guthaben.
+        assertTrue(c[0].first && c[0].cancel && !c[0].exam)
+        assertEquals(1, c[0].hw)
+        assertTrue(c[0].meal && c[0].bang)
+        // Dienstag: Ausfall mitten, Arbeit, genau zwei an diesem Tag fällig.
+        assertTrue(c[1].cancel && c[1].exam && !c[1].meal && !c[1].bang)
+        assertEquals(2, c[1].hw)
+        // Mittwoch frei.
+        assertEquals("frei", c[2].free)
+        // Nach Schulschluss beginnt die Vorschau beim nächsten Tag.
+        assertEquals("Di", WidgetModel.daysFor(k, at(15), l).first().label)
+    }
+
+    @Test
+    fun vorschauLeerWennVeraltet() {
+        val (k, l) = one(kid(1, "Lena", day(mon), stand = "2026-10-29T06:30:00.000"))
+        assertTrue(WidgetModel.daysFor(k, at(7), l).isEmpty())
     }
 }

@@ -30,6 +30,8 @@
     <color name="widget_change_bg">#FF2A2208</color>
     <!-- change.strong: Symbol und Marke Essen/Vertretung/Raum -->
     <color name="widget_change_strong">#FFF5C451</color>
+    <!-- cancel.bg: Feld Ausfall in der Tagesvorschau (4 × 4) -->
+    <color name="widget_cancel_bg">#FF3A1414</color>
     <!-- cancel.strong: Ausfall, geänderter Zeitraum -->
     <color name="widget_cancel_strong">#FFFCA5A5</color>
     <!-- KidTone.label Kind 0: Vorname -->

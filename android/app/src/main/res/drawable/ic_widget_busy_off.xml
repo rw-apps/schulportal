@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ausfall blass (event_busy, faint 45 %) für die Tagesvorschau 4 × 4.
+     Glyphe Icons.event_busy aus MaterialIcons-Regular.otf (Google, Apache-2.0),
+     erzeugt von gen_widget_res10.py. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="@color/widget_faint_off" android:pathData="M9.33 17.02 11.77 14.58 14.2 17.02 15.23 15.94 12.8 13.5 15.23 11.06 14.2 9.98 11.77 12.42 9.33 9.98 8.25 11.06 10.69 13.5 8.25 15.94 9.33 17.02ZM18.98 3H18V0.98H15.98V3H8.02V0.98H6V3H5.02C3.89 3 3 3.89 3 5.02V18.98C3 20.11 3.89 21 5.02 21H18.98C20.11 21 21 20.11 21 18.98V5.02C21 3.89 20.11 3 18.98 3ZM18.98 18.98H5.02V8.02H18.98V18.98Z" />
+</vector>

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ein Tag der Vorschau im 4 × 4 (Abnahme 30.10.26): Kürzel oben, darunter
+     immer alle vier Symbole an fester Stelle – Ausfall · Arbeit · Aufgaben ·
+     Essen –, leuchtend wenn zutreffend, sonst blass; Ferien „frei“. Rahmen
+     widget_day(_first). Ursache: Fehlende Symbole wirkten verwirrend
+     (Rückmeldung 30.10.26: „wir sollten schon alle Icons anzeigen“).
+     Groß: bis zwei Kinder. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/day"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="1"
+    android:layout_marginEnd="@dimen/widget_gap_5"
+    android:background="@drawable/widget_day"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/widget_gap_3"
+    android:paddingTop="@dimen/widget_gap_3"
+    android:paddingEnd="@dimen/widget_gap_3"
+    android:paddingBottom="@dimen/widget_gap_5">
+
+    <TextView
+        android:id="@+id/day_label"
+        style="@style/WidgetText.Bold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:importantForAccessibility="no"
+        android:textColor="@color/widget_muted"
+        android:textSize="@dimen/widget_text_12" />
+
+    <TextView
+        android:id="@+id/day_free"
+        style="@style/WidgetText"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/widget_day_slot_big"
+        android:layout_marginTop="@dimen/widget_gap_3"
+        android:gravity="center"
+        android:importantForAccessibility="no"
+        android:textColor="@color/widget_muted"
+        android:textSize="@dimen/widget_text_12"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/day_slots"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/widget_gap_3"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:orientation="horizontal">
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="@dimen/widget_day_slot_big"
+            android:layout_weight="1"
+            android:clipChildren="false"
+            android:clipToPadding="false">
+
+            <FrameLayout
+                android:id="@+id/d_cancel_box"
+                android:layout_width="@dimen/widget_day_slot_big"
+                android:layout_height="@dimen/widget_day_slot_big"
+                android:layout_gravity="center">
+
+                <ImageView
+                    android:id="@+id/d_cancel"
+                    android:layout_width="@dimen/widget_day_icon_big"
+                    android:layout_height="@dimen/widget_day_icon_big"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no" />
+            </FrameLayout>
+        </FrameLayout>
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="@dimen/widget_day_slot_big"
+            android:layout_weight="1"
+            android:clipChildren="false"
+            android:clipToPadding="false">
+
+            <FrameLayout
+                android:id="@+id/d_exam_box"
+                android:layout_width="@dimen/widget_day_slot_big"
+                android:layout_height="@dimen/widget_day_slot_big"
+                android:layout_gravity="center">
+
+                <ImageView
+                    android:id="@+id/d_exam"
+                    android:layout_width="@dimen/widget_day_icon_big"
+                    android:layout_height="@dimen/widget_day_icon_big"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no" />
+            </FrameLayout>
+        </FrameLayout>
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="@dimen/widget_day_slot_big"
+            android:layout_weight="1"
+            android:clipChildren="false"
+            android:clipToPadding="false">
+
+            <FrameLayout
+                android:id="@+id/d_hw_box"
+                android:layout_width="@dimen/widget_day_slot_big"
+                android:layout_height="@dimen/widget_day_slot_big"
+                android:layout_gravity="center">
+
+                <ImageView
+                    android:id="@+id/d_hw"
+                    android:layout_width="@dimen/widget_day_icon_big"
+                    android:layout_height="@dimen/widget_day_icon_big"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no" />
+            </FrameLayout>
+        <TextView
+            android:id="@+id/d_hw_mark"
+            style="@style/WidgetMark"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/widget_mark"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="@dimen/widget_mark_out"
+            android:layout_marginEnd="@dimen/widget_mark_out"
+            android:visibility="gone" />
+        </FrameLayout>
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="@dimen/widget_day_slot_big"
+            android:layout_weight="1"
+            android:clipChildren="false"
+            android:clipToPadding="false">
+
+            <FrameLayout
+                android:id="@+id/d_meal_box"
+                android:layout_width="@dimen/widget_day_slot_big"
+                android:layout_height="@dimen/widget_day_slot_big"
+                android:layout_gravity="center">
+
+                <ImageView
+                    android:id="@+id/d_meal"
+                    android:layout_width="@dimen/widget_day_icon_big"
+                    android:layout_height="@dimen/widget_day_icon_big"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no" />
+            </FrameLayout>
+        </FrameLayout>
+    </LinearLayout>
+</LinearLayout>

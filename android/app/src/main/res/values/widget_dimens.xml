@@ -34,6 +34,11 @@
     <dimen name="widget_icon_27">17dp</dimen>
     <dimen name="widget_slot_30">30dp</dimen>
     <!-- Groß: mittleres Widget mit zwei Kindern (widget_wide_row, Rückmeldung 30.10.26 „Platz noch nicht optimal genutzt“). -->
+    <!-- Tagesvorschau 4 × 4: Symbolfeld je Tag (vier Kinder / bis zwei). -->
+    <dimen name="widget_day_slot">22dp</dimen>
+    <dimen name="widget_day_icon">15dp</dimen>
+    <dimen name="widget_day_slot_big">28dp</dimen>
+    <dimen name="widget_day_icon_big">19dp</dimen>
     <dimen name="widget_slot_38">38dp</dimen>
     <dimen name="widget_icon_38">24dp</dimen>
     <dimen name="widget_slot_34">34dp</dimen>
