@@ -8,6 +8,9 @@ import 'package:lanis/fork/ui/today/today_page.dart';
 
 final de = forkL10nFor('de');
 
+/// Hinweiszeile „Fach  Art“ (_HintLine, ein Text.rich).
+Finder _hint(String s) => find.text(s, findRichText: true);
+
 /// Pixel 9a: 1080 × 2424 px bei 2.625 → ca. 411 × 923 dp.
 Future<void> _pixel(WidgetTester t) async {
   t.view.physicalSize = const Size(1080, 2424);
@@ -108,17 +111,27 @@ void main() {
     await t.pumpWidget(page());
     await t.pumpAndSettle();
     expect(t.takeException(), isNull);
-    // Kein eigener Kasten für morgen mehr: Hinweis an Lenas Karte.
-    expect(find.text('Sport fällt aus'), findsOneWidget);
-    expect(find.textContaining('Morgen · '), findsOneWidget);
-    expect(find.text('Deutsch: Vertretung'), findsOneWidget);
-    expect(find.textContaining('Tim\u00A0Sommer'), findsOneWidget);
+    // Hinweise je Tag gruppiert (Abnahme 30.10.26): heute die Vertretung,
+    // morgen Ausfall und Arbeit – je eine Zeile, Anzahl rechts im Kopf.
+    expect(find.text('HEUTE'), findsOneWidget);
+    expect(find.text('MITTWOCH, 21. OKT.'), findsOneWidget);
+    expect(_hint('Deutsch  Vertretung'), findsOneWidget);
+    expect(_hint('Sport  fällt aus'), findsOneWidget);
+    expect(_hint('Englisch  Klassenarbeit'), findsOneWidget);
+    expect(find.textContaining('Morgen · '), findsNothing);
+    // Die Lehrkraft steht nicht mehr in der Zeile, bleibt aber für den
+    // Bildschirmleser erreichbar.
+    final sem = t.ensureSemantics();
+    expect(find.bySemanticsLabel(RegExp('Tim Sommer')), findsOneWidget);
+    sem.dispose();
     expect(find.text('Hinweise'), findsWidgets);
     expect(find.text('Stundenplan'), findsNWidgets(2));
-    // Die umrandete Fläche und „Ganzer Tag“ öffnen den Tag.
+    // Die umrandete Fläche, „Ganzer Tag“ und eine Hinweiszeile öffnen den
+    // Tag.
     await t.tap(find.textContaining('Danach').first);
     await t.tap(find.text('Ganzer Tag').first);
-    expect(opened, ['Lena', 'Lena']);
+    await t.tap(_hint('Deutsch  Vertretung'));
+    expect(opened, ['Lena', 'Lena', 'Lena']);
     // Tablet: Termine neben den Kindern, ohne Scrollen sichtbar.
     t.view.physicalSize = const Size(1600, 2560);
     t.view.devicePixelRatio = 2.0;
@@ -138,7 +151,7 @@ void main() {
         await t.pumpAndSettle();
         expect(t.takeException(), isNull);
         expect(find.text('Lena'), findsOneWidget);
-        expect(find.text('Deutsch: Vertretung'), findsOneWidget);
+        expect(_hint('Deutsch  Vertretung'), findsOneWidget);
         expect(find.textContaining('NOCH 30 MIN.'), findsOneWidget);
 
         await t.drag(find.byType(Scrollable).first, const Offset(0, -6000));

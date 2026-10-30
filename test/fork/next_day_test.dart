@@ -11,6 +11,9 @@ import 'package:lanis/fork/ui/today/today_page.dart';
 /// Hinweis (Abnahme 26.10.26) – synthetisch.
 final de = forkL10nFor('de');
 
+/// Hinweiszeile „Fach  Art“ (_HintLine, ein Text.rich).
+Finder _hint(String s) => find.text(s, findRichText: true);
+
 const today = [
   DayLesson(slot: '1.', subject: 'Deutsch', start: '08:00', end: '08:45'),
   DayLesson(slot: '2.', subject: 'Englisch', start: '08:50', end: '13:20'),
@@ -126,16 +129,27 @@ void main() {
     expect(find.text('MORGEN'), findsOneWidget);
     expect(find.text('Dienstag, 27. Oktober'), findsOneWidget);
     expect(
-      find.textContaining(RegExp(r'^Mathematik(?!:)'), findRichText: true),
+      // Nicht die Hinweiszeile „Mathematik  Klassenarbeit“.
+      find.textContaining(
+        RegExp(r'^Mathematik(?!:|  Klassenarbeit)'),
+        findRichText: true,
+      ),
       findsOneWidget,
       reason: 'erste Stunde',
     );
-    // Hinweise ohne eigenes „Morgen ·“, die Arbeit nicht unter Demnächst.
+    // Hinweise als EINE Gruppe mit dem Tag aus dem Kopf (kein zweites
+    // „HEUTE“), ohne „Morgen ·“; die Arbeit nicht unter Demnächst.
     expect(find.textContaining('Morgen · '), findsNothing);
-    expect(find.text('Mathematik: Klassenarbeit'), findsOneWidget);
-    expect(find.text('Deutsch: Vertretung'), findsOneWidget);
+    expect(find.text('DIENSTAG, 27. OKT.'), findsOneWidget);
+    expect(_hint('Mathematik  Klassenarbeit'), findsOneWidget);
+    expect(_hint('Deutsch  Vertretung'), findsOneWidget);
+    // Marke: nur die Stunde als Zahl.
+    expect(find.text('1.–2.'), findsOneWidget);
     await t.tap(find.text('Ganzer Tag'));
     expect(opened, [tue]);
+    // Antippen einer Zeile öffnet ihren Tag wie „Ganzer Tag“.
+    await t.tap(_hint('Deutsch  Vertretung'));
+    expect(opened, [tue, tue]);
   });
 
   testWidgets('während des Unterrichts: unverändert heute', (t) async {
@@ -144,7 +158,9 @@ void main() {
     await t.pumpWidget(app(family(now), opened: opened.add));
     await t.pumpAndSettle();
     expect(find.text('MORGEN'), findsNothing);
-    expect(find.textContaining('Morgen · '), findsWidgets);
+    // Hinweise für morgen unter dem Tageskopf statt „Morgen ·“.
+    expect(find.text('DIENSTAG, 27. OKT.'), findsOneWidget);
+    expect(find.text('HEUTE'), findsNothing);
     await t.tap(find.text('Ganzer Tag'));
     expect(opened, [now]);
   });

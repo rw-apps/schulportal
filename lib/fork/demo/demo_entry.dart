@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
 import '../ui/kit.dart';
-import '../ui/today/hint_card.dart';
 import 'demo_mode.dart';
 
 /// Blatt „Demo ansehen“: Eltern oder Schüler wählen, dann startet die App
@@ -111,18 +110,59 @@ class _Choice extends StatelessWidget {
   }
 }
 
-/// Hinweis oben auf Heute, solange die Demo läuft, mit „Beenden“. Grau wie
-/// die übrigen Hinweise zur App (HintCard).
+/// Schmales Band oben auf Heute, solange die Demo läuft: Symbol, „Demo ·
+/// Senden gesperrt“, Knopf „Beenden“.
+///
+/// Ursache (Abnahme 30.10.26, Entwurf `_demoBand`): Die graue Hinweiskarte
+/// (HintCard mit Titel und Satz) kostete so viel Höhe wie zwei
+/// Hinweiszeilen und drückte die Kinderkarte nach unten. Grenze: Der
+/// ausführliche Satz (demoRunningText) steht nur noch in den Einstellungen
+/// neben „Demo beenden“ (settings_page.dart).
 Widget? demoNotice(BuildContext context) {
   if (!demoActive) return null;
-  final t = context.t;
-  return HintCard(
-    icon: Icons.play_circle_outline,
-    title: t.demoRunningTitle,
-    text: t.demoRunningText,
-    action: t.demoEnd,
-    onAction: () => restartApp?.call(),
-  );
+  return const _DemoBand();
+}
+
+class _DemoBand extends StatelessWidget {
+  const _DemoBand();
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    final t = context.t;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(Sp.m, Sp.s, Sp.s, Sp.s),
+      decoration: BoxDecoration(
+        color: k.p.card,
+        borderRadius: BorderRadius.circular(Rad.pill),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.play_circle_outline, size: Sz.icon, color: k.p.muted),
+          const SizedBox(width: Sp.s),
+          Expanded(
+            child: Text(
+              t.demoBand,
+              style: k.hintSubject,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: Sp.s),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: k.p.strong,
+              foregroundColor: k.p.onStrong,
+              minimumSize: const Size(0, Sz.bandButton),
+              padding: const EdgeInsets.symmetric(horizontal: Sp.m),
+            ),
+            onPressed: () => restartApp?.call(),
+            child: Text(t.demoEndShort),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// In der Demo gesperrte Aktion (Senden, Hochladen, Löschen): Hinweis

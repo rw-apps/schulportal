@@ -872,8 +872,8 @@ String? mealHintFor(
   required ForkL10n t,
   String className = '',
 }) {
-  final afternoon = now.hour >= 14;
-  final target = DateTime(now.year, now.month, now.day + (afternoon ? 1 : 0));
+  final target = mealHintDay(now);
+  final afternoon = target.day != now.day;
   final notes = <String>{};
   for (final e in events) {
     final title = e.title.trim();

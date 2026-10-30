@@ -1511,7 +1511,6 @@
   "demoParentText": "Zwei Kinder, eines mit eigenem Schülerkonto",
   "demoStudent": "Als Schüler",
   "demoStudentText": "Eigener Plan, Kurse und Hausaufgaben",
-  "demoRunningTitle": "Demo",
   "demoRunningText": "Erfundene Schule – Senden und Ändern sind gesperrt.",
   "demoEnd": "Demo beenden",
   "demoSettingDetail": "Erfundene Schule, ohne Anmeldung",
@@ -1587,13 +1586,13 @@
   "mensaRememberText": "Dann meldet sich die App beim Caterer selbst an, wenn die Anmeldung abgelaufen ist – auch für die Anzeige auf Heute. Benutzername und Passwort bleiben nur auf diesem Handy im geschützten Speicher.",
   "mensaRememberYes": "Merken",
   "mensaRememberNo": "Nicht merken",
-  "mealTransfer": "unter 15 € – bitte Geld überweisen",
+  "mealTransfer": "unter 15 € – bitte aufladen",
   "mealOrderTitle": "Essen bestellen?",
   "mealCancelTitle": "Essen abbestellen?",
   "mealOrderAction": "Bestellen",
   "mealCancelAction": "Abbestellen",
   "mealChangeHint": "Die App erledigt das auf der Seite des Caterers und prüft danach, ob es dort so steht.",
-  "mealTransferShort": "bitte überweisen",
+  "mealTransferShort": "bitte aufladen",
   "mealOpenCaterer": "Seite des Caterers",
   "mealOrderDone": "Bestellt: {dish}",
   "@mealOrderDone": {
@@ -1872,5 +1871,9 @@
       }
     }
   },
-  "widgetStaleText": "App öffnen"
+  "widgetStaleText": "App öffnen",
+  "hintsDayCaption": "EEEE, d. MMM",
+  "hintMealUnordered": "nicht bestellt",
+  "demoBand": "Demo · Senden gesperrt",
+  "demoEndShort": "Beenden"
 }

@@ -294,6 +294,19 @@ DayStatus dayStatus(List<DayLesson> lessons, DateTime now) {
 bool lessonDone(DayLesson l, DateTime now) =>
     hasTime(l) && minutesOf(l.end).minutes <= _nowMin(now);
 
+/// Tag, dem der Essenshinweis aus dem Schulkalender gilt
+/// ([ChildToday.mealHint]): heute, ab 14 Uhr der folgende Kalendertag.
+///
+/// Ursache (Abnahme 30.10.26, Hinweise nach Tag gruppiert): Die Karte
+/// ordnet jeden Hinweis einem Tag zu, der Essenshinweis kam aber nur als
+/// fertiger Text („Morgen: …“). Eine Regel für beide Stellen
+/// (mealHintFor in today_from_lanis.dart und kidHints), damit Text und
+/// Gruppe nicht auseinanderlaufen. Grenze: Kalendertag, nicht Schultag –
+/// Freitagnachmittag ist es der Samstag (dann stehen im Kalender praktisch
+/// nie Essenshinweise).
+DateTime mealHintDay(DateTime now) =>
+    DateTime(now.year, now.month, now.day + (now.hour >= 14 ? 1 : 0));
+
 /// Dauer in Minuten (für die Breite in der Tagesleiste).
 int lessonMinutes(DayLesson l) =>
     hasTime(l) ? minutesOf(l.end).minutes - minutesOf(l.start).minutes : 45;

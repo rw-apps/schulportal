@@ -150,4 +150,130 @@ void main() {
     expect(h.single.when, 'Mo 26.10.');
     expect(plain(h.single.detail), '1. Stunde · R101 statt R106');
   });
+
+  group('Zeile und Gruppen (Abnahme 30.10.26)', () {
+    test('Felder der Zeile: Fach, Art, Stunde als Zahl, Tag', () {
+      final h = kidHints(
+        kid(
+          [
+            lesson('1.–2. Stunde', 'Deutsch', '08:00', '09:30'),
+            DayLesson(
+              slot: '3.–4. Stunde',
+              subject: 'Biologie',
+              start: '09:45',
+              end: '11:15',
+              room: 'R020',
+              change: ChangeKind.roomChange,
+              changeDetail: 'R020 statt R106',
+            ),
+            lesson(
+              '5.–6. Stunde',
+              'Mathematik',
+              '11:30',
+              '13:00',
+              ChangeKind.cancelled,
+            ),
+          ],
+          changes: [
+            ChangeItem(
+              day: DateTime(2026, 10, 22),
+              slot: '6.',
+              subject: 'Kunst',
+              kind: ChangeKind.substitution,
+              detail: 'Tom Beispiel',
+            ),
+          ],
+        ),
+        morning,
+        de,
+      );
+      expect(
+        [for (final x in h) (x.subject, x.what, x.slot)],
+        [
+          ('Biologie', 'Raum R020', '3.–4.'),
+          ('Mathematik', 'fällt aus', '5.–6.'),
+          ('Kunst', 'Vertretung', '6.'),
+        ],
+      );
+      expect(h[0].day, DateTime(2026, 10, 21));
+      expect(h[2].day, DateTime(2026, 10, 22));
+      // Folge und Lehrkraft bleiben im Detail (Bildschirmleser).
+      expect(plain(h[1].detail), '5.–6. Stunde · Schluss schon 11:15');
+      expect(plain(h[2].detail), '6. · Tom Beispiel');
+    });
+
+    test('Arbeit: Fach und Art geteilt, Uhrzeit bzw. Stunden als Marke', () {
+      expect(examParts(de, 'Englisch: Test'), ('Englisch', 'Test'));
+      expect(examParts(de, 'Klassenarbeit Englisch'), (
+        'Englisch',
+        'Klassenarbeit',
+      ));
+      expect(examParts(de, 'Physik'), ('Physik', 'Arbeit'));
+      expect(examSlot('09:50'), '09:50');
+      expect(examSlot('9:50 Uhr'), '09:50');
+      expect(examSlot('3., 4. Std. (90 Min.)'), '3.–4.');
+      expect(examSlot('5. Stunde'), '5.');
+      expect(examSlot('nach Absprache'), isNull);
+      expect(examSlot(null), isNull);
+      final h = kidHints(
+        kid(const []),
+        morning,
+        de,
+        exams: [
+          WeekItem(
+            day: DateTime(2026, 10, 21),
+            title: 'Englisch: Test',
+            kind: WeekKind.exam,
+            time: '09:50',
+          ),
+        ],
+      ).single;
+      expect((h.subject, h.what, h.slot), ('Englisch', 'Test', '09:50'));
+      expect(h.day, DateTime(2026, 10, 21));
+    });
+
+    test('Essenshinweis: Text ohne „Heute:“, ab 14 Uhr für morgen', () {
+      final h = kidHints(kid(const [], meal: 'Heute: kein Essen'), morning, de);
+      expect((h.single.subject, h.single.what), ('Essen', 'kein Essen'));
+      expect(h.single.day, DateTime(2026, 10, 21));
+      final late = kidHints(
+        kid(const [], meal: 'Morgen: kein Essen'),
+        DateTime(2026, 10, 21, 15),
+        de,
+      ).single;
+      expect(late.what, 'kein Essen');
+      expect(late.day, DateTime(2026, 10, 22));
+    });
+
+    test('Gruppen: Tage aufsteigend, Guthaben beim gezeigten Tag', () {
+      KidHint h(String s, DateTime? day) => KidHint(
+        kind: HintKind.substitution,
+        title: s,
+        subject: s,
+        what: '',
+        day: day,
+      );
+      final mon = DateTime(2026, 11, 2);
+      final fri = DateTime(2026, 10, 30);
+      final hints = [
+        h('A', mon),
+        h('B', fri),
+        h('Guthaben', null),
+        h('C', mon),
+        h('D', fri),
+      ];
+      final g = groupHints(hints, DateTime(2026, 10, 30, 9));
+      expect([for (final x in g) x.day], [fri, mon]);
+      expect([for (final x in g[0].hints) x.title], ['B', 'Guthaben', 'D']);
+      expect([for (final x in g[1].hints) x.title], ['A', 'C']);
+      // Nach Schulschluss zeigt die Karte Montag: Guthaben dort, eine Gruppe.
+      final after = groupHints([h('A', mon), h('Guthaben', null)], mon);
+      expect(after, hasLength(1));
+      expect(after.single.hints, hasLength(2));
+      final now = DateTime(2026, 10, 30, 9);
+      expect(hintDayCaption(de, fri, now), 'HEUTE');
+      expect(hintDayCaption(de, mon, now), 'MONTAG, 2. NOV.');
+      expect(hintDayCaption(forkL10nFor('en'), mon, now), 'MONDAY, NOV 2');
+    });
+  });
 }

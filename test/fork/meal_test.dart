@@ -245,7 +245,14 @@ void main() {
     final h = kidHints(kid, DateTime(2026, 10, 26, 10), de).single;
     expect(h.kind, HintKind.balance);
     expect(h.title, 'Guthaben 12,50 €');
-    expect(h.detail, 'unter 15 € – bitte Geld überweisen');
+    expect(h.detail, 'unter 15 € – bitte aufladen');
+    // Zeile auf Heute (Abnahme 30.10.26): „Guthaben 12,50 €  bitte
+    // aufladen“, an keinen Tag gebunden, Antippen öffnet die Bestellung.
+    expect(h.subject, 'Guthaben 12,50 €');
+    expect(h.what, 'bitte aufladen');
+    expect(h.day, isNull);
+    expect(h.slot, isNull);
+    expect(h.toMeal, isTrue);
   });
 
   test('Erinnerung: Frist in 24 h, Wochentage, ohne Frist zwei Schultage', () {
@@ -302,6 +309,10 @@ void main() {
     expect(h.single.kind, HintKind.meal);
     expect(h.single.title, 'Kein Essen bestellt');
     expect(h.single.when, 'Morgen');
+    expect(h.single.subject, 'Essen');
+    expect(h.single.what, 'nicht bestellt');
+    expect(h.single.day, DateTime(2026, 10, 30));
+    expect(h.single.toMeal, isTrue);
   });
 
   testWidgets('Wochenansicht: alle Zustände', (t) async {
@@ -345,7 +356,7 @@ void main() {
     await t.pump();
     expect(find.text('Gemüsesuppe'), findsOneWidget);
     expect(find.text('VEGGIE'), findsOneWidget);
-    expect(find.text('Guthaben 12,50 € · bitte überweisen'), findsOneWidget);
+    expect(find.text('Guthaben 12,50 € · bitte aufladen'), findsOneWidget);
     await t.tap(find.text('Seite des Caterers'));
     expect(ordered, 1);
     // Abbestellen am Do (Frist läuft), Bestellen am Fr (aufgeklappt).

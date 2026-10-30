@@ -239,7 +239,9 @@ class _Dot extends StatelessWidget {
 /// schlicht (ohne Kinderfarbe) in einem Rahmen unter „Stundenplan“. Ursache
 /// (Rückmeldung 21.10.26): Ausfall und Vertretung waren zu klein, und mit
 /// dem bunten Plan fielen Signalfarben nicht auf. Die Kinderfarbe bleibt
-/// nur am Bild bzw. Anfangsbuchstaben.
+/// nur am Bild bzw. Anfangsbuchstaben. Seit 30.10.26 (Entwurf B) stehen
+/// die Hinweise als einzeilige Zeilen je Tag gruppiert (_HintGroup); die
+/// Signalfarbe trägt das Feld ums Symbol und das Art-Wort.
 class KidCard extends StatelessWidget {
   const KidCard({
     super.key,
@@ -303,20 +305,24 @@ class KidCard extends StatelessWidget {
         ? kid.lessons.lastWhere((x) => !x.cancelled).end
         : null;
     // Nach Schulschluss steht der nächste Schultag als Kopf über Hinweisen
-    // und Plan (_NextDayBand); die Hinweise brauchen ihr „Morgen“ dann nicht
-    // mehr. Heutige Hinweise (Essen, Arbeit heute) sind nach Schulschluss
-    // erledigt und entfallen.
-    final openDay = onOpenDay == null
-        ? null
-        : () => onOpenDay!(kid, showNext ? nextDate! : now);
+    // und Plan (_NextDayHead). Heutige Hinweise (Essen, Arbeit heute) sind
+    // dann erledigt und entfallen; es bleibt eine Gruppe mit diesem Tag
+    // (groupHints), deren Kopf dem Kartenkopf nicht widerspricht.
+    final shownDay = showNext ? nextDate! : now;
+    final openDay = onOpenDay == null ? null : () => onOpenDay!(kid, shownDay);
     final shown = !showNext
         ? hints
         : [
             for (final h in hints)
-              // Guthaben gilt unabhängig vom Tag und bleibt stehen.
-              if (h.when != null || h.kind == HintKind.balance)
-                KidHint(kind: h.kind, title: h.title, detail: h.detail),
+              // Guthaben (ohne Tag) gilt unabhängig vom Tag und bleibt.
+              if (h.day == null || dayDiff(now, h.day!) > 0) h,
           ];
+    // Antippen einer Zeile: der Tag im Kalender (wie „Ganzer Tag“), dort
+    // stehen Lehrkraft und Zeiten, die die Zeile weglässt; Guthaben und
+    // „nicht bestellt“ öffnen die Essensbestellung.
+    VoidCallback? tapHint(KidHint h, DateTime day) => h.toMeal
+        ? (onOrderMeal == null ? null : () => onOrderMeal!(kid))
+        : (onOpenDay == null ? null : () => onOpenDay!(kid, day));
 
     return Container(
       padding: const EdgeInsets.all(Sp.l),
@@ -397,9 +403,13 @@ class KidCard extends StatelessWidget {
           if (shown.isNotEmpty) ...[
             const SizedBox(height: Sp.l),
             _SectionHead(text: t.hintsTitle),
-            for (final (i, h) in shown.indexed) ...[
+            for (final (i, g) in groupHints(shown, shownDay).indexed) ...[
               if (i > 0) const SizedBox(height: Sp.s),
-              _HintRow(hint: h),
+              _HintGroup(
+                caption: hintDayCaption(t, g.day, now),
+                hints: g.hints,
+                onTap: (h) => tapHint(h, g.day),
+              ),
             ],
           ],
           const SizedBox(height: Sp.l),
@@ -531,7 +541,7 @@ class KidCard extends StatelessWidget {
 /// Kopf der Karte nach Schulschluss: kurz „HEUTE · Unterricht vorbei“,
 /// Trennlinie, dann als Überschrift „MORGEN · Dienstag, 27. Oktober“ bzw.
 /// „NÄCHSTER SCHULTAG · Montag, 2. November“. Hinweise und Plan darunter
-/// gelten diesem Tag (ihr „Morgen ·“ entfällt, KidCard.shown).
+/// gelten diesem Tag (eine Hinweisgruppe mit seinem Datum, KidCard.shown).
 ///
 /// Ursache (Abnahme 26.10.26, drei Runden): „Stundenplan · Morgen“ war zu
 /// leise, ein Band im Planrahmen galt nicht für die Hinweise, ein blaues
@@ -631,13 +641,93 @@ class _SectionHead extends StatelessWidget {
   }
 }
 
-/// Ein Hinweis als gefüllte Fläche: Titel („Ev. Religion fällt aus“) fett,
-/// darunter klein Stunde und Folge bzw. Lehrkraft. Rot für Ausfall, Gelb
-/// für Vertretung, Raumwechsel und Essen.
-class _HintRow extends StatelessWidget {
-  const _HintRow({required this.hint});
+/// Hinweise eines Tages (Abnahme 30.10.26, Entwurf B „Zeilen nach Tag“):
+/// graue Fläche mit Kopf („HEUTE“, „MONTAG, 2. NOV.“) und Anzahl, darin
+/// eine weiße Liste mit je einer Zeile ([_HintLine]) und feinen Linien.
+///
+/// Ursache (Rückmeldung 30.10.26): Je Hinweis eine eigene, zweizeilige
+/// Signalfläche – bei sieben Hinweisen rutschte der Stundenplan unter den
+/// ersten Bildschirm. Grenze: Die Signalfarbe trägt jetzt nur noch das Feld
+/// um das Symbol und das Art-Wort; die Zeile selbst ist weiß.
+class _HintGroup extends StatelessWidget {
+  const _HintGroup({
+    required this.caption,
+    required this.hints,
+    required this.onTap,
+  });
+
+  final String caption;
+  final List<KidHint> hints;
+  final VoidCallback? Function(KidHint h) onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Kit.of(context);
+    return Container(
+      padding: const EdgeInsets.all(Sp.s),
+      decoration: BoxDecoration(
+        color: k.p.inset,
+        borderRadius: BorderRadius.circular(Rad.panel),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Sp.xs, Sp.xxs, Sp.xs, Sp.s),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    caption,
+                    style: k.dateCaps,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: Sp.s),
+                Text('${hints.length}', style: k.dateCaps),
+              ],
+            ),
+          ),
+          Material(
+            color: k.p.card,
+            clipBehavior: Clip.antiAlias,
+            borderRadius: BorderRadius.circular(Rad.hintList),
+            child: Column(
+              children: [
+                for (final (i, h) in hints.indexed) ...[
+                  if (i > 0)
+                    Divider(
+                      height: Sz.frame,
+                      thickness: Sz.frame,
+                      // Linie erst ab dem Text, nicht unter dem Symbol.
+                      indent: Sp.s + Sz.hintBadge + Sp.m,
+                      color: k.p.line,
+                    ),
+                  _HintLine(hint: h, onTap: onTap(h)),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Ein Hinweis als EINE Zeile: Lagebild im Feld der Signalfläche (Rot =
+/// Ausfall, Gelb = Vertretung/Raum/Essen/Guthaben, Grau = Arbeit), Fach fett,
+/// Art in der kräftigen Signalfarbe, rechts die Stunde als Marke.
+///
+/// Was nicht mehr in die Zeile passt (Lehrkraft, „Schluss 11:20“, „Beginn
+/// erst …“), steht in [KidHint.detail]: für den Bildschirmleser im
+/// Semantics-Text und nach dem Antippen im Kalendertag. Grenze: Ohne
+/// [onTap] (Beispielseite ohne Rückruf) sieht man es nur im Kalender.
+class _HintLine extends StatelessWidget {
+  const _HintLine({required this.hint, this.onTap});
 
   final KidHint hint;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -659,49 +749,66 @@ class _HintRow extends StatelessWidget {
       HintKind.exam => weekIcon(WeekKind.exam),
       HintKind.balance => Icons.account_balance_wallet_outlined,
     };
+    final slot = h.slot;
     final detail = h.detail;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Sp.m,
-        vertical: Sp.s + Sp.xxs,
-      ),
-      decoration: BoxDecoration(
-        color: tone.bg,
-        borderRadius: BorderRadius.circular(Rad.row),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: Sp.xxs),
-            child: Icon(icon, size: Sz.hintIcon, color: tone.strong),
-          ),
-          const SizedBox(width: Sp.s),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(h.title, style: k.hintTitle(tone)),
-                if (h.when != null || (detail != null && detail.isNotEmpty))
-                  Text.rich(
-                    TextSpan(
-                      children: [
-                        if (h.when != null)
-                          TextSpan(
-                            text: detail == null || detail.isEmpty
-                                ? h.when
-                                : '${h.when} · ',
-                            style: k.hintWhen(tone),
-                          ),
-                        if (detail != null && detail.isNotEmpty)
-                          TextSpan(text: detail, style: k.hintDetail(tone)),
-                      ],
-                    ),
+    return Semantics(
+      button: onTap != null,
+      excludeSemantics: true,
+      label: [
+        ?h.when,
+        h.title,
+        if (detail != null && detail.isNotEmpty)
+          detail.replaceAll('\u00A0', ' '),
+      ].join(', '),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(Sp.s),
+          child: Row(
+            children: [
+              Container(
+                width: Sz.hintBadge,
+                height: Sz.hintBadge,
+                decoration: BoxDecoration(
+                  color: tone.bg,
+                  borderRadius: BorderRadius.circular(Rad.badge),
+                ),
+                child: Icon(icon, size: Sz.hintBadgeIcon, color: tone.strong),
+              ),
+              const SizedBox(width: Sp.m),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: h.what.isEmpty ? h.subject : '${h.subject}  ',
+                        style: k.hintSubject,
+                      ),
+                      if (h.what.isNotEmpty)
+                        TextSpan(text: h.what, style: k.hintKind(tone)),
+                    ],
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (slot != null && slot.isNotEmpty) ...[
+                const SizedBox(width: Sp.s),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Sp.s,
+                    vertical: Sp.xxs + 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: k.p.inset,
+                    borderRadius: BorderRadius.circular(Rad.pill),
+                  ),
+                  child: Text(slot, style: k.hintSlot, maxLines: 1),
+                ),
               ],
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

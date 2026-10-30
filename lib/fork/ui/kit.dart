@@ -93,6 +93,16 @@ abstract final class Sz {
   /// Essen): etwas größer als [icon], weil der Hinweistext 16 statt 14 ist.
   static const double hintIcon = 20;
 
+  /// Hinweiszeile an der Kinderkarte (Abnahme 30.10.26): Feld in der
+  /// Signalfläche um das Lagebild und das Symbol darin – kleiner als
+  /// [hintIcon], weil die Zeile nur noch 13er Schrift trägt.
+  static const double hintBadge = 30;
+  static const double hintBadgeIcon = 17;
+
+  /// Knopf „Beenden“ im schmalen Demo-Band auf Heute (demo_entry.dart):
+  /// zwischen [buttonTiny] und [buttonSmall], damit das Band einzeilig bleibt.
+  static const double bandButton = 36;
+
   /// Rahmen um den Stundenplan an der Kinderkarte. Farbe der Nebenschrift
   /// (KitPalette.faint) statt der Trennlinie: Ein hellgrauer Rahmen war
   /// schon im Prüfbild kaum zu sehen (Abnahme 21.10.26), bei Sonnenlicht
@@ -170,6 +180,12 @@ abstract final class Rad {
   static const double row = 12;
   static const double day = 16;
   static const double bar = 6;
+
+  /// Feld um das Lagebild einer Hinweiszeile (Sz.hintBadge).
+  static const double badge = 9;
+
+  /// Weiße Liste der Hinweiszeilen in der grauen Tagesgruppe ([panel]).
+  static const double hintList = 14;
   static const double nav = 34;
   static const double navItem = 22;
   static const double cell = 12;
@@ -495,7 +511,18 @@ class Kit {
   TextStyle hintDetail(SignalTone t) => _s(13, FontWeight.w500, t.ink);
 
   /// „Morgen“ vor der Stunde eines Hinweises für den nächsten Schultag.
+  // hintTitle/hintDetail/hintWhen: seit 30.10.26 nicht mehr an der Karte
+  // (Zeilen statt Flächen, hintSubject/hintKind/hintSlot); bleiben für den
+  // abgenommenen Entwurf (Variante A in test/_local) stehen.
   TextStyle hintWhen(SignalTone t) => _s(13, FontWeight.w800, t.ink);
+
+  /// Hinweis als eine Zeile (Abnahme 30.10.26, Entwurf B): Fach fett in
+  /// Schriftfarbe, Art in der kräftigen Signalfarbe, rechts die Stunde als
+  /// Marke – alle in der Größe von cardMeta (13), damit Fach, Art und Marke
+  /// auch bei Systemschrift ×1,3 in eine Zeile passen.
+  TextStyle get hintSubject => _s(13, FontWeight.w800, p.ink);
+  TextStyle hintKind(SignalTone t) => _s(13, FontWeight.w700, t.strong);
+  TextStyle get hintSlot => _s(13, FontWeight.w700, p.ink);
 
   /// Schlichter Plan: Zeile „JETZT · 3.–4. STD.“, Fach, Zeit/Raum/Lehrkraft.
   TextStyle get planNowLabel => _s(11, FontWeight.w800, p.muted, ls: 1);
