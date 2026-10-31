@@ -1955,8 +1955,8 @@
   "widgetLegendExam": "Arbeit am gezeigten Tag",
   "widgetLegendHomework": "Hausaufgaben, die bis dahin fällig sind (Zahl)",
   "widgetLegendMeal": "Essen bestellen oder Guthaben aufladen (!)",
-  "widgetLegendSub": "Vertretung (nur Schülerkonto)",
-  "widgetLegendRoom": "Raumwechsel (nur Schülerkonto)",
+  "widgetLegendSub": "Vertretung",
+  "widgetLegendRoom": "Raumwechsel",
   "widgetLegendTap": "Antippen öffnet die passende Seite: Name → Heute, Arbeit → Arbeiten & Noten, Aufgaben → Unterricht, Essen → Bestellung.",
   "widgetLegendPerWidget": "Welche Kinder ein Widget zeigt, lässt sich beim Aufstellen und später über „Widget einrichten“ (lange drücken) je Widget wählen."
 }

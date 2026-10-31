@@ -10,8 +10,8 @@ import '../ui/kit.dart';
 /// 30.10.26: „mehr visuell über Icons“); was ein Symbol heißt, soll man an
 /// einer Stelle nachlesen können. Dieselben Symbole und Farben wie in Kotlin
 /// (SchoolWidget.kt): Ausfall rot, Arbeit blau (onNavSelected), Aufgaben
-/// neutral, Essen/Vertretung/Raum gelb. Grenze: Vertretung und Raum zeigt
-/// das Widget nur beim Schülerkonto.
+/// neutral, Essen/Vertretung/Raum gelb. Seit 31.10.26 zeigen alle Konten
+/// alle Symbole (vorher Vertretung/Raum nur beim Schülerkonto).
 class WidgetLegend extends StatelessWidget {
   const WidgetLegend({super.key});
 

@@ -743,8 +743,8 @@
   "widgetLegendExam": "Gösterilen günde sınav",
   "widgetLegendHomework": "O güne kadar teslim edilecek ödevler (sayı)",
   "widgetLegendMeal": "Yemek sipariş et veya bakiye yükle (!)",
-  "widgetLegendSub": "Vekil öğretmen (yalnızca öğrenci hesabı)",
-  "widgetLegendRoom": "Sınıf değişikliği (yalnızca öğrenci hesabı)",
+  "widgetLegendSub": "Vekil öğretmen",
+  "widgetLegendRoom": "Sınıf değişikliği",
   "widgetLegendTap": "Dokunmak ilgili sayfayı açar: ad → Bugün, sınav → Sınavlar ve notlar, ödev → Dersler, yemek → sipariş.",
   "widgetLegendPerWidget": "Bir widget’ın hangi çocukları göstereceği yerleştirirken ve daha sonra “Widget ayarları” (uzun basma) ile seçilebilir."
 }

@@ -433,9 +433,16 @@ object WidgetModel {
 
     // ---- Punkt 3: Symbole ------------------------------------------------------
 
+    /**
+     * Symbole je Kind – für alle Konten dieselben fünf (Wunsch 31.10.26:
+     * „alle auch im Elternkonto“). Ursache: Mit Eltern- und Schülerkonto im
+     * selben Widget standen die Spalten nicht untereinander. Grenze: Im
+     * Raster ab drei Kindern (2 × 2) bleiben es drei (cell4, kein Platz).
+     * [Kid.own] bleibt in der Datei, wird hier aber nicht mehr gebraucht.
+     */
+    @Suppress("UNUSED_PARAMETER")
     fun signalsFor(kid: Kid): List<Signal> =
-        if (kid.own) listOf(Signal.EXAM, Signal.HOMEWORK, Signal.SUB, Signal.ROOM, Signal.MEAL)
-        else listOf(Signal.EXAM, Signal.HOMEWORK, Signal.MEAL)
+        listOf(Signal.EXAM, Signal.HOMEWORK, Signal.SUB, Signal.ROOM, Signal.MEAL)
 
     /**
      * Offene Aufgaben mit Frist heute bis [day]. Überfällige zählen nicht:

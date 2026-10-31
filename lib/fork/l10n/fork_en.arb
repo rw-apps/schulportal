@@ -743,8 +743,8 @@
   "widgetLegendExam": "Test on the day shown",
   "widgetLegendHomework": "Homework due by then (number)",
   "widgetLegendMeal": "Order lunch or top up balance (!)",
-  "widgetLegendSub": "Substitute teacher (student account only)",
-  "widgetLegendRoom": "Room change (student account only)",
+  "widgetLegendSub": "Substitute teacher",
+  "widgetLegendRoom": "Room change",
   "widgetLegendTap": "Tapping opens the matching page: name → Today, test → Tests & grades, tasks → Lessons, lunch → ordering.",
   "widgetLegendPerWidget": "Which children a widget shows can be chosen per widget when placing it, and later via “Widget settings” (long press)."
 }

@@ -233,22 +233,22 @@ class WidgetModelTest {
     @Test
     fun arbeitUndEssen() {
         val v = view(kid(1, "Lena", day(mon), exams = "\"$mon\"", mealOpen = "\"$mon\""), at(9))
-        assertEquals(listOf(Signal.EXAM, Signal.HOMEWORK, Signal.MEAL), v.slots.map { it.signal })
+        assertEquals(listOf(Signal.EXAM, Signal.HOMEWORK, Signal.SUB, Signal.ROOM, Signal.MEAL), v.slots.map { it.signal })
         val exam = v.slots[0]
         assertTrue(exam.on)
         assertEquals(Target.EXAMS, exam.target)
-        val meal = v.slots[2]
+        val meal = v.slots[4]
         assertTrue(meal.on)
         assertEquals("", meal.mark)
         assertEquals("Essen bestellen", meal.text)
         assertEquals(Target.MEAL, meal.target)
         // Guthaben niedrig: Marke „!“.
-        val low = view(kid(1, "Lena", day(mon), lowBalance = true), at(9)).slots[2]
+        val low = view(kid(1, "Lena", day(mon), lowBalance = true), at(9)).slots[4]
         assertTrue(low.on)
         assertEquals("!", low.mark)
         assertEquals("Guthaben aufladen", low.text)
         // Essen für einen anderen Tag: blass.
-        val other = view(kid(1, "Lena", day(mon), mealOpen = "\"$tue\""), at(9)).slots[2]
+        val other = view(kid(1, "Lena", day(mon), mealOpen = "\"$tue\""), at(9)).slots[4]
         assertFalse(other.on)
         assertTrue(v.relevant)
     }
@@ -271,8 +271,10 @@ class WidgetModelTest {
         assertEquals("Raumwechsel 5", room.cd)
         // Nach 12:10 kein Raumwechsel mehr.
         assertFalse(view(kid(7, "Mia", day(mon, rooms = rooms), own = true), at(12, 30)).slots[3].on)
-        // Eltern: keine Vertretung/Raum, auch wenn die Datei sie hat.
-        assertEquals(3, view(kid(7, "Mia", day(mon, subs = subs)), at(9)).slots.size)
+        // Eltern (31.10.26): dieselben fünf Symbole, Vertretung leuchtet auch dort.
+        val parent = view(kid(7, "Mia", day(mon, subs = subs)), at(9)).slots
+        assertEquals(5, parent.size)
+        assertTrue(parent[2].on)
     }
 
     // ---- Punkt 4: Größen -------------------------------------------------------------------
