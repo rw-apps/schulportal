@@ -51,7 +51,7 @@
     <dimen name="widget_icon_32">20dp</dimen>
     <!-- Spalte je beschriftetem Symbol (_one41): 56, ab vier Symbolen 48. -->
     <dimen name="widget_label_col">56dp</dimen>
-    <dimen name="widget_label_col_narrow">48dp</dimen>
+    <dimen name="widget_label_col_narrow">44dp</dimen>
 
     <!-- Namensspalte der Kind-Zeile (_strip10/_four42: SizedBox width 58). -->
     <dimen name="widget_name_col">58dp</dimen>
